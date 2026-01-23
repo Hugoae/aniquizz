@@ -184,6 +184,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             const playerChoices = canonicalChoices.length > 0 ? shuffleArray(canonicalChoices) : [];
             const playerDuo = canonicalDuo.length > 0 ? shuffleArray(canonicalDuo) : [];
 
+            // Correction type string pour l'ID socket
             io.to(String(player.id)).emit('round_start', {
                 ...commonPayload,
                 choices: playerChoices,
@@ -218,7 +219,16 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
         io.to(roomId).emit('vote_update', { type: 'skip', count: 0, required: Math.ceil(currentRoom.players.length / 2) });
 
         // ---------------- PHASE 3 : REVEAL (RÉPONSE) ----------------
-        // Le reveal est le même pour tout le monde (la bonne réponse ne change pas)
+        
+        // 1. Récupération et Fusion des Tags (Genre Franchise + Tags Anime)
+        // Note: Si 'genres' est souligné en rouge, lance 'npx prisma generate'
+        const franchiseGenres = currentDbSong.anime.franchise?.genres || [];
+        const animeTags = currentDbSong.anime.tags || [];
+        
+        // On fusionne et on dédoublonne
+        const mergedTags = Array.from(new Set([...franchiseGenres, ...animeTags]));
+
+        // Le reveal est le même pour tout le monde
         io.to(roomId).emit('round_reveal', {
             startTime: Date.now(),
             duration: REVEAL_TIME,
@@ -232,7 +242,8 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
                 difficulty: currentDbSong.difficulty,
                 cover: currentDbSong.anime.coverImage,
                 siteUrl: currentDbSong.anime.siteUrl,
-                year: currentDbSong.anime.seasonYear 
+                year: currentDbSong.anime.seasonYear,
+                tags: mergedTags // ICI C'EST CORRIGÉ
             },
             correctAnswer: correctTarget,
             players: cleanPlayersData(currentRoom.players)
