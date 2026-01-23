@@ -132,6 +132,7 @@ export default function Play() {
   useEffect(() => { if (view === 'roomList' && socket.connected) { socket.emit('get_rooms'); } }, [view]);
 
   useEffect(() => {
+    if (!socket.connected) socket.connect();
     if (socket.connected) setMySocketId(socket.id || '');
     
     const onConnect = () => { 
