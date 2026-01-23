@@ -60,7 +60,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
     const precisionMode = settings.precision || 'franchise'; 
     const TOTAL_ROUNDS = parseInt(String(settings.soundCount), 10) || 10;
     const GUESS_TIME = parseInt(String(settings.guessDuration), 10) || 15;
-    const REVEAL_TIME = 15;
+    const REVEAL_TIME = 10; // MODIFIÉ : 10 secondes (au lieu de 15)
     const TV_SIZE_DURATION = 89;
 
     console.log(`[GAME] 🏁 LOOP START | Room: ${roomId} | Rounds: ${TOTAL_ROUNDS} | Difficulty: ${settings.difficulty}`);
@@ -85,7 +85,9 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
 
     if (gameSongs.length === 0) {
         console.error(`[GAME] ❌ ERROR NO SONGS | Room: ${roomId}`);
-        io.to(roomId).emit('error', { message: "Aucun son trouvé avec ces critères !" });
+        // On envoie un event spécifique pour dire au client de quitter l'écran de chargement
+        io.to(roomId).emit('error', { message: "Aucun son trouvé avec ces critères (Playlist vide ?)" });
+        io.to(roomId).emit('game_over', { message: "Annulé : Pas de sons trouvés." });
         room.status = 'waiting';
         onGameEnd(); 
         return;

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/layout/Header';
 import { FloatingSettingsButton } from '@/components/settings/FloatingSettingsButton';
 import { Button } from '@/components/ui/button';
-import { User, Users, Swords, ArrowLeft, Plus, Lock, RotateCcw, Check, Music2, Trophy, Flame, Film, Globe2, Flower2, Clock, HelpCircle, Eye, Target, Hourglass, Heart, Sparkles, Tv, Calendar } from 'lucide-react';
+import { User, Users, Swords, ArrowLeft, Plus, Lock, RotateCcw, Check, Music2, Trophy, Flame, Film, Globe2, Flower2, Clock, HelpCircle, Eye, Target, Hourglass, Heart, Sparkles, Tv, Calendar, Zap, Rocket, Coffee } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -70,9 +70,12 @@ const defaultRoomConfig: RoomConfig = {
 
 // --- NOUVELLES PLAYLISTS ---
 const playlists = [
-  { id: 'shonen', name: 'Shonen Jump', icon: <Swords className="w-4 h-4 text-orange-500"/>, count: 'Naruto, One Piece...' },
-  { id: 'isekai', name: 'Isekai World', icon: <Globe2 className="w-4 h-4 text-blue-500"/>, count: 'Re:Zero, SAO...' },
-  { id: 'romance', name: 'Romance & Drama', icon: <Heart className="w-4 h-4 text-pink-500"/>, count: 'Kaguya-sama, Nana...' },
+  { id: 'shonen', name: 'Shonen', icon: <Swords className="w-4 h-4 text-orange-500"/>, count: 'Action & Aventure' },
+  { id: 'isekai', name: 'Isekai', icon: <Globe2 className="w-4 h-4 text-blue-500"/>, count: 'Fantasy Worlds' },
+  { id: 'romance', name: 'Romance', icon: <Heart className="w-4 h-4 text-pink-500"/>, count: 'Love & Drama' },
+  { id: 'action', name: 'Action', icon: <Zap className="w-4 h-4 text-yellow-500"/>, count: 'Combats intenses' },
+  { id: 'scifi', name: 'Sci-Fi', icon: <Rocket className="w-4 h-4 text-cyan-500"/>, count: 'Futur & Mecha' },
+  { id: 'slice', name: 'Slice of Life', icon: <Coffee className="w-4 h-4 text-emerald-500"/>, count: 'Relax & School' },
   { id: 'decades', name: 'Décennies', icon: <Calendar className="w-4 h-4 text-purple-500"/>, count: '80s, 90s, 2000s...' },
   { id: 'top-50', name: 'Top 50 Popular', icon: <Trophy className="w-4 h-4 text-yellow-500"/>, count: 'Les plus vus' },
 ];

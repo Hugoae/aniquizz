@@ -13,7 +13,7 @@ export const GAME_CONSTANTS = {
 
     // Délais et Timers (en millisecondes)
     TIMERS: {
-        INTRO_DELAY: 10000,      // Attente avant le 1er round ("Préparez-vous...")
+        INTRO_DELAY: 3000,       // MODIFIÉ : 3 secondes (au lieu de 10s)
         RESUME_COUNTDOWN: 3000,  // Compte à rebours après une pause (3, 2, 1)
         POLL_INTERVAL: 100       // Fréquence de vérification de la boucle de jeu
     },

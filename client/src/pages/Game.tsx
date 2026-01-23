@@ -151,7 +151,7 @@ export default function Game() {
   const isReturningToLobbyRef = useRef(false); // Flag pour éviter le leave_room involontaire
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const volumeRef = useRef(50);
+  const volumeRef = useRef(20); // MODIFIÉ : VOLUME PAR DÉFAUT 20%
   const isMutedRef = useRef(false);
 
   // --- STATES JEU ---
@@ -204,7 +204,7 @@ export default function Game() {
   
   // UI States
   const [isLiked, setIsLiked] = useState(false);
-  const [volume, setVolume] = useState(50);
+  const [volume, setVolume] = useState(20); // MODIFIÉ : UI Volume synchro avec Ref
   const [isMuted, setIsMuted] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -373,7 +373,18 @@ export default function Game() {
 
     socket.on('game_over', (data: any) => { setPhase('ended'); });
 
-    return () => { socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left'); };
+    // MODIFIÉ : Gestion d'erreur critique (retour lobby auto)
+    const onError = (err: { message: string }) => { 
+        toast.error(err.message || "Une erreur est survenue"); 
+        if (phase === 'loading') {
+            setTimeout(() => {
+                handleReturnToLobby();
+            }, 2000);
+        }
+    };
+    socket.on('error', onError);
+
+    return () => { socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left'); socket.off('error', onError); };
   }, []);
 
   // ------------------------------------------------------------------
@@ -594,7 +605,24 @@ export default function Game() {
               
               {phase !== 'loading' && ( <div className={cn("w-full flex justify-center shrink-0 min-h-[80px] z-50", phase === 'revealed' ? "mb-32" : "mb-6")}>{renderInputArea()}</div> )}
               
-              <div className="w-full"><div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-items-center">{players.map(p => ( <div key={p.id} className="relative w-full max-w-[220px]">{phase === 'revealed' && ( <div className="absolute -top-12 left-0 right-0 flex justify-center z-10"><div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce whitespace-nowrap border-2 bg-background", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>{p.currentAnswer || "..."}</div></div> )} <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} </div> ))}</div></div>
+              <div className="w-full">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-items-center">
+                    {players.map(p => ( 
+                        <div key={p.id} className="relative w-full max-w-[220px]">
+                            {phase === 'revealed' && ( 
+                                <div className="absolute -top-12 left-0 right-0 flex justify-center z-10">
+                                    {/* MODIFIÉ : Truncate pour éviter le chevauchement */}
+                                    <div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background truncate max-w-[120px]", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>
+                                        {p.currentAnswer || "..."}
+                                    </div>
+                                </div> 
+                            )} 
+                            <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> 
+                            {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} 
+                        </div> 
+                    ))}
+                </div>
+              </div>
             </div>
           </div>
           

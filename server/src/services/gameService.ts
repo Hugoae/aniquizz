@@ -7,10 +7,14 @@ const prisma = new PrismaClient();
 // CONFIGURATION DES PLAYLISTS
 // ------------------------------------------------------------------
 // Mappe les IDs de playlist (ex: 'shonen') vers les Tags en BDD
+// MODIFIÉ : Ajout de plusieurs tags par clé pour maximiser les résultats
 const PLAYLIST_TAGS: Record<string, string[]> = {
-    'shonen': ['Shonen'],
-    'isekai': ['Isekai'],
-    'romance': ['Romance'],
+    'shonen': ['Shonen', 'Action', 'Adventure'],
+    'isekai': ['Isekai', 'Fantasy'],
+    'romance': ['Romance', 'Drama', 'Shojo'],
+    'action': ['Action', 'Thriller', 'Super Power'], // NOUVEAU
+    'scifi': ['Sci-Fi', 'Mecha', 'Space'],          // NOUVEAU
+    'slice': ['Slice of Life', 'Comedy', 'School'], // NOUVEAU
     'top-50': [], // Géré spécifiquement par la popularité
     'decades': [] // Géré spécifiquement par l'année
 };
