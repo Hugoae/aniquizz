@@ -9,10 +9,6 @@ import {
     generateDuo 
 } from './gameService';
 
-/**
- * Nettoie les données des joueurs avant l'envoi au client.
- * Retire les informations sensibles ou internes (dbId, etc.)
- */
 export function cleanPlayersData(players: ExtendedPlayer[]) {
     return players.map(p => ({
         id: p.id,
@@ -27,29 +23,26 @@ export function cleanPlayersData(players: ExtendedPlayer[]) {
     }));
 }
 
-/**
- * Fonction d'attente intelligente.
- * Attend 'ms' millisecondes, mais vérifie régulièrement les votes de PAUSE ou SKIP.
- */
 async function waitForDuration(io: Server, rooms: Map<string, Room>, roomId: string, ms: number, allowSkip: boolean = false) {
     const POLL_RATE = 100;
     const steps = ms / POLL_RATE;
 
     for (let i = 0; i < steps; i++) {
         const room = rooms.get(roomId);
-        if (!room) return; // La room a été détruite
+        if (!room) return; 
 
-        // 1. Gestion du SKIP (Majorité absolue requise)
+        // 1. Gestion du SKIP
         if (allowSkip) {
             const activePlayers = room.players.filter(p => p.isInGame !== false).length;
             const requiredVotes = activePlayers > 0 ? Math.ceil(activePlayers / 2) : 1;
             
             if (room.skipVotes.size >= requiredVotes && activePlayers > 0) {
-                return; // On coupe l'attente immédiatement
+                console.log(`[GAME] ⏭️ SKIPPED | Room: ${roomId} (Votes: ${room.skipVotes.size}/${requiredVotes})`);
+                return; 
             }
         }
 
-        // 2. Gestion de la PAUSE (Boucle bloquante)
+        // 2. Gestion de la PAUSE
         while (room && room.isPaused) {
             await new Promise(r => setTimeout(r, POLL_RATE));
             if (!rooms.has(roomId)) return;
@@ -59,24 +52,19 @@ async function waitForDuration(io: Server, rooms: Map<string, Room>, roomId: str
     }
 }
 
-/**
- * BOUCLE DE JEU PRINCIPALE
- * Gère l'intégralité d'une partie du début à la fin.
- */
 export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId: string, gameId: string, onGameEnd: () => void) {
     const room = rooms.get(roomId);
     if (!room) return;
 
-    // Récupération des paramètres
     const settings = room.settings || {};
     const precisionMode = settings.precision || 'franchise'; 
     const TOTAL_ROUNDS = parseInt(String(settings.soundCount), 10) || 10;
     const GUESS_TIME = parseInt(String(settings.guessDuration), 10) || 15;
     const REVEAL_TIME = 15;
-    
-    const TV_SIZE_DURATION = 89; // Durée standard d'un Opening TV Size (1m29)
+    const TV_SIZE_DURATION = 89;
 
-    // Reset des scores
+    console.log(`[GAME] 🏁 LOOP START | Room: ${roomId} | Rounds: ${TOTAL_ROUNDS} | Difficulty: ${settings.difficulty}`);
+
     room.players.forEach(p => { p.score = 0; p.correctCount = 0; });
 
     // ---------------- PHASE 1 : INTRO ----------------
@@ -92,19 +80,25 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
     };
 
     // Sélection des sons
+    console.log(`[GAME] 🔍 FETCH SONGS | Room: ${roomId} | Filters: ${JSON.stringify(gameFilters)}`);
     const gameSongs = await getRandomSongs(TOTAL_ROUNDS, gameFilters);
 
     if (gameSongs.length === 0) {
+        console.error(`[GAME] ❌ ERROR NO SONGS | Room: ${roomId}`);
         io.to(roomId).emit('error', { message: "Aucun son trouvé avec ces critères !" });
         room.status = 'waiting';
         onGameEnd(); 
         return;
     }
+    console.log(`[GAME] ✅ SONGS READY | Room: ${roomId} | Count: ${gameSongs.length}`);
 
     // ---------------- BOUCLE DES ROUNDS ----------------
     for (let i = 0; i < TOTAL_ROUNDS; i++) {
         let currentRoom = rooms.get(roomId);
-        if (!currentRoom || currentRoom.currentGameId !== gameId) return; // Partie arrêtée ou nouvelle partie lancée
+        if (!currentRoom || currentRoom.currentGameId !== gameId) {
+            console.log(`[GAME] 🛑 LOOP STOPPED | Room: ${roomId} (Room deleted or new game started)`);
+            return;
+        }
 
         if (currentRoom.status === 'finished') break;
 
@@ -117,7 +111,6 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             p.roundPoints = 0;
         });
 
-        // Mise à jour client : "Nouveau Round"
         io.to(roomId).emit('update_players', { players: cleanPlayersData(currentRoom.players) });
         io.to(roomId).emit('vote_update', { type: 'skip', count: 0, required: Math.ceil(currentRoom.players.length / 2) });
 
@@ -126,6 +119,8 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
         const exactName = currentDbSong.anime.name;
         const franchiseName = currentDbSong.anime.franchise?.name || exactName; 
         const correctTarget = precisionMode === 'franchise' ? franchiseName : exactName;
+
+        console.log(`[GAME] 🎵 ROUND ${i+1} | Room: ${roomId} | Anime: ${correctTarget} | Title: ${currentDbSong.title}`);
 
         // Génération des choix QCM/Duo
         const responseType = settings.responseType || "typing";
@@ -141,8 +136,6 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             duo = await generateDuo(correctTarget, choicesPromise);
         }
 
-        // Calcul du Start Time Aléatoire
-        // Formule : Durée max = (Durée Vidéo) - (Temps Guess + Temps Reveal + Marge 5s)
         const totalPlayTimeNeeded = GUESS_TIME + REVEAL_TIME + 5;
         const maxStartTime = Math.max(0, TV_SIZE_DURATION - totalPlayTimeNeeded);
         const randomStartTime = Math.floor(Math.random() * maxStartTime);
@@ -159,14 +152,13 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
                 difficulty: currentDbSong.difficulty,
                 type: currentDbSong.type
             },
-            videoStartTime: randomStartTime, // Offset vidéo envoyé au client
+            videoStartTime: randomStartTime,
             responseType,
             choices,
             duo,
             players: cleanPlayersData(currentRoom.players)
         });
 
-        // Attente (+500ms de tolérance réseau)
         await waitForDuration(io, rooms, roomId, (GUESS_TIME * 1000) + 500, false);
 
         currentRoom = rooms.get(roomId); 
@@ -213,22 +205,19 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             players: cleanPlayersData(currentRoom.players)
         });
 
-        // Attente Reveal (Skip autorisé ici)
         await waitForDuration(io, rooms, roomId, REVEAL_TIME * 1000, true);
 
-        // ---------------- GESTION PAUSE ----------------
-        // Si une pause a été demandée pendant le round, on l'active maintenant
+        // ---------------- GESTION PAUSE PENDING ----------------
         if (currentRoom.isPausePending) {
+            console.log(`[GAME] ⏸️ PAUSE TRIGGERED | Room: ${roomId}`);
             currentRoom.isPaused = true;
             io.to(roomId).emit('game_paused', { isPaused: true });
             
-            // On boucle tant que c'est en pause
             while (currentRoom && currentRoom.isPaused) {
                 await new Promise(r => setTimeout(r, 500));
                 if (!rooms.has(roomId)) return;
             }
             
-            // Reprise avec compte à rebours
             io.to(roomId).emit('game_resuming', { duration: 3 });
             await new Promise(r => setTimeout(r, 3000));
             
@@ -240,6 +229,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
     // ---------------- FIN DE PARTIE ----------------
     const finalRoom = rooms.get(roomId);
     if (finalRoom && finalRoom.currentGameId === gameId) {
+        console.log(`[GAME] 🏆 GAME OVER | Room: ${roomId} | Winner: ${finalRoom.players.sort((a,b) => b.score - a.score)[0]?.username}`);
         io.to(roomId).emit('game_over', { message: "Partie terminée !" });
         finalRoom.status = 'finished';
         finalRoom.players.forEach(p => {
@@ -248,7 +238,6 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
         });
         io.to(roomId).emit('update_players', { players: cleanPlayersData(finalRoom.players) });
         
-        // Callback pour dire à index.ts de mettre à jour le lobby
         onGameEnd();
     }
 }
