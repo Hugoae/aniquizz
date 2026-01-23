@@ -1,22 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { TAG_DEFINITIONS } from '../config/tagConfig';
 
-// Instance unique de Prisma pour le service
 const prisma = new PrismaClient();
-
-// ------------------------------------------------------------------
-// CONFIGURATION DES PLAYLISTS
-// ------------------------------------------------------------------
-// Les clés doivent correspondre aux filtres envoyés par le client
-const PLAYLIST_TAGS: Record<string, string[]> = {
-    'shonen': ['Shonen', 'Action', 'Adventure'],
-    'isekai': ['Isekai', 'Fantasy'],
-    'romance': ['Romance', 'Drama', 'Shojo'],
-    'action': ['Action', 'Thriller', 'Super Power'], 
-    'scifi': ['Sci-Fi', 'Mecha', 'Space'],          
-    'slice': ['Slice of Life', 'Comedy', 'School'], 
-    'top-50': [], // Géré par popularité
-    'decades': [] // Géré par année
-};
 
 // Types pour les filtres
 interface SongFilters {
@@ -33,17 +18,12 @@ interface AnimeData {
     altNames: string[];
 }
 
-/**
- * Récupère la liste complète des animes pour l'autocomplete côté client.
- */
 export const getAllAnimeNames = async (): Promise<AnimeData[]> => {
     const animes = await prisma.anime.findMany({
         select: { 
             name: true, 
             altNames: true,
-            franchise: {
-                select: { name: true }
-            }
+            franchise: { select: { name: true } }
         }
     });
 
@@ -55,8 +35,7 @@ export const getAllAnimeNames = async (): Promise<AnimeData[]> => {
 };
 
 /**
- * Pioche des sons aléatoires en base de données selon les critères.
- * CORRECTION MAJEURE: Recherche dans Franchise.genres ET Anime.tags
+ * Pioche des sons aléatoires.
  */
 export const getRandomSongs = async (count: number, filters?: SongFilters) => {
     const whereClause: any = {};
@@ -80,51 +59,35 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
 
     // 3. Filtre Playlist Spéciales
     if (filters?.playlist) {
-        // Logique par Tags/Genres
-        if (PLAYLIST_TAGS[filters.playlist] && PLAYLIST_TAGS[filters.playlist].length > 0) {
-            const tags = PLAYLIST_TAGS[filters.playlist];
-            
-            // FIX: On cherche si les tags sont présents dans l'Anime OU dans la Franchise parente
+        const playlistKey = filters.playlist;
+
+        if (playlistKey === 'top-50') {
+            whereClause.anime = { ...(whereClause.anime || {}), popularity: { gte: 80 } };
+        }
+        else if (playlistKey === 'decades' && filters.decade) {
+            const startYear = parseInt(filters.decade);
+            whereClause.anime = {
+                ...(whereClause.anime || {}),
+                seasonYear: { gte: startYear, lt: startYear + 10 }
+            };
+        }
+        else if (TAG_DEFINITIONS[playlistKey]) {
+            const targetTags = TAG_DEFINITIONS[playlistKey].dbValues;
             whereClause.anime = {
                 OR: [
-                    { tags: { hasSome: tags } },              // Cas 1: Tag spécifique sur l'anime
-                    { franchise: { genres: { hasSome: tags } } } // Cas 2: Genre global sur la franchise
+                    { tags: { hasSome: targetTags } },
+                    { franchise: { genres: { hasSome: targetTags } } }
                 ]
-            };
-        }
-
-        // Par Popularité
-        if (filters.playlist === 'top-50') {
-            // On s'assure de garder les filtres existants s'il y en a
-            whereClause.anime = {
-                ...(whereClause.anime || {}),
-                popularity: { gte: 80 }
-            };
-        }
-
-        // Par Décennie
-        if (filters.playlist === 'decades' && filters.decade) {
-            const startYear = parseInt(filters.decade);
-            const endYear = startYear + 10;
-            
-            whereClause.anime = {
-                ...(whereClause.anime || {}),
-                seasonYear: {
-                    gte: startYear,
-                    lt: endYear
-                }
             };
         }
     }
 
-    // 4. Mode "Watched" (Liste perso)
+    // 4. Mode "Watched"
     if (filters?.watchedIds && filters.watchedIds.length > 0) {
         whereClause.animeId = { in: filters.watchedIds };
     }
 
     // --- ALGORITHME DE LOTERIE ---
-    
-    // Étape A : Récupérer TOUS les IDs correspondants
     const allSongIds = await prisma.song.findMany({
         where: whereClause,
         select: { id: true }
@@ -132,22 +95,13 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
 
     if (allSongIds.length === 0) return [];
 
-    // Étape B : Mélanger les IDs
     const shuffledIds = allSongIds.sort(() => 0.5 - Math.random());
+    const selectedIds = shuffledIds.slice(0, count).map(s => s.id);
 
-    // Étape C : Garder uniquement le nombre nécessaire
-    const selectedIdsObj = shuffledIds.slice(0, count);
-    const selectedIds = selectedIdsObj.map(s => s.id);
-
-    // Étape D : Récupérer les détails complets
     const songs = await prisma.song.findMany({
         where: { id: { in: selectedIds } },
         include: {
-            anime: {
-                include: {
-                    franchise: true
-                }
-            }
+            anime: { include: { franchise: true } }
         }
     });
 
@@ -155,8 +109,8 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
 };
 
 /**
- * Génère 3 mauvaises réponses pour le mode QCM.
- * Essaie de prendre des animes du même thème si possible.
+ * GÉNÉRATION INTELLIGENTE DES CHOIX
+ * Corrige le problème "One Piece en mode Hard"
  */
 export const generateChoices = async (
     correctTarget: string, 
@@ -168,35 +122,67 @@ export const generateChoices = async (
         name: { not: correctTarget }
     };
 
-    // Cohérence des pièges (Playlist)
+    // 1. COHÉRENCE PLAYLIST (Déjà présent)
     if (filters?.playlist) {
-        if (PLAYLIST_TAGS[filters.playlist] && PLAYLIST_TAGS[filters.playlist].length > 0) {
-             // Même correction ici : on cherche dans Anime OU Franchise pour les pièges
+        if (TAG_DEFINITIONS[filters.playlist]) {
+             const targetTags = TAG_DEFINITIONS[filters.playlist].dbValues;
              whereClause.OR = [
-                { tags: { hasSome: PLAYLIST_TAGS[filters.playlist] } },
-                { franchise: { genres: { hasSome: PLAYLIST_TAGS[filters.playlist] } } }
+                { tags: { hasSome: targetTags } },
+                { franchise: { genres: { hasSome: targetTags } } }
              ];
         }
-        if (filters.playlist === 'decades' && filters.decade) {
+        else if (filters.playlist === 'decades' && filters.decade) {
             const startYear = parseInt(filters.decade);
             whereClause.seasonYear = { gte: startYear, lt: startYear + 10 };
         }
     }
 
-    const randomAnimes = await prisma.anime.findMany({
+    // 2. COHÉRENCE DE DIFFICULTÉ (NOUVEAU !)
+    // Si on joue en 'hard', on évite de proposer des animes ultra populaires
+    if (filters?.difficulty && filters.difficulty.length > 0) {
+        
+        // Mode HARD ou INSANE -> On cherche des leurres peu connus
+        if (filters.difficulty.includes('hard') || filters.difficulty.includes('insane')) {
+            // On exclut les animes trop populaires (> 75 de popularité)
+            // Cela évite d'avoir "Naruto" comme proposition face à un anime inconnu
+            whereClause.popularity = { lt: 75 }; 
+        } 
+        
+        // Mode EASY -> On cherche des leurres connus
+        else if (filters.difficulty.includes('easy') && !filters.difficulty.includes('hard')) {
+            // On force les leurres à être un minimum connus (> 30)
+            whereClause.popularity = { gte: 30 };
+        }
+    }
+
+    // TENTATIVE 1 : Recherche stricte (Bonne playlist + Bonne difficulté)
+    let randomAnimes = await prisma.anime.findMany({
         where: whereClause,
         select: { name: true, franchise: { select: { name: true } } },
         take: 60
     });
 
-    // Fallback si pas assez d'animes trouvés
+    // TENTATIVE 2 (FALLBACK) : Si pas assez de choix, on relâche la contrainte de popularité
     if (randomAnimes.length < 3) {
+        // On garde la cohérence de playlist, mais on enlève le filtre de popularité
+        const { popularity, ...relaxedWhere } = whereClause;
+        
         const fallbackAnimes = await prisma.anime.findMany({
-            where: { name: { not: correctTarget } },
+            where: relaxedWhere, // Plus de filtre popularity ici
             select: { name: true, franchise: { select: { name: true } } },
             take: 20
         });
         randomAnimes.push(...fallbackAnimes);
+    }
+    
+    // TENTATIVE 3 (DÉSESPOIR) : Si vraiment rien (playlist vide ?), on prend n'importe quoi
+    if (randomAnimes.length < 3) {
+        const anyAnimes = await prisma.anime.findMany({
+            where: { name: { not: correctTarget } },
+            select: { name: true, franchise: { select: { name: true } } },
+            take: 10
+        });
+        randomAnimes.push(...anyAnimes);
     }
 
     const candidates = randomAnimes.map(a => 
@@ -206,12 +192,12 @@ export const generateChoices = async (
     const uniqueCandidates = [...new Set(candidates)].filter(c => c !== correctTarget);
     const wrongChoices = uniqueCandidates.sort(() => 0.5 - Math.random()).slice(0, 3);
     
-    const finalChoices = [...wrongChoices, correctTarget];
-    return finalChoices.sort(() => 0.5 - Math.random());
+    return [...wrongChoices, correctTarget].sort(() => 0.5 - Math.random());
 };
 
 /**
- * Génère le mode DUO (50/50).
+ * MODE DUO (50/50)
+ * On s'assure de ne pas mettre un fallback stupide comme "Naruto" si possible
  */
 export const generateDuo = async (
     correctItem: string, 
@@ -219,7 +205,13 @@ export const generateDuo = async (
 ): Promise<string[]> => {
     const choices = await choicesPromise;
     const wrongChoices = choices.filter(c => c !== correctItem);
-    const randomWrong = wrongChoices[Math.floor(Math.random() * wrongChoices.length)] || "Naruto";
+    
+    // On prend un mauvais choix parmi ceux générés intelligemment ci-dessus
+    let randomWrong = wrongChoices[Math.floor(Math.random() * wrongChoices.length)];
+    
+    // Si jamais la liste est vide (bug extrême), on met un truc générique, sinon le choix intelligent
+    if (!randomWrong) randomWrong = "Unknown Anime";
+
     return [correctItem, randomWrong].sort(() => 0.5 - Math.random());
 };
 
