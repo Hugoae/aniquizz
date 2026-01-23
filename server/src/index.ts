@@ -38,14 +38,35 @@ const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
   }
 });
 
-app.use(cors());
+// Configuration CORS Express
+app.use(cors({
+    origin: "*", // A restreindre en prod idéalement (ex: process.env.CLIENT_URL)
+    methods: ["GET", "POST"]
+}));
 app.use(express.json());
 
+// Route Health Check (Vital pour Render)
+app.get('/health', (req, res) => { res.status(200).send('OK'); });
 app.get('/', (req, res) => { res.send('👋 Server AniQuizz V1 Clean & Secure'); });
 
+// Création du serveur HTTP
 const httpServer = createServer(app);
+
+// ==================================================================
+// FIX CRITIQUE POUR RENDER / LOAD BALANCERS (ERREURS 502)
+// ==================================================================
+// Les load balancers ont souvent un timeout de 60s. Node par défaut est à 5s.
+// Si Node coupe la connexion avant le LB, le LB renvoie une 502.
+httpServer.keepAliveTimeout = 65000; // 65 secondes
+httpServer.headersTimeout = 66000;   // 66 secondes (doit être > keepAliveTimeout)
+
 const io = new Server(httpServer, {
-    cors: { origin: "*", methods: ["GET", "POST"] }
+    cors: { 
+        origin: "*", 
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['websocket', 'polling'] // Force le support des deux
 });
 
 // Stockage en mémoire des salles actives
@@ -377,8 +398,13 @@ io.on('connection', (socket: Socket) => {
     });
 
     socket.on('get_anime_list', async () => {
-        const list = await getAllAnimeNames();
-        socket.emit('anime_list', list);
+        try {
+            const list = await getAllAnimeNames();
+            socket.emit('anime_list', list);
+        } catch (error) {
+            console.error("Erreur récupération anime list:", error);
+            socket.emit('error', { message: "Erreur lors de la récupération de la liste" });
+        }
     });
 
     socket.on('disconnect', () => {
@@ -398,6 +424,42 @@ io.on('connection', (socket: Socket) => {
     });
 });
 
-httpServer.listen(process.env.PORT || 3001, () => {
-    console.log(`🚀 Server ready on port ${process.env.PORT || 3001}`);
+// ==================================================================
+// LANCEMENT ET GESTION ARRÊT (Graceful Shutdown)
+// ==================================================================
+const PORT = process.env.PORT || 3001;
+
+httpServer.listen(PORT, () => {
+    console.log(`🚀 Server ready on port ${PORT}`);
+    console.log(`ℹ️ Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Gestion propre de l'arrêt (évite que Render ne tue le processus brutalement)
+const gracefulShutdown = async () => {
+    console.log('🔄 Received kill signal, shutting down gracefully');
+    
+    io.close(() => {
+        console.log('🔌 Socket.io server closed');
+    });
+
+    httpServer.close(async () => {
+        console.log('🛑 HTTP server closed');
+        try {
+            await prisma.$disconnect();
+            console.log('💾 Prisma disconnected');
+            process.exit(0);
+        } catch (e) {
+            console.error('Error during cleanup', e);
+            process.exit(1);
+        }
+    });
+    
+    // Force close after 10s if hangs
+    setTimeout(() => {
+        console.error('Could not close connections in time, forcefully shutting down');
+        process.exit(1);
+    }, 10000);
+};
+
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
