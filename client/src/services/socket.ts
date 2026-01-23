@@ -1,15 +1,16 @@
 import { io, Socket } from "socket.io-client";
 
-// ✅ CORRECTION PORT : On se connecte au serveur Node (3001), pas au serveur Vite (3000)
-// En PROD, undefined (pour utiliser le même domaine). En DEV, on force le port 3001.
-const URL = import.meta.env.PROD ? undefined : "http://localhost:3001";
+// ✅ CONFIGURATION DE L'URL
+// 1. On regarde si une URL serveur est définie dans l'environnement (Vercel)
+// 2. Sinon, en DEV, on utilise localhost:3001
+// 3. Sinon (fallback), on tente le domaine courant (undefined)
+const URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.PROD ? undefined : "http://localhost:3001");
 
-// --- NOUVEAU : Fonction pour récupérer le token Supabase ---
+console.log("🔌 Tentative de connexion Socket vers :", URL || "Domaine courant");
+
+// --- Fonction pour récupérer le token Supabase ---
 const getSupabaseToken = () => {
   try {
-    // Supabase stocke le token dans le localStorage sous une clé spécifique
-    // Le format est généralement : sb-<project-ref>-auth-token
-    // On cherche n'importe quelle clé qui ressemble à ça
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
@@ -27,9 +28,11 @@ const getSupabaseToken = () => {
 };
 
 export const socket: Socket = io(URL || "http://localhost:3001", {
-  autoConnect: false, // On connectera manuellement quand l'app se lance
+  autoConnect: false,
+  reconnection: true,        // Essayer de se reconnecter
+  reconnectionAttempts: 5,   // 5 essais max
+  transports: ['websocket'], // Force websocket pour éviter les erreurs CORS
   auth: (cb) => {
-    // À chaque connexion/reconnexion, on envoie le token à jour
     const token = getSupabaseToken();
     cb({ token });
   }
