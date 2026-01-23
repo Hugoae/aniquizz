@@ -174,17 +174,14 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             },
             videoStartTime: randomStartTime,
             responseType,
-            // choices et duo sont retirés d'ici pour être personnalisés
             players: cleanPlayersData(currentRoom.players)
         };
 
-        // Envoi INDIVIDUEL (Unicast) pour mélanger les choix
+        // Envoi INDIVIDUEL (Unicast)
         currentRoom.players.forEach(player => {
-            // Mélange unique pour ce joueur
             const playerChoices = canonicalChoices.length > 0 ? shuffleArray(canonicalChoices) : [];
             const playerDuo = canonicalDuo.length > 0 ? shuffleArray(canonicalDuo) : [];
 
-            // Correction type string pour l'ID socket
             io.to(String(player.id)).emit('round_start', {
                 ...commonPayload,
                 choices: playerChoices,
@@ -192,7 +189,9 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             });
         });
 
-        await waitForDuration(io, rooms, roomId, (GUESS_TIME * 1000) + 500, false);
+        // MODIFICATION ICI : On autorise le skip UNIQUEMENT si le joueur est seul (Solo)
+        const isSolo = currentRoom.players.length === 1;
+        await waitForDuration(io, rooms, roomId, (GUESS_TIME * 1000) + 500, isSolo);
 
         currentRoom = rooms.get(roomId); 
         if (!currentRoom) return;
@@ -220,15 +219,10 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
 
         // ---------------- PHASE 3 : REVEAL (RÉPONSE) ----------------
         
-        // 1. Récupération et Fusion des Tags (Genre Franchise + Tags Anime)
-        // Note: Si 'genres' est souligné en rouge, lance 'npx prisma generate'
         const franchiseGenres = currentDbSong.anime.franchise?.genres || [];
         const animeTags = currentDbSong.anime.tags || [];
-        
-        // On fusionne et on dédoublonne
         const mergedTags = Array.from(new Set([...franchiseGenres, ...animeTags]));
 
-        // Le reveal est le même pour tout le monde
         io.to(roomId).emit('round_reveal', {
             startTime: Date.now(),
             duration: REVEAL_TIME,
@@ -243,7 +237,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
                 cover: currentDbSong.anime.coverImage,
                 siteUrl: currentDbSong.anime.siteUrl,
                 year: currentDbSong.anime.seasonYear,
-                tags: mergedTags // ICI C'EST CORRIGÉ
+                tags: mergedTags
             },
             correctAnswer: correctTarget,
             players: cleanPlayersData(currentRoom.players)

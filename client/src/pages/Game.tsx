@@ -98,7 +98,6 @@ interface RoundHistory {
 // UTILITAIRES
 // ------------------------------------------------------------------
 
-// Normalise le nom des joueurs pour éviter les vides
 const safePlayerName = (p: any) => {
     if (p.name && p.name.trim() !== "") return p.name;
     if (p.username && p.username.trim() !== "") return p.username;
@@ -108,7 +107,6 @@ const safePlayerName = (p: any) => {
 const SUPABASE_PROJECT_URL = "https://qjnfdhmvvledhtwwfrzb.supabase.co"; 
 const BUCKET_NAME = "videos";
 
-// Génère l'URL de la vidéo depuis Supabase Storage
 const getVideoUrl = (key: string | undefined | null) => {
   if (!key) return "";
   if (key.startsWith('http')) return key;
@@ -139,20 +137,17 @@ export default function Game() {
       precision: 'franchise'
   };
 
-  // Détection Mode Solo vs Multi
   const gameMode = (initialPlayers.length === 1 && initialState.mode !== 'multiplayer') ? 'solo' : 'multiplayer';
   
-  // Données initiales (si envoyées par le lobby)
   const firstVideoKey = initialState.firstVideo || initialState.gameData?.firstVideo || "";
   const firstChoices = initialState.gameData?.firstChoices || []; 
   const firstDuoChoices = initialState.gameData?.firstDuoChoices || [];
 
-  // --- REFS & STATES TECHNIQUES ---
   const [targetGameStart] = useState(() => initialState.gameStartTime || (Date.now() + 8000));
-  const isReturningToLobbyRef = useRef(false); // Flag pour éviter le leave_room involontaire
+  const isReturningToLobbyRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const volumeRef = useRef(20); // MODIFIÉ : VOLUME PAR DÉFAUT 20%
+  const volumeRef = useRef(20);
   const isMutedRef = useRef(false);
 
   // --- STATES JEU ---
@@ -164,7 +159,6 @@ export default function Game() {
 
   const [myProfile, setMyProfile] = useState({ username: profile?.username || 'Moi', avatar: profile?.avatar || 'player1' });
 
-  // Timers & Rounds
   const [loadingCount, setLoadingCount] = useState(() => {
     const remaining = Math.ceil((targetGameStart - Date.now()) / 1000);
     return remaining > 0 ? remaining : 0;
@@ -173,7 +167,6 @@ export default function Game() {
   const [totalRounds, setTotalRounds] = useState(settings.soundCount);
   const [timeLeft, setTimeLeft] = useState(0);
   
-  // Données Round Actuel
   const [currentSong, setCurrentSong] = useState<ServerSong | null>(null);
   const [nextVideoKey, setNextVideoKey] = useState<string | null>(null);
   const [answer, setAnswer] = useState('');
@@ -181,18 +174,15 @@ export default function Game() {
   const [pointsEarned, setPointsEarned] = useState<number | null>(null);
   const [showPointsAnimation, setShowPointsAnimation] = useState(false);
   
-  // Modes de réponse
   const [inputMode, setInputMode] = useState<'typing' | 'carre' | 'duo'>('typing');
   const [choices, setChoices] = useState<string[]>(firstChoices); 
   const [storedQcmChoices, setStoredQcmChoices] = useState<string[]>(firstChoices);
   const [storedDuoChoices, setStoredDuoChoices] = useState<string[]>(firstDuoChoices);
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
   
-  // Historique & Données Globales
   const [gameHistory, setGameHistory] = useState<RoundHistory[]>([]);
   const [animeList, setAnimeList] = useState<AnimeDataItem[]>([]);
 
-  // États Pause & Skip
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [isPausePending, setIsPausePending] = useState(false); 
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
@@ -203,9 +193,8 @@ export default function Game() {
   const [hasVotedPause, setHasVotedPause] = useState(false);
   const [hasVotedSkip, setHasVotedSkip] = useState(false);
   
-  // UI States
   const [isLiked, setIsLiked] = useState(false);
-  const [volume, setVolume] = useState(20); // MODIFIÉ : UI Volume synchro avec Ref
+  const [volume, setVolume] = useState(20);
   const [isMuted, setIsMuted] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -233,7 +222,6 @@ export default function Game() {
   }, [volume, isMuted]);
 
   useEffect(() => {
-    // Préchargement de la première vidéo
     if (videoRef.current && firstVideoKey && phase === 'loading') { 
         videoRef.current.src = getVideoUrl(firstVideoKey); 
         videoRef.current.load(); 
@@ -244,7 +232,6 @@ export default function Game() {
   // EFFETS SOCKET & JEU
   // ------------------------------------------------------------------
 
-  // 1. Initialisation Profil & Liste Animes
   useEffect(() => {
     if (profile) setMyProfile({ username: profile.username, avatar: profile.avatar });
     else {
@@ -258,21 +245,16 @@ export default function Game() {
     return () => { socket.off('anime_list'); socket.off('user_profile'); }
   }, [profile]);
 
-  // 2. Gestion de la déconnexion
   useEffect(() => {
       return () => {
-        // En multi, si on ne retourne pas explicitement au lobby, on quitte la room
         if (roomId && !isReturningToLobbyRef.current) {
             socket.emit('leave_room', { roomId });
         }
-        // Nettoyage des écouteurs
         socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
       };
   }, []);
 
-  // 3. Écouteurs Socket Principaux
   useEffect(() => {
-    // Nettoyage préventif
     socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
 
     const handlePlayerUpdate = (data: { players: any[] }) => { 
@@ -281,7 +263,6 @@ export default function Game() {
     socket.on('update_players', handlePlayerUpdate);
     socket.on('player_left', handlePlayerUpdate);
 
-    // --- DÉBUT DU ROUND ---
     socket.on('round_start', (data) => {
       setPhase('guessing'); setPhaseStartTime(data.startTime); setPhaseDuration(data.duration); setProgress(100);
       setCurrentRound(data.round); setTotalRounds(data.totalRounds); 
@@ -289,32 +270,27 @@ export default function Game() {
       setAnswer(''); setSuggestions([]); setSubmittedAnswer(null); setPointsEarned(null); setShowPointsAnimation(false); setHasVotedSkip(false); setIsLiked(false); setNextVideoKey(null);
       setSkipVotes(0);
 
-      // Gestion des choix QCM/Duo stockés
       if (data.choices && Array.isArray(data.choices)) setStoredQcmChoices(data.choices);
       if (data.duo && Array.isArray(data.duo)) setStoredDuoChoices(data.duo);
 
-      // Mode d'input
       if (settings.responseType === 'qcm') { setInputMode('carre'); setChoices(data.choices || []); }
       else if (settings.responseType === 'typing') { setInputMode('typing'); setChoices([]); }
       else { setInputMode('typing'); if (data.choices) setStoredQcmChoices(data.choices); }
 
-      // Reset visuel joueurs
       setPlayers(prev => prev.map(p => ({ ...p, currentAnswer: null, isCorrect: null })));
       
-      // Lancement Vidéo avec StartTime aléatoire
       const newVideoKey = data.song?.videoKey || data.videoKey || data.video; 
       if (videoRef.current && newVideoKey) {
         videoRef.current.pause(); 
         const startTime = data.videoStartTime || 0;
         const fullUrl = `${getVideoUrl(newVideoKey)}#t=${startTime}`;
         videoRef.current.src = fullUrl;
-        videoRef.current.currentTime = startTime; // Force seek
+        videoRef.current.currentTime = startTime; 
         videoRef.current.load();
         safePlayVideo();
       }
     });
 
-    // --- RÉVÉLATION (REVEAL) ---
     socket.on('round_reveal', async (data: RevealData) => {
       setPhase('revealed'); setPhaseStartTime(data.startTime); setPhaseDuration(data.duration); setProgress(100);
       setCurrentSong(data.song); setSuggestions([]);
@@ -323,7 +299,6 @@ export default function Game() {
       if (data.nextVideo) setNextVideoKey(data.nextVideo);
       if (videoRef.current && videoRef.current.paused) safePlayVideo();
 
-      // Mise à jour historique & scores
       const serverPlayers = data.players || [];
       const myPlayer = serverPlayers.find((p: any) => String(p.id) === String(socket.id));
       
@@ -351,7 +326,6 @@ export default function Game() {
       });
     });
 
-    // --- AUTRES EVENTS ---
     socket.on('vote_update', (data: any) => {
       if (data.type === 'pause') { 
           setPauseVotes(data.count); setPauseRequired(data.required); 
@@ -374,7 +348,6 @@ export default function Game() {
 
     socket.on('game_over', (data: any) => { setPhase('ended'); });
 
-    // MODIFIÉ : Gestion d'erreur critique (retour lobby auto)
     const onError = (err: { message: string }) => { 
         toast.error(err.message || "Une erreur est survenue"); 
         if (phase === 'loading') {
@@ -392,7 +365,6 @@ export default function Game() {
   // GESTION UI & INTERACTION
   // ------------------------------------------------------------------
 
-  // Autocomplete
   useEffect(() => {
     if (answer.length >= 2) {
       const searchLower = answer.toLowerCase();
@@ -417,7 +389,6 @@ export default function Game() {
     }
   }, [answer, animeList, settings.precision]);
 
-  // Timer Progress Bar
   useEffect(() => {
     if (phase === 'loading' || isGamePaused || resumeCountdown !== null || phase === 'ended') return;
     const interval = setInterval(() => {
@@ -432,7 +403,6 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [phaseStartTime, phase, isGamePaused, resumeCountdown, phaseDuration]);
 
-  // Loading Timer (Intro)
   useEffect(() => {
     if (phase === 'loading') {
       const interval = setInterval(() => {
@@ -449,7 +419,6 @@ export default function Game() {
   const handleAction = (val: string) => {
     if (phase === 'revealed') return;
     
-    // Mise à jour locale optimiste
     setSubmittedAnswer(val);
     setSuggestions([]);
     setPlayers(prev => prev.map(p => (String(p.id) === String(socket.id)) ? { ...p, currentAnswer: val } : p));
@@ -464,8 +433,10 @@ export default function Game() {
   const handleSwitchToDuo = () => { setInputMode('duo'); setChoices(storedDuoChoices); };
   const handleVotePause = () => { setHasVotedPause(v => !v); socket.emit('vote_pause', { roomId }); };
   
+  // MODIFICATION ICI : Gestion du skip en phase Guessing (Solo uniquement)
   const handleVoteSkip = () => { 
-      if(phase === 'revealed') {
+      // On autorise si on est en reveal OU (en guessing ET en solo)
+      if (phase === 'revealed' || (phase === 'guessing' && gameMode === 'solo')) {
           setHasVotedSkip(v => !v); 
           socket.emit('vote_skip', { roomId }); 
       }
@@ -482,7 +453,6 @@ export default function Game() {
   };
 
   const handleReplay = () => {
-      // Rejouer en solo = recréer une room
       isReturningToLobbyRef.current = true;
       const soloRoomPayload = {
         roomName: "Solo-" + Date.now(), username: profile?.username || "Joueur Solo", avatar: profile?.avatar || "player1", userId: user?.id,
@@ -576,6 +546,17 @@ export default function Game() {
                 
                 <video ref={videoRef} playsInline preload="auto" className={cn("w-full h-full object-cover transition-opacity duration-500", phase === 'revealed' ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")} />
                 
+                {/* NOUVEAU : BOUTON PASSER (En Guessing Solo) */}
+                {phase === 'guessing' && gameMode === 'solo' && (
+                    <div className="absolute bottom-4 right-4 z-30 animate-fade-in">
+                        <Button variant="secondary" onClick={handleVoteSkip} className="gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white">
+                            <SkipForward className="h-4 w-4" /> 
+                            Passer
+                        </Button>
+                    </div> 
+                )}
+
+                {/* BOUTON SUIVANT (En Reveal) */}
                 {phase === 'revealed' && ( 
                     <div className="absolute bottom-4 right-4 z-30">
                         <Button variant="default" onClick={handleVoteSkip} className="gap-2 shadow-lg shadow-purple-500/20">
@@ -613,7 +594,6 @@ export default function Game() {
                         <div key={p.id} className="relative w-full max-w-[220px]">
                             {phase === 'revealed' && ( 
                                 <div className="absolute -top-12 left-0 right-0 flex justify-center z-10">
-                                    {/* MODIFIÉ : Truncate pour éviter le chevauchement */}
                                     <div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background truncate max-w-[120px]", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>
                                         {p.currentAnswer || "..."}
                                     </div>

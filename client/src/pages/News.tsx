@@ -17,8 +17,8 @@ const roadmapData = [
     date: "Janvier 2026"
   },
   {
-    title: "Intégration AniList",
-    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vu.",
+    title: "Intégration AniList & Profil",
+    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vu. Mise en place d'un système de profil avec statistiques.",
     status: "in-progress",
     date: "Q1 2026"
   },
