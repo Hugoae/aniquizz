@@ -1,0 +1,173 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- ENUMS ---
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+// Pour savoir si c'est un like ou un dislike
+enum VoteType {
+  LIKE
+  DISLIKE
+}
+
+// --- UTILISATEURS (PROFIL) ---
+model Profile {
+  id        String   @id @default(uuid()) 
+  username  String   @unique
+  email     String   @unique 
+  avatar    String   @default("default_avatar.png")
+  // NIVEAU & PROGRESSION
+  level     Int      @default(1)
+  xp        Int      @default(0)
+  // INTEGRATIONS EXTERNES (Pour jouer avec sa liste)
+  anilistUsername   String?
+  lastListSync      DateTime?
+
+  // RÔLE
+  role      UserRole @default(USER)
+  // STATS
+  gamesPlayed Int @default(0)
+  gamesWon    Int @default(0)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // RELATIONS
+  games     GameParticipant[] 
+  votes     SongVote[]
+  history   SongHistory[]
+  myList    PlayerAnimeList[]
+}
+
+// --- PARTIES (SESSIONS) ---
+model GameSession {
+  id          String   @id @default(uuid())
+  mode        String   
+  startedAt   DateTime @default(now())
+  endedAt     DateTime?
+  
+  participants GameParticipant[]
+}
+
+model GameParticipant {
+  id        String   @id @default(uuid())
+  
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id])
+  
+  gameId    String
+  game      GameSession @relation(fields: [gameId], references: [id])
+  
+  score     Int      @default(0)
+  rank      Int?     
+  isWinner  Boolean  @default(false)
+}
+
+// --- DONNÉES DU JEU ---
+
+model Franchise {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique 
+  animes    Anime[]
+}
+
+model Anime {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique 
+  altNames  String[] 
+  siteUrl   String?
+  studio    String?
+  coverImage String?
+  popularity Int @default(0)
+  tags       String[]
+  format     String?
+  status     String?
+  seasonYear Int?
+  
+  franchiseId Int?
+  franchise   Franchise? @relation(fields: [franchiseId], references: [id])
+  isLocked    Boolean @default(false)
+  songs       Song[]
+  playerLists PlayerAnimeList[]
+}
+
+model Song {
+  id        Int      @id @default(autoincrement())
+  title     String
+  artist    String
+  type      String
+  videoKey  String   @unique
+  tags      String[]
+  sourceUrl String?
+  duration  Int?
+  
+  difficulty String @default("medium")
+  episodeRange String?
+  
+  animeId   Int
+  isLocked  Boolean @default(false)
+
+  // RELATIONS
+  anime     Anime    @relation(fields: [animeId], references: [id])
+  votes     SongVote[]
+  history   SongHistory[]
+}
+
+
+model SongVote {
+  id        String   @id @default(uuid())
+  
+  type      VoteType // LIKE ou DISLIKE
+  
+  createdAt DateTime @default(now())
+
+  // Qui a voté ?
+  profileId String
+  profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Sur quel son ?
+  songId    Int
+  song      Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, songId])
+}
+
+model SongHistory {
+  id        String   @id @default(uuid())
+  
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  songId    Int
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  
+  listenedAt DateTime @default(now())
+
+  @@unique([profileId, songId])
+}
+
+model PlayerAnimeList {
+  id        String   @id @default(uuid())
+  
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  animeId   Int
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  
+  status    String   // "COMPLETED", "WATCHING"...
+
+  @@unique([profileId, animeId])
+}

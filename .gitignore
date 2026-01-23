@@ -1,0 +1,22 @@
+# Dépendances (NE JAMAIS ENVOYER)
+node_modules/
+*/node_modules/
+
+# Variables d'environnement (SÉCURITÉ)
+.env
+.env.local
+.env.*.local
+
+# Builds de production
+dist/
+build/
+.output/
+
+# Logs et Système
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
