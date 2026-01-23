@@ -50,6 +50,7 @@ interface ServerSong {
   sourceUrl?: string;
   difficulty?: string;
   year?: number;
+  tags?: string[];
 }
 
 interface Player { 
@@ -598,6 +599,7 @@ export default function Game() {
                       siteUrl={currentSong?.siteUrl} 
                       sourceUrl={currentSong?.sourceUrl} 
                       isRevealed={phase === 'revealed'} 
+                      tags={currentSong?.tags}
                   />
               </div>
 

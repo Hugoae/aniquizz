@@ -9,6 +9,22 @@ import {
     generateDuo 
 } from './gameService';
 
+/**
+ * Fonction utilitaire pour mélanger un tableau (Fisher-Yates Shuffle).
+ * Utilisée pour donner un ordre visuel différent à chaque joueur tout en gardant les mêmes items.
+ */
+function shuffleArray<T>(array: T[]): T[] {
+    const newArr = [...array];
+    for (let i = newArr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArr[i], newArr[j]] = [newArr[j], newArr[i]];
+    }
+    return newArr;
+}
+
+/**
+ * Nettoie les données sensibles des joueurs avant envoi au client
+ */
 export function cleanPlayersData(players: ExtendedPlayer[]) {
     return players.map(p => ({
         id: p.id,
@@ -60,7 +76,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
     const precisionMode = settings.precision || 'franchise'; 
     const TOTAL_ROUNDS = parseInt(String(settings.soundCount), 10) || 10;
     const GUESS_TIME = parseInt(String(settings.guessDuration), 10) || 15;
-    const REVEAL_TIME = 10; // MODIFIÉ : 10 secondes (au lieu de 15)
+    const REVEAL_TIME = 10; 
     const TV_SIZE_DURATION = 89;
 
     console.log(`[GAME] 🏁 LOOP START | Room: ${roomId} | Rounds: ${TOTAL_ROUNDS} | Difficulty: ${settings.difficulty}`);
@@ -85,7 +101,6 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
 
     if (gameSongs.length === 0) {
         console.error(`[GAME] ❌ ERROR NO SONGS | Room: ${roomId}`);
-        // On envoie un event spécifique pour dire au client de quitter l'écran de chargement
         io.to(roomId).emit('error', { message: "Aucun son trouvé avec ces critères (Playlist vide ?)" });
         io.to(roomId).emit('game_over', { message: "Annulé : Pas de sons trouvés." });
         room.status = 'waiting';
@@ -113,6 +128,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             p.roundPoints = 0;
         });
 
+        // Mise à jour des joueurs (Score, Reset Ready, etc.)
         io.to(roomId).emit('update_players', { players: cleanPlayersData(currentRoom.players) });
         io.to(roomId).emit('vote_update', { type: 'skip', count: 0, required: Math.ceil(currentRoom.players.length / 2) });
 
@@ -124,18 +140,18 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
 
         console.log(`[GAME] 🎵 ROUND ${i+1} | Room: ${roomId} | Anime: ${correctTarget} | Title: ${currentDbSong.title}`);
 
-        // Génération des choix QCM/Duo
+        // Génération des choix QCM/Duo (CANONIQUES = Mêmes pour tout le monde)
         const responseType = settings.responseType || "typing";
-        let choices: string[] = [];
-        let duo: string[] = [];
+        let canonicalChoices: string[] = [];
+        let canonicalDuo: string[] = [];
 
         const choicesPromise = generateChoices(correctTarget, precisionMode, gameFilters);
 
         if (responseType === "qcm" || responseType === "mix") {
-            choices = await choicesPromise;
+            canonicalChoices = await choicesPromise;
         } 
         if (responseType === "duo" || responseType === "mix") {
-            duo = await generateDuo(correctTarget, choicesPromise);
+            canonicalDuo = await generateDuo(correctTarget, choicesPromise);
         }
 
         const totalPlayTimeNeeded = GUESS_TIME + REVEAL_TIME + 5;
@@ -143,7 +159,9 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
         const randomStartTime = Math.floor(Math.random() * maxStartTime);
 
         // ---------------- PHASE 2 : GUESS (DEVINETTE) ----------------
-        io.to(roomId).emit('round_start', {
+        
+        // On prépare les données communes
+        const commonPayload = {
             round: i + 1,
             totalRounds: TOTAL_ROUNDS,
             startTime: Date.now(),
@@ -156,9 +174,21 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             },
             videoStartTime: randomStartTime,
             responseType,
-            choices,
-            duo,
+            // choices et duo sont retirés d'ici pour être personnalisés
             players: cleanPlayersData(currentRoom.players)
+        };
+
+        // Envoi INDIVIDUEL (Unicast) pour mélanger les choix
+        currentRoom.players.forEach(player => {
+            // Mélange unique pour ce joueur
+            const playerChoices = canonicalChoices.length > 0 ? shuffleArray(canonicalChoices) : [];
+            const playerDuo = canonicalDuo.length > 0 ? shuffleArray(canonicalDuo) : [];
+
+            io.to(String(player.id)).emit('round_start', {
+                ...commonPayload,
+                choices: playerChoices,
+                duo: playerDuo
+            });
         });
 
         await waitForDuration(io, rooms, roomId, (GUESS_TIME * 1000) + 500, false);
@@ -188,6 +218,7 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
         io.to(roomId).emit('vote_update', { type: 'skip', count: 0, required: Math.ceil(currentRoom.players.length / 2) });
 
         // ---------------- PHASE 3 : REVEAL (RÉPONSE) ----------------
+        // Le reveal est le même pour tout le monde (la bonne réponse ne change pas)
         io.to(roomId).emit('round_reveal', {
             startTime: Date.now(),
             duration: REVEAL_TIME,
