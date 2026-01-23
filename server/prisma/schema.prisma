@@ -16,7 +16,6 @@ enum UserRole {
   MODERATOR
 }
 
-// Pour savoir si c'est un like ou un dislike
 enum VoteType {
   LIKE
   DISLIKE
@@ -28,15 +27,18 @@ model Profile {
   username  String   @unique
   email     String   @unique 
   avatar    String   @default("default_avatar.png")
+  
   // NIVEAU & PROGRESSION
   level     Int      @default(1)
   xp        Int      @default(0)
-  // INTEGRATIONS EXTERNES (Pour jouer avec sa liste)
+  
+  // INTEGRATIONS
   anilistUsername   String?
   lastListSync      DateTime?
 
   // RÔLE
   role      UserRole @default(USER)
+  
   // STATS
   gamesPlayed Int @default(0)
   gamesWon    Int @default(0)
@@ -57,7 +59,6 @@ model GameSession {
   mode        String   
   startedAt   DateTime @default(now())
   endedAt     DateTime?
-  
   participants GameParticipant[]
 }
 
@@ -71,7 +72,7 @@ model GameParticipant {
   game      GameSession @relation(fields: [gameId], references: [id])
   
   score     Int      @default(0)
-  rank      Int?     
+  rank      Int?
   isWinner  Boolean  @default(false)
 }
 
@@ -79,7 +80,8 @@ model GameParticipant {
 
 model Franchise {
   id        Int      @id @default(autoincrement())
-  name      String   @unique 
+  name      String   @unique
+  genres    String[] // C'EST ICI QUE TOUT SE JOUE : Les genres globaux
   animes    Anime[]
 }
 
@@ -91,13 +93,14 @@ model Anime {
   studio    String?
   coverImage String?
   popularity Int @default(0)
-  tags       String[]
+  tags       String[] // Tags spécifiques (ex: Isekai, School)
   format     String?
   status     String?
   seasonYear Int?
   
   franchiseId Int?
   franchise   Franchise? @relation(fields: [franchiseId], references: [id])
+  
   isLocked    Boolean @default(false)
   songs       Song[]
   playerLists PlayerAnimeList[]
@@ -125,19 +128,14 @@ model Song {
   history   SongHistory[]
 }
 
-
 model SongVote {
   id        String   @id @default(uuid())
-  
-  type      VoteType // LIKE ou DISLIKE
-  
+  type      VoteType 
   createdAt DateTime @default(now())
 
-  // Qui a voté ?
   profileId String
   profile   Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  // Sur quel son ?
   songId    Int
   song      Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
 
@@ -146,7 +144,6 @@ model SongVote {
 
 model SongHistory {
   id        String   @id @default(uuid())
-  
   profileId String
   profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
   
@@ -167,7 +164,7 @@ model PlayerAnimeList {
   animeId   Int
   anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
   
-  status    String   // "COMPLETED", "WATCHING"...
+  status    String   
 
   @@unique([profileId, animeId])
 }

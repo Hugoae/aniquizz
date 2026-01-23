@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const DATA_FILE = path.join(__dirname, 'data/final_game_data.json');
 
 async function main() {
-  console.log(`🔥 DÉMARRAGE DU RESET & SEED (Mode Anti-Doublons)...`);
+  console.log(`🔥 DÉMARRAGE DU RESET & SEED (Mode Genres & Anti-Doublons)...`);
 
   if (!fs.existsSync(DATA_FILE)) {
     console.error(`❌ Fichier de données introuvable : ${DATA_FILE}`);
@@ -15,6 +15,7 @@ async function main() {
 
   // 1. NETTOYAGE
   console.log("🧹 Nettoyage des anciennes données...");
+  // L'ordre est important pour éviter les erreurs de contraintes de clé étrangère
   await prisma.songHistory.deleteMany();
   await prisma.songVote.deleteMany();
   await prisma.playerAnimeList.deleteMany();
@@ -31,26 +32,28 @@ async function main() {
   let totalAnimes = 0;
   let totalSongs = 0;
 
-  // Ensembles pour traquer les doublons DANS le fichier JSON
+  // Ensembles pour traquer les doublons (Sécurité supplémentaire)
   const insertedAnimeIds = new Set<number>();
   const insertedVideoKeys = new Set<string>();
 
   for (const fData of franchisesData) {
     
-    // Création Franchise (Upsert pour éviter doublon de nom de franchise)
+    // Création Franchise avec GENRES IMPORTÉS DU JSON
+    // Note: On s'assure que fData.genres existe, sinon tableau vide
     const franchise = await prisma.franchise.upsert({
       where: { name: fData.franchiseName },
-      update: {},
-      create: { name: fData.franchiseName }
+      update: {
+        genres: fData.genres || [] 
+      },
+      create: { 
+        name: fData.franchiseName,
+        genres: fData.genres || [] 
+      }
     });
     totalFranchises++;
 
     for (const aData of fData.animes) {
-      // Vérification doublon Anime ID
-      if (insertedAnimeIds.has(aData.id)) {
-        // On a déjà traité cet anime (peut-être présent dans une autre franchise du JSON ?)
-        continue; 
-      }
+      if (insertedAnimeIds.has(aData.id)) continue; 
 
       // Création Anime
       const anime = await prisma.anime.create({
@@ -68,15 +71,11 @@ async function main() {
             franchiseId: franchise.id
         }
       });
-      insertedAnimeIds.add(aData.id); // On note qu'on a fait cet anime
+      insertedAnimeIds.add(aData.id);
       totalAnimes++;
 
       for (const sData of aData.songs) {
-        // Vérification doublon VideoKey
-        if (insertedVideoKeys.has(sData.videoKey)) {
-            // Ce son existe déjà (doublon dans le JSON), on passe
-            continue;
-        }
+        if (insertedVideoKeys.has(sData.videoKey)) continue;
 
         // Création Song
         await prisma.song.create({
@@ -92,7 +91,7 @@ async function main() {
             animeId: anime.id
           }
         });
-        insertedVideoKeys.add(sData.videoKey); // On note qu'on a fait ce son
+        insertedVideoKeys.add(sData.videoKey);
         totalSongs++;
       }
     }

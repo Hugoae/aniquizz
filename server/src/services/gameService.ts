@@ -6,17 +6,16 @@ const prisma = new PrismaClient();
 // ------------------------------------------------------------------
 // CONFIGURATION DES PLAYLISTS
 // ------------------------------------------------------------------
-// Mappe les IDs de playlist (ex: 'shonen') vers les Tags en BDD
-// MODIFIÉ : Ajout de plusieurs tags par clé pour maximiser les résultats
+// Les clés doivent correspondre aux filtres envoyés par le client
 const PLAYLIST_TAGS: Record<string, string[]> = {
     'shonen': ['Shonen', 'Action', 'Adventure'],
     'isekai': ['Isekai', 'Fantasy'],
     'romance': ['Romance', 'Drama', 'Shojo'],
-    'action': ['Action', 'Thriller', 'Super Power'], // NOUVEAU
-    'scifi': ['Sci-Fi', 'Mecha', 'Space'],          // NOUVEAU
-    'slice': ['Slice of Life', 'Comedy', 'School'], // NOUVEAU
-    'top-50': [], // Géré spécifiquement par la popularité
-    'decades': [] // Géré spécifiquement par l'année
+    'action': ['Action', 'Thriller', 'Super Power'], 
+    'scifi': ['Sci-Fi', 'Mecha', 'Space'],          
+    'slice': ['Slice of Life', 'Comedy', 'School'], 
+    'top-50': [], // Géré par popularité
+    'decades': [] // Géré par année
 };
 
 // Types pour les filtres
@@ -36,7 +35,6 @@ interface AnimeData {
 
 /**
  * Récupère la liste complète des animes pour l'autocomplete côté client.
- * Optimisé pour ne renvoyer que les noms.
  */
 export const getAllAnimeNames = async (): Promise<AnimeData[]> => {
     const animes = await prisma.anime.findMany({
@@ -58,8 +56,7 @@ export const getAllAnimeNames = async (): Promise<AnimeData[]> => {
 
 /**
  * Pioche des sons aléatoires en base de données selon les critères.
- * Utilise une stratégie "Fetch IDs -> Shuffle -> Fetch Details" pour
- * garantir une équité parfaite (chaque son a la même chance de sortir).
+ * CORRECTION MAJEURE: Recherche dans Franchise.genres ET Anime.tags
  */
 export const getRandomSongs = async (count: number, filters?: SongFilters) => {
     const whereClause: any = {};
@@ -83,19 +80,25 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
 
     // 3. Filtre Playlist Spéciales
     if (filters?.playlist) {
-        // Par Tags
+        // Logique par Tags/Genres
         if (PLAYLIST_TAGS[filters.playlist] && PLAYLIST_TAGS[filters.playlist].length > 0) {
             const tags = PLAYLIST_TAGS[filters.playlist];
+            
+            // FIX: On cherche si les tags sont présents dans l'Anime OU dans la Franchise parente
             whereClause.anime = {
-                tags: { hasSome: tags }
+                OR: [
+                    { tags: { hasSome: tags } },              // Cas 1: Tag spécifique sur l'anime
+                    { franchise: { genres: { hasSome: tags } } } // Cas 2: Genre global sur la franchise
+                ]
             };
         }
 
         // Par Popularité
         if (filters.playlist === 'top-50') {
+            // On s'assure de garder les filtres existants s'il y en a
             whereClause.anime = {
-                ...whereClause.anime,
-                popularity: { gte: 80 } // Seuil arbitraire de popularité
+                ...(whereClause.anime || {}),
+                popularity: { gte: 80 }
             };
         }
 
@@ -105,7 +108,7 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
             const endYear = startYear + 10;
             
             whereClause.anime = {
-                ...whereClause.anime,
+                ...(whereClause.anime || {}),
                 seasonYear: {
                     gte: startYear,
                     lt: endYear
@@ -121,7 +124,7 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
 
     // --- ALGORITHME DE LOTERIE ---
     
-    // Étape A : Récupérer TOUS les IDs correspondants (très léger)
+    // Étape A : Récupérer TOUS les IDs correspondants
     const allSongIds = await prisma.song.findMany({
         where: whereClause,
         select: { id: true }
@@ -136,7 +139,7 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
     const selectedIdsObj = shuffledIds.slice(0, count);
     const selectedIds = selectedIdsObj.map(s => s.id);
 
-    // Étape D : Récupérer les détails complets pour les gagnants
+    // Étape D : Récupérer les détails complets
     const songs = await prisma.song.findMany({
         where: { id: { in: selectedIds } },
         include: {
@@ -148,7 +151,6 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
         }
     });
 
-    // Étape E : Re-mélanger le résultat final (pour éviter l'ordre croissant des IDs)
     return songs.sort(() => 0.5 - Math.random());
 };
 
@@ -166,10 +168,14 @@ export const generateChoices = async (
         name: { not: correctTarget }
     };
 
-    // On essaie de garder la cohérence de playlist pour les pièges
+    // Cohérence des pièges (Playlist)
     if (filters?.playlist) {
         if (PLAYLIST_TAGS[filters.playlist] && PLAYLIST_TAGS[filters.playlist].length > 0) {
-            whereClause.tags = { hasSome: PLAYLIST_TAGS[filters.playlist] };
+             // Même correction ici : on cherche dans Anime OU Franchise pour les pièges
+             whereClause.OR = [
+                { tags: { hasSome: PLAYLIST_TAGS[filters.playlist] } },
+                { franchise: { genres: { hasSome: PLAYLIST_TAGS[filters.playlist] } } }
+             ];
         }
         if (filters.playlist === 'decades' && filters.decade) {
             const startYear = parseInt(filters.decade);
@@ -177,7 +183,6 @@ export const generateChoices = async (
         }
     }
 
-    // On prend plus de candidats que nécessaire pour avoir de la variété
     const randomAnimes = await prisma.anime.findMany({
         where: whereClause,
         select: { name: true, franchise: { select: { name: true } } },
@@ -194,16 +199,13 @@ export const generateChoices = async (
         randomAnimes.push(...fallbackAnimes);
     }
 
-    // Formatage selon le mode de précision (Exact vs Franchise)
     const candidates = randomAnimes.map(a => 
         precisionMode === 'franchise' ? (a.franchise?.name || a.name) : a.name
     );
 
-    // Dédoublonnage et sélection aléatoire
     const uniqueCandidates = [...new Set(candidates)].filter(c => c !== correctTarget);
     const wrongChoices = uniqueCandidates.sort(() => 0.5 - Math.random()).slice(0, 3);
     
-    // On ajoute la bonne réponse et on mélange le tout
     const finalChoices = [...wrongChoices, correctTarget];
     return finalChoices.sort(() => 0.5 - Math.random());
 };
@@ -217,12 +219,10 @@ export const generateDuo = async (
 ): Promise<string[]> => {
     const choices = await choicesPromise;
     const wrongChoices = choices.filter(c => c !== correctItem);
-    // Fallback safe si jamais
     const randomWrong = wrongChoices[Math.floor(Math.random() * wrongChoices.length)] || "Naruto";
     return [correctItem, randomWrong].sort(() => 0.5 - Math.random());
 };
 
-// @TODO: Implémenter l'intégration Anilist pour récupérer la liste de l'utilisateur
 export const getAniListIds = async (username: string): Promise<number[]> => {
     return []; 
 };
