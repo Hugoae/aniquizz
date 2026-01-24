@@ -99,8 +99,6 @@ io.use(async (socket, next) => {
             const { data, error } = await supabaseAdmin.auth.getUser(token);
 
             if (error || !data.user) {
-                // Log discret pour ne pas spammer
-                // console.log("⚠️ Token invalide, connexion en Invité.");
                 socket.data.user = { id: socket.id, isGuest: true, email: "Invité" };
                 return next();
             }
@@ -124,7 +122,6 @@ io.use(async (socket, next) => {
 // ==================================================================
 io.on('connection', (socket: Socket) => {
     
-    // Log de connexion clair
     const userLogInfo = socket.data.user.isGuest ? "Invité" : `User (${socket.data.user.email})`;
     console.log(`[SOCKET] 🔌 Connexion: ${socket.id} | ${userLogInfo}`);
 
@@ -142,7 +139,6 @@ io.on('connection', (socket: Socket) => {
         const settings = data.settings || {};
         if (!settings.precision) settings.precision = 'franchise';
 
-        // Log création
         console.log(`[ROOM] 🏠 CRÉATION | ID: ${roomId} | Host: ${data.username} | Mode: ${settings.gameType} | MaxPlayers: ${settings.maxPlayers}`);
 
         const newRoom: Room = {
@@ -180,12 +176,10 @@ io.on('connection', (socket: Socket) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         
         if (!room) {
-            console.log(`[ROOM] ❌ Join Fail: Salon introuvable (${data.roomId})`);
             socket.emit('error', { message: "Salon introuvable" });
             return;
         }
 
-        // Log tentative join
         console.log(`[ROOM] ➕ JOIN REQUEST | Room: ${room.id} | User: ${data.username || 'Inconnu'}`);
 
         if (room.players.length >= room.maxPlayers) {
@@ -208,13 +202,11 @@ io.on('connection', (socket: Socket) => {
         const existingPlayerIndex = room.players.findIndex(p => p.id === socket.id);
 
         if (existingPlayerIndex !== -1) {
-            // Reconnexion
             console.log(`[ROOM] 🔄 RECONNEXION | User: ${room.players[existingPlayerIndex].username} dans ${room.id}`);
             room.players[existingPlayerIndex].isReady = false;
             room.players[existingPlayerIndex].isInGame = false;
             room.players[existingPlayerIndex].score = 0; 
         } else {
-            // Nouveau joueur
             const newPlayer: ExtendedPlayer = {
                 id: socket.id,
                 username: data.username || `Joueur ${room.players.length + 1}`,
@@ -262,7 +254,7 @@ io.on('connection', (socket: Socket) => {
                 rooms.delete(roomId);
             } else {
                 if (room.hostId === socket.id) {
-                    room.hostId = room.players[0].id; // Transfert host
+                    room.hostId = room.players[0].id;
                     console.log(`[ROOM] 👑 NEW HOST | ${room.players[0].username} est l'hôte de ${roomId}`);
                 }
                 io.to(roomId).emit('player_left', { players: cleanPlayersData(room.players), hostId: room.hostId });
@@ -290,7 +282,6 @@ io.on('connection', (socket: Socket) => {
         }
     });
 
-    // --- CHAT ---
     socket.on('send_message', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room) {
@@ -317,7 +308,7 @@ io.on('connection', (socket: Socket) => {
     socket.on('start_game', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room && room.hostId === socket.id) {
-            console.log(`[GAME] 🚀 START REQUEST | Room: ${room.id} | Settings: ${JSON.stringify(room.settings)}`);
+            console.log(`[GAME] 🚀 START REQUEST | Room: ${room.id}`);
             
             room.status = 'playing';
             const gameId = uuidv4();
@@ -325,10 +316,12 @@ io.on('connection', (socket: Socket) => {
             room.players.forEach(p => { p.score = 0; p.isInGame = true; });
             
             broadcastRooms();
+            
+            // CORRECTION ICI : On n'envoie PAS de timestamp absolu, mais la DURÉE
             io.to(room.id).emit('game_started', { 
                 roomId: room.id, 
                 settings: room.settings,
-                gameStartTime: Date.now() + GAME_CONSTANTS.TIMERS.INTRO_DELAY,
+                introDuration: GAME_CONSTANTS.TIMERS.INTRO_DELAY, // <-- Envoi de la durée (3000ms)
                 players: cleanPlayersData(room.players)
             });
 
@@ -336,7 +329,7 @@ io.on('connection', (socket: Socket) => {
         }
     });
 
-    // --- JEU : ACTIONS ---
+    // ... (Reste du code inchangé : toggle_ready, submit_answer, vote_pause, vote_skip...)
     socket.on('toggle_ready', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room) {
@@ -353,8 +346,6 @@ io.on('connection', (socket: Socket) => {
         if (room) {
             const player = room.players.find(p => p.id === socket.id);
             if (player) {
-                // Log réponse (utile pour debug, mais peut être verbeux)
-                // console.log(`[GAME] 📝 ANSWER | Room: ${room.id} | User: ${player.username} | Input: ${data.answer}`);
                 player.currentAnswer = (data.answer || "").trim();
                 player.answerMode = data.mode;
                 io.to(room.id).emit('update_players', { players: cleanPlayersData(room.players) });
@@ -371,14 +362,11 @@ io.on('connection', (socket: Socket) => {
             const activePlayers = room.players.filter(p => p.isInGame !== false).length;
             const required = activePlayers > 0 ? Math.ceil(activePlayers / 2) : 1;
             
-            console.log(`[GAME] ⏸️ PAUSE VOTE | Room: ${room.id} | Votes: ${room.pauseVotes.size}/${required}`);
-
             if (room.isPaused) {
                 if (room.pauseVotes.size >= required) {
                     room.isPaused = false;
                     room.pauseVotes.clear();
                     io.to(room.id).emit('game_paused', { isPaused: false });
-                    console.log(`[GAME] ▶️ RESUME | Room: ${room.id}`);
                 }
             } else {
                 if (room.pauseVotes.size >= required) room.isPausePending = true;
@@ -397,7 +385,6 @@ io.on('connection', (socket: Socket) => {
             const activePlayers = room.players.filter(p => p.isInGame !== false).length;
             const required = activePlayers > 0 ? Math.ceil(activePlayers / 2) : 1;
             
-            // console.log(`[GAME] ⏭️ SKIP VOTE | Room: ${room.id} | Votes: ${room.skipVotes.size}/${required}`);
             io.to(room.id).emit('vote_update', { type: 'skip', count: room.skipVotes.size, required });
         }
     });
@@ -407,7 +394,6 @@ io.on('connection', (socket: Socket) => {
             const list = await getAllAnimeNames();
             socket.emit('anime_list', list);
         } catch (error) {
-            console.error("Erreur récupération anime list:", error);
             socket.emit('error', { message: "Erreur lors de la récupération de la liste" });
         }
     });

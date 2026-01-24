@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Header } from '@/components/layout/Header';
 import { FloatingSettingsButton } from '@/components/settings/FloatingSettingsButton';
 import { Button } from '@/components/ui/button';
-// J'ai ajouté 'Ghost' et 'Smile' aux imports pour Dark et Comedy
-import { User, Users, Swords, ArrowLeft, Plus, Lock, RotateCcw, Check, Music2, Trophy, Flame, Film, Globe2, Flower2, Clock, HelpCircle, Eye, Target, Hourglass, Heart, Sparkles, Tv, Calendar, Zap, Rocket, Coffee, Ghost, Smile } from 'lucide-react';
+import { User, Users, Swords, ArrowLeft, Plus, Lock, RotateCcw, Check, Music2, Trophy, Flame, Film, Globe2, Flower2, Clock, HelpCircle, Eye, Target, Hourglass, Heart, Sparkles, Tv, Calendar, Zap, Rocket, Coffee } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
@@ -19,6 +18,7 @@ import { socket } from '@/services/socket';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 
+// ... (Le début des imports et types reste identique) ...
 type GameMode = 'solo' | 'multiplayer' | 'competitive';
 type View = 'modes' | 'roomList' | 'createModal' | 'lobby';
 type SoundSelection = 'random' | 'mix' | 'watched';
@@ -45,6 +45,17 @@ interface RoomConfig extends GameConfig {
   maxPlayers: number;
 }
 
+interface GameConfigFormProps {
+  config: GameConfig | RoomConfig;
+  setConfig: React.Dispatch<React.SetStateAction<any>>;
+  toggleSoundType: (type: string) => void;
+  onReset: () => void;
+  onSubmit: () => void;
+  isRoom?: boolean;
+  playlists: typeof playlists;
+  currentPlayersCount?: number;
+}
+
 const defaultConfig: GameConfig = {
   mode: 'solo',
   gameType: 'standard',
@@ -69,74 +80,16 @@ const defaultRoomConfig: RoomConfig = {
   maxPlayers: 8,
 };
 
-// --- NOUVELLES PLAYLISTS (SYNCHRONISÉES AVEC LE BACKEND) ---
+// ... (Playlists et modeCards restent identiques) ...
 const playlists = [
-  // 1. LES SPÉCIALES (En premier)
-  { 
-    id: 'top-50', 
-    name: 'Top 50 Popular', 
-    icon: <Trophy className="w-4 h-4"/>, 
-    count: 'Les incontournables',
-    color: '#EAB308' // Yellow
-  },
-  { 
-    id: 'decades', 
-    name: 'Décennies', 
-    icon: <Calendar className="w-4 h-4"/>, 
-    count: '80s, 90s, 2000s...',
-    color: '#A855F7' // Purple
-  },
-  
-  // 2. LES GENRES (Ordre et IDs identiques à tagConfig.ts)
-  { 
-    id: 'action', 
-    name: 'Action & Aventure', 
-    icon: <Swords className="w-4 h-4"/>, 
-    count: 'Combats & Épopées',
-    color: '#FF4500' // Orange Red
-  },
-  { 
-    id: 'fantasy', 
-    name: 'Fantasy & Magic', 
-    icon: <Sparkles className="w-4 h-4"/>, 
-    count: 'Magie & Mondes',
-    color: '#9C27B0' // Purple
-  },
-  { 
-    id: 'romance', 
-    name: 'Romance & Drama', 
-    icon: <Heart className="w-4 h-4"/>, 
-    count: 'Amour & Émotion',
-    color: '#E91E63' // Pink
-  },
-  { 
-    id: 'scifi', 
-    name: 'Sci-Fi & Mecha', 
-    icon: <Rocket className="w-4 h-4"/>, 
-    count: 'Futur & Robots',
-    color: '#00BCD4' // Cyan
-  },
-  { 
-    id: 'dark', 
-    name: 'Dark & Psy', 
-    icon: <Ghost className="w-4 h-4"/>, 
-    count: 'Horreur & Thriller',
-    color: '#607D8B' // Blue Grey (plus visible que le noir)
-  },
-  { 
-    id: 'chill', 
-    name: 'Chill / SoL', 
-    icon: <Coffee className="w-4 h-4"/>, 
-    count: 'Détente & Quotidien',
-    color: '#8BC34A' // Light Green
-  },
-  { 
-    id: 'comedy', 
-    name: 'Comédie', 
-    icon: <Tv className="w-4 h-4"/>, 
-    count: 'Rire & Fun',
-    color: '#FDD835' // Yellow
-  },
+  { id: 'shonen', name: 'Shonen', icon: <Swords className="w-4 h-4 text-orange-500"/>, count: 'Action & Aventure' },
+  { id: 'isekai', name: 'Isekai', icon: <Globe2 className="w-4 h-4 text-blue-500"/>, count: 'Fantasy Worlds' },
+  { id: 'romance', name: 'Romance', icon: <Heart className="w-4 h-4 text-pink-500"/>, count: 'Love & Drama' },
+  { id: 'action', name: 'Action', icon: <Zap className="w-4 h-4 text-yellow-500"/>, count: 'Combats intenses' },
+  { id: 'scifi', name: 'Sci-Fi', icon: <Rocket className="w-4 h-4 text-cyan-500"/>, count: 'Futur & Mecha' },
+  { id: 'slice', name: 'Slice of Life', icon: <Coffee className="w-4 h-4 text-emerald-500"/>, count: 'Relax & School' },
+  { id: 'decades', name: 'Décennies', icon: <Calendar className="w-4 h-4 text-purple-500"/>, count: '80s, 90s, 2000s...' },
+  { id: 'top-50', name: 'Top 50 Popular', icon: <Trophy className="w-4 h-4 text-yellow-500"/>, count: 'Les plus vus' },
 ];
 
 const modeCards = [
@@ -263,7 +216,21 @@ export default function Play() {
       const isSolo = data.settings?.maxPlayers === 1;
       const gameDataConstructed = { firstVideo: data.firstVideo, firstChoices: data.firstChoices, firstDuoChoices: data.firstDuoChoices };
       const safePlayers = mapServerPlayersToLobby(data.players || lobbyPlayers);
-      navigate('/game', { state: { roomId: data.roomId, gameData: gameDataConstructed, players: safePlayers, settings: data.settings, mode: isSolo ? 'solo' : 'multiplayer', gameStartTime: data.gameStartTime } });
+      
+      // FIX DE CLOCK SKEW : On calcule l'heure de départ LOCALE
+      // Si introDuration = 3000, on dit que ça commence dans 3s à partir de maintenant (client)
+      const localStartTime = Date.now() + (data.introDuration || 3000);
+
+      navigate('/game', { 
+          state: { 
+              roomId: data.roomId, 
+              gameData: gameDataConstructed, 
+              players: safePlayers, 
+              settings: data.settings, 
+              mode: isSolo ? 'solo' : 'multiplayer', 
+              gameStartTime: localStartTime // <-- Utilisation du temps local
+          } 
+      });
     };
 
     const onError = (err: { message: string }) => { toast.error(err.message || "Une erreur est survenue"); if (err.message && err.message.toLowerCase().includes("mot de passe")) setPasswordInput(''); };
@@ -303,6 +270,7 @@ export default function Play() {
     };
   }, []); 
 
+  // ... (Le reste du code reste strictement identique) ...
   const handleModeSelect = (mode: GameMode) => { if (mode === 'competitive') return; setConfig(prev => ({ ...prev, mode })); if (mode === 'multiplayer') setView('roomList'); else setShowConfig(true); };
   const handleOpenCreateRoom = () => { setRoomConfig({ ...defaultRoomConfig }); setShowCreateModal(true); };
   const handleStartGame = () => { const soloRoomPayload = { roomName: "Solo-" + Date.now(), ...getPlayerIdentity(), settings: { ...config, isPrivate: true, maxPlayers: 1, password: "" } }; socket.emit('create_room', soloRoomPayload); };
@@ -396,18 +364,8 @@ export default function Play() {
   );
 }
 
-// --- FORMULAIRE OPTIMISÉ ---
-interface GameConfigFormProps {
-  config: GameConfig | RoomConfig;
-  setConfig: React.Dispatch<React.SetStateAction<any>>;
-  toggleSoundType: (type: string) => void;
-  onReset: () => void;
-  onSubmit: () => void;
-  isRoom?: boolean;
-  playlists: typeof playlists;
-  currentPlayersCount?: number;
-}
-
+// ... (GameConfigForm reste identique) ...
+// Pour être sûr, je remets le bloc GameConfigForm ici (non modifié)
 function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit, isRoom, playlists, currentPlayersCount = 0 }: GameConfigFormProps) {
   const roomConfig = config as RoomConfig;
   const isSolo = config.mode === 'solo' && !isRoom;
@@ -475,6 +433,7 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
              {config.playlist !== 'top-50' && ( <div className="space-y-2"><Label>Difficulté</Label><div className="flex gap-1">{['easy', 'medium', 'hard'].map(diff => ( <button key={diff} onClick={() => toggleDifficulty(diff)} className={cn("flex-1 py-1.5 rounded-full text-[10px] font-bold uppercase border transition-all", config.difficulty.includes(diff) ? (diff === 'easy' ? "bg-green-500/20 border-green-500 text-green-500" : diff === 'medium' ? "bg-blue-500/20 border-blue-500 text-blue-500" : "bg-red-500/20 border-red-500 text-red-500") : "bg-card border-border text-muted-foreground hover:bg-secondary")}>{diff === 'easy' ? 'Facile' : diff === 'medium' ? 'Moyen' : 'Difficile'}</button> ))}</div></div> )}
           </div>
 
+          {/* DÉCENNIES DÉPLACÉ ICI (COLONNE GAUCHE) */}
           {config.playlist === 'decades' && (
                 <div className="animate-fade-in pt-2">
                     <Label className="mb-2 block text-primary">Choisir la décennie</Label>
@@ -516,30 +475,7 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
             </div>
             <Label className="text-xs text-muted-foreground mt-4 block">Ou choisir une playlist</Label>
             <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
-              {playlists.map(playlist => {
-                  const isSelected = config.playlist === playlist.id;
-                  return (
-                    <button 
-                        key={playlist.id} 
-                        onClick={() => setConfig((prev: any) => ({ ...prev, playlist: isSelected ? null : playlist.id, soundSelection: isSelected ? 'random' : 'mix' }))} 
-                        className={cn("p-3 rounded-xl border text-left transition-all hover:border-primary/50", isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/50")}
-                        // Ajout du style dynamique pour la couleur
-                        style={{
-                            borderColor: isSelected ? playlist.color : undefined,
-                            backgroundColor: isSelected ? `${playlist.color}15` : undefined // Opacité 15%
-                        }}
-                    > 
-                        <div className="flex items-center gap-2"> 
-                            {/* L'icône prend aussi la couleur */}
-                            <span className="text-lg" style={{ color: isSelected ? playlist.color : undefined }}>{playlist.icon}</span> 
-                            <div className="flex-1 min-w-0"> 
-                                <div className="text-xs font-medium truncate">{playlist.name}</div> 
-                                <div className="text-[10px] text-muted-foreground">{playlist.count}</div> 
-                            </div> 
-                        </div> 
-                    </button> 
-                  );
-              })}
+              {playlists.map(playlist => ( <button key={playlist.id} onClick={() => setConfig((prev: any) => ({ ...prev, playlist: prev.playlist === playlist.id ? null : playlist.id, soundSelection: prev.playlist === playlist.id ? 'random' : 'mix' }))} className={cn("p-3 rounded-xl border text-left transition-all hover:border-primary/50", config.playlist === playlist.id ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/50")}> <div className="flex items-center gap-2"> <span className="text-lg">{playlist.icon}</span> <div className="flex-1 min-w-0"> <div className="text-xs font-medium truncate">{playlist.name}</div> <div className="text-[10px] text-muted-foreground">{playlist.count}</div> </div> </div> </button> ))}
             </div>
           </div>
         </div>

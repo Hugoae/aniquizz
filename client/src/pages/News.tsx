@@ -5,54 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-// Assure-toi que ces imports pointent vers tes vrais fichiers de données
-import { allNews, typeConfig } from '@/data/newsData'; 
-
-// Données de la Roadmap (Tu pourras les déplacer dans un fichier data plus tard)
-const roadmapData = [
-  {
-    title: "Lancement V0.1",
-    description: "Sortie publique de la base du jeu (Solo, Multi standard, Profil).",
-    status: "done", // done, in-progress, planned
-    date: "Janvier 2026"
-  },
-  {
-    title: "Intégration AniList & Profil",
-    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vu. Mise en place d'un système de profil avec statistiques.",
-    status: "in-progress",
-    date: "Q1 2026"
-  },
-  {
-    title: "Modes 'Lives' & 'Battle Royale'",
-    description: "Nouveaux modes de jeu multijoueur éliminatoires.",
-    status: "in-progress",
-    date: "Q1 2026"
-  },
-  {
-    title: "Système d'Xp et Amis",
-    description: "Système d'xp et fonctionnalités d'amis.",
-    status: "planned",
-    date: "Q1 2026"
-  },
-  {
-    title: "Paramètre et Traduction en Anglais",
-    description: "Ajout de paramètres pour le site et votre compte & Traduction en Anglais",
-    status: "planned",
-    date: "Q2 2026"
-  },
-  {
-    title: "Collection des sons & Coup de coeurs",
-    description: "Collection des sons et possiblité de liké les sons pour les avoir en favoris",
-    status: "planned",
-    date: "Q2 2026"
-  },
-  {
-    title: "Intégration MyAnimeList",
-    description: "Support d'autres plateformes en plus d'AniList.",
-    status: "planned",
-    date: "Q3 2026"
-  }
-];
+// IMPORT MIS À JOUR : On importe roadmapData
+import { allNews, typeConfig, roadmapData } from '@/data/newsData'; 
 
 export default function News() {
   const navigate = useNavigate();
