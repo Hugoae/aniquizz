@@ -81,6 +81,7 @@ interface RevealData {
   song: ServerSong;
   duration: number;
   startTime: number;
+  endTime?: number; // NOUVEAU
   players: Player[];
   nextVideo?: string | null;
   correctAnswer?: string;
@@ -118,27 +119,20 @@ const getVideoUrl = (key: string | undefined | null) => {
 // ------------------------------------------------------------------
 
 export default function Game() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { setTheme, resolvedTheme } = useTheme();
+  const location = useLocation();
   const { user, profile } = useAuth();
 
-  // --- INITIALISATION DE L'ÉTAT ---
+  // --- INITIALISATION ---
   const initialState = location.state || {};
   const roomId = initialState.roomId;
   const initialPlayers = initialState.players || [];
   
   const settings: GameSettings = initialState.settings || { 
-      gameType: 'Standard', 
-      responseType: 'mix', 
-      soundCount: 10, 
-      guessDuration: 15, 
-      difficulty: 'medium',
-      precision: 'franchise'
+      gameType: 'Standard', responseType: 'mix', soundCount: 10, guessDuration: 15, difficulty: 'medium', precision: 'franchise'
   };
 
   const gameMode = (initialPlayers.length === 1 && initialState.mode !== 'multiplayer') ? 'solo' : 'multiplayer';
-  
   const firstVideoKey = initialState.firstVideo || initialState.gameData?.firstVideo || "";
   const firstChoices = initialState.gameData?.firstChoices || []; 
   const firstDuoChoices = initialState.gameData?.firstDuoChoices || [];
@@ -153,16 +147,14 @@ export default function Game() {
   // --- STATES JEU ---
   const [players, setPlayers] = useState<Player[]>(initialPlayers.map((p: any) => ({ ...p, name: safePlayerName(p), score: p.score || 0, isInGame: p.isInGame !== false })));
   const [phase, setPhase] = useState<'loading' | 'guessing' | 'revealed' | 'ended'>('loading');
-  const [phaseStartTime, setPhaseStartTime] = useState<number>(0);
-  const [phaseDuration, setPhaseDuration] = useState<number>(settings.guessDuration);
+  
+  // MODIFICATION : On stocke l'heure de fin cible (Timestamp)
+  const [phaseEndTime, setPhaseEndTime] = useState<number>(0);
+  const [phaseTotalDuration, setPhaseTotalDuration] = useState<number>(settings.guessDuration);
   const [progress, setProgress] = useState(100);
 
   const [myProfile, setMyProfile] = useState({ username: profile?.username || 'Moi', avatar: profile?.avatar || 'player1' });
-
-  const [loadingCount, setLoadingCount] = useState(() => {
-    const remaining = Math.ceil((targetGameStart - Date.now()) / 1000);
-    return remaining > 0 ? remaining : 0;
-  });
+  const [loadingCount, setLoadingCount] = useState(() => { const remaining = Math.ceil((targetGameStart - Date.now()) / 1000); return remaining > 0 ? remaining : 0; });
   const [currentRound, setCurrentRound] = useState(1);
   const [totalRounds, setTotalRounds] = useState(settings.soundCount);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -202,10 +194,7 @@ export default function Game() {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
-  // ------------------------------------------------------------------
-  // GESTION VIDEO & AUDIO
-  // ------------------------------------------------------------------
-  
+  // --- AUDIO ---
   const safePlayVideo = () => {
     if (!videoRef.current) return;
     videoRef.current.volume = isMutedRef.current ? 0 : volumeRef.current / 100;
@@ -228,28 +217,18 @@ export default function Game() {
     }
   }, []);
 
-  // ------------------------------------------------------------------
-  // EFFETS SOCKET & JEU
-  // ------------------------------------------------------------------
-
+  // --- EFFETS SOCKET ---
   useEffect(() => {
     if (profile) setMyProfile({ username: profile.username, avatar: profile.avatar });
-    else {
-        if(socket.connected) socket.emit('get_profile');
-        socket.on('user_profile', (data) => { if (data) setMyProfile(data); });
-    }
-    
+    else { if(socket.connected) socket.emit('get_profile'); socket.on('user_profile', (data) => { if (data) setMyProfile(data); }); }
     socket.emit('get_anime_list');
     socket.on('anime_list', (list: AnimeDataItem[]) => { setAnimeList(list); });
-    
     return () => { socket.off('anime_list'); socket.off('user_profile'); }
   }, [profile]);
 
   useEffect(() => {
       return () => {
-        if (roomId && !isReturningToLobbyRef.current) {
-            socket.emit('leave_room', { roomId });
-        }
+        if (roomId && !isReturningToLobbyRef.current) socket.emit('leave_room', { roomId });
         socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
       };
   }, []);
@@ -264,7 +243,12 @@ export default function Game() {
     socket.on('player_left', handlePlayerUpdate);
 
     socket.on('round_start', (data) => {
-      setPhase('guessing'); setPhaseStartTime(data.startTime); setPhaseDuration(data.duration); setProgress(100);
+      setPhase('guessing');
+      // MAJ TIMER : On utilise le timestamp de fin pour la synchro
+      setPhaseEndTime(data.endTime || (Date.now() + data.duration * 1000));
+      setPhaseTotalDuration(data.duration);
+      setProgress(100);
+
       setCurrentRound(data.round); setTotalRounds(data.totalRounds); 
       setIsGamePaused(false); setIsPausePending(false); setResumeCountdown(null);
       setAnswer(''); setSuggestions([]); setSubmittedAnswer(null); setPointsEarned(null); setShowPointsAnimation(false); setHasVotedSkip(false); setIsLiked(false); setNextVideoKey(null);
@@ -292,7 +276,12 @@ export default function Game() {
     });
 
     socket.on('round_reveal', async (data: RevealData) => {
-      setPhase('revealed'); setPhaseStartTime(data.startTime); setPhaseDuration(data.duration); setProgress(100);
+      setPhase('revealed');
+      // MAJ TIMER REVEAL
+      setPhaseEndTime(data.endTime || (Date.now() + data.duration * 1000));
+      setPhaseTotalDuration(data.duration);
+      setProgress(100);
+
       setCurrentSong(data.song); setSuggestions([]);
       setSkipVotes(0); setHasVotedSkip(false);
 
@@ -342,6 +331,9 @@ export default function Game() {
     });
 
     socket.on('game_resuming', (data: any) => {
+      // SI LE SERVEUR ENVOIE UNE NOUVELLE HEURE DE FIN (après pause), on l'applique
+      if (data.newEndTime) setPhaseEndTime(data.newEndTime);
+
       let count = data.duration; setResumeCountdown(count);
       const timer = setInterval(() => { count--; if (count <= 0) { clearInterval(timer); setResumeCountdown(null); return; } setResumeCountdown(count); }, 1000);
     });
@@ -350,59 +342,37 @@ export default function Game() {
 
     const onError = (err: { message: string }) => { 
         toast.error(err.message || "Une erreur est survenue"); 
-        if (phase === 'loading') {
-            setTimeout(() => {
-                handleReturnToLobby();
-            }, 2000);
-        }
+        if (phase === 'loading') { setTimeout(() => { handleReturnToLobby(); }, 2000); }
     };
     socket.on('error', onError);
 
     return () => { socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left'); socket.off('error', onError); };
   }, []);
 
-  // ------------------------------------------------------------------
-  // GESTION UI & INTERACTION
-  // ------------------------------------------------------------------
-
-  useEffect(() => {
-    if (answer.length >= 2) {
-      const searchLower = answer.toLowerCase();
-      const precisionMode = settings.precision || 'franchise';
-      
-      const matchedObjects = animeList.filter(item => {
-        if (item.name.toLowerCase().includes(searchLower)) return true;
-        if (item.altNames.some(alt => alt.toLowerCase().includes(searchLower))) return true;
-        if (item.franchise && item.franchise.toLowerCase().includes(searchLower)) return true;
-        return false;
-      });
-
-      const mappedNames = matchedObjects.map(item => {
-          if (precisionMode === 'franchise') return item.franchise || item.name; 
-          return item.name;
-      });
-
-      const uniqueSuggestions = Array.from(new Set(mappedNames)).slice(0, 5);
-      setSuggestions(uniqueSuggestions);
-    } else {
-      setSuggestions([]);
-    }
-  }, [answer, animeList, settings.precision]);
-
+  // --- GESTION TIMER INTELLIGENT (CORRECTION LAG) ---
   useEffect(() => {
     if (phase === 'loading' || isGamePaused || resumeCountdown !== null || phase === 'ended') return;
+    
+    // NOUVELLE LOGIQUE TIMER : On compare l'heure actuelle avec l'heure de fin prévue
     const interval = setInterval(() => {
       const now = Date.now();
-      const elapsedSeconds = (now - phaseStartTime) / 1000;
-      const totalDuration = phaseDuration || 1;
-      const remaining = Math.max(0, Math.ceil(totalDuration - elapsedSeconds));
-      setTimeLeft(remaining);
-      const pct = Math.max(0, Math.min(100, ((totalDuration - elapsedSeconds) / totalDuration) * 100));
+      const remainingMs = Math.max(0, phaseEndTime - now);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      
+      setTimeLeft(remainingSec);
+      
+      // Calcul du pourcentage basé sur le temps écoulé réel
+      const totalMs = phaseTotalDuration * 1000;
+      const elapsedMs = totalMs - remainingMs;
+      const pct = Math.max(0, Math.min(100, ((totalMs - elapsedMs) / totalMs) * 100));
       setProgress(pct);
-    }, 100); 
-    return () => clearInterval(interval);
-  }, [phaseStartTime, phase, isGamePaused, resumeCountdown, phaseDuration]);
 
+    }, 100); 
+    
+    return () => clearInterval(interval);
+  }, [phaseEndTime, phase, isGamePaused, resumeCountdown, phaseTotalDuration]);
+
+  // Loading Timer (Reste inchangé car c'est du pre-game)
   useEffect(() => {
     if (phase === 'loading') {
       const interval = setInterval(() => {
@@ -414,17 +384,12 @@ export default function Game() {
     }
   }, [phase, targetGameStart]);
 
-  // --- ACTIONS JOUEUR ---
-
+  // --- ACTIONS ---
   const handleAction = (val: string) => {
     if (phase === 'revealed') return;
-    
-    setSubmittedAnswer(val);
-    setSuggestions([]);
+    setSubmittedAnswer(val); setSuggestions([]);
     setPlayers(prev => prev.map(p => (String(p.id) === String(socket.id)) ? { ...p, currentAnswer: val } : p));
-    
     socket.emit('submit_answer', { roomId, answer: val, mode: inputMode });
-    
     if (inputMode === 'typing') setAnswer('');
   };
 
@@ -432,48 +397,29 @@ export default function Game() {
   const handleSwitchToCarre = () => { setInputMode('carre'); setChoices(storedQcmChoices); };
   const handleSwitchToDuo = () => { setInputMode('duo'); setChoices(storedDuoChoices); };
   const handleVotePause = () => { setHasVotedPause(v => !v); socket.emit('vote_pause', { roomId }); };
-  
-  // MODIFICATION ICI : Gestion du skip en phase Guessing (Solo uniquement)
-  const handleVoteSkip = () => { 
-      // On autorise si on est en reveal OU (en guessing ET en solo)
-      if (phase === 'revealed' || (phase === 'guessing' && gameMode === 'solo')) {
-          setHasVotedSkip(v => !v); 
-          socket.emit('vote_skip', { roomId }); 
-      }
-  };
+  const handleVoteSkip = () => { if (phase === 'revealed' || (phase === 'guessing' && gameMode === 'solo')) { setHasVotedSkip(v => !v); socket.emit('vote_skip', { roomId }); } };
 
   const handleReturnToLobby = () => {
       isReturningToLobbyRef.current = true;
-      if (gameMode === 'solo') { 
-          socket.emit('leave_room', { roomId });
-          navigate('/play', { replace: true, state: {} }); 
-      } else { 
-          navigate('/play', { replace: true, state: { returnToLobby: true, roomId: roomId } }); 
-      }
+      if (gameMode === 'solo') { socket.emit('leave_room', { roomId }); navigate('/play', { replace: true, state: {} }); } 
+      else { navigate('/play', { replace: true, state: { returnToLobby: true, roomId: roomId } }); }
   };
 
   const handleReplay = () => {
       isReturningToLobbyRef.current = true;
-      const soloRoomPayload = {
-        roomName: "Solo-" + Date.now(), username: profile?.username || "Joueur Solo", avatar: profile?.avatar || "player1", userId: user?.id,
-        settings: { ...settings, isPrivate: true, maxPlayers: 1, password: "" }
-      };
+      const soloRoomPayload = { roomName: "Solo-" + Date.now(), username: profile?.username || "Joueur Solo", avatar: profile?.avatar || "player1", userId: user?.id, settings: { ...settings, isPrivate: true, maxPlayers: 1, password: "" } };
       socket.emit('create_room', soloRoomPayload); navigate('/play'); 
   };
 
-  // --- RENDER INPUT AREA ---
+  // --- RENDER INPUT ---
   const renderInputArea = () => {
     if (phase !== 'guessing') {
       return (
         <div className="glass-card p-4 flex items-center justify-between w-full animate-scale-in border border-white/10">
-          <div className="text-left">
-            <h3 className="text-xl font-bold mb-1 text-primary">{currentSong?.displayAnswer || currentSong?.anime}</h3>
-            <p className="text-sm text-muted-foreground">{currentSong?.title} - {currentSong?.artist}</p>
-          </div>
+          <div className="text-left"><h3 className="text-xl font-bold mb-1 text-primary">{currentSong?.displayAnswer || currentSong?.anime}</h3><p className="text-sm text-muted-foreground">{currentSong?.title} - {currentSong?.artist}</p></div>
         </div>
       );
     }
-
     return (
       <div className="flex flex-col items-center w-full gap-4 relative">
         {submittedAnswer && ( <div className="animate-fade-in mb-2 px-4 py-1.5 bg-primary/20 border border-primary/30 rounded-full flex items-center gap-2 backdrop-blur-sm shadow-lg"><span className="text-xs text-primary-foreground/70 uppercase font-bold">Votre réponse :</span><span className="text-sm font-bold text-white">{submittedAnswer}</span></div> )}
@@ -490,35 +436,17 @@ export default function Game() {
     );
   };
 
-  // --- RENDER FIN DE PARTIE ---
   if (phase === 'ended') { return ( <GameOver players={players} currentUserId={socket.id || ""} onLeave={handleReturnToLobby} onReplay={handleReplay} gameMode={gameMode} history={gameHistory} settings={settings} /> ); }
 
-  // --- RENDER PRINCIPAL ---
   return (
     <>
       <Helmet><title>Partie en cours - AniQuizz</title></Helmet>
       {nextVideoKey && ( <div style={{ display: 'none' }}> <video src={getVideoUrl(nextVideoKey)} preload="auto" /> </div> )}
-      
       <div className="h-screen bg-background flex flex-col overflow-hidden">
-        {/* HEADER */}
         <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 shrink-0 justify-between relative z-50">
           <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={() => setShowLeaveDialog(true)} className="gap-2 text-muted-foreground hover:text-destructive"><LogOut className="h-4 w-4" /><span className="hidden md:inline">Quitter</span></Button>
-            
-            <Button 
-                variant={(isGamePaused || isPausePending) ? "secondary" : "outline"} 
-                size="sm" 
-                onClick={handleVotePause}
-                className={cn(
-                    "gap-2 ml-2 transition-all duration-300",
-                    isGamePaused && "bg-yellow-500 hover:bg-yellow-600 text-black border-none",
-                    isPausePending && !isGamePaused && "bg-orange-500/90 hover:bg-orange-600 animate-pulse border-none text-white"
-                )}
-            >
-                {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />} 
-                {isGamePaused ? "Reprendre" : (isPausePending ? "Pause (Fin round)" : "Pause")} 
-                {players.length > 1 && ( <span className="text-xs opacity-70 ml-1">({pauseVotes}/{pauseRequired})</span> )}
-            </Button>
+            <Button variant={(isGamePaused || isPausePending) ? "secondary" : "outline"} size="sm" onClick={handleVotePause} className={cn("gap-2 ml-2 transition-all duration-300", isGamePaused && "bg-yellow-500 hover:bg-yellow-600 text-black border-none", isPausePending && !isGamePaused && "bg-orange-500/90 hover:bg-orange-600 animate-pulse border-none text-white")}> {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />} {isGamePaused ? "Reprendre" : (isPausePending ? "Pause (Fin round)" : "Pause")} {players.length > 1 && ( <span className="text-xs opacity-70 ml-1">({pauseVotes}/{pauseRequired})</span> )} </Button>
           </div>
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             <div className="flex items-center gap-2 mb-1"><span className="font-bold gradient-text text-lg">AniQuizz</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-wider">{settings.gameType}</span></div>
@@ -527,7 +455,6 @@ export default function Game() {
           <div className="flex items-center gap-2"><Button variant="ghost" className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 transition-all" onClick={() => navigate('/profile')}><Avatar className="h-8 w-8 border border-primary/20"><AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${myProfile.avatar}`} /><AvatarFallback>{myProfile.username[0]}</AvatarFallback></Avatar><span className="font-semibold text-sm hidden sm:block">{myProfile.username}</span></Button></div>
         </header>
 
-        {/* MAIN GAME AREA */}
         <main className="flex-1 flex overflow-hidden min-h-0">
           <div className="flex-1 flex flex-col items-center p-4 overflow-y-auto scrollbar-hide">
             {phase === 'loading' && ( <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center animate-fade-in gap-6"><div className="relative"><Loader2 className="h-20 w-20 text-primary animate-spin" /><div className="absolute inset-0 flex items-center justify-center"><span className="text-xs font-bold text-primary">{loadingCount > 0 ? `${loadingCount}s` : "GO!"}</span></div></div><div className="text-center space-y-2"><h2 className="text-3xl font-bold tracking-widest animate-pulse gradient-text">{loadingCount > 0 ? "LA PARTIE VA COMMENCER" : "LANCEMENT..."}</h2><p className="text-muted-foreground">Préparez vos écouteurs...</p></div></div> )}
@@ -546,72 +473,24 @@ export default function Game() {
                 
                 <video ref={videoRef} playsInline preload="auto" className={cn("w-full h-full object-cover transition-opacity duration-500", phase === 'revealed' ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")} />
                 
-                {/* NOUVEAU : BOUTON PASSER (En Guessing Solo) */}
-                {phase === 'guessing' && gameMode === 'solo' && (
-                    <div className="absolute bottom-4 right-4 z-30 animate-fade-in">
-                        <Button variant="secondary" onClick={handleVoteSkip} className="gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white">
-                            <SkipForward className="h-4 w-4" /> 
-                            Passer
-                        </Button>
-                    </div> 
-                )}
-
-                {/* BOUTON SUIVANT (En Reveal) */}
-                {phase === 'revealed' && ( 
-                    <div className="absolute bottom-4 right-4 z-30">
-                        <Button variant="default" onClick={handleVoteSkip} className="gap-2 shadow-lg shadow-purple-500/20">
-                            <SkipForward className="h-4 w-4" /> 
-                            Suivant {players.length > 1 && ` (${skipVotes}/${skipRequired})`}
-                        </Button>
-                    </div> 
-                )}
+                {phase === 'guessing' && gameMode === 'solo' && ( <div className="absolute bottom-4 right-4 z-30 animate-fade-in"><Button variant="secondary" onClick={handleVoteSkip} className="gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white"><SkipForward className="h-4 w-4" /> Passer</Button></div> )}
+                {phase === 'revealed' && ( <div className="absolute bottom-4 right-4 z-30"><Button variant="default" onClick={handleVoteSkip} className="gap-2 shadow-lg shadow-purple-500/20"><SkipForward className="h-4 w-4" /> Suivant {players.length > 1 && ` (${skipVotes}/${skipRequired})`}</Button></div> )}
               </div>
               
-              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2">
-                  <SongInfoCard 
-                      animeName={currentSong?.displayAnswer || currentSong?.anime} 
-                      songTitle={currentSong?.title} 
-                      artist={currentSong?.artist} 
-                      type={currentSong?.type} 
-                      difficulty={currentSong?.difficulty} 
-                      franchise={currentSong?.franchise} 
-                      year={currentSong?.year} 
-                      coverImage={currentSong?.cover} 
-                      siteUrl={currentSong?.siteUrl} 
-                      sourceUrl={currentSong?.sourceUrl} 
-                      isRevealed={phase === 'revealed'} 
-                      tags={currentSong?.tags}
-                  />
-              </div>
-
+              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2"><SongInfoCard animeName={currentSong?.displayAnswer || currentSong?.anime} songTitle={currentSong?.title} artist={currentSong?.artist} type={currentSong?.type} difficulty={currentSong?.difficulty} franchise={currentSong?.franchise} year={currentSong?.year} coverImage={currentSong?.cover} siteUrl={currentSong?.siteUrl} sourceUrl={currentSong?.sourceUrl} isRevealed={phase === 'revealed'} tags={currentSong?.tags} /></div>
               {isPausePending && !isGamePaused && ( <div className="w-full max-w-[750px] mb-4 bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center justify-center gap-3 animate-pulse"><Clock className="h-5 w-5 text-orange-500" /><span className="text-orange-500 font-bold">Le jeu se mettra en pause à la fin de ce round !</span></div> )}
-              
               {phase !== 'loading' && ( <div className={cn("w-full flex justify-center shrink-0 min-h-[80px] z-50", phase === 'revealed' ? "mb-32" : "mb-6")}>{renderInputArea()}</div> )}
               
               <div className="w-full">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-items-center">
-                    {players.map(p => ( 
-                        <div key={p.id} className="relative w-full max-w-[220px]">
-                            {phase === 'revealed' && ( 
-                                <div className="absolute -top-12 left-0 right-0 flex justify-center z-10">
-                                    <div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background truncate max-w-[120px]", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>
-                                        {p.currentAnswer || "..."}
-                                    </div>
-                                </div> 
-                            )} 
-                            <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> 
-                            {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} 
-                        </div> 
-                    ))}
+                    {players.map(p => ( <div key={p.id} className="relative w-full max-w-[220px]">{phase === 'revealed' && ( <div className="absolute -top-12 left-0 right-0 flex justify-center z-10"><div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background truncate max-w-[120px]", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>{p.currentAnswer || "..."}</div></div> )} <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} </div> ))}
                 </div>
               </div>
             </div>
           </div>
-          
           {gameMode !== 'solo' && ( <GameSidebar players={players as any} isCollapsed={sidebarCollapsed} onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} roomId={roomId} /> )}
         </main>
       </div>
-      
       <GlobalSettingsModal open={showSettings} onOpenChange={setShowSettings} />
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}><DialogContent><DialogHeader><DialogTitle>Profil</DialogTitle><DialogDescription>Vos statistiques de jeu</DialogDescription></DialogHeader><div className="p-4">Stats...</div></DialogContent></Dialog>
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Quitter ?</AlertDialogTitle><AlertDialogDescription>Progression perdue.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={() => { handleReturnToLobby(); setShowLeaveDialog(false); }} className="bg-destructive">Quitter</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
