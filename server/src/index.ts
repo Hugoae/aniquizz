@@ -152,7 +152,8 @@ io.on('connection', (socket: Socket) => {
                 score: 0,
                 isReady: false,
                 isInGame: false,
-                dbId: authenticatedUserId 
+                dbId: authenticatedUserId,
+                sessionWins: 0 // Initialisation
             }],
             status: 'waiting',
             maxPlayers: settings.maxPlayers || 8,
@@ -202,7 +203,8 @@ io.on('connection', (socket: Socket) => {
         const existingPlayerIndex = room.players.findIndex(p => p.id === socket.id);
 
         if (existingPlayerIndex !== -1) {
-            console.log(`[ROOM] 🔄 RECONNEXION | User: ${room.players[existingPlayerIndex].username} dans ${room.id}`);
+            console.log(`[ROOM] 🔄 RECONNEXION/RETOUR | User: ${room.players[existingPlayerIndex].username} dans ${room.id}`);
+            // Reset état pour le lobby
             room.players[existingPlayerIndex].isReady = false;
             room.players[existingPlayerIndex].isInGame = false;
             room.players[existingPlayerIndex].score = 0; 
@@ -214,7 +216,8 @@ io.on('connection', (socket: Socket) => {
                 score: 0,
                 isReady: false,
                 isInGame: false,
-                dbId: authenticatedUserId 
+                dbId: authenticatedUserId,
+                sessionWins: 0
             };
             room.players.push(newPlayer);
             console.log(`[ROOM] ✅ JOIN SUCCESS | Room: ${room.id} | Total: ${room.players.length}/${room.maxPlayers}`);
@@ -222,6 +225,7 @@ io.on('connection', (socket: Socket) => {
 
         socket.join(room.id);
         
+        // Si le jeu était fini et que quelqu'un revient, on s'assure que le statut est 'waiting'
         if (room.status === 'finished') {
             room.status = 'waiting';
         }
@@ -235,7 +239,44 @@ io.on('connection', (socket: Socket) => {
             hostId: room.hostId, 
             roomSettings: room.settings 
         });
+        
+        // FIX FANTÔMES : On force une mise à jour globale des joueurs vers tout le monde
+        // Pour être sûr que ceux qui sont déjà dans le lobby voient celui qui arrive
+        io.to(room.id).emit('update_players', { 
+            players: cleanPlayersData(room.players),
+            hostId: room.hostId
+        });
+
         broadcastRooms();
+    });
+
+    // --- TRANSFERT HÔTE (NOUVEAU) ---
+    socket.on('transfer_host', (data) => {
+        const room = rooms.get(data.roomId?.toUpperCase());
+        // Seul l'hôte actuel peut transférer
+        if (room && String(room.hostId) === String(socket.id)) {
+            const targetId = data.targetId;
+            // On vérifie que la cible est bien dans la room
+            const targetExists = room.players.find(p => String(p.id) === String(targetId));
+            
+            if (targetExists) {
+                room.hostId = targetId;
+                console.log(`[ROOM] 👑 HOST TRANSFER | Room: ${room.id} | New Host: ${targetId}`);
+                
+                // On notifie tout le monde du changement
+                io.to(room.id).emit('update_players', { 
+                    players: cleanPlayersData(room.players),
+                    hostId: room.hostId 
+                });
+                io.to(room.id).emit('room_updated', { 
+                    roomSettings: room.settings,
+                    roomName: room.name,
+                    players: cleanPlayersData(room.players),
+                    hostId: room.hostId
+                });
+                broadcastRooms();
+            }
+        }
     });
 
     // --- QUITTER SALLE ---
@@ -254,8 +295,8 @@ io.on('connection', (socket: Socket) => {
                 rooms.delete(roomId);
             } else {
                 if (room.hostId === socket.id) {
-                    room.hostId = room.players[0].id;
-                    console.log(`[ROOM] 👑 NEW HOST | ${room.players[0].username} est l'hôte de ${roomId}`);
+                    room.hostId = room.players[0].id; // Transfert automatique si l'hôte quitte
+                    console.log(`[ROOM] 👑 NEW HOST AUTO | ${room.players[0].username} est l'hôte de ${roomId}`);
                 }
                 io.to(roomId).emit('player_left', { players: cleanPlayersData(room.players), hostId: room.hostId });
             }
@@ -267,7 +308,7 @@ io.on('connection', (socket: Socket) => {
     socket.on('update_room_settings', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room && room.hostId === socket.id) {
-            console.log(`[ROOM] ⚙️ SETTINGS UPDATE | Room: ${room.id}`);
+            // console.log(`[ROOM] ⚙️ SETTINGS UPDATE | Room: ${room.id}`);
             room.settings = { ...room.settings, ...data.settings };
             
             if (data.settings.roomName) room.name = data.settings.roomName;
@@ -282,6 +323,7 @@ io.on('connection', (socket: Socket) => {
         }
     });
 
+    // ... (Le reste du fichier reste inchangé : send_message, start_game, etc.)
     socket.on('send_message', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room) {
@@ -304,7 +346,6 @@ io.on('connection', (socket: Socket) => {
 
     socket.on('get_rooms', () => { broadcastRooms(); });
 
-    // --- JEU : DÉMARRAGE ---
     socket.on('start_game', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room && room.hostId === socket.id) {
@@ -317,11 +358,10 @@ io.on('connection', (socket: Socket) => {
             
             broadcastRooms();
             
-            // CORRECTION ICI : On n'envoie PAS de timestamp absolu, mais la DURÉE
             io.to(room.id).emit('game_started', { 
                 roomId: room.id, 
                 settings: room.settings,
-                introDuration: GAME_CONSTANTS.TIMERS.INTRO_DELAY, // <-- Envoi de la durée (3000ms)
+                introDuration: GAME_CONSTANTS.TIMERS.INTRO_DELAY,
                 players: cleanPlayersData(room.players)
             });
 
@@ -329,7 +369,6 @@ io.on('connection', (socket: Socket) => {
         }
     });
 
-    // ... (Reste du code inchangé : toggle_ready, submit_answer, vote_pause, vote_skip...)
     socket.on('toggle_ready', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room) {

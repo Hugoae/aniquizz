@@ -25,6 +25,9 @@ export interface ExtendedPlayer extends Player {
     // État global
     isReady?: boolean;
     isInGame?: boolean;
+    
+    // NOUVEAU : Victoires dans la session actuelle (Reset quand on quitte la room)
+    sessionWins?: number; 
 }
 
 // --- SALON (ROOM) ---

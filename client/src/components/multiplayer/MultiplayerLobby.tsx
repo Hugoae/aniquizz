@@ -26,7 +26,8 @@ export interface LobbyPlayer {
   level: number;
   rank: string;
   rankTier: number;
-  totalWins: number;
+  totalWins: number; // Wins globales
+  sessionWins?: number; // Wins de session (nouveau)
   isReady: boolean;
   isHost: boolean;
   isInGame?: boolean;
@@ -80,6 +81,9 @@ export function MultiplayerLobby({
   const [showCode, setShowCode] = useState(false);
   const [copied, setCopied] = useState(false);
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
+  
+  // --- NOUVEAU : État pour le transfert d'hôte
+  const [hostTransferTarget, setHostTransferTarget] = useState<string | number | null>(null);
 
   const [myProfile, setMyProfile] = useState({ username: 'Moi', avatar: 'player1' });
 
@@ -101,16 +105,26 @@ export function MultiplayerLobby({
     }
   };
 
-  // Vérification de l'état prêt
-  // IMPORTANT: conversion string pour comparaison sûre
+  const handleConfirmTransfer = () => {
+      if (onTransferHost && hostTransferTarget) {
+          onTransferHost(hostTransferTarget);
+          toast.success("Droits d'hôte transférés !");
+      }
+      setHostTransferTarget(null);
+  };
+
+  // --- LOGIQUE DE TRI : Hôte en premier ---
+  const sortedPlayers = [...players].sort((a, b) => {
+      if (a.isHost) return -1;
+      if (b.isHost) return 1;
+      return 0; // Garde l'ordre d'arrivée pour le reste
+  });
+
   const isCurrentUserReady = players.find(p => String(p.id) === String(currentUserId))?.isReady;
   const readyCount = players.filter(p => p.isReady).length;
   const hasMinPlayers = players.length >= 2;
   const isGameRunning = players.some(p => p.isInGame);
-  
-  // TOUT LE MONDE doit être prêt pour lancer (y compris le host)
   const allReady = readyCount === players.length && players.length > 0;
-  
   const canStart = isHost && allReady && hasMinPlayers && !isGameRunning;
 
   const handleLeaveConfirm = () => {
@@ -202,10 +216,10 @@ export function MultiplayerLobby({
           </div>
         </div>
 
-        {/* Grid Joueurs - Modification ici : Ajout de padding p-4 pour éviter de couper les cartes */}
+        {/* Grid Joueurs */}
         <div className="flex-1 overflow-y-auto min-h-0 p-4 custom-scrollbar">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 auto-rows-fr pb-4">
-            {players.map((player) => (
+            {sortedPlayers.map((player) => (
                 <div 
                 key={player.id}
                 className={cn(
@@ -218,41 +232,43 @@ export function MultiplayerLobby({
                     String(player.id) === String(currentUserId) && "ring-2 ring-primary ring-offset-2 ring-offset-background"
                 )}
                 >
+                
+                {/* --- BADGE HOTE --- */}
                 {player.isHost && (
-                    <div className="absolute top-2 left-2 text-yellow-500" title="Hôte">
-                    <Crown className="h-4 w-4 fill-current" />
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 rounded-full text-yellow-500 text-[10px] font-bold shadow-sm" title="Hôte de la partie">
+                        <Crown className="h-3 w-3 fill-current" />
+                        <span>HÔTE</span>
                     </div>
                 )}
                 
+                {/* --- BOUTON TRANSFERT (Visible pour l'hôte actuel sur les autres) --- */}
                 {isHost && !player.isHost && onTransferHost && (
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-6 w-6 text-muted-foreground hover:text-yellow-500"
-                            title="Donner le lead"
-                            onClick={() => onTransferHost(player.id)}
+                            className="h-6 w-6 text-muted-foreground hover:text-yellow-500 hover:bg-yellow-500/10 rounded-full"
+                            title="Donner le rôle d'hôte"
+                            onClick={() => setHostTransferTarget(player.id)}
                         >
                             <Crown className="h-3 w-3" />
                         </Button>
                     </div>
                 )}
                 
-                {/* BADGE EN JEU */}
                 {player.isInGame && (
                     <div className="absolute top-2 right-2 px-2 py-0.5 rounded bg-purple-500 text-white text-[9px] font-bold animate-pulse">
                         EN JEU
                     </div>
                 )}
                 
-                {/* CHECK MARK PRET */}
                 {!player.isInGame && player.isReady && (
                     <div className="absolute -top-1 -right-1 bg-success text-success-foreground p-0.5 rounded-full shadow-lg animate-in zoom-in spin-in-12">
                     <Check className="h-3 w-3" />
                     </div>
                 )}
 
-                <div className="flex-1 flex flex-col items-center justify-center gap-2">
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 mt-4">
                     <Avatar className={cn("h-16 w-16 border-4 shadow-lg transition-colors", player.isReady ? "border-success" : "border-background")}>
                         <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${player.avatar}`} />
                         <AvatarFallback>{player.name?.[0] || "?"}</AvatarFallback>
@@ -269,10 +285,11 @@ export function MultiplayerLobby({
                     </div>
                 </div>
                 
-                <div className="mt-auto pt-2 border-t border-white/5 w-full text-center">
-                    <div className="text-[10px] font-medium text-yellow-500 flex items-center justify-center gap-1">
+                {/* --- COMPTEUR DE VICTOIRES DE SESSION --- */}
+                <div className="mt-auto pt-2 border-t border-white/5 w-full flex items-center justify-center gap-3">
+                    <div className="text-[10px] font-medium text-yellow-500 flex items-center gap-1">
                         <Trophy className="h-3 w-3" />
-                        {player.totalWins} victoires
+                        <span>{player.sessionWins || 0} win{player.sessionWins && player.sessionWins > 1 ? 's' : ''}</span>
                     </div>
                 </div>
                 </div>
@@ -292,7 +309,6 @@ export function MultiplayerLobby({
 
         {/* Action Bar */}
         <div className="mt-4 shrink-0 flex flex-col items-center gap-4 pb-2">
-          
           <div className="flex items-center gap-2 bg-secondary/30 p-1 pl-4 rounded-full border border-white/10">
             <span className="text-sm text-muted-foreground mr-2">Code:</span>
             <div className="font-mono font-bold tracking-widest text-lg min-w-[80px] text-center">
@@ -317,8 +333,6 @@ export function MultiplayerLobby({
           </div>
 
           <div className="w-full max-w-md flex flex-col items-center gap-3">
-            
-            {/* BOUTON PRÊT POUR TOUT LE MONDE (Même le Host) */}
             <Button
                 variant={isCurrentUserReady ? "outline" : "glow"}
                 size="lg"
@@ -329,7 +343,6 @@ export function MultiplayerLobby({
                 {isGameRunning ? "PARTIE EN COURS" : (isCurrentUserReady ? "ANNULER (PRÊT)" : "PRÊT !")}
             </Button>
 
-            {/* BOUTON LANCER (Seulement pour Host et si tout le monde est prêt) */}
             {isHost && (
               <Button
                 variant="default"
@@ -354,13 +367,14 @@ export function MultiplayerLobby({
         </div>
       </main>
 
+      {/* MODALE QUITTER */}
       <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Quitter le salon ?</AlertDialogTitle>
             <AlertDialogDescription>
               {isHost 
-                ? "En tant qu'hôte, si vous quittez, le salon sera dissous pour tout le monde (sauf si d'autres joueurs sont présents, un nouvel hôte sera désigné)." 
+                ? "En tant qu'hôte, si vous quittez, un nouvel hôte sera désigné automatiquement parmi les joueurs restants." 
                 : "Vous allez être déconnecté de ce salon."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -368,6 +382,24 @@ export function MultiplayerLobby({
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleLeaveConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Quitter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* MODALE TRANSFERT HÔTE */}
+      <AlertDialog open={!!hostTransferTarget} onOpenChange={() => setHostTransferTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Transférer le rôle d'hôte ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Voulez-vous vraiment donner les droits d'administration à ce joueur ? Vous deviendrez un simple participant.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmTransfer} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              Confirmer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
