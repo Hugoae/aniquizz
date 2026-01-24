@@ -22,7 +22,7 @@ const Index = () => {
 
         {/* INDICATEUR DE VERSION */}
         <div className="fixed bottom-4 left-6 text-[14px] font-mono font-bold text-muted-foreground/40 pointer-events-none z-50">
-            v0.1 Alpha
+            v0.2 Alpha
         </div>
       </div>
     </>

@@ -20,10 +20,18 @@ export interface RoadmapItem {
 // --- NEWS (PATCHNOTES) ---
 export const allNews: NewsItem[] = [
   {
+    id: 2,
+    title: 'Patchnote 0.2 - Correction Bugs + Reset BDD + Playlist + QOL ',
+    description: 'Grosse mise à jour technique et visuelle ! Reset de la BDD pour une architecture plus solide, corrections d\'interface et amélioration du confort de jeu.',
+    content: "Cette mise à jour 0.2 marque une étape importante pour la stabilité d'AniQuizz. J'ai retravaillé les fondations du jeu pour vous offrir une expérience plus fluide et plus agréable.\n\nAu programme :\n** Améliorations Visuelles (UI/UX) **\n• Cartes Infos (Reveal) : Agrandissement de l'affichage pour éviter de couper les titres longs et les tags.\n• Réponses Joueurs : Les titres longs s'affichent désormais sur deux lignes au-dessus des avatars.\n• Playlists : Elles marchent dorénavant et retour des couleurs sur les icônes de playlist pour plus de lisibilité.\n• Interface : Nettoyage des boutons.\n\n** Corrections & Technique **\n• Synchronisation : Correction du décalage de temps (Timer) entre le serveur et les joueurs.\n• Saisie (Typing) : L'autocomplétion est maintenant plus intelligente (gestion des doublons et du mode Franchise).\n• Stabilité : Optimisation du téléchargement des vidéos pour éviter les chargements infinis.\n• Multijoueur : Les lobbys multijoueur sont devenus robustes, possibilité de changer d'Host, ajout d'un statut 'En Jeu' quand un joueur est encore en game\n• Solo : Ajout d'un bouton 'Passer' lors de la phase de guess pour avoir la réponse instantanément\n• Anime : Correction massive pour les noms des Animes et Franchise (noms harmonisés sur les versions anglaises) et perfectionnement des AltNames pour vous permettre une plus grande fléxibilité \n\nMerci de votre soutien et amusez-vous bien !",
+    date: '2026-01-24T12:00:00Z', 
+    type: 'update'
+  },
+  {
     id: 1,
     title: 'Patchnote 0.1 - Sortie du jeu',
     description: 'Lancement officiel d\'AniQuizz ! Découvrez les fonctionnalités de la V0.1.',
-    content: "Bienvenue sur la version 0.1 d'AniQuizz ! \n\nNous sommes ravis de vous présenter la première version à peu près stable du jeu. \n\nAu programme :\n• Mode Solo : Entraînez-vous sur des playlists (Shonen, Isekai, 90s...).\n• Mode Multijoueur : Créez des salons privés et défiez vos amis en temps réel.\n• Système de jeu : Choix entre QCM ou Typing (réponse clavier) pour plus de challenge.\n\nMerci de votre soutien et amusez-vous bien !",
+    content: "Bienvenue sur la version 0.1 d'AniQuizz ! \n\nJe suis ravis de vous présenter la première version à peu près stable du jeu. \n\nAu programme :\n• Mode Solo : Entraînez-vous sur des playlists (Shonen, Isekai, 90s...).\n• Mode Multijoueur : Créez des salons privés et défiez vos amis en temps réel.\n• Système de jeu : Choix entre QCM ou Typing (réponse clavier) pour plus de challenge.\n\nMerci de votre soutien et amusez-vous bien !",
     date: '2026-01-23T12:00:00Z', 
     type: 'update'
   }

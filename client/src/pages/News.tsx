@@ -54,7 +54,7 @@ export default function News() {
                   return (
                     <article 
                       key={news.id}
-                      className="glass-card p-6 hover:bg-secondary/30 transition-all cursor-default group border border-white/5 rounded-2xl"
+                      className="glass-card p-6 border border-white/5 rounded-2xl"
                     >
                       <div className="flex items-start gap-4">
                         <div className={`p-3 rounded-xl ${config.color} bg-opacity-20 shrink-0`}>
@@ -73,7 +73,7 @@ export default function News() {
                               })}
                             </span>
                           </div>
-                          <h2 className="font-bold text-xl mb-2 text-foreground group-hover:text-primary transition-colors">
+                          <h2 className="font-bold text-xl mb-2 text-foreground">
                             {news.title}
                           </h2>
                           <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
