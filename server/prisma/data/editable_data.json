@@ -1,0 +1,1536 @@
+[
+  {
+    "id": 1011,
+    "name": "My Hero Academia",
+    "genres": [
+      "Action",
+      "Adventure",
+      "Comedy"
+    ],
+    "isLocked": true,
+    "animes": [
+      {
+        "id": 21459,
+        "name": "My Hero Academia",
+        "altNames": [
+          "Boku no Hero Academia",
+          "僕のヒーローアカデミア",
+          "BNHA",
+          "MHA",
+          "나의 히어로 아카데미아 1기",
+          "나히아 1기",
+          "אקדמיית הגיבורים שלי",
+          "我的英雄学院",
+          "มายฮีโร่ อคาเดเมีย",
+          "أكاديميتي للأبطال",
+          "Η Δική Μου Ακαδημία Ηρώων ",
+          "Akademia bohaterów ",
+          "Моя геройская академия"
+        ],
+        "siteUrl": "https://anilist.co/anime/21459",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21459-nYh85uj2Fuwr.jpg",
+        "popularity": 793765,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2016,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5158,
+            "title": "The Day",
+            "artist": "Porno Graffitti",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia-21459-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademia-OP1-NCBD1080.webm",
+            "duration": 92,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 21459,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 21856,
+        "name": "My Hero Academia Season 2",
+        "altNames": [
+          "My Hero Academia 2",
+          "Boku no Hero Academia 2",
+          "Boku no Hero Academia Season 2",
+          "僕のヒーローアカデミア２",
+          "BNHA 2",
+          "MHA 2",
+          "나의 히어로 아카데미아 2기",
+          "나히아 2기",
+          "我的英雄学院 2",
+          "我的英雄学院第二季",
+          "มายฮีโร่ อคาเดเมีย ภาค 2",
+          "أكاديميتي للأبطال2",
+          "Моя геройская академия 2"
+        ],
+        "siteUrl": "https://anilist.co/anime/21856",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx21856-gutauxhWAwn6.png",
+        "popularity": 602240,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2017,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5159,
+            "title": "Peace Sign",
+            "artist": "Kenshi Yonezu",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia2-21856-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS2-OP1-NCBD1080.webm",
+            "duration": 92,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 21856,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5160,
+            "title": "Sora ni Utaeba",
+            "artist": "amazarashi",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia2-21856-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS2-OP2-NCBD1080.webm",
+            "duration": 92,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 21856,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 100166,
+        "name": "My Hero Academia Season 3",
+        "altNames": [
+          "Boku no Hero Academia 3",
+          "Boku no Hero Academia Season 3",
+          "My Hero Academia 3",
+          "僕のヒーローアカデミア３",
+          "BNHA 3",
+          "MHA 3",
+          "我的英雄学院 3",
+          "我的英雄学院第三季",
+          "มายฮีโร่ อคาเดเมีย ภาค 3",
+          "3أكاديميتي للأبطال",
+          "Моя геройская академия 3"
+        ],
+        "siteUrl": "https://anilist.co/anime/100166",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx100166-jUCZYbzn2XLw.jpg",
+        "popularity": 551463,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2018,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5161,
+            "title": "ODD FUTURE",
+            "artist": "UVERworld",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia3-100166-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS3-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 100166,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5162,
+            "title": "Make My Story",
+            "artist": "Lenny code fiction",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia3-100166-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS3-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 100166,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 104276,
+        "name": "My Hero Academia Season 4",
+        "altNames": [
+          "Boku no Hero Academia 4",
+          "Boku no Hero Academia Season 4",
+          "My Hero Academia 4",
+          "僕のヒーローアカデミア４",
+          "BNHA 4",
+          "MHA 4",
+          "我的英雄学院 4",
+          "我的英雄学院第四季",
+          "มายฮีโร่ อคาเดเมีย ภาค 4",
+          "أكاديميتي للأبطال",
+          "Моя геройская академия 4"
+        ],
+        "siteUrl": "https://anilist.co/anime/104276",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx104276-SnEowMvesWIE.png",
+        "popularity": 486569,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2019,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5163,
+            "title": "Polaris",
+            "artist": "BLUE ENCOUNT",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia4-104276-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS4-OP1-NCBD1080.webm",
+            "duration": 91,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 104276,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5164,
+            "title": "Star Marker",
+            "artist": "KANA-BOON",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia4-104276-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS4-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 104276,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 117193,
+        "name": "My Hero Academia Season 5",
+        "altNames": [
+          "My Hero Academia Season 5",
+          "Boku no Hero Academia 5",
+          "Boku no Hero Academia Season 5",
+          "僕のヒーローアカデミア５",
+          "BNHA 5",
+          "MHA 5",
+          "我的英雄学院 5",
+          "我的英雄学院第五季",
+          "มายฮีโร่ อคาเดเมีย ภาค 5",
+          "أكاديميتي للأبطال",
+          "Моя геройская академия 5"
+        ],
+        "siteUrl": "https://anilist.co/anime/117193",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx117193-E75BlZmDh1aB.jpg",
+        "popularity": 373418,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2021,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5165,
+            "title": "No.1",
+            "artist": "DISH//",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia5-117193-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS5-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 117193,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5166,
+            "title": "Merry-Go-Round",
+            "artist": "MAN WITH A MISSION",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia5-117193-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS5-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 117193,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 139630,
+        "name": "My Hero Academia Season 6",
+        "altNames": [
+          "My Hero Academia 6",
+          "Boku no Hero Academia 6",
+          "僕のヒーローアカデミア６",
+          "BNHA 6",
+          "MHA 6",
+          "我的英雄学院 6",
+          "我的英雄学院第六季",
+          "มายฮีโร่ อคาเดเมีย ภาค 6",
+          "أكاديميتي للأبطال ",
+          "Моя геройская академия 6"
+        ],
+        "siteUrl": "https://anilist.co/anime/139630",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx139630-3v4gxWtNZxLV.jpg",
+        "popularity": 231199,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2022,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5167,
+            "title": "Hitamuki",
+            "artist": "SUPER BEAVER",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia6-139630-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS6-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 139630,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5168,
+            "title": "Bokura no",
+            "artist": "Eve",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia6-139630-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS6-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 139630,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 163139,
+        "name": "My Hero Academia Season 7",
+        "altNames": [
+          "My Hero Academia 7",
+          "Boku no Hero Academia 7",
+          "僕のヒーローアカデミア 7",
+          "BNHA 7",
+          "MHA 7",
+          "Моя геройская академия 7"
+        ],
+        "siteUrl": "https://anilist.co/anime/163139",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx163139-JchZhUFlNTWU.jpg",
+        "popularity": 148105,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2024,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5169,
+            "title": "Ta ga Tame",
+            "artist": "TK from Ling tosite sigure",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademia7-163139-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS7-OP1.webm",
+            "duration": 90,
+            "difficulty": "medium",
+            "episodeRange": null,
+            "animeId": 163139,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5170,
+            "title": "Curtain Call",
+            "artist": "Yuuri",
+            "type": "OP2",
+            "videoKey": "BokunoHeroAcademia7-163139-OP2.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://qjnfdhmvvledhtwwfrzb.supabase.co/storage/v1/object/public/videos/BokunoHeroAcademia7-163139-OP2.mp4",
+            "duration": 90,
+            "difficulty": "medium",
+            "episodeRange": null,
+            "animeId": 163139,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 182896,
+        "name": "My Hero Academia Season Final",
+        "altNames": [
+          "My Hero Academia FINAL SEASON",
+          "Boku no Hero Academia Season Final",
+          "僕のヒーローアカデミア FINAL SEASON",
+          "My Hero Academia 8",
+          "My Hero Academia Season 8",
+          "Boku no Hero Academia 8",
+          "BNHA 8",
+          "MHA 8",
+          "Моя геройская академия 8",
+          "ヒロアカ 8",
+          "มายฮีโร่ อคาเดเมีย ไฟนอลซีซัน"
+        ],
+        "siteUrl": "https://anilist.co/anime/182896",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx182896-mvxTVHGdDB4q.jpg",
+        "popularity": 91915,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2025,
+        "franchiseId": 1011,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5171,
+            "title": "THE REVO",
+            "artist": "Porno Graffitti",
+            "type": "OP1",
+            "videoKey": "BokunoHeroAcademiaFINALSEASON-182896-OP1.mp4",
+            "tags": [
+              "Super Power",
+              "Superhero",
+              "Shounen",
+              "Primarily Teen Cast",
+              "Male Protagonist"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/BokuNoHeroAcademiaS8-OP1.webm",
+            "duration": 90,
+            "difficulty": "medium",
+            "episodeRange": null,
+            "animeId": 182896,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1012,
+    "name": "Death Note",
+    "genres": [
+      "Mystery",
+      "Psychological",
+      "Supernatural",
+      "Thriller"
+    ],
+    "isLocked": true,
+    "animes": [
+      {
+        "id": 1535,
+        "name": "Death Note",
+        "altNames": [
+          "Death Note",
+          "DEATH NOTE",
+          "デスノート",
+          "死亡笔记",
+          "מחברת המוות",
+          "Notatnik śmierci",
+          "Carnet de la Mort",
+          "สมุดโน้ตกระชากวิญญาณ",
+          "مذكرة الموت"
+        ],
+        "siteUrl": "https://anilist.co/anime/1535",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx1535-kUgkcrfOrkUM.jpg",
+        "popularity": 860571,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2006,
+        "franchiseId": 1012,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5172,
+            "title": "THE WORLD",
+            "artist": "Nightmare",
+            "type": "OP1",
+            "videoKey": "DEATHNOTE-1535-OP1.mp4",
+            "tags": [
+              "Crime",
+              "Detective",
+              "Anti-Hero",
+              "Male Protagonist",
+              "Fugitive"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/DeathNote-OP1.webm",
+            "duration": 80,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 1535,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5173,
+            "title": "What's up people?",
+            "artist": "Maximum the Hormone",
+            "type": "OP2",
+            "videoKey": "DEATHNOTE-1535-OP2.mp4",
+            "tags": [
+              "Crime",
+              "Detective",
+              "Anti-Hero",
+              "Male Protagonist",
+              "Fugitive"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/DeathNote-OP2.webm",
+            "duration": 80,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 1535,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1013,
+    "name": "Jujutsu Kaisen",
+    "genres": [
+      "Action",
+      "Drama",
+      "Supernatural"
+    ],
+    "isLocked": true,
+    "animes": [
+      {
+        "id": 113415,
+        "name": "Jujutsu Kaisen",
+        "altNames": [
+          "JUJUTSU KAISEN",
+          "呪術廻戦",
+          "JJK",
+          "Sorcery Fight",
+          "咒术回战",
+          "주술회전",
+          "มหาเวทย์ผนึกมาร",
+          "جوجوتسو كايسن",
+          "Магическая битва",
+          "咒術迴戰"
+        ],
+        "siteUrl": "https://anilist.co/anime/113415",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx113415-LHBAeoZDIsnF.jpg",
+        "popularity": 853810,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2020,
+        "franchiseId": 1013,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5174,
+            "title": "Kaikai Kitan",
+            "artist": "Eve",
+            "type": "OP1",
+            "videoKey": "JujutsuKaisen-113415-OP1.mp4",
+            "tags": [
+              "Urban Fantasy",
+              "Shounen",
+              "Curses",
+              "Super Power",
+              "Youkai"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/JujutsuKaisen-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 113415,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5175,
+            "title": "VIVID VICE",
+            "artist": "Who-ya Extended",
+            "type": "OP2",
+            "videoKey": "JujutsuKaisen-113415-OP2.mp4",
+            "tags": [
+              "Urban Fantasy",
+              "Shounen",
+              "Curses",
+              "Super Power",
+              "Youkai"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/JujutsuKaisen-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 113415,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 145064,
+        "name": "Jujutsu Kaisen Season 2",
+        "altNames": [
+          "JUJUTSU KAISEN 2nd Season",
+          "呪術廻戦 第2期",
+          "呪術廻戦 懐玉・玉折／渋谷事変 ",
+          "Jujutsu Kaisen: Kaigyoku Gyokusetsu / Shibuya Jihen",
+          "Jujutsu Kaisen: Hidden Inventory / Premature Death",
+          "JJK2",
+          "咒術迴戰  第二季",
+          "มหาเวทย์ผนึกมาร ภาค 2 ",
+          "咒术回战 2",
+          "2جوجوتسو كايسن ",
+          "Jujutsu Kaisen: Shibuya Incident"
+        ],
+        "siteUrl": "https://anilist.co/anime/145064",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx145064-hSNRJM03pvv1.jpg",
+        "popularity": 406557,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2023,
+        "franchiseId": 1013,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5176,
+            "title": "Ao no Sumika",
+            "artist": "Tatsuya Kitani",
+            "type": "OP1",
+            "videoKey": "JujutsuKaisen2ndSeason-145064-OP1.mp4",
+            "tags": [
+              "Urban Fantasy",
+              "Shounen",
+              "Curses",
+              "Super Power",
+              "Youkai"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/JujutsuKaisenS2-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 145064,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5177,
+            "title": "SPECIALZ",
+            "artist": "King Gnu",
+            "type": "OP2",
+            "videoKey": "JujutsuKaisen2ndSeason-145064-OP2.mp4",
+            "tags": [
+              "Urban Fantasy",
+              "Shounen",
+              "Curses",
+              "Super Power",
+              "Youkai"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/JujutsuKaisenS2-OP2-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 145064,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 172463,
+        "name": "Jujutsu Kaisen Season 3",
+        "altNames": [
+          "JUJUTSU KAISEN Season 3: The Culling Game Part 1",
+          "Jujutsu Kaisen: Shimetsu Kaiyuu - Zenpen",
+          "呪術廻戦 死滅回游 前編",
+          "Jujutsu Kaisen 3rd Season",
+          "呪術廻戦 第3期",
+          "JJK3",
+          "มหาเวทย์ผนึกมาร จรดลล้างบาง พาร์ต 1"
+        ],
+        "siteUrl": "https://anilist.co/anime/172463",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx172463-LnXqHzt74SJL.jpg",
+        "popularity": 136535,
+        "tags": [],
+        "format": "TV",
+        "status": "RELEASING",
+        "seasonYear": 2026,
+        "franchiseId": 1013,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5178,
+            "title": "AIZO",
+            "artist": "King Gnu",
+            "type": "OP1",
+            "videoKey": "JujutsuKaisenShimetsuKaiyuuZenpen-172463-OP1.mp4",
+            "tags": [
+              "Urban Fantasy",
+              "Shounen",
+              "Curses",
+              "Super Power",
+              "Youkai"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/JujutsuKaisenS3-OP1.webm",
+            "duration": 90,
+            "difficulty": "medium",
+            "episodeRange": null,
+            "animeId": 172463,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 1014,
+    "name": "Demon Slayer",
+    "genres": [
+      "Action",
+      "Adventure",
+      "Drama",
+      "Fantasy",
+      "Supernatural"
+    ],
+    "isLocked": true,
+    "animes": [
+      {
+        "id": 101922,
+        "name": "Demon Slayer",
+        "altNames": [
+          "Demon Slayer: Kimetsu no Yaiba",
+          "Kimetsu no Yaiba",
+          "鬼滅の刃",
+          "KnY",
+          "Kimetsu no Yaiba: Kyoudai no Kizuna",
+          "Demon Slayer: Kimetsu no Yaiba: Bonds of Siblings",
+          "鬼滅の刃-兄妹の絆-",
+          "鬼灭之刃",
+          "הלהב קוטל השדים",
+          "قاتل الشياطين",
+          "ดาบพิฆาตอสูร",
+          "Miecz zabójcy demonów – Kimetsu no Yaiba",
+          " Guardians de la nit: Kimetsu no Yaiba",
+          "İblis Keser",
+          "ΚΥΝΗΓΟΣ ΔΑΙΜΟΝΩΝ: KIMETSU NO YAIBA",
+          "Zabiják démonů",
+          "شیطان کش",
+          "귀멸의 칼날"
+        ],
+        "siteUrl": "https://anilist.co/anime/101922",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx101922-WBsBl0ClmgYL.jpg",
+        "popularity": 895966,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2019,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5179,
+            "title": "Gurenge",
+            "artist": "LiSA",
+            "type": "OP1",
+            "videoKey": "KimetsunoYaiba-101922-OP1.mp4",
+            "tags": [
+              "Demons",
+              "Shounen",
+              "Swordplay",
+              "Male Protagonist",
+              "Vampire"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/KimetsuNoYaiba-OP1-NCBD1080.webm",
+            "duration": 91,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 101922,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 112151,
+        "name": "Demon Slayer The Movie: Mugen Train",
+        "altNames": [
+          "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+          "Kimetsu no Yaiba: Mugen Ressha-hen",
+          "鬼滅の刃 無限列車編",
+          "KnY Movie",
+          "Els Guardians de la Nit: El Tren Infinit",
+          "Guardianes de la Noche: Tren Infinito",
+          "Demon Slayer: Mugen Treni",
+          "Demon Slayer: Il Treno Mugen",
+          "鬼灭之刃：无限列车篇",
+          "قاتل الشياطين الفيلم: قطار اللانهاية",
+          "ดาบพิฆาตอสูร เดอะมูฟวี่ : ศึกรถไฟสู่นิรันดร์",
+          "Demon Slayer: Kimetsu no Yaiba - Le film : Le train de l'Infini",
+          "ΚΥΝΗΓΟΣ ΔΑΙΜΟΝΩΝ: KIMETSU NO YAIBA – Η ΤΑΙΝΙΑ: ΤΟ ΤΡΕΝΟ ΜΟΥΓΚΕΝ",
+          "극장판 귀멸의 칼날: 무한열차편"
+        ],
+        "siteUrl": "https://anilist.co/anime/112151",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx112151-1qlQwPB1RrJe.png",
+        "popularity": 459321,
+        "tags": [],
+        "format": "MOVIE",
+        "status": "FINISHED",
+        "seasonYear": 2020,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": []
+      },
+      {
+        "id": 142329,
+        "name": "Demon Slayer Season 2",
+        "altNames": [
+          "Demon Slayer: Kimetsu no Yaiba Entertainment District Arc",
+          "Kimetsu no Yaiba: Yuukaku-hen",
+          "鬼滅の刃 遊郭編",
+          "KnY 2",
+          "Demon Slayer: Kimetsu no Yaiba - Le quartier des plaisirs",
+          "ดาบพิฆาตอสูร ภาค 2 บทย่านเริงรมย์",
+          "Miecz zabójcy demonów – Kimetsu no Yaiba: Dzielnica uciech",
+          "귀멸의 칼날: 환락의 거리편"
+        ],
+        "siteUrl": "https://anilist.co/anime/142329",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx142329-kET1PIXJv2eW.jpg",
+        "popularity": 425197,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2022,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5180,
+            "title": "Zankyou Zanka",
+            "artist": "Aimer",
+            "type": "OP1",
+            "videoKey": "KimetsunoYaibaYuukakuhen-142329-OP1.mp4",
+            "tags": [
+              "Demons",
+              "Shounen",
+              "Swordplay",
+              "Male Protagonist",
+              "Vampire"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/KimetsuNoYaibaYuukakuHen-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 142329,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 145139,
+        "name": "Demon Slayer Season 3",
+        "altNames": [
+          "Demon Slayer: Kimetsu no Yaiba Swordsmith Village Arc",
+          "Kimetsu no Yaiba: Katanakaji no Sato-hen",
+          "鬼滅の刃 刀鍛冶の里編",
+          "KnY 3",
+          "ดาบพิฆาตอสูร ภาค 3 บทหมู่บ้านช่างตีดาบ",
+          "Demon Slayer: Kimetsu no Yaiba - Le village des forgerons",
+          "Истребитель демонов: Kimetsu no Yaiba. Деревня кузнецов",
+          "Miecz zabójcy demonów – Kimetsu no Yaiba: Wioska płatnerzy"
+        ],
+        "siteUrl": "https://anilist.co/anime/145139",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx145139-rRimpHGWLhym.png",
+        "popularity": 319931,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2023,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5181,
+            "title": "Kizuna no Kiseki",
+            "artist": "MAN WITH A MISSION, milet",
+            "type": "OP1",
+            "videoKey": "KimetsunoYaibaKatanakajinoSatohen-145139-OP1.mp4",
+            "tags": [
+              "Demons",
+              "Shounen",
+              "Swordplay",
+              "Male Protagonist",
+              "Vampire"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/KimetsuNoYaibaKatanakajiNoSatoHen-OP1-NCBD1080.webm",
+            "duration": 89,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 145139,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 166240,
+        "name": "Demon Slayer Season 4",
+        "altNames": [
+          "Demon Slayer: Kimetsu no Yaiba Hashira Training Arc",
+          "Kimetsu no Yaiba: Hashira Geiko-hen",
+          "Kimetsu no Yaiba: Hashira Geiko-hen",
+          "鬼滅の刃 柱稽古編",
+          "KnY 4",
+          "Demon Slayer: Kimetsu no Yaiba - L'entraînement des Piliers",
+          "Miecz zabójcy demonów – Kimetsu no Yaiba: Trening Filarów"
+        ],
+        "siteUrl": "https://anilist.co/anime/166240",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx166240-PBV7zukIHW7V.png",
+        "popularity": 225601,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2024,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5182,
+            "title": "Mugen",
+            "artist": "MY FIRST STORY, HYDE",
+            "type": "OP1",
+            "videoKey": "KimetsunoYaibaHashiraGeikohen-166240-OP1.mp4",
+            "tags": [
+              "Demons",
+              "Shounen",
+              "Swordplay",
+              "Male Protagonist",
+              "Vampire"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/KimetsuNoYaibaHashiraGeikoHen-OP1.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 166240,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 178788,
+        "name": " Demon Slayer The Movie: Infinity Castle",
+        "altNames": [
+          "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+          "Kimetsu no Yaiba: Mugenjou-hen Movie 1 - Akaza Sairai",
+          "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+          "Demon Slayer: Kimetsu no Yaiba La Forteresse infinie",
+          "Demon Slayer: Kimetsu no Yaiba Castelo Infinito"
+        ],
+        "siteUrl": "https://anilist.co/anime/178788",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx178788-zm3gtpB9TpRt.jpg",
+        "popularity": 138515,
+        "tags": [],
+        "format": "MOVIE",
+        "status": "FINISHED",
+        "seasonYear": 2025,
+        "franchiseId": 1014,
+        "isLocked": true,
+        "songs": []
+      }
+    ]
+  },
+  {
+    "id": 1015,
+    "name": "Attack on Titan",
+    "genres": [
+      "Action",
+      "Drama",
+      "Fantasy",
+      "Mystery"
+    ],
+    "isLocked": true,
+    "animes": [
+      {
+        "id": 16498,
+        "name": "Attack on Titan",
+        "altNames": [
+          "Shingeki no Kyojin",
+          "進撃の巨人",
+          "SnK",
+          "AoT",
+          "Ataque a los Titanes",
+          "Ataque dos Titãs",
+          "L'Attacco dei Giganti",
+          "מתקפת הטיטאנים",
+          "进击的巨人",
+          "L’Attaque des Titans",
+          "الهجوم على العمالقة",
+          "ผ่าพิภพไททัน",
+          "حمله به تایتان",
+          "Ataque de Titãs",
+          "Atak Tytanów"
+        ],
+        "siteUrl": "https://anilist.co/anime/16498",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx16498-buvcRTBx4NSm.jpg",
+        "popularity": 944367,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2013,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5183,
+            "title": "Guren no Yumiya",
+            "artist": "Linked Horizon",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojin-16498-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojin-OP1.webm",
+            "duration": 92,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 16498,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          },
+          {
+            "id": 5184,
+            "title": "Jiyuu no Tsubasa",
+            "artist": "Linked Horizon",
+            "type": "OP2",
+            "videoKey": "ShingekinoKyojin-16498-OP2.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojin-OP2.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 16498,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 20958,
+        "name": "Attack on Titan Season 2",
+        "altNames": [
+          "Shingeki no Kyojin Season 2",
+          "進撃の巨人 Season２",
+          "SnK 2",
+          "AoT 2",
+          "+מתקפת הטיטאנים עונה 2",
+          "L'Attacco dei Giganti 2",
+          "L'Attacco dei Giganti - Seconda Stagione",
+          "ผ่าพิภพไททัน ภาค 2",
+          "حمله به تایتان فصل 2"
+        ],
+        "siteUrl": "https://anilist.co/anime/20958",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx20958-HuFJyr54Mmir.jpg",
+        "popularity": 664544,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2017,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5185,
+            "title": "Shinzou wo Sasageyo!",
+            "artist": "Linked Horizon",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinSeason2-20958-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS2-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 20958,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 99147,
+        "name": "Attack on Titan Season 3",
+        "altNames": [
+          "Shingeki no Kyojin Season 3",
+          "進撃の巨人 Season３",
+          "SnK 3",
+          "AoT 3",
+          "Shingeki no Kyojin Season 3",
+          "מתקפת הטיטאנים עונה 3",
+          "L'Attacco dei Giganti 3",
+          "L'Attacco dei Giganti - Terza Stagione",
+          "ผ่าพิภพไททัน ภาค 3",
+          "حمله به تایتان فصل 3",
+          "ผ่าพิภพไททัน ภาค 3 Part 1"
+        ],
+        "siteUrl": "https://anilist.co/anime/99147",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx99147-AiPDD8cwlCfi.jpg",
+        "popularity": 620759,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2018,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5186,
+            "title": "Red Swan",
+            "artist": "Yoshiki, HYDE",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinSeason3-99147-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS3-OP1-NCBD1080.webm",
+            "duration": 91,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 99147,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 104578,
+        "name": "Attack on Titan Season 3 Part 2",
+        "altNames": [
+          "Shingeki no Kyojin Season 3 Part 2",
+          "進撃の巨人 Season３ Part.2",
+          "SnK 3",
+          "AoT 3",
+          "Shingeki no Kyojin Season 3 (2019)",
+          "L'Attaco dei Giganti 3 Parte 2",
+          "L'Attacco dei Giganti - Terza Stagione Parte 2",
+          "מתקפת הטיטאנים עונה 3 חלק 2",
+          "L'Attaque des Titans Saison 3 Partie 2 ",
+          "ผ่าพิภพไททัน ภาค 3 Part 2",
+          "ผ่าพิภพไททัน ภาค 3 พาร์ท 2",
+          "حمله به تایتان فصل 3"
+        ],
+        "siteUrl": "https://anilist.co/anime/104578",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx104578-k61nx3LPjvgd.jpg",
+        "popularity": 551775,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2019,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5187,
+            "title": "Shoukei to Shikabane no Michi",
+            "artist": "Linked Horizon",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinSeason3Part2-104578-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS3Part2-OP1-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 104578,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 110277,
+        "name": "Attack on Titan Final Season",
+        "altNames": [
+          "Shingeki no Kyojin: The Final Season",
+          "進撃の巨人 The Final Season",
+          "SnK 4",
+          "AoT 4",
+          "Shingeki no Kyojin 4",
+          "進撃の巨人4",
+          "Attack on Titan Season 4",
+          "진격의 거인 더 파이널 시즌",
+          "מתקפת הטיטאנים העונה האחרונה",
+          "L'Attaque des Titans Saison Finale",
+          "L'Attacco dei Giganti 4",
+          "L'Attacco dei Giganti - La Stagione Finale",
+          "حمله به تایتان فصل 4 ",
+          " ผ่าพิภพไททัน ไฟนอล ซีซั่น",
+          "ผ่าพิภพไททัน Final Season",
+          "ผ่าพิภพไททัน ภาค 4",
+          "هجوم العملاقة الجزء الأخير"
+        ],
+        "siteUrl": "https://anilist.co/anime/110277",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx110277-sKUNXAsWMNFw.jpg",
+        "popularity": 579488,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2021,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5188,
+            "title": "Boku no Sensou",
+            "artist": "Shinsei Kamattechan",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinTheFinalSeason-110277-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS4-OP1-NCBD1080.webm",
+            "duration": 89,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 110277,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 131681,
+        "name": "Attack on Titan Final Season Part 2",
+        "altNames": [
+          "Shingeki no Kyojin: The Final Season Part 2",
+          "進撃の巨人 The Final Season Part 2",
+          "SnK 4",
+          "AoT 4",
+          "L'attaque des titans Saison Finale Partie 2",
+          "Shingeki no Kyojin: The Final Season (2022)",
+          "اتک عن تایتان",
+          "حمله به غول ها",
+          "حمله به تایتان فصل 4 ",
+          " ผ่าพิภพไททัน ไฟนอล ซีซั่น Part 2",
+          "ผ่าพิภพไททัน ภาค 4",
+          "L'Attacco dei Giganti 4 Parte 2"
+        ],
+        "siteUrl": "https://anilist.co/anime/131681",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx131681-5ooUqvqNtee1.jpg",
+        "popularity": 385847,
+        "tags": [],
+        "format": "TV",
+        "status": "FINISHED",
+        "seasonYear": 2022,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5189,
+            "title": "The Rumbling",
+            "artist": "SiM",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinTheFinalSeasonPart2-131681-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS4Part2-OP1.webm",
+            "duration": 90,
+            "difficulty": "easy",
+            "episodeRange": null,
+            "animeId": 131681,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      },
+      {
+        "id": 146984,
+        "name": "Attack on Titan Final Season Part 3 Final Arc Part 1",
+        "altNames": [
+          "Shingeki no Kyojin: The Final Season - Kanketsu-hen Zenpen",
+          "Attack on Titan Final Season THE FINAL CHAPTERS Special 1",
+          "進撃の巨人 The Final Season完結編 前編",
+          "Shingeki no Kyojin: The Final Season Final Edition",
+          "Shingeki no Kyojin: The Final Season Part 3",
+          "ผ่าพิภพไททัน ภาค 4",
+          "ผ่าพิภพไททัน ไฟนอล ซีซั่น Part 3",
+          "Attack on Titan The Final Season The Final Part Special",
+          "Attack on Titan The Final Season The Final Part Part 1",
+          "حمله به تایتان فصل آخر قسمت ویژه 1 ",
+          "SnK 4",
+          "AoT 4"
+        ],
+        "siteUrl": "https://anilist.co/anime/146984",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx146984-GXrLeT6vQqyP.jpg",
+        "popularity": 212952,
+        "tags": [],
+        "format": "SPECIAL",
+        "status": "FINISHED",
+        "seasonYear": 2023,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": []
+      },
+      {
+        "id": 162314,
+        "name": "Attack on Titan Final Season Part 3 Final Arc Part 2",
+        "altNames": [
+          "Shingeki no Kyojin: The Final Season - Kanketsu-hen Kouhen",
+          "Attack on Titan Final Season THE FINAL CHAPTERS Special 2",
+          "進撃の巨人 The Final Season完結編 後編",
+          "Shingeki no Kyojin: The Final Season Final Edition",
+          "Attack on Titan: The Final Season Part 4",
+          "Shingeki no Kyojin: The Final Season Part 4",
+          "SnK 4",
+          "AoT 4"
+        ],
+        "siteUrl": "https://anilist.co/anime/162314",
+        "studio": null,
+        "coverImage": "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx162314-qIWdAAFtvY8J.jpg",
+        "popularity": 144839,
+        "tags": [],
+        "format": "SPECIAL",
+        "status": "FINISHED",
+        "seasonYear": 2023,
+        "franchiseId": 1015,
+        "isLocked": true,
+        "songs": [
+          {
+            "id": 5190,
+            "title": "Saigo no Kyojin",
+            "artist": "Linked Horizon",
+            "type": "OP1",
+            "videoKey": "ShingekinoKyojinTheFinalSeasonKanketsuhenKouhen-162314-OP1.mp4",
+            "tags": [
+              "Kaiju",
+              "Revenge",
+              "Military",
+              "Tragedy",
+              "Post-Apocalyptic"
+            ],
+            "sourceUrl": "https://v.animethemes.moe/ShingekiNoKyojinS4KanketsuHenKouhen-OP1-TV-NCBD1080.webm",
+            "duration": 90,
+            "difficulty": "medium",
+            "episodeRange": null,
+            "animeId": 162314,
+            "isLocked": true,
+            "downloadStatus": "COMPLETED",
+            "errorLog": null
+          }
+        ]
+      }
+    ]
+  }
+]

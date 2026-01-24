@@ -21,6 +21,15 @@ enum VoteType {
   DISLIKE
 }
 
+// NOUVEAU : Pour suivre l'état du téléchargement
+enum DownloadStatus {
+  PENDING     // À faire
+  PROCESSING  // En cours (pris par un worker)
+  COMPLETED   // Fini, URL dispo
+  ERROR       // Échec (voir errorLog)
+  SKIPPED     // Ignoré volontairement
+}
+
 // --- UTILISATEURS (PROFIL) ---
 model Profile {
   id        String   @id @default(uuid()) 
@@ -28,32 +37,26 @@ model Profile {
   email     String   @unique 
   avatar    String   @default("default_avatar.png")
   
-  // NIVEAU & PROGRESSION
   level     Int      @default(1)
   xp        Int      @default(0)
   
-  // INTEGRATIONS
   anilistUsername   String?
   lastListSync      DateTime?
 
-  // RÔLE
   role      UserRole @default(USER)
   
-  // STATS
   gamesPlayed Int @default(0)
   gamesWon    Int @default(0)
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  // RELATIONS
   games     GameParticipant[] 
   votes     SongVote[]
   history   SongHistory[]
   myList    PlayerAnimeList[]
 }
 
-// --- PARTIES (SESSIONS) ---
 model GameSession {
   id          String   @id @default(uuid())
   mode        String   
@@ -81,7 +84,10 @@ model GameParticipant {
 model Franchise {
   id        Int      @id @default(autoincrement())
   name      String   @unique
-  genres    String[] // C'EST ICI QUE TOUT SE JOUE : Les genres globaux
+  genres    String[] 
+  
+  isLocked  Boolean  @default(false)
+  
   animes    Anime[]
 }
 
@@ -89,11 +95,12 @@ model Anime {
   id        Int      @id @default(autoincrement())
   name      String   @unique 
   altNames  String[] 
+  
   siteUrl   String?
   studio    String?
   coverImage String?
   popularity Int @default(0)
-  tags       String[] // Tags spécifiques (ex: Isekai, School)
+  tags       String[] 
   format     String?
   status     String?
   seasonYear Int?
@@ -121,6 +128,10 @@ model Song {
   
   animeId   Int
   isLocked  Boolean @default(false)
+
+  // NOUVEAUX CHAMPS POUR LE WORKER
+  downloadStatus DownloadStatus @default(PENDING)
+  errorLog       String?        // Pour stocker le message d'erreur si ça plante
 
   // RELATIONS
   anime     Anime    @relation(fields: [animeId], references: [id])

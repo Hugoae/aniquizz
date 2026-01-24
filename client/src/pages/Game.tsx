@@ -45,6 +45,7 @@ interface ServerSong {
   type: string; 
   videoKey: string;
   cover?: string;
+  exactName?: string;
   franchise?: string;
   siteUrl?: string;
   sourceUrl?: string;
@@ -235,6 +236,35 @@ export default function Game() {
   }, []);
 
   useEffect(() => {
+    // Si on n'est pas en mode typing ou si le champ est vide, on vide les suggestions
+    if (inputMode !== 'typing' || !answer || answer.trim().length < 2) {
+        setSuggestions([]);
+        return;
+    }
+
+    const term = answer.toLowerCase().trim();
+    
+    // On cherche dans la liste complète (chargée au démarrage)
+    const matches = animeList
+        .filter(anime => {
+            // 1. Recherche sur le nom principal
+            if (anime.name.toLowerCase().includes(term)) return true;
+            
+            // 2. Recherche sur les noms alternatifs (ex: "BnHA" pour "My Hero Academia")
+            if (anime.altNames && anime.altNames.some(alt => alt.toLowerCase().includes(term))) return true;
+            
+            // 3. Recherche sur la franchise
+            if (anime.franchise && anime.franchise.toLowerCase().includes(term)) return true;
+            
+            return false;
+        })
+        .slice(0, 5) // On garde seulement les 5 meilleurs résultats
+        .map(a => a.name); // On ne garde que le nom principal pour l'affichage
+
+    setSuggestions(matches);
+  }, [answer, animeList, inputMode]);
+
+  useEffect(() => {
     socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
 
     const handlePlayerUpdate = (data: { players: any[] }) => { 
@@ -420,7 +450,13 @@ export default function Game() {
     if (phase !== 'guessing') {
       return (
         <div className="glass-card p-4 flex items-center justify-between w-full animate-scale-in border border-white/10">
-          <div className="text-left"><h3 className="text-xl font-bold mb-1 text-primary">{currentSong?.displayAnswer || currentSong?.anime}</h3><p className="text-sm text-muted-foreground">{currentSong?.title} - {currentSong?.artist}</p></div>
+          <div className="text-left">
+            {/* MODIFICATION ICI : On priorise exactName */}
+            <h3 className="text-xl font-bold mb-1 text-primary">
+                {currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime}
+            </h3>
+            <p className="text-sm text-muted-foreground">{currentSong?.title} - {currentSong?.artist}</p>
+          </div>
         </div>
       );
     }
@@ -481,7 +517,7 @@ export default function Game() {
                 {phase === 'revealed' && ( <div className="absolute bottom-4 right-4 z-30"><Button variant="default" onClick={handleVoteSkip} className="gap-2 shadow-lg shadow-purple-500/20"><SkipForward className="h-4 w-4" /> Suivant {players.length > 1 && ` (${skipVotes}/${skipRequired})`}</Button></div> )}
               </div>
               
-              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2"><SongInfoCard animeName={currentSong?.displayAnswer || currentSong?.anime} songTitle={currentSong?.title} artist={currentSong?.artist} type={currentSong?.type} difficulty={currentSong?.difficulty} franchise={currentSong?.franchise} year={currentSong?.year} coverImage={currentSong?.cover} siteUrl={currentSong?.siteUrl} sourceUrl={currentSong?.sourceUrl} isRevealed={phase === 'revealed'} tags={currentSong?.tags} /></div>
+              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2"><SongInfoCard animeName={currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime} songTitle={currentSong?.title} artist={currentSong?.artist} type={currentSong?.type} difficulty={currentSong?.difficulty} franchise={currentSong?.franchise} year={currentSong?.year} coverImage={currentSong?.cover} siteUrl={currentSong?.siteUrl} sourceUrl={currentSong?.sourceUrl} isRevealed={phase === 'revealed'} tags={currentSong?.tags} /></div>
               {isPausePending && !isGamePaused && ( <div className="w-full max-w-[750px] mb-4 bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center justify-center gap-3 animate-pulse"><Clock className="h-5 w-5 text-orange-500" /><span className="text-orange-500 font-bold">Le jeu se mettra en pause à la fin de ce round !</span></div> )}
               {phase !== 'loading' && ( <div className={cn("w-full flex justify-center shrink-0 min-h-[80px] z-50", phase === 'revealed' ? "mb-32" : "mb-6")}>{renderInputArea()}</div> )}
               

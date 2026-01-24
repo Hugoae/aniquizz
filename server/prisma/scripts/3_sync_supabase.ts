@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { PrismaClient } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 import axios from "axios";
@@ -6,112 +7,35 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 import dotenv from "dotenv";
+import https from "https";
 
+// --- SETUP ---
 dotenv.config({ path: path.join(__dirname, "../../.env") });
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
-// --- CONFIGURATION ---
+const prisma = new PrismaClient();
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const BUCKET_NAME = "videos";
-
-const INPUT_FILE = path.join(__dirname, "../data/data_step2.json");
-const OUTPUT_FILE = path.join(__dirname, "../data/final_game_data.json");
-
+// Ajuste ce chemin selon ton arborescence réelle
 const TEMP_DIR = path.join(__dirname, "../data/tmp");
-const DEDUPE_FILE = path.join(__dirname, "../data/dedupe_map.json");
 
-const MAX_CONCURRENCY = 3; // ⚠️ Windows: si tu as encore des locks, baisse à 2
-const DOWNLOAD_TIMEOUT = 60000;
+// ⚡ RÉGLAGES ---
+const HARD_TIMEOUT = 15000; // 15 secondes MAX (Fail Fast)
+const RESET_ERRORS_ON_START = true; // Retente les erreurs au lancement
+
+const httpsAgent = new https.Agent({ keepAlive: false });
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
-
-type Task = {
-  franchiseIndex: number;
-  animeIndex: number;
-  songIndex: number;
-  animeId: number;
-  animeName: string;
-  songType: string;
-  sourceUrl: string;
-};
-
-function sanitizeName(s: string) {
-  return s.replace(/[^a-zA-Z0-9]/g, "");
-}
-
-function loadJsonSafe(file: string): any {
-  try {
-    if (!fs.existsSync(file)) return {};
-    return JSON.parse(fs.readFileSync(file, "utf-8"));
-  } catch {
-    return {};
-  }
-}
-
-function saveJsonSafe(file: string, data: any) {
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-function isRetryableStatus(status?: number) {
-  if (!status) return false;
-  return status === 429 || (status >= 500 && status < 600);
-}
-
-async function sleep(ms: number) {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-async function retry<T>(fn: () => Promise<T>, tries = 4, baseDelay = 500): Promise<T> {
-  let lastErr: any;
-  for (let i = 0; i < tries; i++) {
-    try {
-      return await fn();
-    } catch (e: any) {
-      lastErr = e;
-      const status = e?.response?.status;
-      const retryable = isRetryableStatus(status) || !status;
-      if (!retryable || i === tries - 1) throw e;
-      const wait = baseDelay * Math.pow(2, i);
-      await sleep(wait);
-    }
-  }
-  throw lastErr;
-}
-
-// ✅ ne crash jamais si le fichier n'existe pas
-function safeStatMB(p: string): string {
-  try {
-    const st = fs.statSync(p);
-    return `${(st.size / (1024 * 1024)).toFixed(2)} MB`;
-  } catch {
-    return "? MB";
-  }
-}
-
-// ✅ Windows: unlink peut échouer (EBUSY/EPERM). On retry et sinon on ignore.
+// --- UTILS ---
 async function safeUnlink(p: string) {
-  if (!p) return;
-  for (let i = 0; i < 6; i++) {
-    try {
-      if (fs.existsSync(p)) fs.unlinkSync(p);
-      return;
-    } catch (e: any) {
-      const code = e?.code;
-      if (code === "EBUSY" || code === "EPERM") {
-        await sleep(250 * (i + 1));
-        continue;
-      }
-      return; // autres erreurs -> on ignore
-    }
-  }
+  try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch {}
 }
 
-// ✅ get duration via ffprobe
 async function getVideoDurationSeconds(filePath: string): Promise<number> {
   return new Promise((resolve) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
@@ -123,83 +47,59 @@ async function getVideoDurationSeconds(filePath: string): Promise<number> {
   });
 }
 
-async function listAllFilesInBucket(): Promise<Set<string>> {
-  const existing = new Set<string>();
-  let offset = 0;
-  const limit = 100;
-
-  while (true) {
-    const { data, error } = await supabase.storage.from(BUCKET_NAME).list("", {
-      limit,
-      offset,
-      sortBy: { column: "name", order: "asc" },
-    });
-
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-
-    for (const f of data) {
-      if (f?.name) existing.add(f.name);
-    }
-
-    if (data.length < limit) break;
-    offset += limit;
-  }
-
-  return existing;
-}
-
+// --- CORE DOWNLOAD ---
 async function downloadToFile(url: string, outPath: string) {
-  await retry(async () => {
-    const resp = await axios.get(url, {
-      responseType: "stream",
-      timeout: DOWNLOAD_TIMEOUT,
-      headers: { Accept: "*/*" },
-      maxRedirects: 5,
+  const controller = new AbortController();
+  const writer = fs.createWriteStream(outPath);
+
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+    if (writer && !writer.destroyed) writer.destroy();
+  }, HARD_TIMEOUT);
+
+  try {
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'stream',
+      signal: controller.signal,
+      httpsAgent: httpsAgent,
+      headers: { 'Connection': 'close' }
     });
+
+    response.data.pipe(writer);
 
     await new Promise<void>((resolve, reject) => {
-      const stream = fs.createWriteStream(outPath);
-      resp.data.pipe(stream);
-      stream.on("finish", () => resolve());
-      stream.on("error", reject);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+      response.data.on('error', reject);
     });
-  }, 4, 700);
+  } catch (err: any) {
+    if (axios.isCancel(err) || controller.signal.aborted) {
+      throw new Error(`TIMEOUT (${HARD_TIMEOUT/1000}s)`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function compressMp4(inputPath: string, outputPath: string) {
-  await retry(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        ffmpeg(inputPath)
-          .outputOptions([
-            "-c:v libx264",
-            "-preset veryfast",
-            "-crf 28",
-            "-c:a aac",
-            "-b:a 128k",
-            "-movflags +faststart",
-            "-vf scale=-2:720",
-          ])
-          .on("end", () => resolve())
-          .on("error", (err) => reject(err))
-          .save(outputPath);
-      }),
-    3,
-    800
-  );
+  return new Promise<void>((resolve, reject) => {
+    const safetyTimeout = setTimeout(() => reject(new Error("Compression Timeout")), 20000);
+    
+    ffmpeg(inputPath)
+      .outputOptions(["-c:v libx264", "-preset veryfast", "-crf 28", "-c:a aac", "-b:a 128k", "-movflags +faststart", "-vf scale=-2:720"])
+      .on("end", () => { clearTimeout(safetyTimeout); resolve(); })
+      .on("error", (err) => { clearTimeout(safetyTimeout); reject(err); })
+      .save(outputPath);
+  });
 }
 
 async function uploadFile(filePath: string, fileName: string) {
   const buffer = fs.readFileSync(filePath);
-
-  await retry(async () => {
-    const { error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, buffer, {
-      contentType: "video/mp4",
-      upsert: false,
-    });
-    if (error) throw error;
-  }, 4, 700);
+  const { error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, buffer, { contentType: "video/mp4", upsert: true });
+  if (error) throw error;
 }
 
 function getPublicUrl(fileName: string): string {
@@ -207,182 +107,126 @@ function getPublicUrl(fileName: string): string {
   return data.publicUrl;
 }
 
-async function runWithConcurrency(
-  tasks: Task[],
-  workerCount: number,
-  handler: (t: Task, index: number, total: number) => Promise<void>
-) {
-  let idx = 0;
-  const total = tasks.length;
+// --- WORKER ---
+async function processNextSong() {
+  // 1. Stats
+  const pendingCount = await prisma.song.count({ where: { downloadStatus: 'PENDING' } });
+  
+  // Si fini, on retourne false pour sortir de la boucle
+  if (pendingCount === 0) return false;
 
-  async function worker(workerId: number) {
-    while (true) {
-      const current = idx++;
-      if (current >= total) return;
-      const task = tasks[current];
-      await handler(task, current + 1, total);
+  const errorCount = await prisma.song.count({ where: { downloadStatus: 'ERROR' } });
+  const completedCount = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+
+  // 2. Prendre une tâche
+  const song = await prisma.$transaction(async (tx) => {
+    const candidate = await tx.song.findFirst({
+      where: { downloadStatus: 'PENDING' },
+      select: { id: true, videoKey: true, sourceUrl: true }
+    });
+
+    if (!candidate) return null;
+
+    await tx.song.update({
+      where: { id: candidate.id },
+      data: { downloadStatus: 'PROCESSING' }
+    });
+
+    return candidate;
+  });
+
+  if (!song) return false;
+
+  const fileName = song.videoKey;
+  const rawPath = path.join(TEMP_DIR, `${fileName}.raw`);
+  const outPath = path.join(TEMP_DIR, fileName);
+
+  console.log(`\n🔄 [WORKER] ${fileName}`);
+  console.log(`   📊 RESTE: ${pendingCount} | FINIS: ${completedCount} | ERREURS: ${errorCount}`);
+
+  try {
+    if (!song.sourceUrl) throw new Error("URL manquante");
+
+    // Check Supabase Rapide
+    const { data: list } = await supabase.storage.from(BUCKET_NAME).list('', { search: fileName });
+    if (list && list.length > 0 && list.find(x => x.name === fileName)) {
+        console.log(`   ☁️  Existe déjà -> SKIP DL`);
+        const publicUrl = getPublicUrl(fileName);
+        await prisma.song.update({
+            where: { id: song.id },
+            data: { downloadStatus: 'COMPLETED', sourceUrl: publicUrl }
+        });
+        return true;
     }
+
+    process.stdout.write(`   ⬇️  DL... `);
+    await downloadToFile(song.sourceUrl, rawPath);
+    console.log(`OK`);
+    
+    process.stdout.write(`   🔨 Compress... `);
+    await compressMp4(rawPath, outPath);
+    console.log(`OK`);
+
+    process.stdout.write(`   ⬆️  Upload... `);
+    await uploadFile(outPath, fileName);
+    console.log(`OK`);
+
+    const duration = await getVideoDurationSeconds(outPath);
+    const publicUrl = getPublicUrl(fileName);
+
+    await prisma.song.update({
+      where: { id: song.id },
+      data: { downloadStatus: 'COMPLETED', sourceUrl: publicUrl, duration: duration, errorLog: null }
+    });
+
+  } catch (error: any) {
+    const msg = error.message || "Erreur";
+    console.log(`❌ ${msg}`);
+
+    await prisma.song.update({
+      where: { id: song.id },
+      data: { downloadStatus: 'ERROR', errorLog: msg }
+    });
+  } finally {
+    await safeUnlink(rawPath);
+    await safeUnlink(outPath);
   }
 
-  await Promise.all(Array.from({ length: workerCount }, (_, i) => worker(i + 1)));
+  return true;
 }
 
 async function main() {
-  console.log("\n🟢 [ÉTAPE 3/3] SYNCHRONISATION SUPABASE (BULLETPROOF WINDOWS)");
-  console.log("=====================================");
+  console.log("👷 WORKER DATABASE (Mode: 10s Timeout)");
+  
+  if (RESET_ERRORS_ON_START) {
+      console.log("♻️  Reset des ERREURS en PENDING...");
+      const updated = await prisma.song.updateMany({
+          where: { downloadStatus: 'ERROR' },
+          data: { downloadStatus: 'PENDING', errorLog: null }
+      });
+      console.log(`   -> ${updated.count} tâches réactivées pour tentative.`);
+  }
 
-  const franchises = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
-
-  console.log("📡 Vérification Supabase...");
-  const existingFiles = await listAllFilesInBucket();
-  console.log(`   ${existingFiles.size} fichiers existants.`);
-
-  const dedupeMap: Record<string, string> = loadJsonSafe(DEDUPE_FILE);
-
-  // Build tasks
-  const tasks: Task[] = [];
-  const totalTasks = tasks.length;
-  for (let fi = 0; fi < franchises.length; fi++) {
-    const franchise = franchises[fi];
-    for (let ai = 0; ai < franchise.animes.length; ai++) {
-      const anime = franchise.animes[ai];
-      for (let si = 0; si < (anime.songs ?? []).length; si++) {
-        const song = anime.songs[si];
-        const sourceUrl = song?.videoKey;
-
-        if (!sourceUrl || typeof sourceUrl !== "string" || !sourceUrl.startsWith("http")) continue;
-
-        tasks.push({
-          franchiseIndex: fi,
-          animeIndex: ai,
-          songIndex: si,
-          animeId: anime.id,
-          animeName: anime.name,
-          songType: String(song.type ?? "OP").toUpperCase(),
-          sourceUrl,
-        });
-      }
+  // BOUCLE PRINCIPALE
+  while (true) {
+    const worked = await processNextSong();
+    if (!worked) {
+      break; 
     }
   }
 
-  console.log(`📦 Tâches à traiter : ${tasks.length}`);
-  if (tasks.length === 0) {
-    fs.writeFileSync(OUTPUT_FILE, JSON.stringify(franchises, null, 2));
-    console.log(`⚠️ Aucune tâche. JSON final écrit : ${OUTPUT_FILE}`);
-    return;
-  }
-
-  let successCount = 0;
-  let skipCount = 0;
-  let errorCount = 0;
-
-  const handle = async (t: Task, i: number, total: number) => {
-    const franchise = franchises[t.franchiseIndex];
-    const anime = franchise.animes[t.animeIndex];
-    const song = anime.songs[t.songIndex];
-
-    console.log(`\n[${i}/${total}] ➡️  ${t.animeName} ${t.songType}`);
-    console.log(`   🔗 source: ${t.sourceUrl}`);
-
-    song.sourceUrl = t.sourceUrl;
-
-    // dedupe
-    const dedupedFileName = dedupeMap[t.sourceUrl];
-    if (dedupedFileName) {
-      song.videoKey = dedupedFileName;
-      song.videoUrl = getPublicUrl(dedupedFileName);
-      skipCount++;
-      console.log(`   ♻️  DEDUP -> ${dedupedFileName}`);
-      return;
-    }
-
-    const cleanName = sanitizeName(t.animeName);
-    const fileName = `${cleanName}-${t.animeId}-${t.songType}.mp4`;
-
-    if (existingFiles.has(fileName)) {
-      dedupeMap[t.sourceUrl] = fileName;
-      saveJsonSafe(DEDUPE_FILE, dedupeMap);
-
-      song.videoKey = fileName;
-      song.videoUrl = getPublicUrl(fileName);
-      skipCount++;
-      console.log(`   ✅ Déjà sur Supabase -> ${fileName}`);
-      return;
-    }
-
-    const rawPath = path.join(TEMP_DIR, `${fileName}.raw`);
-    const outPath = path.join(TEMP_DIR, fileName);
-
-    try {
-      console.log(`   ⬇️  Download...`);
-      await downloadToFile(t.sourceUrl, rawPath);
-      console.log(`   ✅ Download OK (${safeStatMB(rawPath)})`);
-
-      console.log(`   🎞️  Compression ffmpeg...`);
-      await compressMp4(rawPath, outPath);
-      console.log(`   ✅ Compression OK (${safeStatMB(outPath)})`);
-
-      console.log(`   ⏱️  Calcul duration (ffprobe)...`);
-      const duration = await getVideoDurationSeconds(outPath);
-      song.duration = duration || undefined;
-      console.log(`   ✅ Duration = ${duration}s`);
-
-      console.log(`   ☁️  Upload Supabase -> ${fileName}`);
-      await uploadFile(outPath, fileName);
-      console.log(`   ✅ Upload OK`);
-
-      existingFiles.add(fileName);
-
-      dedupeMap[t.sourceUrl] = fileName;
-      saveJsonSafe(DEDUPE_FILE, dedupeMap);
-
-      song.videoKey = fileName;
-      song.videoUrl = getPublicUrl(fileName);
-
-      successCount++;
-
-      await safeUnlink(rawPath);
-      await safeUnlink(outPath);
-    } catch (e: any) {
-      errorCount++;
-      const status = e?.response?.status;
-      const msg = e?.message ?? String(e);
-      console.log(`   ❌ Erreur (status=${status ?? "?"}) : ${msg}`);
-
-      // cleanup safe
-      await safeUnlink(rawPath);
-      await safeUnlink(outPath);
-    }
-  };
-
-  await runWithConcurrency(tasks, MAX_CONCURRENCY, handle);
-
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(franchises, null, 2));
-
-  // Nettoie temp (safe)
-  try {
-    if (fs.existsSync(TEMP_DIR)) fs.rmSync(TEMP_DIR, { recursive: true, force: true });
-  } catch {
-    // ignore
-  }
-
-    const completed = successCount + skipCount;
-    const percent = totalTasks > 0
-    ? ((completed / totalTasks) * 100).toFixed(1)
-    : "0.0";
-
-    console.log(`\n✨ PIPELINE TERMINÉ !`);
-    console.log(`   - Total sons détectés : ${totalTasks}`);
-    console.log(`   - Uploadés           : ${successCount}`);
-    console.log(`   - Skippés            : ${skipCount}`);
-    console.log(`   - Erreurs restantes  : ${totalTasks - completed}`);
-    console.log(`   - Progression        : ${percent} %`);
-    console.log(`   📄 Données finales   : ${OUTPUT_FILE}`);
-
+  // --- RAPPORT FINAL AVANT DE QUITTER ---
+  const finalErrors = await prisma.song.count({ where: { downloadStatus: 'ERROR' } });
+  const finalSuccess = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+  
+  console.log(`\n============================================`);
+  console.log(`✨ PLUS DE TÂCHES PENDING ! FIN DU JOB.`);
+  console.log(`--------------------------------------------`);
+  console.log(`✅ SUCCÈS TOTAL : ${finalSuccess}`);
+  console.log(`❌ ERREURS      : ${finalErrors}`);
+  console.log(`============================================\n`);
+  
+  process.exit(0);
 }
 
-// ✅ IMPORTANT: ne plus "crash" sur une erreur de nettoyage, etc.
-main().catch((e) => {
-  console.error("❌ Crash étape 3:", e?.message ?? e);
-  process.exit(1);
-});
+main().catch(console.error);

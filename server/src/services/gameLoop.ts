@@ -254,6 +254,8 @@ export async function startGameLoop(io: Server, rooms: Map<string, Room>, roomId
             song: {
                 id: currentDbSong.id,
                 anime: correctTarget,
+                exactName: exactName, // <--- NOUVEAU : Nom précis (ex: "My Hero Academia Season 7")
+                franchise: franchiseName, // <--- NOUVEAU : Pour afficher la franchise au-dessus
                 title: currentDbSong.title,
                 artist: currentDbSong.artist,
                 type: currentDbSong.type,

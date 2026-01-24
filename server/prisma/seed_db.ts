@@ -15,7 +15,6 @@ async function main() {
 
   // 1. NETTOYAGE
   console.log("🧹 Nettoyage des anciennes données...");
-  // L'ordre est important pour éviter les erreurs de contraintes de clé étrangère
   await prisma.songHistory.deleteMany();
   await prisma.songVote.deleteMany();
   await prisma.playerAnimeList.deleteMany();
@@ -32,22 +31,22 @@ async function main() {
   let totalAnimes = 0;
   let totalSongs = 0;
 
-  // Ensembles pour traquer les doublons (Sécurité supplémentaire)
   const insertedAnimeIds = new Set<number>();
   const insertedVideoKeys = new Set<string>();
 
   for (const fData of franchisesData) {
     
-    // Création Franchise avec GENRES IMPORTÉS DU JSON
-    // Note: On s'assure que fData.genres existe, sinon tableau vide
+    // Création Franchise
     const franchise = await prisma.franchise.upsert({
       where: { name: fData.franchiseName },
       update: {
-        genres: fData.genres || [] 
+        genres: fData.genres || [],
+        isLocked: fData.isLocked || false // <-- Import du Lock
       },
       create: { 
         name: fData.franchiseName,
-        genres: fData.genres || [] 
+        genres: fData.genres || [],
+        isLocked: fData.isLocked || false // <-- Import du Lock
       }
     });
     totalFranchises++;
@@ -68,7 +67,8 @@ async function main() {
             status: aData.status,
             seasonYear: aData.year,
             popularity: aData.popularity || 0,
-            franchiseId: franchise.id
+            franchiseId: franchise.id,
+            isLocked: aData.isLocked || false // <-- Import du Lock
         }
       });
       insertedAnimeIds.add(aData.id);
@@ -88,7 +88,8 @@ async function main() {
             difficulty: sData.difficulty || 'medium',
             duration: sData.duration || 0,
             sourceUrl: sData.sourceUrl || null,
-            animeId: anime.id
+            animeId: anime.id,
+            // Pas de lock explicite sur Song dans le JSON mais on pourrait l'ajouter
           }
         });
         insertedVideoKeys.add(sData.videoKey);

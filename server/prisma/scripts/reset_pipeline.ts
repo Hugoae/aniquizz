@@ -24,7 +24,7 @@ async function emptyBucket() {
     console.log(`\n🌊 VIDAGE DU BUCKET SUPABASE '${BUCKET_NAME}'...`);
     
     let hasMore = true;
-    let deletedCount = 0;
+    let totalDeleted = 0;
 
     while (hasMore) {
         // 1. Lister les fichiers (par paquets de 100)
@@ -49,31 +49,41 @@ async function emptyBucket() {
             if (deleteError) {
                 console.error(`❌ Erreur suppression: ${deleteError.message}`);
             } else {
-                deletedCount += filesToRemove.length;
-                process.stdout.write(`   🗑️  ${deletedCount} fichiers supprimés...\r`);
+                totalDeleted += filesToRemove.length;
+                process.stdout.write(`   🗑️  ${totalDeleted} fichiers supprimés...\r`);
             }
         }
     }
-    console.log(`\n✅ Bucket vidé avec succès.`);
+    console.log(`\n✅ Bucket vidé avec succès (${totalDeleted} fichiers).`);
 }
 
 async function cleanDatabase() {
     console.log(`\n🗄️  NETTOYAGE DE LA BASE DE DONNÉES...`);
     
     try {
-        // L'ordre est important à cause des clés étrangères (Foreign Keys)
-        // On supprime d'abord les enfants (Songs), puis les parents (Animes), puis les grands-parents (Franchises)
+        // 1. D'abord les tables dépendantes (Enfants)
+        // C'est important pour éviter les erreurs de clés étrangères (Foreign Keys)
         
+        const deletedHistory = await prisma.songHistory.deleteMany({});
+        console.log(`   - SongHistory supprimés   : ${deletedHistory.count}`);
+
+        const deletedVotes = await prisma.songVote.deleteMany({});
+        console.log(`   - SongVotes supprimés     : ${deletedVotes.count}`);
+
+        const deletedLists = await prisma.playerAnimeList.deleteMany({});
+        console.log(`   - PlayerAnimeLists suppr. : ${deletedLists.count}`);
+
+        // 2. Ensuite les données principales (Parents)
         const deletedSongs = await prisma.song.deleteMany({});
-        console.log(`   - Songs supprimés : ${deletedSongs.count}`);
+        console.log(`   - Songs supprimés         : ${deletedSongs.count}`);
 
         const deletedAnimes = await prisma.anime.deleteMany({});
-        console.log(`   - Animes supprimés : ${deletedAnimes.count}`);
+        console.log(`   - Animes supprimés        : ${deletedAnimes.count}`);
 
         const deletedFranchises = await prisma.franchise.deleteMany({});
-        console.log(`   - Franchises supprimées : ${deletedFranchises.count}`);
+        console.log(`   - Franchises supprimées   : ${deletedFranchises.count}`);
 
-        console.log(`✅ Base de données nettoyée.`);
+        console.log(`✅ Base de données totalement nettoyée.`);
     } catch (error: any) {
         console.error(`❌ Erreur BDD : ${error.message}`);
     }
@@ -85,7 +95,9 @@ function cleanLocalFiles() {
     const filesToDelete = [
         'data_step1.json',
         'data_step2.json',
-        'final_game_data.json'
+        'final_game_data.json',
+        'dedupe_map.json',   // Suppression critique pour forcer le ré-upload
+        'stats_report.json'
     ];
 
     filesToDelete.forEach(file => {

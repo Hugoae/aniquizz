@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import path from 'path';
 
+// CONFIGURATION DU CHEMIN (Adapté à ton arborescence server/prisma/)
 const SCRIPTS_DIR = path.join(__dirname, 'scripts');
 
 // Structure pour garder les temps en mémoire
@@ -9,17 +10,13 @@ interface StepTiming {
     description: string;
     duration: string;
 }
-
 const timings: StepTiming[] = [];
 
-// Fonction utilitaire pour convertir les millisecondes en "1h 2m 3s"
+// Fonction utilitaire : Convertit ms en "1m 30s"
 const formatDuration = (ms: number) => {
     const seconds = Math.floor((ms / 1000) % 60);
     const minutes = Math.floor((ms / (1000 * 60)) % 60);
-    const hours = Math.floor((ms / (1000 * 60 * 60)));
-
     const parts = [];
-    if (hours > 0) parts.push(`${hours}h`);
     if (minutes > 0) parts.push(`${minutes}m`);
     parts.push(`${seconds}s`);
     return parts.join(' ') || '0s';
@@ -29,69 +26,68 @@ const runScript = (scriptName: string, description: string) => {
     const scriptPath = path.join(SCRIPTS_DIR, scriptName);
     
     console.log(`\n------------------------------------------------------------`);
-    console.log(`🎬 ÉTAPE EN COURS : ${description}`);
-    console.log(`   (Script : ${scriptName})`);
+    console.log(`🎬 ÉTAPE : ${description}`);
+    console.log(`   Fichier : ${scriptName}`);
     console.log(`------------------------------------------------------------\n`);
     
-    const start = Date.now(); // ⏱️ Démarrage chrono
-    
+    const startStep = Date.now(); // ⏱️ Start Chrono
+
     try {
+        // 'inherit' permet de voir les logs du script fils en temps réel
         execSync(`npx ts-node ${scriptPath}`, { stdio: 'inherit' });
         
-        const end = Date.now(); // 🏁 Arrêt chrono
-        const durationMs = end - start;
-        const durationStr = formatDuration(durationMs);
+        const endStep = Date.now(); // 🏁 End Chrono
+        const durationStr = formatDuration(endStep - startStep);
+        console.log(`\n✅ SUCCÈS : ${scriptName} (${durationStr})`);
 
-        console.log(`\n✅ SUCCÈS : ${scriptName} terminé en ${durationStr}.`);
-        
-        // On enregistre le temps pour le bilan final
+        // Ajout au bilan
         timings.push({ name: scriptName, description, duration: durationStr });
 
     } catch (error) {
-        console.error(`\n❌ ÉCHEC CRITIQUE : Le script ${scriptName} a rencontré une erreur.`);
+        console.error(`\n❌ ARRÊT CRITIQUE sur ${scriptName}`);
         process.exit(1);
     }
 };
 
 const main = () => {
-    const totalStart = Date.now(); // Chrono Global
+    const totalStart = Date.now();
 
     console.log(`
     ========================================
-    🏗️  PIPELINE DE GÉNÉRATION DE DONNÉES
+    🚀  ANIGAME DATA PIPELINE (V2: DB-FIRST)
     ========================================
     `);
 
-    // 1. Récupération AniList
-    runScript('1_fetch_anilist.ts', 'Récupération des Données Anime (AniList)');
+    // 1. Récupération des métadonnées (AniList) -> JSON
+    runScript('1_fetch_anilist.ts', '1. Fetch AniList (Structure)');
 
-    // 2. Enrichissement AnimeThemes
-    runScript('2_fetch_animethemes.ts', 'Recherche des Vidéos (AnimeThemes)');
+    // 2. Récupération des liens vidéos (AnimeThemes) -> JSON
+    runScript('2_fetch_animethemes.ts', '2. Fetch AnimeThemes (Liens)');
 
-    // 3. Supabase
-    runScript('3_sync_supabase.ts', 'Compression, Upload & Finalisation');
+    // 3. Import JSON vers Base de Données (Postgres)
+    runScript('import_json_to_db.ts', '3. Import JSON -> Database (Respect Locks)');
+
+    // 4. Worker (Téléchargement / Upload Supabase)
+    runScript('3_sync_supabase.ts', '4. Worker Download & Upload');
 
     const totalEnd = Date.now();
     const totalDuration = formatDuration(totalEnd - totalStart);
 
     console.log(`
-    ========================================
+    ==================================================================
     ✨  PIPELINE TERMINÉ AVEC SUCCÈS !  ✨
-    ========================================
+    ==================================================================
     `);
 
-    // 📊 LE TABLEAU RÉCAPITULATIF
     console.log(`⏱️  BILAN DES PERFORMANCES :`);
     console.log(`------------------------------------------------------------------`);
     timings.forEach(t => {
-        // On aligne joliment le texte
+        // Affichage aligné
         console.log(`   • ${t.description.padEnd(45)} : ${t.duration}`);
     });
     console.log(`------------------------------------------------------------------`);
     console.log(`   🏁 TEMPS TOTAL                                 : ${totalDuration}`);
-    console.log(`------------------------------------------------------------------\n`);
-
-    console.log(`📂 Vos données sont prêtes dans : prisma/data/final_game_data.json\n`);
+    console.log(`==================================================================\n`);
 };
 
 main();

@@ -67,7 +67,6 @@ function chooseBestVideo(videos: Array<{ link: string; tags?: any }>) {
 
 /**
  * Récupère un animé AnimeThemes via mapping AniList (resources)
- * + inclut animethemes.song.artists + animethemeentries.videos
  */
 async function fetchByAniListId(anilistId: number) {
   const url =
@@ -86,12 +85,10 @@ async function fetchByAniListId(anilistId: number) {
 
       const payload = resp.data;
 
-      // Wrapper (au cas où)
       if (Array.isArray(payload?.anime) && payload.anime.length > 0) {
         return payload.anime[0];
       }
 
-      // JSON:API
       const data = payload?.data;
       if (!Array.isArray(data) || data.length === 0) return null;
 
@@ -176,9 +173,23 @@ async function enrichData() {
   console.log("=============================================================\n");
 
   for (const franchise of franchises) {
+    
+    // --- PROTECTION DES FRANCHISES VERROUILLÉES ---
+    if (franchise.isLocked) {
+        console.log(`🔐 Franchise VERROUILLÉE : ${franchise.franchiseName} (Pas de modif des sons)`);
+        continue; // On passe à la suivante sans toucher aux sons
+    }
+    // ---------------------------------------------
+
     console.log(`📦 Franchise : ${franchise.franchiseName}`);
 
     for (const anime of franchise.animes) {
+      // Protection niveau anime (au cas où)
+      if (anime.isLocked) {
+         console.log(`   🔐 Anime locké : ${anime.name}`);
+         continue;
+      }
+
       animeCount++;
       process.stdout.write(
         `   [${animeCount}] Recherche ID ${anime.id} (${anime.name})... `
@@ -196,21 +207,19 @@ async function enrichData() {
 
       if (!atAnime || !Array.isArray(atAnime.animethemes)) {
         console.log("⚠️  Pas de correspondance ID.");
-        anime._toBeDeleted = true;
+        // Note: On ne supprime pas l'anime s'il n'a pas de sons, on le laisse vide
+        // anime._toBeDeleted = true; 
         continue;
       }
 
-      // ✅ récupère toutes les OP
       const opThemes = atAnime.animethemes
         .filter((t: any) => String(t?.type ?? "").toUpperCase() === "OP");
 
       if (opThemes.length === 0) {
         console.log("⚠️  Match OK mais aucune OP trouvée.");
-        anime._toBeDeleted = true;
         continue;
       }
 
-      // Sort par sequence si possible
       opThemes.sort((a: any, b: any) => {
         const sa = Number(a?.sequence);
         const sb = Number(b?.sequence);
@@ -223,13 +232,11 @@ async function enrichData() {
       let fallbackSeq = 1;
 
       for (const theme of opThemes) {
-        // sequence fiable si dispo, sinon fallback
         const seq =
           Number.isFinite(Number(theme?.sequence)) && Number(theme.sequence) > 0
             ? Number(theme.sequence)
             : fallbackSeq++;
 
-        // récupère tous les videos
         const allVideos: Array<{ link: string; tags?: any }> = [];
         for (const entry of theme.animethemeentries ?? []) {
           for (const v of entry.videos ?? []) {
@@ -251,9 +258,9 @@ async function enrichData() {
         songsForThisAnime.push({
           title: rawTitle,
           artist,
-          type: `OP${seq}`, // ✅ OP1 / OP2 / OP3 ...
+          type: `OP${seq}`,
           sequence: seq,
-          videoKey: sourceUrl, // URL source; remplacée par filename à l’étape 3
+          videoKey: sourceUrl, 
           difficulty: anime.difficulty ?? "easy",
           tags: franchise.tags ?? [],
         });
@@ -261,7 +268,6 @@ async function enrichData() {
 
       if (songsForThisAnime.length === 0) {
         console.log("⚠️  OP trouvées mais aucune vidéo exploitable.");
-        anime._toBeDeleted = true;
         continue;
       }
 
@@ -270,15 +276,12 @@ async function enrichData() {
 
       console.log(`✅ ${songsForThisAnime.length} opening(s) ajoutée(s).`);
     }
-
-    franchise.animes = franchise.animes.filter((a: any) => !a._toBeDeleted);
-    franchise.animes.forEach((a: any) => delete a._toBeDeleted);
   }
 
-  const filteredFranchises = franchises.filter((f: any) => f.animes.length > 0);
-  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(filteredFranchises, null, 2));
+  // On sauvegarde tout
+  fs.writeFileSync(OUTPUT_FILE, JSON.stringify(franchises, null, 2));
 
-  console.log(`\n✨ FIN ÉTAPE 2 : ${totalSongsAdded} openings (OP1/OP2/...) trouvées.`);
+  console.log(`\n✨ FIN ÉTAPE 2 : ${totalSongsAdded} nouveaux openings.`);
   console.log(`   📄 Fichier : ${OUTPUT_FILE}`);
 }
 
