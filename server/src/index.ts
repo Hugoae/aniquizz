@@ -230,7 +230,12 @@ io.on('connection', (socket: Socket) => {
             room.status = 'waiting';
         }
 
-        io.to(room.id).emit('player_joined', { players: cleanPlayersData(room.players) });
+        // CORRECTION : Envoi explicite du hostId
+        io.to(room.id).emit('player_joined', { 
+            players: cleanPlayersData(room.players),
+            hostId: room.hostId 
+        });
+        
         socket.emit('chat_history', { messages: room.chatHistory });
 
         socket.emit('room_joined', { 
@@ -240,8 +245,7 @@ io.on('connection', (socket: Socket) => {
             roomSettings: room.settings 
         });
         
-        // FIX FANTÔMES : On force une mise à jour globale des joueurs vers tout le monde
-        // Pour être sûr que ceux qui sont déjà dans le lobby voient celui qui arrive
+        // CORRECTION : Envoi explicite du hostId
         io.to(room.id).emit('update_players', { 
             players: cleanPlayersData(room.players),
             hostId: room.hostId
@@ -317,13 +321,13 @@ io.on('connection', (socket: Socket) => {
             io.to(room.id).emit('room_updated', { 
                 roomSettings: room.settings,
                 roomName: room.name,
-                players: cleanPlayersData(room.players)
+                players: cleanPlayersData(room.players),
+                hostId: room.hostId
             });
             broadcastRooms();
         }
     });
 
-    // ... (Le reste du fichier reste inchangé : send_message, start_game, etc.)
     socket.on('send_message', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room) {
@@ -346,6 +350,7 @@ io.on('connection', (socket: Socket) => {
 
     socket.on('get_rooms', () => { broadcastRooms(); });
 
+    // --- JEU : DÉMARRAGE ---
     socket.on('start_game', (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         if (room && room.hostId === socket.id) {
@@ -358,11 +363,13 @@ io.on('connection', (socket: Socket) => {
             
             broadcastRooms();
             
+            // CORRECTION : Ajout du hostId pour le client
             io.to(room.id).emit('game_started', { 
                 roomId: room.id, 
                 settings: room.settings,
                 introDuration: GAME_CONSTANTS.TIMERS.INTRO_DELAY,
-                players: cleanPlayersData(room.players)
+                players: cleanPlayersData(room.players),
+                hostId: room.hostId
             });
 
             startGameLoop(io, rooms, room.id, gameId, broadcastRooms);
@@ -375,7 +382,8 @@ io.on('connection', (socket: Socket) => {
             const player = room.players.find(p => p.id === socket.id);
             if (player) {
                 player.isReady = !player.isReady; 
-                io.to(room.id).emit('update_players', { players: cleanPlayersData(room.players) });
+                // CORRECTION : Ajout du hostId
+                io.to(room.id).emit('update_players', { players: cleanPlayersData(room.players), hostId: room.hostId });
             }
         }
     });
@@ -387,7 +395,8 @@ io.on('connection', (socket: Socket) => {
             if (player) {
                 player.currentAnswer = (data.answer || "").trim();
                 player.answerMode = data.mode;
-                io.to(room.id).emit('update_players', { players: cleanPlayersData(room.players) });
+                // CORRECTION : Ajout du hostId
+                io.to(room.id).emit('update_players', { players: cleanPlayersData(room.players), hostId: room.hostId });
             }
         }
     });
