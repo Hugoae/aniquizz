@@ -450,23 +450,20 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
         {/* --- COLONNE GAUCHE --- */}
         <div className="space-y-6">
           <div className="space-y-3">
-            <div className="flex items-center gap-2"><Label>Type de partie</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Standard: Classique à points<br/>Battle Royale: Le dernier survivant<br/>Lives: 3 vies, game over si 0</p></TooltipContent></Tooltip></div>
+            <div className="flex items-center gap-2"><Label>Type de partie</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Standard: Classique à points<br/>Battle Royale: Le dernier survivant gagne, réduction du temps de réponse au fur et à mesure<br/>Lives: 3 vies par Round, la rapidité est récompensé</p></TooltipContent></Tooltip></div>
             <div className="grid grid-cols-3 gap-2">
               {availableGameTypes.map((type) => ( 
                 <button 
                   key={type.id} 
                   onClick={() => !type.disabled && setConfig((prev: any) => ({ ...prev, gameType: type.id }))} 
                   className={cn(
-                    "relative flex-1 py-2.5 text-xs font-bold uppercase rounded-xl transition-all flex items-center justify-center gap-2 border overflow-hidden whitespace-nowrap", 
+                    "relative flex-1 py-3 px-1 text-[10px] sm:text-xs font-bold uppercase rounded-xl transition-all flex items-center justify-center border overflow-hidden whitespace-nowrap", 
                     config.gameType === type.id ? "bg-primary text-primary-foreground shadow-md border-primary" : "bg-card border-border hover:border-primary/50 text-muted-foreground", 
                     type.disabled && "opacity-60 cursor-not-allowed bg-secondary/50"
-                  )} 
+                  )}
                   disabled={type.disabled}
                 >
-                  <span className="flex items-center gap-2">
-                    {type.label}
-                    {type.disabled && <Hourglass className="w-3 h-3 text-muted-foreground" />}
-                  </span>
+                  {type.label}
                 </button> 
               ))}
             </div>
@@ -513,7 +510,7 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
         {/* --- COLONNE DROITE --- */}
         <div className="space-y-6">
             <div className="space-y-3">
-                <div className="flex items-center gap-2"><Label>Précision des réponses</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Franchise: Si l'anime est "Naruto Shippuden", "Naruto" est accepté.<br/>Exacte: Il faut trouver la saison précise (Ex: "MHA S2").</p></TooltipContent></Tooltip></div>
+                <div className="flex items-center gap-2"><Label>Précision des réponses</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Franchise: Il faut juste trouver le nom de l'anime et pas la saison précise. (Ex : My Hero Academia et pas My Hero Academia Season 6)<br/>Exacte: Il faut trouver la saison précise (Ex: "My Hero Academia Season 2").</p></TooltipContent></Tooltip></div>
                 <div className="flex gap-2">
                     <button onClick={() => setConfig((prev: any) => ({ ...prev, precision: 'exact' }))} className={cn("flex-1 py-2.5 text-xs font-bold uppercase rounded-xl transition-all border flex items-center justify-center gap-2", config.precision === 'exact' ? "bg-blue-500/20 text-blue-500 border-blue-500 shadow-sm" : "bg-card border-border hover:border-primary/50 text-muted-foreground")}><Target className="h-4 w-4" /> Anime Exact</button>
                     <button onClick={() => setConfig((prev: any) => ({ ...prev, precision: 'franchise' }))} className={cn("flex-1 py-2.5 text-xs font-bold uppercase rounded-xl transition-all border flex items-center justify-center gap-2", config.precision === 'franchise' ? "bg-purple-500/20 text-purple-500 border-purple-500 shadow-sm" : "bg-card border-border hover:border-primary/50 text-muted-foreground")}><Globe2 className="h-4 w-4" /> Franchise</button>
@@ -521,7 +518,7 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
             </div>
 
           <div className="space-y-3">
-            <div className="flex items-center gap-2"><Label>Sélection de sons</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Aléatoire: Tout le catalogue<br/>Watched: Uniquement vos animes vus (connexion requise)</p></TooltipContent></Tooltip></div>
+            <div className="flex items-center gap-2"><Label>Sélection de sons</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Aléatoire: Tout le catalogue en aléatoire<br/>Watched: Uniquement vos animes vus (connexion à AniList requise)</p></TooltipContent></Tooltip></div>
             <div className="flex gap-2">
                 <Button variant={config.soundSelection === 'random' ? 'default' : 'outline'} size="sm" className="flex-1 rounded-xl" onClick={() => setConfig((prev: any) => ({ ...prev, soundSelection: 'random', playlist: null }))}><Music2 className="w-4 h-4 mr-2" /> Aléatoire</Button>
                 <Button variant={config.soundSelection === 'watched' ? 'default' : 'outline'} size="sm" className="flex-1 rounded-xl" disabled><Eye className="w-4 h-4 mr-2" /> Watched</Button>
@@ -543,7 +540,7 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
                     > 
                         <div className="flex items-center gap-2"> 
                             {/* L'icône prend aussi la couleur (RESTAURÉ) */}
-                            <span className="text-lg" style={{ color: isSelected ? playlist.color : undefined }}>{playlist.icon}</span> 
+                            <span className="text-lg" style={{ color: playlist.color}}>{playlist.icon}</span> 
                             <div className="flex-1 min-w-0"> 
                                 <div className="text-xs font-medium truncate">{playlist.name}</div> 
                                 <div className="text-[10px] text-muted-foreground">{playlist.count}</div> 

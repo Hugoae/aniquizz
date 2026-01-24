@@ -23,7 +23,7 @@ const BUCKET_NAME = "videos";
 const TEMP_DIR = path.join(__dirname, "../data/tmp");
 
 // ⚡ RÉGLAGES ---
-const HARD_TIMEOUT = 15000; // 15 secondes MAX (Fail Fast)
+const HARD_TIMEOUT = 10000; // 10 secondes MAX (Fail Fast)
 const RESET_ERRORS_ON_START = true; // Retente les erreurs au lancement
 
 const httpsAgent = new https.Agent({ keepAlive: false });

@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 // --- CONFIGURATION ---
-const ANIME_LIMIT = 5;
+const ANIME_LIMIT = 50;
 const ITEMS_PER_PAGE = 50; 
 const OUTPUT_DIR = path.join(__dirname, '../data');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'data_step1.json');

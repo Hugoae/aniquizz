@@ -35,7 +35,7 @@ export function HeroSection() {
 
           {/* Subheading */}
           <p className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto px-4">
-            Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur otaku.
+            Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
           </p>
 
           {/* CTA Buttons */}
@@ -69,7 +69,7 @@ export function HeroSection() {
                 className="hover-lift"
               >
                 <Calendar className="h-5 w-5" />
-                Quiz of the Day
+                Quiz du Jour
               </Button>
             </div>
           </div>

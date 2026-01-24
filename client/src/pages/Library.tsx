@@ -40,7 +40,7 @@ export default function Library() {
 
           <div className="text-center space-y-4 max-w-lg px-4">
             <h1 className="text-4xl md:text-6xl font-black tracking-tight">
-              <span className="gradient-text">COMING SOON</span>
+              <span className="gradient-text">BIENTÔT</span>
             </h1>
             <p className="text-lg text-muted-foreground">
               La plus grande librairie musicale d'anime est en cours de construction. 

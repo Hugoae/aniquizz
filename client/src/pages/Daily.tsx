@@ -42,7 +42,7 @@ export default function Daily() {
           <div className="text-center space-y-4 max-w-lg px-4">
             <h1 className="text-4xl md:text-6xl font-black tracking-tight">
               <span className="bg-clip-text text-transparent bg-gradient-to-r from-orange-400 to-red-600">
-                COMING SOON
+               BIENTÔT
               </span>
             </h1>
             <p className="text-lg text-muted-foreground">

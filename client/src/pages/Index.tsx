@@ -8,7 +8,7 @@ const Index = () => {
     <>
       <Helmet>
         <title>AniQuizz - Le Blindtest Anime Nouvelle Génération</title>
-        <meta name="description" content="Testez votre culture anime avec AniQuizz ! Défiez vos amis, grimpez dans le classement et prouvez que vous êtes le meilleur otaku." />
+        <meta name="description" content="Testez votre culture anime avec AniQuizz" />
       </Helmet>
       
       <div className="min-h-screen bg-background relative">

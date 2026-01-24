@@ -39,13 +39,13 @@ interface AnimeDataItem {
 interface ServerSong { 
   id: number; 
   anime: any; 
+  exactName?: string;
   displayAnswer?: string;
   title: string; 
   artist: string; 
   type: string; 
   videoKey: string;
   cover?: string;
-  exactName?: string;
   franchise?: string;
   siteUrl?: string;
   sourceUrl?: string;
@@ -138,7 +138,6 @@ export default function Game() {
   const firstChoices = initialState.gameData?.firstChoices || []; 
   const firstDuoChoices = initialState.gameData?.firstDuoChoices || [];
 
-  // CORRECTION 1 : Fallback réduit à 3500ms (3.5s) pour matcher l'intro serveur
   const [targetGameStart] = useState(() => initialState.gameStartTime || (Date.now() + 3500));
   
   const isReturningToLobbyRef = useRef(false);
@@ -235,6 +234,7 @@ export default function Game() {
       };
   }, []);
 
+  // --- GESTION DE L'AUTOCOMPLÉTION (CORRIGÉE) ---
   useEffect(() => {
     // Si on n'est pas en mode typing ou si le champ est vide, on vide les suggestions
     if (inputMode !== 'typing' || !answer || answer.trim().length < 2) {
@@ -244,25 +244,35 @@ export default function Game() {
 
     const term = answer.toLowerCase().trim();
     
-    // On cherche dans la liste complète (chargée au démarrage)
-    const matches = animeList
-        .filter(anime => {
-            // 1. Recherche sur le nom principal
-            if (anime.name.toLowerCase().includes(term)) return true;
-            
-            // 2. Recherche sur les noms alternatifs (ex: "BnHA" pour "My Hero Academia")
-            if (anime.altNames && anime.altNames.some(alt => alt.toLowerCase().includes(term))) return true;
-            
-            // 3. Recherche sur la franchise
-            if (anime.franchise && anime.franchise.toLowerCase().includes(term)) return true;
-            
-            return false;
-        })
-        .slice(0, 5) // On garde seulement les 5 meilleurs résultats
-        .map(a => a.name); // On ne garde que le nom principal pour l'affichage
+    // Filtrage initial
+    const filteredMatches = animeList.filter(anime => {
+        // 1. Nom principal
+        if (anime.name.toLowerCase().includes(term)) return true;
+        // 2. Alt Names
+        if (anime.altNames && anime.altNames.some(alt => alt.toLowerCase().includes(term))) return true;
+        // 3. Franchise
+        if (anime.franchise && anime.franchise.toLowerCase().includes(term)) return true;
+        
+        return false;
+    });
 
-    setSuggestions(matches);
-  }, [answer, animeList, inputMode]);
+    let displaySuggestions: string[] = [];
+
+    // --- LOGIQUE DIFFÉRENCIÉE SELON LE MODE ---
+    if (settings.precision === 'franchise') {
+        // En mode Franchise, on mappe vers le nom de la franchise (ou nom si pas de franchise)
+        const franchiseNames = filteredMatches.map(a => a.franchise || a.name);
+        // Dédoublonnage (Set) pour ne pas voir 15 fois "Naruto"
+        displaySuggestions = Array.from(new Set(franchiseNames));
+    } else {
+        // En mode Exact, on garde les noms exacts
+        displaySuggestions = filteredMatches.map(a => a.name);
+    }
+
+    // On coupe à 5 résultats max
+    setSuggestions(displaySuggestions.slice(0, 5));
+
+  }, [answer, animeList, inputMode, settings.precision]); // Ajout de settings.precision aux dépendances
 
   useEffect(() => {
     socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
@@ -275,9 +285,6 @@ export default function Game() {
 
     socket.on('round_start', (data) => {
       setPhase('guessing');
-      
-      // CORRECTION 2 : On utilise le temps local pour l'affichage (Date.now() + duration)
-      // Cela évite le décalage si l'horloge du client est différente de celle du serveur.
       const localEndTime = Date.now() + (data.duration * 1000);
       setPhaseEndTime(localEndTime);
       setPhaseTotalDuration(data.duration);
@@ -311,8 +318,6 @@ export default function Game() {
 
     socket.on('round_reveal', async (data: RevealData) => {
       setPhase('revealed');
-      
-      // CORRECTION 3 : Même chose pour le reveal, on utilise le temps local
       const localEndTime = Date.now() + (data.duration * 1000);
       setPhaseEndTime(localEndTime);
       setPhaseTotalDuration(data.duration);
@@ -523,7 +528,17 @@ export default function Game() {
               
               <div className="w-full">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-items-center">
-                    {players.map(p => ( <div key={p.id} className="relative w-full max-w-[220px]">{phase === 'revealed' && ( <div className="absolute -top-12 left-0 right-0 flex justify-center z-10"><div className={cn("px-3 py-1.5 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background truncate max-w-[120px]", p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20")}>{p.currentAnswer || "..."}</div></div> )} <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} </div> ))}
+                    {players.map(p => ( <div key={p.id} className="relative w-full max-w-[220px]">{phase === 'revealed' && ( 
+  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex justify-center z-10 w-full"> {/* MODIFIÉ : Centrage absolu */}
+    <div className={cn(
+      "px-3 py-2 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background",
+      "line-clamp-2 text-center leading-tight max-w-[160px] w-max break-words", // MODIFIÉ : Multi-lignes + Largeur
+      p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20"
+    )}>
+      {p.currentAnswer || "..."}
+    </div>
+  </div> 
+)} <PlayerCard player={p} isCurrentUser={String(p.id) === String(socket.id)} showResult={phase === 'revealed'} gameMode={'standard'} compact /> {(String(p.id) === String(socket.id)) && showPointsAnimation && pointsEarned && ( <div className="absolute -top-4 -right-2 animate-fade-in z-20"><PointsBadge points={pointsEarned} /></div> )} </div> ))}
                 </div>
               </div>
             </div>
