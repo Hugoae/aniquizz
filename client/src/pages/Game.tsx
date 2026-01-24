@@ -81,7 +81,7 @@ interface RevealData {
   song: ServerSong;
   duration: number;
   startTime: number;
-  endTime?: number; // NOUVEAU
+  endTime?: number; 
   players: Player[];
   nextVideo?: string | null;
   correctAnswer?: string;
@@ -137,7 +137,9 @@ export default function Game() {
   const firstChoices = initialState.gameData?.firstChoices || []; 
   const firstDuoChoices = initialState.gameData?.firstDuoChoices || [];
 
-  const [targetGameStart] = useState(() => initialState.gameStartTime || (Date.now() + 8000));
+  // CORRECTION 1 : Fallback réduit à 3500ms (3.5s) pour matcher l'intro serveur
+  const [targetGameStart] = useState(() => initialState.gameStartTime || (Date.now() + 3500));
+  
   const isReturningToLobbyRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -148,7 +150,6 @@ export default function Game() {
   const [players, setPlayers] = useState<Player[]>(initialPlayers.map((p: any) => ({ ...p, name: safePlayerName(p), score: p.score || 0, isInGame: p.isInGame !== false })));
   const [phase, setPhase] = useState<'loading' | 'guessing' | 'revealed' | 'ended'>('loading');
   
-  // MODIFICATION : On stocke l'heure de fin cible (Timestamp)
   const [phaseEndTime, setPhaseEndTime] = useState<number>(0);
   const [phaseTotalDuration, setPhaseTotalDuration] = useState<number>(settings.guessDuration);
   const [progress, setProgress] = useState(100);
@@ -244,8 +245,11 @@ export default function Game() {
 
     socket.on('round_start', (data) => {
       setPhase('guessing');
-      // MAJ TIMER : On utilise le timestamp de fin pour la synchro
-      setPhaseEndTime(data.endTime || (Date.now() + data.duration * 1000));
+      
+      // CORRECTION 2 : On utilise le temps local pour l'affichage (Date.now() + duration)
+      // Cela évite le décalage si l'horloge du client est différente de celle du serveur.
+      const localEndTime = Date.now() + (data.duration * 1000);
+      setPhaseEndTime(localEndTime);
       setPhaseTotalDuration(data.duration);
       setProgress(100);
 
@@ -277,8 +281,10 @@ export default function Game() {
 
     socket.on('round_reveal', async (data: RevealData) => {
       setPhase('revealed');
-      // MAJ TIMER REVEAL
-      setPhaseEndTime(data.endTime || (Date.now() + data.duration * 1000));
+      
+      // CORRECTION 3 : Même chose pour le reveal, on utilise le temps local
+      const localEndTime = Date.now() + (data.duration * 1000);
+      setPhaseEndTime(localEndTime);
       setPhaseTotalDuration(data.duration);
       setProgress(100);
 
@@ -331,7 +337,7 @@ export default function Game() {
     });
 
     socket.on('game_resuming', (data: any) => {
-      // SI LE SERVEUR ENVOIE UNE NOUVELLE HEURE DE FIN (après pause), on l'applique
+      // Pour la reprise après pause, on peut faire confiance au serveur car c'est un délai court
       if (data.newEndTime) setPhaseEndTime(data.newEndTime);
 
       let count = data.duration; setResumeCountdown(count);
@@ -349,11 +355,10 @@ export default function Game() {
     return () => { socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left'); socket.off('error', onError); };
   }, []);
 
-  // --- GESTION TIMER INTELLIGENT (CORRECTION LAG) ---
+  // --- GESTION TIMER INTELLIGENT ---
   useEffect(() => {
     if (phase === 'loading' || isGamePaused || resumeCountdown !== null || phase === 'ended') return;
     
-    // NOUVELLE LOGIQUE TIMER : On compare l'heure actuelle avec l'heure de fin prévue
     const interval = setInterval(() => {
       const now = Date.now();
       const remainingMs = Math.max(0, phaseEndTime - now);
@@ -361,7 +366,6 @@ export default function Game() {
       
       setTimeLeft(remainingSec);
       
-      // Calcul du pourcentage basé sur le temps écoulé réel
       const totalMs = phaseTotalDuration * 1000;
       const elapsedMs = totalMs - remainingMs;
       const pct = Math.max(0, Math.min(100, ((totalMs - elapsedMs) / totalMs) * 100));
@@ -372,7 +376,7 @@ export default function Game() {
     return () => clearInterval(interval);
   }, [phaseEndTime, phase, isGamePaused, resumeCountdown, phaseTotalDuration]);
 
-  // Loading Timer (Reste inchangé car c'est du pre-game)
+  // Loading Timer
   useEffect(() => {
     if (phase === 'loading') {
       const interval = setInterval(() => {
