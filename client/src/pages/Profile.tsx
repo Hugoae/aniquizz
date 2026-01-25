@@ -56,14 +56,23 @@ export default function Profile() {
   const [totalSongsCount, setTotalSongsCount] = useState(0);
 
   // --- EFFETS ---
+  
+  // 1. Redirection de sécurité si pas connecté
   useEffect(() => {
-    if (!loading && !user) navigate('/');
+    if (!loading && !user) {
+        navigate('/');
+    }
+  }, [user, loading, navigate]);
+
+  // 2. Initialisation des champs quand le profil est chargé
+  useEffect(() => {
     if (profile) {
       setAnilistName(profile.anilistUsername || "");
       setNewUsername(profile.username);
     }
-  }, [user, loading, navigate, profile]);
+  }, [profile]);
 
+  // 3. Récupération des stats globales
   useEffect(() => {
       if (socket.connected) {
           socket.emit('get_home_stats');
@@ -72,6 +81,7 @@ export default function Profile() {
       return () => { socket.off('home_stats'); };
   }, []);
 
+  // 4. Écoute des mises à jour socket
   useEffect(() => {
     const handleProfileUpdate = () => { toast.success("Profil mis à jour !"); setIsSaving(false); setIsEditingUsername(false); refreshProfile(); };
     const handleError = (err: any) => { toast.error(err.message); setIsSaving(false); };
@@ -79,6 +89,28 @@ export default function Profile() {
     socket.on('error', handleError);
     return () => { socket.off('user_profile', handleProfileUpdate); socket.off('error', handleError); };
   }, [refreshProfile]);
+
+  // --- GESTION DE L'AFFICHAGE DE CHARGEMENT (Anti-Écran Noir) ---
+  if (loading) {
+      return (
+          <div className="min-h-screen bg-background flex items-center justify-center">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          </div>
+      );
+  }
+
+  // Si pas d'user (la redirection useEffect va se déclencher, mais on retourne null pour éviter un flash)
+  if (!user) return null;
+
+  // Si user existe mais profil pas encore chargé (latence BDD)
+  if (!profile) {
+      return (
+          <div className="min-h-screen bg-background flex items-center justify-center flex-col gap-4">
+              <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              <p className="text-muted-foreground animate-pulse">Chargement du profil...</p>
+          </div>
+      );
+  }
 
   // --- CALCULS ---
   const discoveredSongs = profile?.history && Array.isArray(profile.history) && profile.history.length > 0 ? (profile.history[0] as any).count : 0;
@@ -146,8 +178,6 @@ export default function Profile() {
 
   const saveUsername = () => { socket.emit('update_profile_data', { username: newUsername }); setIsSaving(true); };
   const getAvatarSrc = (avatar: string) => avatar.startsWith('http') ? avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatar}`;
-
-  if (loading || !profile) return <div className="min-h-screen bg-background flex items-center justify-center"><Loader2 className="h-10 w-10 animate-spin text-primary" /></div>;
 
   return (
     <>
@@ -224,7 +254,6 @@ export default function Profile() {
                       <h2 className="text-xl font-bold">Statistiques</h2>
                   </div>
 
-                  {/* GRID 4 COLONNES (Ligne unique) */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       <StatCard icon={Trophy} label="Taux de victoire" value={`${winRate}%`} color="text-yellow-500" />
                       <StatCard icon={Check} label="Taux de bon guess" value={`${guessAccuracy}%`} color="text-green-500" />
