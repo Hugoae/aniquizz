@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { TAG_DEFINITIONS } from '../config/tagConfig';
+import { getUserAnimeIds } from '../services/anilistService';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,28 @@ interface AnimeData {
     franchise: string | null;
     altNames: string[];
 }
+
+export const getDatabaseStats = async () => {
+    console.log("[PRISMA] 🔍 Début du comptage..."); // <--- LOG
+    try {
+        const [countAnimes, profiles, songs] = await Promise.all([
+            prisma.anime.count(),
+            prisma.profile.count(), 
+            prisma.song.count()
+        ]);
+
+        console.log(`[PRISMA] ✅ Résultats : F:${countAnimes} | P:${profiles} | S:${songs}`); // <--- LOG
+
+        return {
+            animes: countAnimes,
+            users: profiles,
+            songs
+        };
+    } catch (error) {
+        console.error("❌ ERREUR PRISMA (gameService):", error); // <--- LOG ERREUR
+        return { franchises: 0, users: 0, songs: 0 };
+    }
+};
 
 export const getAllAnimeNames = async (): Promise<AnimeData[]> => {
     const animes = await prisma.anime.findMany({
@@ -216,5 +239,9 @@ export const generateDuo = async (
 };
 
 export const getAniListIds = async (username: string): Promise<number[]> => {
-    return []; 
+    // Sécurité : Si pas de pseudo, on renvoie une liste vide
+    if (!username || username.trim() === "") return [];
+    
+    // Appel au service qu'on vient de créer
+    return await getUserAnimeIds(username);
 };

@@ -7,12 +7,13 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js'; 
 
+
 // Import des Types centralisés
 import { Room, ExtendedPlayer } from './types/shared';
 
 // Import de la logique de jeu et utilitaires
 import { startGameLoop, cleanPlayersData } from './services/gameLoop';
-import { getAllAnimeNames } from './services/gameService';
+import { getAllAnimeNames, getDatabaseStats, getAniListIds } from './services/gameService';
 import { GAME_CONSTANTS } from './config/constants';
 
 dotenv.config();
@@ -132,6 +133,62 @@ io.on('connection', (socket: Socket) => {
         socket.emit('user_profile', { username: "Invité", avatar: "player1" });
     });
 
+    // --- MISE À JOUR DU PROFIL ---
+    socket.on('update_profile_data', async (data) => {
+        if (socket.data.user.isGuest) return;
+        
+        try {
+            const updates: any = {};
+            if (data.username && data.username.length >= 3 && data.username.length <= 15) {
+                updates.username = data.username;
+            }
+            if (data.avatarUrl) {
+                updates.avatar = data.avatarUrl;
+            }
+
+            // 1. Update DB (Déjà fait)
+            const updatedProfile = await prisma.profile.update({
+                where: { id: authenticatedUserId },
+                data: updates
+            });
+
+            // 2. Renvoi confirmation (Déjà fait)
+            socket.emit('user_profile', updatedProfile);
+
+            rooms.forEach((room) => {
+                // On cherche si le joueur est dans cette room
+                const player = room.players.find(p => p.id === socket.id || p.dbId === authenticatedUserId);
+                
+                if (player) {
+                    // On met à jour ses infos en mémoire
+                    if (updates.avatar) player.avatar = updates.avatar;
+                    if (updates.username) player.username = updates.username;
+
+                    // On prévient tout le monde dans la room
+                    io.to(room.id).emit('update_players', { 
+                        players: cleanPlayersData(room.players),
+                        hostId: room.hostId
+                    });
+                }
+            });
+        } catch (error) {
+            console.error("Erreur update profil:", error);
+            socket.emit('error', { message: "Erreur lors de la mise à jour." });
+        }
+    });
+
+    // --- NOUVEAU : STATS HOMEPAGE ---
+    socket.on('get_home_stats', async () => {
+        console.log(`[STATS] 📩 Demande reçue de ${socket.id}`); // <--- AJOUT LOG 1
+        try {
+            const stats = await getDatabaseStats();
+            console.log(`[STATS] 📤 Envoi de la réponse:`, stats); // <--- AJOUT LOG 2
+            socket.emit('home_stats', stats);
+        } catch (err) {
+            console.error(`[STATS] ❌ Erreur critique lors de l'envoi:`, err);
+        }
+    });
+
     // --- CRÉATION DE SALLE ---
     socket.on('create_room', (data) => {
         const roomId = uuidv4().substring(0, 6).toUpperCase();
@@ -173,7 +230,7 @@ io.on('connection', (socket: Socket) => {
     });
 
     // --- REJOINDRE UNE SALLE ---
-    socket.on('join_room', (data) => {
+    socket.on('join_room', async (data) => {
         const room = rooms.get(data.roomId?.toUpperCase());
         
         if (!room) {
@@ -209,6 +266,24 @@ io.on('connection', (socket: Socket) => {
             room.players[existingPlayerIndex].isInGame = false;
             room.players[existingPlayerIndex].score = 0; 
         } else {
+            // 2. LOGIQUE DE RÉCUPÉRATION ANILIST 👇
+            let fetchedAnilistUser: string | undefined;
+
+            // Si ce n'est pas un invité, on check la BDD
+            if (!socket.data.user.isGuest) {
+                try {
+                    const userProfile = await prisma.profile.findUnique({
+                        where: { id: authenticatedUserId },
+                        select: { anilistUsername: true }
+                    });
+                    if (userProfile?.anilistUsername) {
+                        fetchedAnilistUser = userProfile.anilistUsername;
+                    }
+                } catch (e) {
+                    console.error("Erreur récup AniList username:", e);
+                }
+            }
+
             const newPlayer: ExtendedPlayer = {
                 id: socket.id,
                 username: data.username || `Joueur ${room.players.length + 1}`,
@@ -217,7 +292,8 @@ io.on('connection', (socket: Socket) => {
                 isReady: false,
                 isInGame: false,
                 dbId: authenticatedUserId,
-                sessionWins: 0
+                sessionWins: 0,
+                anilistUsername: fetchedAnilistUser
             };
             room.players.push(newPlayer);
             console.log(`[ROOM] ✅ JOIN SUCCESS | Room: ${room.id} | Total: ${room.players.length}/${room.maxPlayers}`);
@@ -445,6 +521,18 @@ io.on('connection', (socket: Socket) => {
             socket.emit('error', { message: "Erreur lors de la récupération de la liste" });
         }
     });
+
+    socket.on('get_user_watched_ids', async (data) => {
+    try {
+        // data.username doit être le pseudo AniList
+        if (data.username) {
+            const ids = await getAniListIds(data.username);
+            socket.emit('user_watched_ids', ids);
+        }
+    } catch (error) {
+        console.error("Erreur récup watched ids:", error);
+    }
+});
 
     socket.on('disconnect', () => {
         console.log(`[SOCKET] 🔌 Déconnexion: ${socket.id}`);

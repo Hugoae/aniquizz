@@ -12,7 +12,7 @@ interface Overrides {
 }
 
 async function main() {
-  console.log(`🔥 IMPORTATION JSON -> DATABASE (Mode : Smart Bridge + Overrides)`);
+  console.log(`🔥 IMPORTATION JSON -> DATABASE (Mode : Respect Locks)`);
   
   if (!fs.existsSync(INPUT_FILE)) {
     console.error(`❌ Fichier introuvable : ${INPUT_FILE}`);
@@ -41,14 +41,11 @@ async function main() {
 
   for (const fData of franchisesData) {
     
-    // --- ÉTAPE A : RECHERCHE INTELLIGENTE (LE PONT) ---
-    // 1. Chercher par nom exact
+    // --- ÉTAPE A : RECHERCHE INTELLIGENTE ---
     let dbFranchise = await prisma.franchise.findUnique({ 
         where: { name: fData.franchiseName } 
     });
 
-    // 2. Si pas trouvé, utiliser le "Pont" (Smart Match via Anime enfant)
-    // C'est ça qui permet de retrouver "L'Attaque des Titans" même si le JSON dit "Shingeki"
     if (!dbFranchise && fData.animes.length > 0) {
         const firstAnimeId = fData.animes[0].id;
         const childAnime = await prisma.anime.findUnique({
@@ -57,7 +54,7 @@ async function main() {
         });
 
         if (childAnime && childAnime.franchise) {
-            console.log(`   🌉 Pont établi : "${fData.franchiseName}" -> "${childAnime.franchise.name}"`);
+            // console.log(`   🌉 Pont établi : "${fData.franchiseName}" -> "${childAnime.franchise.name}"`);
             dbFranchise = childAnime.franchise;
         }
     }
@@ -68,24 +65,17 @@ async function main() {
         // EXISTE ET LOCKÉ -> On ne touche à rien
         franchiseId = dbFranchise.id;
     } else {
-        // NOUVEAU OU NON LOCKÉ -> On met à jour ou on crée
-        // Si on a trouvé via le pont, on garde le nom de la BDD (dbFranchise.name)
-        // Sinon on prend le nom du JSON (fData.franchiseName)
-        const targetName = dbFranchise ? dbFranchise.name : fData.franchiseName;
-
         const f = await prisma.franchise.upsert({
-            where: { id: dbFranchise ? dbFranchise.id : -1 }, // Hack pour upsert par ID si existe
+            where: { id: dbFranchise ? dbFranchise.id : -1 }, 
             create: { 
                 name: fData.franchiseName,
                 genres: fData.genres || []
             },
             update: {
                 genres: fData.genres || []
-                // On ne change PAS le nom ici pour respecter le renommage manuel "soft"
             }
         });
         
-        // Si on n'a pas trouvé par ID (cas création), on le récupère par nom
         if (!dbFranchise) {
              const created = await prisma.franchise.findUnique({ where: { name: fData.franchiseName } });
              if (created) franchiseId = created.id;
@@ -94,7 +84,7 @@ async function main() {
         }
     }
 
-    if (!franchiseId) continue; // Sécurité
+    if (!franchiseId) continue;
 
     // --- ÉTAPE B : GESTION ANIMES ---
     for (const aData of fData.animes) {
@@ -103,7 +93,6 @@ async function main() {
         if (existingAnime && existingAnime.isLocked) {
              // Anime locké -> On ne touche pas à son parent (franchiseId)
         } else {
-            // Anime libre -> On le rattache à la franchise trouvée (via nom ou pont)
             await prisma.anime.upsert({
                 where: { id: aData.id },
                 update: {
@@ -116,7 +105,7 @@ async function main() {
                     status: aData.status,
                     seasonYear: aData.year,
                     popularity: aData.popularity || 0,
-                    franchiseId: franchiseId // <--- C'est ici que le lien se refait
+                    franchiseId: franchiseId
                 },
                 create: {
                     id: aData.id,
@@ -134,11 +123,25 @@ async function main() {
             });
         }
 
-        // --- ÉTAPE C : GESTION SONGS ---
+        // --- ÉTAPE C : GESTION SONGS (AVEC LOCK CHECK) ---
         for (const sData of aData.songs) {
             if (!sData.videoKey) continue;
+            
+            // Clé unique pour identifier le son
             const songNameClean = `${aData.name.replace(/[^a-zA-Z0-9]/g, "")}-${aData.id}-${sData.type}.mp4`;
 
+            // 1. VÉRIFICATION DU LOCK (NOUVEAU)
+            const existingSong = await prisma.song.findUnique({
+                where: { videoKey: songNameClean }
+            });
+
+            if (existingSong && existingSong.isLocked) {
+                // Si le son est locké, on PASSE (continue) sans rien mettre à jour.
+                // Tes modifs manuelles (Difficulté, Titre...) sont ainsi protégées.
+                continue;
+            }
+
+            // 2. UPSERT (Si pas locké ou inexistant)
             await prisma.song.upsert({
                 where: { videoKey: songNameClean },
                 update: {
@@ -166,7 +169,7 @@ async function main() {
     }
   }
 
-  console.log(`✅ Import terminé. Base de données synchronisée.`);
+  console.log(`✅ Import terminé. Base de données synchronisée en respectant les Locks.`);
 }
 
 main()

@@ -1,4 +1,4 @@
-import { Music, User, Tv, Link as LinkIcon, Video, Calendar } from 'lucide-react';
+import { Music, User, Tv, Link as LinkIcon, Video, Calendar, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { getTagStyle } from '@/config/constants';
@@ -16,6 +16,7 @@ interface SongInfoCardProps {
   coverImage?: string;
   siteUrl?: string; 
   sourceUrl?: string; 
+  isWatched?: boolean;
 }
 
 export function SongInfoCard({ 
@@ -30,7 +31,8 @@ export function SongInfoCard({
     isRevealed = true, 
     coverImage,
     siteUrl,
-    sourceUrl 
+    sourceUrl,
+    isWatched = false
 }: SongInfoCardProps) {
 
   const handleLinkClick = (url?: string) => {
@@ -56,13 +58,22 @@ export function SongInfoCard({
           {/* MODIF : space-y-2 pour équilibrer avec la nouvelle hauteur */}
           <div className="flex-1 p-5 space-y-2 flex flex-col justify-center min-w-0 relative">
               
-              {/* Franchise */}
-              {franchise && (
-                  // MODIF 2 : pb-2 et mb-2 pour décoller le texte de la barre
-                  <div className="text-[11px] uppercase tracking-widest text-primary/80 font-bold truncate border-b border-white/5 pb-2 mb-2">
-                      {isRevealed ? franchise : "???"}
-                  </div>
-              )}
+              {/* Franchise + Indicateur VU */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-2">
+                  {franchise ? (
+                      <div className="text-[11px] uppercase tracking-widest text-primary/80 font-bold truncate">
+                          {isRevealed ? franchise : "???"}
+                      </div>
+                  ) : ( <div /> )}
+
+                  {/* INDICATEUR VU */}
+                  {isRevealed && isWatched && (
+                      <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 animate-fade-in" title="Vous avez vu cet anime (selon AniList)">
+                          <Eye className="h-3 w-3" />
+                          <span className="text-[9px] font-bold uppercase">Vu</span>
+                      </div>
+                  )}
+              </div>
 
               {/* Anime */}
               <div className="flex items-center gap-2 group cursor-pointer" onClick={() => handleLinkClick(siteUrl)}>

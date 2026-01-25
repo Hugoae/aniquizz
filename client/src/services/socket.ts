@@ -4,9 +4,11 @@ import { io, Socket } from "socket.io-client";
 // 1. On regarde si une URL serveur est définie dans l'environnement (Vercel)
 // 2. Sinon, en DEV, on utilise localhost:3001
 // 3. Sinon (fallback), on tente le domaine courant (undefined)
-const URL = import.meta.env.VITE_SERVER_URL || (import.meta.env.PROD ? undefined : "http://localhost:3001");
+const URL = import.meta.env.MODE === 'production' 
+  ? 'https://aniquizz-server.onrender.com' // URL Production
+  : 'http://localhost:3001';               // URL Locale (Modifie le port si besoin)
 
-console.log("🔌 Tentative de connexion Socket vers :", URL || "Domaine courant");
+console.log("📍 Tentative de connexion Socket vers :", URL);
 
 // --- Fonction pour récupérer le token Supabase ---
 const getSupabaseToken = () => {

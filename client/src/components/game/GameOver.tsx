@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { Trophy, Medal, ArrowLeft, Check, X, RotateCcw, Clock, Music, ListMusic, BrainCircuit, Play, BarChart3 } from 'lucide-react';
+import { Trophy, Medal, ArrowLeft, Check, X, RotateCcw, Clock, ListMusic, BrainCircuit, Play, BarChart3, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { getRank } from '@/lib/gameRules'; 
+// 👇 Import indispensable pour que l'avatar s'affiche correctement
+import { UserAvatar } from '@/components/shared/UserAvatar'; 
 
-// Interfaces simplifiées (plus de XpData)
 interface GameOverProps {
   players: any[];
   currentUserId: string;
@@ -15,74 +17,106 @@ interface GameOverProps {
   gameMode?: string;
   history?: any[];
   settings?: any;
+  victoryData?: any; 
 }
 
-export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, history, settings }: GameOverProps) {
+export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, history, settings, victoryData }: GameOverProps) {
   const [selectedRound, setSelectedRound] = useState<any | null>(null);
   const [showMultiDetail, setShowMultiDetail] = useState(false);
   
-  // Calcul des stats
+  // Stats joueur actuel
   const myPlayer = players.find(p => String(p.id) === String(currentUserId)) || players[0];
   const score = myPlayer?.score || 0;
+  
+  // Récupération des données serveurs ou calcul par défaut
   const totalRounds = history && history.length > 0 ? history.length : (settings?.soundCount || 10);
-  const correctCount = history ? history.filter((h: any) => h.isCorrect).length : 0;
-  const accuracy = totalRounds > 0 ? Math.round((correctCount / totalRounds) * 100) : 0;
-
-  let grade = 'D';
-  let gradeColor = 'text-gray-500';
-  if (accuracy >= 91) { grade = 'S+'; gradeColor = 'text-yellow-400 drop-shadow-glow'; }
-  else if (accuracy >= 81) { grade = 'S'; gradeColor = 'text-yellow-500'; }
-  else if (accuracy >= 71) { grade = 'A+'; gradeColor = 'text-green-400'; }
-  else if (accuracy >= 61) { grade = 'A'; gradeColor = 'text-green-500'; }
-  else if (accuracy >= 51) { grade = 'B+'; gradeColor = 'text-blue-400'; }
-  else if (accuracy >= 41) { grade = 'B'; gradeColor = 'text-blue-500'; }
-  else if (accuracy >= 31) { grade = 'C+'; gradeColor = 'text-orange-400'; }
-  else if (accuracy >= 21) { grade = 'C'; gradeColor = 'text-orange-500'; }
-  else if (accuracy >= 11) { grade = 'D+'; gradeColor = 'text-red-400'; }
-  else { grade = 'D'; gradeColor = 'text-red-600'; }
+  const maxPossibleScore = victoryData?.totalMaxScore || (totalRounds * 5);
+  
+  // Calcul du Rank (S, A, B...)
+  const rankData = getRank(score, maxPossibleScore);
 
   // --- MODE SOLO ---
   if (gameMode === 'solo') {
+      const targetScore = victoryData?.soloTargetScore || Math.ceil(maxPossibleScore * 0.5);
+      const isSuccess = score >= targetScore;
+      const progressPercent = Math.min(100, (score / maxPossibleScore) * 100);
+      const targetPercent = Math.min(100, (targetScore / maxPossibleScore) * 100);
+
+      // Calcul de la précision pour l'affichage
+      const correctCount = history ? history.filter((r: any) => r.isCorrect).length : 0;
+      const accuracy = Math.round((correctCount / totalRounds) * 100);
+
       return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background animate-fade-in overflow-y-auto custom-scrollbar">
             <div className="w-full max-w-5xl flex flex-col gap-6 p-4 md:p-8 min-h-screen md:min-h-0">
                 
-                {/* HEADER */}
+                {/* HEADER INFO */}
                 <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground bg-secondary/30 p-3 rounded-full border border-white/5 mx-auto">
                     <Badge variant="outline" className="gap-1 border-primary/30 text-primary">
                         <BrainCircuit className="h-3 w-3" /> Solo
                     </Badge>
                     <div className="flex items-center gap-1"><ListMusic className="h-3 w-3" /> {settings?.soundCount} sons</div>
                     <div className="w-px h-3 bg-border" />
-                    <div className="flex items-center gap-1"><Clock className="h-3 w-3" /> {settings?.guessDuration}s</div>
+                    <div className="flex items-center gap-1 uppercase font-bold text-xs">{victoryData?.soloDifficulty || "Normal"}</div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* GAUCHE: SCORE & RANK */}
+                    {/* GAUCHE: RÉSULTAT DU DÉFI */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="glass-card p-6 flex flex-col items-center gap-6 border-2 border-primary/10 bg-card/40 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
-                            <div className="relative">
-                                <Avatar className="h-32 w-32 border-4 border-background shadow-2xl">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${myPlayer?.avatar}`} />
-                                    <AvatarFallback>{myPlayer?.name[0]}</AvatarFallback>
-                                </Avatar>
-                                <div className={cn("absolute -bottom-2 -right-2 px-3 py-1 bg-card border border-border rounded-lg font-black text-2xl shadow-lg", gradeColor)}>
-                                    {grade}
+                        <div className={cn(
+                            "glass-card p-6 flex flex-col items-center gap-6 border-2 relative overflow-hidden transition-colors duration-500",
+                            isSuccess ? "border-green-500/30 bg-green-500/5" : "border-red-500/30 bg-red-500/5"
+                        )}>
+                            {/* TITRE VICTOIRE/DÉFAITE */}
+                            <div className="text-center z-10">
+                                <h1 className={cn("text-4xl font-black italic tracking-tighter uppercase", isSuccess ? "text-green-400 drop-shadow-glow" : "text-red-500")}>
+                                    {isSuccess ? "VICTOIRE" : "DÉFAITE"}
+                                </h1>
+                                <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mt-1">
+                                    Précision : {accuracy}%
+                                </p>
+                            </div>
+
+                            {/* AVATAR & RANK */}
+                            <div className="relative z-10">
+                                {/* 👇 Utilisation de UserAvatar pour gérer l'image custom */}
+                                <UserAvatar 
+                                    avatar={myPlayer?.avatar}
+                                    username={myPlayer?.name || myPlayer?.username}
+                                    className={cn(
+                                        "h-32 w-32 border-4 shadow-2xl",
+                                        isSuccess ? "border-green-500" : "border-red-500/50 grayscale-[0.5]"
+                                    )}
+                                />
+                                
+                                <div className={cn("absolute -bottom-2 -right-2 px-3 py-1 bg-card border border-border rounded-lg font-black text-2xl shadow-lg", rankData.color)}>
+                                    {rankData.label}
                                 </div>
                             </div>
-                            <div className="text-center space-y-1">
-                                <h2 className="text-5xl font-black tracking-tighter">{score}</h2>
-                                <p className="text-muted-foreground text-sm uppercase tracking-widest font-semibold">Points Totaux</p>
+
+                            {/* SCORE */}
+                            <div className="text-center space-y-1 z-10">
+                                <h2 className="text-5xl font-black tracking-tighter">{score} <span className="text-lg text-muted-foreground font-medium">/ {maxPossibleScore}</span></h2>
                             </div>
-                            <div className="grid grid-cols-2 gap-4 w-full">
-                                <div className="bg-secondary/50 p-3 rounded-xl text-center">
-                                    <div className="text-2xl font-bold text-green-400">{correctCount}</div>
-                                    <div className="text-[10px] text-muted-foreground uppercase">Corrects</div>
+
+                            {/* BARRE DE PROGRESSION OBJECTIF */}
+                            <div className="w-full space-y-2 z-10">
+                                <div className="h-4 w-full bg-black/40 rounded-full relative overflow-hidden border border-white/5">
+                                    {/* Barre de score */}
+                                    <div 
+                                        className={cn("h-full transition-all duration-1000 ease-out rounded-full", isSuccess ? "bg-green-500" : "bg-primary")}
+                                        style={{ width: `${progressPercent}%` }}
+                                    />
+                                    {/* Marqueur Objectif */}
+                                    <div 
+                                        className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20"
+                                        style={{ left: `${targetPercent}%` }}
+                                    />
                                 </div>
-                                <div className="bg-secondary/50 p-3 rounded-xl text-center">
-                                    <div className="text-2xl font-bold text-blue-400">{accuracy}%</div>
-                                    <div className="text-[10px] text-muted-foreground uppercase">Précision</div>
+                                <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase">
+                                    <span>0</span>
+                                    <span className={isSuccess ? "text-green-400" : "text-red-400"}>Requis: {targetScore}</span>
+                                    <span>Max: {maxPossibleScore}</span>
                                 </div>
                             </div>
                         </div>
@@ -98,7 +132,7 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
                         </div>
                     </div>
 
-                    {/* DROITE: DÉTAIL DES ROUNDS */}
+                    {/* DROITE: DÉTAIL DES ROUNDS (Inchangé) */}
                     <div className="lg:col-span-2 glass-card bg-card/30 flex flex-col overflow-hidden max-h-[600px]">
                         <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
                             <h3 className="font-bold flex items-center gap-2">
@@ -107,10 +141,9 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
                             </h3>
                             <span className="text-xs text-muted-foreground">{history?.length} rounds</span>
                         </div>
-                        
                         <div className="overflow-y-auto p-4 space-y-3 custom-scrollbar flex-1">
                             {history?.map((round: any, i: number) => (
-                                <div key={i} onClick={() => setSelectedRound(round)} className="flex items-center gap-4 p-3 rounded-xl bg-background/60 border border-white/5 hover:border-primary/30 hover:bg-secondary/40 transition-all">
+                                <div key={i} onClick={() => setSelectedRound(round)} className="flex items-center gap-4 p-3 rounded-xl bg-background/60 border border-white/5 hover:border-primary/30 hover:bg-secondary/40 transition-all cursor-pointer">
                                     <div className="flex flex-col items-center justify-center w-10 gap-1">
                                         <span className="text-[10px] text-muted-foreground font-mono">#{round.round}</span>
                                         <div className={cn("p-1.5 rounded-full", round.isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500")}>
@@ -145,8 +178,9 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
   // --- MODE MULTIJOUEUR ---
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   const [winner, second, third] = sortedPlayers;
-  const isWinner = String(winner?.id) === String(currentUserId);
-  const myRank = sortedPlayers.findIndex(p => String(p.id) === String(currentUserId)) + 1;
+  const winnerCount = victoryData?.multiWinnerCount || 1;
+  const myRank = sortedPlayers.findIndex(p => String(p.id) === String(currentUserId));
+  const isWinner = myRank < winnerCount;
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md animate-fade-in p-4 lg:p-10 overflow-hidden">
@@ -156,9 +190,11 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
         <div className="flex flex-col h-full">
             <div className="text-center mb-6">
                 <h1 className="text-4xl md:text-6xl font-black mb-2 italic uppercase tracking-tighter">
-                    {isWinner ? <span className="text-yellow-400 drop-shadow-glow">Victoire !</span> : "Terminé !"}
+                    {isWinner ? <span className="text-yellow-400 drop-shadow-glow">Victoire !</span> : <span className="text-muted-foreground">Terminé !</span>}
                 </h1>
-                <p className="text-muted-foreground text-lg">La partie est finie. Voici les résultats.</p>
+                <p className="text-muted-foreground text-lg">
+                    {isWinner ? "Bravo, belle performance !" : `Vous avez fini ${myRank + 1}ème.`}
+                </p>
             </div>
 
             {/* Carte Stats Perso */}
@@ -168,19 +204,12 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
             >
                 <div className="glass-card bg-card/60 border border-white/10 p-4 rounded-2xl flex items-center justify-between shadow-lg hover:border-primary/50 group">
                     <div className="flex items-center gap-4">
-                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border", gradeColor, "bg-background")}>
-                            {grade}
+                        <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border", rankData.color, "bg-background")}>
+                            {rankData.label}
                         </div>
                         <div>
-                            <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Vos Stats</div>
-                            <div className="text-xs text-muted-foreground">Cliquez pour voir le détail</div>
-                        </div>
-                    </div>
-                    
-                    <div className="flex gap-4 text-right">
-                        <div>
-                            <div className="text-lg font-bold text-blue-400">{accuracy}%</div>
-                            <div className="text-[10px] uppercase text-muted-foreground">Précision</div>
+                            <div className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Votre Score</div>
+                            <div className="text-2xl font-black text-foreground">{score} <span className="text-sm text-muted-foreground font-normal">pts</span></div>
                         </div>
                     </div>
                     <BarChart3 className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
@@ -189,25 +218,35 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
 
             {/* Podium */}
             <div className="flex items-end justify-center gap-4 h-64 w-full px-4 mb-8 mt-auto">
+                {/* 2ème */}
                 {second && (
                     <div className="flex flex-col items-center gap-2 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-                        <Avatar className="h-16 w-16 border-4 border-gray-400 shadow-lg">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${second.avatar}`} />
-                            <AvatarFallback>{second.name[0]}</AvatarFallback>
-                        </Avatar>
+                        {/* 👇 UserAvatar ICI AUSSI */}
+                        <div className="relative">
+                            <UserAvatar 
+                                avatar={second.avatar} 
+                                username={second.name}
+                                className="h-16 w-16 border-4 border-gray-400 shadow-lg" 
+                            />
+                            {winnerCount >= 2 && <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">WIN</div>}
+                        </div>
+                        
                         <div className="flex flex-col items-center w-24 bg-gray-400/20 border-t-4 border-gray-400 rounded-t-lg h-32 justify-end pb-4">
                             <span className="font-bold text-2xl">{second.score}</span>
                             <span className="text-xs font-bold uppercase text-gray-400">2ème</span>
                         </div>
                     </div>
                 )}
+                {/* 1er */}
                 {winner && (
                     <div className="flex flex-col items-center gap-2 z-10 animate-slide-up">
-                        <Trophy className="h-8 w-8 text-yellow-400 mb-1 animate-bounce" />
-                        <Avatar className="h-24 w-24 border-4 border-yellow-400 shadow-glow">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${winner.avatar}`} />
-                            <AvatarFallback>{winner.name[0]}</AvatarFallback>
-                        </Avatar>
+                        <Crown className="h-8 w-8 text-yellow-400 mb-1 animate-bounce" />
+                        {/* 👇 UserAvatar ICI AUSSI */}
+                        <UserAvatar 
+                            avatar={winner.avatar} 
+                            username={winner.name}
+                            className="h-24 w-24 border-4 border-yellow-400 shadow-glow" 
+                        />
                         <div className="flex flex-col items-center w-28 bg-yellow-400/20 border-t-4 border-yellow-400 rounded-t-lg h-44 justify-end pb-4 relative overflow-hidden">
                             <div className="absolute inset-0 bg-gradient-to-t from-yellow-400/10 to-transparent" />
                             <span className="font-bold text-3xl text-yellow-400">{winner.score}</span>
@@ -215,12 +254,18 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
                         </div>
                     </div>
                 )}
+                {/* 3ème */}
                 {third && (
                     <div className="flex flex-col items-center gap-2 animate-slide-up" style={{ animationDelay: '0.4s' }}>
-                        <Avatar className="h-16 w-16 border-4 border-orange-700 shadow-lg">
-                            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${third.avatar}`} />
-                            <AvatarFallback>{third.name[0]}</AvatarFallback>
-                        </Avatar>
+                        {/* 👇 UserAvatar ICI AUSSI */}
+                        <div className="relative">
+                            <UserAvatar 
+                                avatar={third.avatar} 
+                                username={third.name}
+                                className="h-16 w-16 border-4 border-orange-700 shadow-lg" 
+                            />
+                            {winnerCount >= 3 && <div className="absolute -top-2 -right-2 bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">WIN</div>}
+                        </div>
                         <div className="flex flex-col items-center w-24 bg-orange-700/20 border-t-4 border-orange-700 rounded-t-lg h-24 justify-end pb-4">
                             <span className="font-bold text-2xl">{third.score}</span>
                             <span className="text-xs font-bold uppercase text-orange-700">3ème</span>
@@ -230,7 +275,7 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
             </div>
         </div>
 
-        {/* DROITE: CLASSEMENT */}
+        {/* DROITE: CLASSEMENT (Inchangé) */}
         <div className="bg-card/50 border border-white/5 rounded-3xl p-6 flex flex-col h-full overflow-hidden backdrop-blur-sm shadow-2xl">
             <h3 className="font-bold text-xl mb-4 flex items-center gap-2">
                 <Medal className="h-5 w-5 text-primary" />
@@ -240,16 +285,18 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
                 {sortedPlayers.map((p, index) => {
                     const isMe = String(p.id) === String(currentUserId);
                     const rank = index + 1;
+                    const isPlayerWinner = index < winnerCount;
+
                     return (
                         <div key={p.id} className={cn("flex items-center gap-4 p-3 rounded-xl transition-all border", isMe ? "bg-primary/20 border-primary/50 shadow-[0_0_15px_rgba(var(--primary),0.3)]" : "bg-secondary/30 border-transparent hover:bg-secondary/50")}>
                             <div className="flex items-center gap-4 flex-1">
                                 <div className="font-mono font-bold text-muted-foreground">#{rank}</div>
-                                <Avatar className="h-10 w-10 border border-white/10">
-                                    <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${p.avatar}`} />
-                                    <AvatarFallback>{p.name[0]}</AvatarFallback>
-                                </Avatar>
+                                <UserAvatar avatar={p.avatar} username={p.name} className="h-10 w-10 border border-white/10" />
                                 <div className="flex flex-col">
-                                    <span className={cn("font-bold text-lg leading-none", isMe ? "text-primary" : "text-foreground")}>{p.name} {isMe && "(Moi)"}</span>
+                                    <span className={cn("font-bold text-lg leading-none flex items-center gap-2", isMe ? "text-primary" : "text-foreground")}>
+                                        {p.name} {isMe && "(Moi)"}
+                                        {isPlayerWinner && <Crown className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                                    </span>
                                 </div>
                             </div>
                             <div className="text-right">
@@ -269,25 +316,19 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
         </div>
       </div>
 
-      {/* MODAL DETAIL MULTI */}
+      {/* MODAL DETAIL MULTI (Inchangé) */}
       <Dialog open={showMultiDetail} onOpenChange={setShowMultiDetail}>
         <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[85vh] flex flex-col overflow-y-auto custom-scrollbar">
-            <DialogHeader>
+             <DialogHeader>
                 <DialogTitle className="flex items-center gap-3 text-xl">
                     <BrainCircuit className="h-5 w-5 text-primary" />
                     Détail de votre performance
-                    <Badge variant="outline" className="ml-auto text-muted-foreground">
-                        {myRank}e sur {sortedPlayers.length}
-                    </Badge>
                 </DialogTitle>
             </DialogHeader>
-            
-            {/* Liste historique */}
             <div className="flex-1 space-y-3 pt-4">
-                <h4 className="text-sm font-bold text-muted-foreground uppercase">Historique des rounds</h4>
                 {history?.map((round: any, i: number) => (
                     <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-background/50 border border-white/5">
-                        <div className="flex flex-col items-center justify-center w-8 gap-1">
+                         <div className="flex flex-col items-center justify-center w-8 gap-1">
                             <span className="text-[10px] text-muted-foreground font-mono">#{round.round}</span>
                             <div className={cn("p-1 rounded-full", round.isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500")}>
                                 {round.isCorrect ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
@@ -296,9 +337,6 @@ export function GameOver({ players, currentUserId, onLeave, onReplay, gameMode, 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
                                 <span className="font-bold text-sm truncate">{round.song.anime}</span>
-                                <span className="text-[10px] px-1 py-0 rounded bg-secondary text-muted-foreground border border-border">
-                                    {round.song.type}
-                                </span>
                             </div>
                             <div className="text-xs text-muted-foreground truncate">{round.song.title}</div>
                         </div>

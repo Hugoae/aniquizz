@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { socket } from '@/services/socket';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
+import { TriviaCard } from '@/components/game/TriviaCard';
 
 type GameMode = 'solo' | 'multiplayer' | 'competitive';
 type View = 'modes' | 'roomList' | 'createModal' | 'lobby';
@@ -35,6 +36,7 @@ interface GameConfig {
   livesCount?: number;
   precision: 'exact' | 'franchise';
   decade?: string;
+  watchedMode?: 'union' | 'intersection';
 }
 
 interface RoomConfig extends GameConfig {
@@ -56,7 +58,8 @@ const defaultConfig: GameConfig = {
   playlist: null,
   livesCount: 3,
   precision: 'franchise',
-  decade: '2010'
+  decade: '2010',
+  watchedMode: 'union'
 };
 
 const defaultRoomConfig: RoomConfig = {
@@ -68,73 +71,70 @@ const defaultRoomConfig: RoomConfig = {
   maxPlayers: 8,
 };
 
-// --- PLAYLISTS RESTAURÉES (Avec couleurs et style) ---
+// --- PLAYLISTS ---
 const playlists = [
-  // 1. LES SPÉCIALES (En premier)
   { 
     id: 'top-50', 
     name: 'Top 50 Popular', 
     icon: <Trophy className="w-4 h-4"/>, 
     count: 'Les incontournables',
-    color: '#EAB308' // Yellow
+    color: '#EAB308' 
   },
   { 
     id: 'decades', 
     name: 'Décennies', 
     icon: <Calendar className="w-4 h-4"/>, 
     count: '80s, 90s, 2000s...',
-    color: '#A855F7' // Purple
+    color: '#A855F7' 
   },
-  
-  // 2. LES GENRES (Ordre et IDs identiques à tagConfig.ts)
   { 
     id: 'action', 
     name: 'Action & Aventure', 
     icon: <Swords className="w-4 h-4"/>, 
     count: 'Combats & Épopées',
-    color: '#FF4500' // Orange Red
+    color: '#FF4500' 
   },
   { 
     id: 'fantasy', 
     name: 'Fantasy & Magic', 
     icon: <Sparkles className="w-4 h-4"/>, 
     count: 'Magie & Mondes',
-    color: '#9C27B0' // Purple
+    color: '#9C27B0' 
   },
   { 
     id: 'romance', 
     name: 'Romance & Drama', 
     icon: <Heart className="w-4 h-4"/>, 
     count: 'Amour & Émotion',
-    color: '#E91E63' // Pink
+    color: '#E91E63' 
   },
   { 
     id: 'scifi', 
     name: 'Sci-Fi & Mecha', 
     icon: <Rocket className="w-4 h-4"/>, 
     count: 'Futur & Robots',
-    color: '#00BCD4' // Cyan
+    color: '#00BCD4' 
   },
   { 
     id: 'dark', 
     name: 'Dark & Psy', 
     icon: <Ghost className="w-4 h-4"/>, 
     count: 'Horreur & Thriller',
-    color: '#607D8B' // Blue Grey
+    color: '#607D8B' 
   },
   { 
     id: 'chill', 
     name: 'Chill / SoL', 
     icon: <Coffee className="w-4 h-4"/>, 
     count: 'Détente & Quotidien',
-    color: '#8BC34A' // Light Green
+    color: '#8BC34A' 
   },
   { 
     id: 'comedy', 
     name: 'Comédie', 
     icon: <Tv className="w-4 h-4"/>, 
     count: 'Rire & Fun',
-    color: '#FDD835' // Yellow
+    color: '#FDD835' 
   },
 ];
 
@@ -263,7 +263,6 @@ export default function Play() {
       const gameDataConstructed = { firstVideo: data.firstVideo, firstChoices: data.firstChoices, firstDuoChoices: data.firstDuoChoices };
       const safePlayers = mapServerPlayersToLobby(data.players || lobbyPlayers);
       
-      // FIX TEMPS : On calcule l'heure de départ LOCALE
       const localStartTime = Date.now() + (data.introDuration || 3000);
 
       navigate('/game', { 
@@ -273,7 +272,7 @@ export default function Play() {
               players: safePlayers, 
               settings: data.settings, 
               mode: isSolo ? 'solo' : 'multiplayer', 
-              gameStartTime: localStartTime // Utilisation du temps local
+              gameStartTime: localStartTime 
           } 
       });
     };
@@ -335,12 +334,12 @@ export default function Play() {
       <>
         <MultiplayerLobby roomName={roomConfig.roomName || "Salon de jeu"} players={lobbyPlayers} maxPlayers={roomConfig.maxPlayers} isHost={isAmIHost} currentUserId={mySocketId} gameSettings={{ gameType: roomConfig.gameType, soundCount: roomConfig.soundCount, guessDuration: roomConfig.guessDuration, difficulty: roomConfig.difficulty[0] || 'medium', }} roomCode={currentRoomId} onStartGame={handleStartLobbyGame} onToggleReady={handleToggleReady} onLeave={goBack} onOpenSettings={handleOpenRoomSettings} onTransferHost={handleTransferHost} />
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-3xl bg-card border-border">
+          <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
             <DialogHeader className="pb-2">
                 <DialogTitle className="text-xl flex items-center gap-3">Paramètres du salon <span className="px-2 py-0.5 text-xs rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white">{isAmIHost ? 'Modification' : 'Détails'}</span></DialogTitle>
                 <DialogDescription>Configurez les règles de votre salon multijoueur.</DialogDescription>
             </DialogHeader>
-            <GameConfigForm config={roomConfig} setConfig={setRoomConfig as any} toggleSoundType={(t) => toggleSoundType(t, true)} onReset={handleResetRoom} onSubmit={handleCreateOrUpdateRoom} isRoom playlists={playlists} currentPlayersCount={lobbyPlayers.length} />
+            <GameConfigForm config={roomConfig} setConfig={setRoomConfig as any} toggleSoundType={(t) => toggleSoundType(t, true)} onReset={handleResetRoom} onSubmit={handleCreateOrUpdateRoom} isRoom playlists={playlists} currentPlayersCount={lobbyPlayers.length} user={user} profile={profile} />
           </DialogContent>
         </Dialog>
       </>
@@ -353,13 +352,34 @@ export default function Play() {
       <div className="min-h-screen bg-background">
         <Header />
         <main className="container pt-28 pb-12 px-4 md:px-6">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {view === 'modes' && (
               <div className="relative">
                 <button onClick={() => navigate('/')} className="absolute top-0 left-0 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"><ArrowLeft className="h-5 w-5" /><span className="text-sm">Retour</span></button>
                 <h1 className="text-3xl md:text-4xl font-bold text-center mb-4 animate-fade-in">Choisissez votre <span className="gradient-text">mode de jeu</span></h1>
                 <p className="text-center text-muted-foreground mb-8 md:mb-12 animate-fade-in">Sélectionnez un mode pour configurer votre partie</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 md:gap-8">{modeCards.map((mode, index) => ( <button key={mode.id} onClick={() => handleModeSelect(mode.id)} disabled={mode.disabled} className={cn("glass-card p-8 text-left hover-lift hover-glow group cursor-pointer animate-fade-in transition-all relative overflow-hidden", mode.disabled && "opacity-60 cursor-not-allowed grayscale-[0.3]")} style={{ animationDelay: `${index * 0.1}s` }}> <div className={`inline-flex p-4 rounded-xl bg-gradient-to-br ${mode.gradient} mb-4`}><mode.icon className="h-7 w-7 text-white" /></div> <h3 className="text-2xl font-semibold mb-2 group-hover:text-primary transition-colors">{mode.title}</h3> <p className="text-sm text-muted-foreground">{mode.description}</p> </button> ))}</div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8">
+                    {modeCards.map((mode, index) => ( 
+                        <button 
+                            key={mode.id} 
+                            onClick={() => handleModeSelect(mode.id)} 
+                            disabled={mode.disabled} 
+                            className={cn(
+                                "glass-card p-10 text-left hover-lift hover-glow group cursor-pointer animate-fade-in transition-all relative overflow-hidden flex flex-col justify-center min-h-[300px]", 
+                                mode.disabled && "opacity-60 cursor-not-allowed grayscale-[0.3]"
+                            )} 
+                            style={{ animationDelay: `${index * 0.1}s` }}
+                        > 
+                            <div className={`inline-flex p-5 rounded-2xl bg-gradient-to-br ${mode.gradient} mb-6 w-fit`}>
+                                <mode.icon className="h-8 w-8 text-white" />
+                            </div> 
+                            <h3 className="text-3xl font-bold mb-3 group-hover:text-primary transition-colors">{mode.title}</h3> 
+                            <p className="text-base text-muted-foreground leading-relaxed">{mode.description}</p> 
+                        </button> 
+                    ))}
+                </div>
+                <TriviaCard />
               </div>
             )}
 
@@ -375,24 +395,28 @@ export default function Play() {
             )}
           </div>
         </main>
+        
+        {/* --- MODAL CONFIGURATION SOLO (CORRIGÉ: onOpenAutoFocus) --- */}
         <Dialog open={showConfig} onOpenChange={setShowConfig}>
-            <DialogContent className="sm:max-w-3xl bg-card border-border">
+            <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>Configuration de la partie</DialogTitle>
                     <DialogDescription>Personnalisez vos paramètres de jeu.</DialogDescription>
                 </DialogHeader>
-                <GameConfigForm config={config} setConfig={setConfig} toggleSoundType={(t) => toggleSoundType(t)} onReset={handleReset} onSubmit={handleStartGame} playlists={playlists} />
+                <GameConfigForm config={config} setConfig={setConfig} toggleSoundType={(t) => toggleSoundType(t)} onReset={handleReset} onSubmit={handleStartGame} playlists={playlists} user={user} profile={profile} />
             </DialogContent>
         </Dialog>
+        
         <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-            <DialogContent className="sm:max-w-3xl bg-card border-border">
+            <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
                 <DialogHeader>
                     <DialogTitle>Créer un salon Multijoueur</DialogTitle>
                     <DialogDescription>Créez un salon pour jouer avec vos amis.</DialogDescription>
                 </DialogHeader>
-                <GameConfigForm config={roomConfig} setConfig={setRoomConfig as any} toggleSoundType={(t) => toggleSoundType(t, true)} onReset={handleResetRoom} onSubmit={handleCreateOrUpdateRoom} isRoom playlists={playlists} currentPlayersCount={lobbyPlayers.length} />
+                <GameConfigForm config={roomConfig} setConfig={setRoomConfig as any} toggleSoundType={(t) => toggleSoundType(t, true)} onReset={handleResetRoom} onSubmit={handleCreateOrUpdateRoom} isRoom playlists={playlists} currentPlayersCount={lobbyPlayers.length} user={user} profile={profile} />
             </DialogContent>
         </Dialog>
+        
         <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
             <DialogContent className="sm:max-w-md bg-card border-border">
                 <DialogHeader>
@@ -408,7 +432,7 @@ export default function Play() {
   );
 }
 
-// --- FORMULAIRE OPTIMISÉ (Interface réintégrée) ---
+// --- FORMULAIRE OPTIMISÉ ---
 interface GameConfigFormProps {
   config: GameConfig | RoomConfig;
   setConfig: React.Dispatch<React.SetStateAction<any>>;
@@ -418,11 +442,16 @@ interface GameConfigFormProps {
   isRoom?: boolean;
   playlists: typeof playlists;
   currentPlayersCount?: number;
+  user: any; 
+  profile: any;
 }
 
-function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit, isRoom, playlists, currentPlayersCount = 0 }: GameConfigFormProps) {
+function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit, isRoom, playlists, currentPlayersCount = 0, user, profile }: GameConfigFormProps) {
   const roomConfig = config as RoomConfig;
   const isSolo = config.mode === 'solo' && !isRoom;
+
+  // VERIFICATION ANILIST
+  const isWatchedDisabled = !user || !profile?.anilistUsername;
 
   const availableGameTypes = [
     { id: 'standard', label: 'Standard', disabled: false },
@@ -519,10 +548,97 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
 
           <div className="space-y-3">
             <div className="flex items-center gap-2"><Label>Sélection de sons</Label><Tooltip delayDuration={300}><TooltipTrigger><HelpCircle className="h-4 w-4 text-muted-foreground/50 hover:text-primary transition-colors cursor-help" /></TooltipTrigger><TooltipContent><p className="w-48 text-xs">Aléatoire: Tout le catalogue en aléatoire<br/>Watched: Uniquement vos animes vus (connexion à AniList requise)</p></TooltipContent></Tooltip></div>
+            
             <div className="flex gap-2">
-                <Button variant={config.soundSelection === 'random' ? 'default' : 'outline'} size="sm" className="flex-1 rounded-xl" onClick={() => setConfig((prev: any) => ({ ...prev, soundSelection: 'random', playlist: null }))}><Music2 className="w-4 h-4 mr-2" /> Aléatoire</Button>
-                <Button variant={config.soundSelection === 'watched' ? 'default' : 'outline'} size="sm" className="flex-1 rounded-xl" disabled><Eye className="w-4 h-4 mr-2" /> Watched</Button>
+                {/* BOUTON ALÉATOIRE */}
+                <Button 
+                    variant={config.soundSelection === 'random' ? 'default' : 'outline'} 
+                    size="sm" 
+                    className="flex-1 rounded-xl" 
+                    onClick={() => setConfig((prev: any) => ({ ...prev, soundSelection: 'random', playlist: null }))}
+                >
+                    <Music2 className="w-4 h-4 mr-2" /> Aléatoire
+                </Button>
+
+                {/* BOUTON WATCHED (LOGIQUE INTELLIGENTE) */}
+                {isWatchedDisabled ? (
+                    <Tooltip delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <span className="flex-1">
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="w-full rounded-xl opacity-50 cursor-not-allowed" 
+                                    disabled
+                                >
+                                    <Eye className="w-4 h-4 mr-2" /> Watched
+                                </Button>
+                            </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-destructive text-destructive-foreground border-destructive">
+                            <p className="text-xs font-bold">Connectez-vous et liez votre compte AniList dans votre profil pour accéder à ce mode !</p>
+                        </TooltipContent>
+                    </Tooltip>
+                ) : (
+                    <Button 
+                        variant={config.soundSelection === 'watched' ? 'default' : 'outline'} 
+                        size="sm" 
+                        className="flex-1 rounded-xl"
+                        onClick={() => setConfig((prev: any) => ({ 
+                            ...prev, 
+                            soundSelection: 'watched', 
+                            playlist: 'watchlist' // <--- Active le mode watchlist pour le backend
+                        }))}
+                    >
+                        <Eye className="w-4 h-4 mr-2" /> Watched
+                    </Button>
+                )}
             </div>
+
+            {/* OPTIONS MULTIJOUEUR (SEULEMENT EN SALLE) */}
+            {config.soundSelection === 'watched' && isRoom && (
+                <div className="animate-fade-in mt-3 p-3 bg-secondary/20 rounded-xl border border-primary/10">
+                    <Label className="text-xs font-bold text-primary mb-2 block flex items-center gap-2">
+                        {/* Utilisation de Users comme icône générique si Settings2 n'est pas importé */}
+                        <Users className="h-3 w-3" /> Options Multijoueur
+                    </Label>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                        <button 
+                            onClick={() => setConfig((prev: any) => ({ ...prev, watchedMode: 'union' }))}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-2 rounded-lg text-xs border transition-all",
+                                config.watchedMode !== 'intersection' 
+                                    ? "bg-primary text-primary-foreground border-primary" 
+                                    : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                            )}
+                        >
+                            <span className="font-bold">Cumul (Union)</span>
+                            <span className="text-[9px] opacity-80">Tout le monde</span>
+                        </button>
+
+                        <button 
+                            onClick={() => setConfig((prev: any) => ({ ...prev, watchedMode: 'intersection' }))}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-2 rounded-lg text-xs border transition-all",
+                                config.watchedMode === 'intersection' 
+                                    ? "bg-purple-600 text-white border-purple-600" 
+                                    : "bg-background text-muted-foreground border-border hover:bg-secondary"
+                            )}
+                        >
+                            <span className="font-bold">Commun (Strict)</span>
+                            <span className="text-[9px] opacity-80">En commun seulement</span>
+                        </button>
+                    </div>
+                    
+                    <p className="text-[10px] text-muted-foreground mt-2 text-center italic">
+                        {config.watchedMode === 'intersection' 
+                            ? "Attention : Si vous n'avez aucun anime en commun, la partie ne pourra pas se lancer."
+                            : "Mélange les listes de tous les joueurs présents."}
+                    </p>
+                </div>
+            )}
+
             <Label className="text-xs text-muted-foreground mt-4 block">Ou choisir une playlist</Label>
             <div className="grid grid-cols-2 gap-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-1">
               {playlists.map(playlist => {
@@ -530,16 +646,18 @@ function GameConfigForm({ config, setConfig, toggleSoundType, onReset, onSubmit,
                   return (
                     <button 
                         key={playlist.id} 
-                        onClick={() => setConfig((prev: any) => ({ ...prev, playlist: isSelected ? null : playlist.id, soundSelection: isSelected ? 'random' : 'mix' }))} 
+                        onClick={() => setConfig((prev: any) => ({ 
+                            ...prev, 
+                            playlist: isSelected ? null : playlist.id, 
+                            soundSelection: isSelected ? 'random' : 'mix' 
+                        }))} 
                         className={cn("p-3 rounded-xl border text-left transition-all hover:border-primary/50", isSelected ? "border-primary bg-primary/10" : "border-border bg-card hover:bg-secondary/50")}
-                        // Ajout du style dynamique pour la couleur (RESTAURÉ)
                         style={{
                             borderColor: isSelected ? playlist.color : undefined,
-                            backgroundColor: isSelected ? `${playlist.color}15` : undefined // Opacité 15%
+                            backgroundColor: isSelected ? `${playlist.color}15` : undefined
                         }}
                     > 
                         <div className="flex items-center gap-2"> 
-                            {/* L'icône prend aussi la couleur (RESTAURÉ) */}
                             <span className="text-lg" style={{ color: playlist.color}}>{playlist.icon}</span> 
                             <div className="flex-1 min-w-0"> 
                                 <div className="text-xs font-medium truncate">{playlist.name}</div> 

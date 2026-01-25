@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 // Icônes & UI
 import { Send, Volume2, VolumeX, LogOut, Pause, Play, SkipForward, Grid2X2, Columns2, AlertCircle, Loader2, Clock } from 'lucide-react';
@@ -38,6 +39,7 @@ interface AnimeDataItem {
 
 interface ServerSong { 
   id: number; 
+  animeId?: number;
   anime: any; 
   exactName?: string;
   displayAnswer?: string;
@@ -149,6 +151,8 @@ export default function Game() {
   // --- STATES JEU ---
   const [players, setPlayers] = useState<Player[]>(initialPlayers.map((p: any) => ({ ...p, name: safePlayerName(p), score: p.score || 0, isInGame: p.isInGame !== false })));
   const [phase, setPhase] = useState<'loading' | 'guessing' | 'revealed' | 'ended'>('loading');
+
+  const [myWatchedIds, setMyWatchedIds] = useState<number[]>([]);
   
   const [phaseEndTime, setPhaseEndTime] = useState<number>(0);
   const [phaseTotalDuration, setPhaseTotalDuration] = useState<number>(settings.guessDuration);
@@ -176,6 +180,9 @@ export default function Game() {
   const [gameHistory, setGameHistory] = useState<RoundHistory[]>([]);
   const [animeList, setAnimeList] = useState<AnimeDataItem[]>([]);
 
+  // 👇 NOUVEL ÉTAT POUR STOCKER LES INFOS DE VICTOIRE
+  const [victoryData, setVictoryData] = useState<any>(null);
+
   const [isGamePaused, setIsGamePaused] = useState(false);
   const [isPausePending, setIsPausePending] = useState(false); 
   const [resumeCountdown, setResumeCountdown] = useState<number | null>(null);
@@ -194,6 +201,8 @@ export default function Game() {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // --- AUDIO ---
   const safePlayVideo = () => {
@@ -234,45 +243,45 @@ export default function Game() {
       };
   }, []);
 
-  // --- GESTION DE L'AUTOCOMPLÉTION (CORRIGÉE) ---
   useEffect(() => {
-    // Si on n'est pas en mode typing ou si le champ est vide, on vide les suggestions
+    if (profile?.anilistUsername) {
+        socket.emit('get_user_watched_ids', { username: profile.anilistUsername });
+    }
+
+    socket.on('user_watched_ids', (ids: number[]) => {
+        setMyWatchedIds(ids);
+    });
+
+    return () => {
+        socket.off('user_watched_ids');
+    };
+  }, [profile?.anilistUsername]);
+
+  // --- GESTION DE L'AUTOCOMPLÉTION ---
+  useEffect(() => {
     if (inputMode !== 'typing' || !answer || answer.trim().length < 2) {
         setSuggestions([]);
         return;
     }
 
     const term = answer.toLowerCase().trim();
-    
-    // Filtrage initial
     const filteredMatches = animeList.filter(anime => {
-        // 1. Nom principal
         if (anime.name.toLowerCase().includes(term)) return true;
-        // 2. Alt Names
         if (anime.altNames && anime.altNames.some(alt => alt.toLowerCase().includes(term))) return true;
-        // 3. Franchise
         if (anime.franchise && anime.franchise.toLowerCase().includes(term)) return true;
-        
         return false;
     });
 
     let displaySuggestions: string[] = [];
-
-    // --- LOGIQUE DIFFÉRENCIÉE SELON LE MODE ---
     if (settings.precision === 'franchise') {
-        // En mode Franchise, on mappe vers le nom de la franchise (ou nom si pas de franchise)
         const franchiseNames = filteredMatches.map(a => a.franchise || a.name);
-        // Dédoublonnage (Set) pour ne pas voir 15 fois "Naruto"
         displaySuggestions = Array.from(new Set(franchiseNames));
     } else {
-        // En mode Exact, on garde les noms exacts
         displaySuggestions = filteredMatches.map(a => a.name);
     }
-
-    // On coupe à 5 résultats max
     setSuggestions(displaySuggestions.slice(0, 5));
 
-  }, [answer, animeList, inputMode, settings.precision]); // Ajout de settings.precision aux dépendances
+  }, [answer, animeList, inputMode, settings.precision]);
 
   useEffect(() => {
     socket.off('round_start'); socket.off('round_reveal'); socket.off('game_over'); socket.off('vote_update'); socket.off('game_paused'); socket.off('game_resuming'); socket.off('update_players'); socket.off('player_left');
@@ -372,14 +381,18 @@ export default function Game() {
     });
 
     socket.on('game_resuming', (data: any) => {
-      // Pour la reprise après pause, on peut faire confiance au serveur car c'est un délai court
       if (data.newEndTime) setPhaseEndTime(data.newEndTime);
-
       let count = data.duration; setResumeCountdown(count);
       const timer = setInterval(() => { count--; if (count <= 0) { clearInterval(timer); setResumeCountdown(null); return; } setResumeCountdown(count); }, 1000);
     });
 
-    socket.on('game_over', (data: any) => { setPhase('ended'); });
+    socket.on('game_over', (data: any) => { 
+        // 👇 ICI : On récupère les données de victoire envoyées par le serveur
+        if (data.victoryData) {
+            setVictoryData(data.victoryData);
+        }
+        setPhase('ended'); 
+    });
 
     const onError = (err: { message: string }) => { 
         toast.error(err.message || "Une erreur est survenue"); 
@@ -436,7 +449,13 @@ export default function Game() {
   const handleSwitchToCarre = () => { setInputMode('carre'); setChoices(storedQcmChoices); };
   const handleSwitchToDuo = () => { setInputMode('duo'); setChoices(storedDuoChoices); };
   const handleVotePause = () => { setHasVotedPause(v => !v); socket.emit('vote_pause', { roomId }); };
-  const handleVoteSkip = () => { if (phase === 'revealed' || (phase === 'guessing' && gameMode === 'solo')) { setHasVotedSkip(v => !v); socket.emit('vote_skip', { roomId }); } };
+  const handleVoteSkip = () => { 
+      if (hasVotedSkip) return; 
+      if (phase === 'revealed' || (phase === 'guessing' && gameMode === 'solo')) { 
+          setHasVotedSkip(true); 
+          socket.emit('vote_skip', { roomId }); 
+      } 
+  };
 
   const handleReturnToLobby = () => {
       isReturningToLobbyRef.current = true;
@@ -456,48 +475,162 @@ export default function Game() {
       return (
         <div className="glass-card p-4 flex items-center justify-between w-full animate-scale-in border border-white/10">
           <div className="text-left">
-            {/* MODIFICATION ICI : On priorise exactName */}
             <h3 className="text-xl font-bold mb-1 text-primary">
-                {currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime}
+              {currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime}
             </h3>
-            <p className="text-sm text-muted-foreground">{currentSong?.title} - {currentSong?.artist}</p>
+            <p className="text-sm text-muted-foreground">
+              {currentSong?.title} - {currentSong?.artist}
+            </p>
           </div>
         </div>
       );
     }
+
     return (
       <div className="flex flex-col items-center w-full gap-4 relative">
-        {submittedAnswer && ( <div className="animate-fade-in mb-2 px-4 py-1.5 bg-primary/20 border border-primary/30 rounded-full flex items-center gap-2 backdrop-blur-sm shadow-lg"><span className="text-xs text-primary-foreground/70 uppercase font-bold">Votre réponse :</span><span className="text-sm font-bold text-white">{submittedAnswer}</span></div> )}
-        {settings.responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && ( <div className="flex gap-4 mb-2 animate-fade-in"><Button variant="secondary" size="sm" onClick={handleSwitchToCarre} className="gap-2 hover:bg-primary/20 hover:text-primary transition-all"><Grid2X2 className="h-4 w-4" /> Carré (2 pts)</Button><Button variant="secondary" size="sm" onClick={handleSwitchToDuo} className="gap-2 hover:bg-primary/20 hover:text-primary transition-all"><Columns2 className="h-4 w-4" /> Duo (1 pt)</Button></div> )}
-        {inputMode === 'typing' && (
-          <div className="flex gap-3 items-center w-full animate-slide-up relative z-50">
-            {suggestions.length > 0 && ( <div className="absolute bottom-full mb-2 left-0 w-full bg-card border border-primary/20 rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-60 overflow-y-auto">{suggestions.map((suggestion, idx) => ( <button key={idx} className="text-left px-4 py-3 hover:bg-primary/20 hover:text-primary transition-colors text-sm font-medium border-b border-white/5 last:border-0" onClick={() => handleSuggestionClick(suggestion)}>{suggestion}</button> ))}</div> )}
-            <div className="relative flex-1"><Input ref={inputRef} value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder={submittedAnswer ? "Changer votre réponse..." : (settings.precision === 'franchise' ? "Nom de la franchise..." : "Nom de l'anime exact...")} className={cn("h-14 text-lg bg-card/50 backdrop-blur-sm pl-4 border-primary/20 focus-visible:ring-primary/50", submittedAnswer && "border-primary/50 bg-primary/5")} onKeyDown={(e) => e.key === 'Enter' && handleAction(answer)} autoFocus /></div>
-            <div className="flex items-center gap-2"><span className="text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded">+5 pts</span><Button variant="glow" size="lg" onClick={() => handleAction(answer)} disabled={!answer} className="h-14 w-14 p-0 rounded-xl"><Send className="h-5 w-5" /></Button></div>
+        {submittedAnswer && (
+          <div className="animate-fade-in mb-2 px-4 py-1.5 bg-primary/20 border border-primary/30 rounded-full flex items-center gap-2 backdrop-blur-sm shadow-lg">
+            <span className="text-xs text-primary-foreground/70 uppercase font-bold">Votre réponse :</span>
+            <span className="text-sm font-bold text-white">{submittedAnswer}</span>
           </div>
         )}
-        {inputMode !== 'typing' && ( <div className={cn("grid gap-4 w-full animate-slide-up", inputMode === 'carre' ? "grid-cols-2" : "grid-cols-2")}>{choices.map((choice, idx) => ( <Button key={idx} variant="outline" className={cn("h-20 text-lg font-semibold border-2 transition-all whitespace-normal", submittedAnswer === choice ? "bg-primary text-white border-primary shadow-lg hover:bg-primary hover:text-white" : "hover:bg-primary/10 hover:border-primary/50")} onClick={() => handleAction(choice)}>{choice}</Button> ))}</div> )}
+
+        {settings.responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && (
+          <div className="flex gap-4 mb-2 animate-fade-in">
+            <Button variant="secondary" size="sm" onClick={handleSwitchToCarre} className="gap-2 hover:bg-primary/20 hover:text-primary transition-all">
+              <Grid2X2 className="h-4 w-4" /> Carré (2 pts)
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleSwitchToDuo} className="gap-2 hover:bg-primary/20 hover:text-primary transition-all">
+              <Columns2 className="h-4 w-4" /> Duo (1 pt)
+            </Button>
+          </div>
+        )}
+
+        {inputMode === 'typing' && (
+          <div className="flex gap-3 items-center w-full animate-slide-up relative z-50">
+            {suggestions.length > 0 && (
+              <div className="absolute bottom-full mb-2 left-0 w-full bg-card border border-primary/20 rounded-xl shadow-2xl overflow-hidden z-50 flex flex-col max-h-60 overflow-y-auto">
+                {suggestions.map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    className={cn(
+                      "text-left px-4 py-3 transition-colors text-sm font-medium border-b border-white/5 last:border-0 w-full flex justify-between items-center",
+                      idx === 0 ? "bg-primary/20 text-primary border-l-4 border-l-primary" : "hover:bg-primary/20 hover:text-primary"
+                    )}
+                    onClick={() => handleSuggestionClick(suggestion)}
+                  >
+                    <span>{suggestion}</span>
+                    {idx === 0 && <span className="text-[10px] opacity-60 font-mono border border-current px-1 rounded ml-2">ENTRÉE</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="relative flex-1">
+              <Input
+                ref={inputRef}
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder={submittedAnswer ? "Changer votre réponse..." : settings.precision === 'franchise' ? "Nom de la franchise..." : "Nom de l'anime exact..."}
+                className={cn("h-14 text-lg bg-card/50 backdrop-blur-sm pl-4 border-primary/20 focus-visible:ring-primary/50", submittedAnswer && "border-primary/50 bg-primary/5")}
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (suggestions.length > 0) {
+                      const bestMatch = suggestions[0];
+                      setAnswer(bestMatch);
+                      handleAction(bestMatch);
+                    } else {
+                      handleAction(answer);
+                    }
+                  }
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold text-primary bg-primary/10 px-2 py-1 rounded">+5 pts</span>
+              <Button variant="glow" size="lg" onClick={() => handleAction(answer)} disabled={!answer} className="h-14 w-14 p-0 rounded-xl">
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {inputMode !== 'typing' && (
+          <div className={cn("grid gap-4 w-full animate-slide-up", inputMode === 'carre' ? "grid-cols-2" : "grid-cols-2")}>
+            {choices.map((choice, idx) => (
+              <Button
+                key={idx}
+                variant="outline"
+                className={cn("h-20 text-lg font-semibold border-2 transition-all whitespace-normal", submittedAnswer === choice ? "bg-primary text-white border-primary shadow-lg hover:bg-primary hover:text-white" : "hover:bg-primary/10 hover:border-primary/50")}
+                onClick={() => handleAction(choice)}
+              >
+                {choice}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
 
-  if (phase === 'ended') { return ( <GameOver players={players} currentUserId={socket.id || ""} onLeave={handleReturnToLobby} onReplay={handleReplay} gameMode={gameMode} history={gameHistory} settings={settings} /> ); }
+  if (phase === 'ended') { 
+      return ( 
+        <GameOver 
+            players={players} 
+            currentUserId={socket.id || ""} 
+            onLeave={handleReturnToLobby} 
+            onReplay={handleReplay} 
+            gameMode={gameMode} 
+            history={gameHistory} 
+            settings={settings}
+            // 👇 ICI : On passe la data au composant enfant
+            victoryData={victoryData} 
+        /> 
+      ); 
+  }
 
   return (
     <>
+      {/* ... Le reste du JSX (Header, Main, AlertDialog) reste inchangé ... */}
       <Helmet><title>Partie en cours - AniQuizz</title></Helmet>
       {nextVideoKey && ( <div style={{ display: 'none' }}> <video src={getVideoUrl(nextVideoKey)} preload="auto" /> </div> )}
       <div className="h-screen bg-background flex flex-col overflow-hidden">
         <header className="h-14 border-b border-border bg-card/50 backdrop-blur-sm flex items-center px-4 shrink-0 justify-between relative z-50">
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setShowLeaveDialog(true)} className="gap-2 text-muted-foreground hover:text-destructive"><LogOut className="h-4 w-4" /><span className="hidden md:inline">Quitter</span></Button>
+            
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => { setPendingNavigation(null); setShowLeaveDialog(true); }} 
+                className="gap-2 text-muted-foreground hover:text-destructive"
+            >
+                <LogOut className="h-4 w-4" /><span className="hidden md:inline">Quitter</span>
+            </Button>
+
             <Button variant={(isGamePaused || isPausePending) ? "secondary" : "outline"} size="sm" onClick={handleVotePause} className={cn("gap-2 ml-2 transition-all duration-300", isGamePaused && "bg-yellow-500 hover:bg-yellow-600 text-black border-none", isPausePending && !isGamePaused && "bg-orange-500/90 hover:bg-orange-600 animate-pulse border-none text-white")}> {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />} {isGamePaused ? "Reprendre" : (isPausePending ? "Pause (Fin round)" : "Pause")} {players.length > 1 && ( <span className="text-xs opacity-70 ml-1">({pauseVotes}/{pauseRequired})</span> )} </Button>
           </div>
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             <div className="flex items-center gap-2 mb-1"><span className="font-bold gradient-text text-lg">AniQuizz</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase font-bold tracking-wider">{settings.gameType}</span></div>
             <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground w-64">{phase === 'loading' ? ( <span className="animate-pulse">Synchronisation...</span> ) : ( <> <span className="whitespace-nowrap">Round {currentRound}/{totalRounds}</span> <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden"> <div className="h-full bg-gradient-primary transition-all duration-1000" style={{ width: `${(currentRound / totalRounds) * 100}%` }} /> </div> </> )}</div>
           </div>
-          <div className="flex items-center gap-2"><Button variant="ghost" className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 transition-all" onClick={() => navigate('/profile')}><Avatar className="h-8 w-8 border border-primary/20"><AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${myProfile.avatar}`} /><AvatarFallback>{myProfile.username[0]}</AvatarFallback></Avatar><span className="font-semibold text-sm hidden sm:block">{myProfile.username}</span></Button></div>
+          <div className="flex items-center gap-2">
+            
+            <Button 
+                variant="ghost" 
+                className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 transition-all" 
+                onClick={() => { setPendingNavigation('/profile'); setShowLeaveDialog(true); }}
+            >
+                <UserAvatar 
+                    avatar={myProfile.avatar} 
+                    username={myProfile.username} 
+                    className="h-8 w-8" 
+                />
+                <span className="font-semibold text-sm hidden sm:block">{myProfile.username}</span>
+            </Button>
+
+          </div>
         </header>
 
         <main className="flex-1 flex overflow-hidden min-h-0">
@@ -522,17 +655,17 @@ export default function Game() {
                 {phase === 'revealed' && ( <div className="absolute bottom-4 right-4 z-30"><Button variant="default" onClick={handleVoteSkip} className="gap-2 shadow-lg shadow-purple-500/20"><SkipForward className="h-4 w-4" /> Suivant {players.length > 1 && ` (${skipVotes}/${skipRequired})`}</Button></div> )}
               </div>
               
-              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2"><SongInfoCard animeName={currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime} songTitle={currentSong?.title} artist={currentSong?.artist} type={currentSong?.type} difficulty={currentSong?.difficulty} franchise={currentSong?.franchise} year={currentSong?.year} coverImage={currentSong?.cover} siteUrl={currentSong?.siteUrl} sourceUrl={currentSong?.sourceUrl} isRevealed={phase === 'revealed'} tags={currentSong?.tags} /></div>
+              <div className="hidden xl:block absolute left-[calc(100%+20px)] top-0 mt-2"><SongInfoCard animeName={currentSong?.exactName || currentSong?.displayAnswer || currentSong?.anime} songTitle={currentSong?.title} artist={currentSong?.artist} type={currentSong?.type} difficulty={currentSong?.difficulty} franchise={currentSong?.franchise} year={currentSong?.year} coverImage={currentSong?.cover} siteUrl={currentSong?.siteUrl} sourceUrl={currentSong?.sourceUrl} isRevealed={phase === 'revealed'} tags={currentSong?.tags} isWatched={currentSong?.animeId ? myWatchedIds.includes(currentSong.animeId) : false} /></div>
               {isPausePending && !isGamePaused && ( <div className="w-full max-w-[750px] mb-4 bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center justify-center gap-3 animate-pulse"><Clock className="h-5 w-5 text-orange-500" /><span className="text-orange-500 font-bold">Le jeu se mettra en pause à la fin de ce round !</span></div> )}
               {phase !== 'loading' && ( <div className={cn("w-full flex justify-center shrink-0 min-h-[80px] z-50", phase === 'revealed' ? "mb-32" : "mb-6")}>{renderInputArea()}</div> )}
               
               <div className="w-full">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 justify-items-center">
                     {players.map(p => ( <div key={p.id} className="relative w-full max-w-[220px]">{phase === 'revealed' && ( 
-  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex justify-center z-10 w-full"> {/* MODIFIÉ : Centrage absolu */}
+  <div className="absolute -top-16 left-1/2 -translate-x-1/2 flex justify-center z-10 w-full"> 
     <div className={cn(
       "px-3 py-2 rounded-xl text-xs font-bold shadow-xl animate-bounce border-2 bg-background",
-      "line-clamp-2 text-center leading-tight max-w-[160px] w-max break-words", // MODIFIÉ : Multi-lignes + Largeur
+      "line-clamp-2 text-center leading-tight max-w-[160px] w-max break-words",
       p.isCorrect ? "bg-success text-success-foreground border-success-foreground/20" : "bg-destructive text-destructive-foreground border-destructive-foreground/20"
     )}>
       {p.currentAnswer || "..."}
@@ -548,7 +681,41 @@ export default function Game() {
       </div>
       <GlobalSettingsModal open={showSettings} onOpenChange={setShowSettings} />
       <Dialog open={showProfileModal} onOpenChange={setShowProfileModal}><DialogContent><DialogHeader><DialogTitle>Profil</DialogTitle><DialogDescription>Vos statistiques de jeu</DialogDescription></DialogHeader><div className="p-4">Stats...</div></DialogContent></Dialog>
-      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>Quitter ?</AlertDialogTitle><AlertDialogDescription>Progression perdue.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={() => { handleReturnToLobby(); setShowLeaveDialog(false); }} className="bg-destructive">Quitter</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+      
+      {/* DIALOGUE DE SORTIE SÉCURISÉ */}
+      <AlertDialog open={showLeaveDialog} onOpenChange={setShowLeaveDialog}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Quitter ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    La partie est en cours. Toute progression non sauvegardée sera perdue.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPendingNavigation(null)}>
+                    Annuler
+                </AlertDialogCancel>
+                
+                <AlertDialogAction 
+                    onClick={() => { 
+                        socket.emit('leave_room', { roomId }); 
+                        
+                        if (pendingNavigation) {
+                            navigate(pendingNavigation);
+                        } else {
+                            handleReturnToLobby();
+                        }
+                        
+                        setShowLeaveDialog(false); 
+                        setPendingNavigation(null);
+                    }} 
+                    className="bg-destructive"
+                >
+                    Quitter
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

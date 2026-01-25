@@ -10,6 +10,7 @@ const INPUT_FILE = path.join(__dirname, "../data/editable_data.json");
 
 async function main() {
   console.log("📥 IMPORTATION DES MODIFICATIONS MANUELLES (JSON -> SUPABASE)...");
+  console.log("   ⚠️  MODE GOD : Toutes les infos du JSON vont écraser la BDD (Tags, Difficulté, Noms...)");
   
   if (!fs.existsSync(INPUT_FILE)) {
     console.error(`❌ Fichier introuvable : ${INPUT_FILE}`);
@@ -20,68 +21,91 @@ async function main() {
   const franchisesData = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf-8'));
   console.log(`📦 Analyse de ${franchisesData.length} franchises...`);
 
-  let updatesCount = 0;
-
   for (const fr of franchisesData) {
-    // 1. MISE À JOUR FRANCHISE
-    // On utilise l'ID pour retrouver la franchise, ce qui permet le RENOMMAGE
+    
+    // --- 1. GESTION FRANCHISE (Smart Upsert) ---
+    
+    // Cas A : On a l'ID dans le JSON -> Update direct
     if (fr.id) {
         await prisma.franchise.update({
             where: { id: fr.id },
             data: {
-                name: fr.name,       // Si tu as changé le nom dans le JSON, ça update ici
-                isLocked: fr.isLocked, // Si tu as mis true, ça lock
-                genres: fr.genres
-            }
-        });
-        updatesCount++;
-    } else {
-        // Si pas d'ID, c'est une création (copier-coller d'un bloc ?)
-        console.log(`   ✨ Création nouvelle franchise : ${fr.name}`);
-        const newFr = await prisma.franchise.create({
-            data: {
                 name: fr.name,
-                isLocked: true, // Par sécurité, on lock les créations manuelles
-                genres: fr.genres || []
+                isLocked: fr.isLocked,
+                genres: fr.genres || [] 
             }
         });
-        fr.id = newFr.id; // On assigne l'ID pour les enfants
+    } 
+    // Cas B : Pas d'ID -> On vérifie si elle existe par nom avant de créer (Anti-Crash P2002)
+    else {
+        const existingFranchise = await prisma.franchise.findUnique({
+            where: { name: fr.name }
+        });
+
+        if (existingFranchise) {
+            console.log(`   🔄 Franchise existante trouvée par nom : "${fr.name}" (ID: ${existingFranchise.id}) -> Mise à jour.`);
+            await prisma.franchise.update({
+                where: { id: existingFranchise.id },
+                data: {
+                    isLocked: true, // On lock par sécurité si ça vient du fichier manuel
+                    genres: fr.genres || []
+                }
+            });
+            fr.id = existingFranchise.id; // On récupère l'ID pour les enfants
+        } else {
+            console.log(`   ✨ Création réelle nouvelle franchise : "${fr.name}"`);
+            const newFr = await prisma.franchise.create({
+                data: {
+                    name: fr.name,
+                    isLocked: true, 
+                    genres: fr.genres || []
+                }
+            });
+            fr.id = newFr.id; 
+        }
     }
 
-    // 2. MISE À JOUR ANIMES
+    // --- 2. GESTION ANIMES ---
     for (const anime of fr.animes) {
         if (anime.id) {
             await prisma.anime.update({
                 where: { id: anime.id },
                 data: {
                     name: anime.name,
+                    altNames: anime.altNames || [],
+                    tags: anime.tags || [],
+                    seasonYear: anime.seasonYear,
                     isLocked: anime.isLocked,
-                    // LA MAGIE EST ICI :
-                    // On force le franchiseId à être celui du parent actuel dans le JSON.
-                    // Donc si tu as déplacé le bloc anime dans une autre franchise JSON, ça le déplace en BDD.
-                    franchiseId: fr.id 
+                    franchiseId: fr.id // Gère le déplacement d'une franchise à l'autre
                 }
             });
         } else {
-            // Création d'un anime manuel ? (Rare mais géré)
+            // Création d'un anime manuel
             await prisma.anime.create({
                 data: {
                     name: anime.name,
+                    altNames: anime.altNames || [],
+                    tags: anime.tags || [],
                     franchiseId: fr.id,
                     isLocked: true
                 }
             });
         }
 
-        // 3. MISE À JOUR SONGS (Pour les locks ou titres)
+        // --- 3. GESTION SONGS ---
         for (const song of anime.songs) {
             if (song.id) {
                 await prisma.song.update({
                     where: { id: song.id },
                     data: {
                         title: song.title,
+                        artist: song.artist,       
+                        difficulty: song.difficulty, 
+                        type: song.type,           
+                        tags: song.tags || [],     
+                        
                         isLocked: song.isLocked,
-                        animeId: anime.id // Permet de déplacer une song d'un anime à l'autre
+                        animeId: anime.id
                     }
                 });
             }
@@ -89,8 +113,8 @@ async function main() {
     }
   }
 
-  console.log(`✅ SYNC TERMINÉE ! Base de données mise à jour.`);
-  console.log(`   💡 Note : N'oublie pas de relancer l'export si tu veux une version JSON à jour des IDs créés.`);
+  console.log(`✅ SYNC TERMINÉE ! La Base de Données reflète exactement ton JSON.`);
+  console.log(`   💡 Note : Relance l'export pour récupérer les IDs dans ton JSON.`);
 }
 
 main()

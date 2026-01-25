@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 // socket
 import { socket } from '@/services/socket';
 
@@ -196,10 +197,11 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                       #{index + 1}
                     </span>
 
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${player.avatar}`} />
-                      <AvatarFallback>{player.name[0]}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar 
+                        avatar={player.avatar} 
+                        username={player.name} 
+                        className="h-9 w-9 shrink-0" 
+                    />
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate text-sm hover:text-primary transition-colors">

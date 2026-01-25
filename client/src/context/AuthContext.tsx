@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 // TYPES
 // ------------------------------------------------------------------
 
-// Structure du Profil (Doit matcher ta table "Profile" dans Supabase)
 export type Profile = {
   id: string;
   username: string;
@@ -16,11 +15,13 @@ export type Profile = {
   role: "USER" | "ADMIN" | "MODERATOR";
   gamesPlayed: number;
   gamesWon: number;
-  anilistUsername?: string | null; // Pour l'intégration AniList
+  anilistUsername?: string | null;
   lastListSync?: string | null;
+  totalGuesses?: number;
+  correctGuesses?: number;
+  history?: { count: number }[];
 };
 
-// Ce que le contexte met à disposition dans toute l'app
 type AuthContextType = {
   session: Session | null;
   user: User | null;
@@ -28,10 +29,9 @@ type AuthContextType = {
   loading: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
-  refreshProfile: () => Promise<void>; // NOUVEAU : Pour mettre à jour l'XP/Niveau sans F5
+  refreshProfile: () => Promise<void>;
 };
 
-// Création du contexte
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // ------------------------------------------------------------------
@@ -43,68 +43,90 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // --- FONCTION : Récupérer le profil depuis la BDD ---
-  // Utilisation de useCallback pour éviter les boucles infinies
+  // --- FETCH PROFILE ---
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from("Profile") // "Profile" avec majuscule car défini ainsi dans Prisma/SQL
+        .from("Profile")
         .select("*")
+        .select("*, history:SongHistory(count)")
         .eq("id", userId)
         .single();
 
       if (error) {
         console.error("❌ Erreur chargement profil:", error.message);
+        // Important: si erreur (ex: profil pas encore créé), on ne bloque pas tout
       } else {
         setProfile(data);
       }
     } catch (err) {
-      console.error("❌ Erreur inattendue:", err);
+      console.error("❌ Erreur inattendue fetchProfile:", err);
     }
   }, []);
 
-  // --- EFFET : Gestion du cycle de vie Auth ---
+  // --- INIT AUTH ---
   useEffect(() => {
-    // 1. Vérification initiale au chargement de la page
+    let mounted = true;
+
     const initAuth = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
+      try {
+        // 1. Récup session initiale
+        const { data: { session: initialSession } } = await supabase.auth.getSession();
         
-        if (session?.user) {
-            await fetchProfile(session.user.id);
+        if (mounted) {
+            setSession(initialSession);
+            if (initialSession?.user) {
+                await fetchProfile(initialSession.user.id);
+            }
         }
-        setLoading(false);
+      } catch (err) {
+        console.error("❌ Erreur Init Auth:", err);
+      } finally {
+        if (mounted) setLoading(false); // <--- ON GARANTIT LA FIN DU LOADING
+      }
     };
 
     initAuth();
 
-    // 2. Écouteur d'événements (Connexion, Déconnexion, Refresh Token)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setSession(session);
+    // 2. Listeners
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!mounted) return;
       
-      if (session?.user) {
-        // Si l'utilisateur vient de se connecter, on charge son profil
-        if (!profile) await fetchProfile(session.user.id);
+      setSession(newSession);
+
+      if (newSession?.user) {
+        // On ne recharge que si l'ID a changé ou si on n'a pas de profil
+        setProfile(prev => {
+            if (prev && prev.id === newSession.user.id) return prev;
+            fetchProfile(newSession.user.id); // On lance le fetch
+            return prev; // On garde l'ancien en attendant (ou null)
+        });
       } else {
-        // Si déconnexion, on vide tout
         setProfile(null);
-        setLoading(false);
       }
+      
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
-  }, [fetchProfile, profile]); // Ajout des dépendances pour la stabilité
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [fetchProfile]); 
+  // On a retiré 'profile' des dépendances pour éviter la boucle infinie fetch <-> update
 
   // --- ACTIONS ---
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setSession(null);
-    setLoading(false);
+    try {
+        await supabase.auth.signOut();
+        setProfile(null);
+        setSession(null);
+    } catch (err) {
+        console.error("Erreur Logout:", err);
+    }
   };
 
-  // Permet de forcer la mise à jour du profil (ex: après une fin de partie)
   const refreshProfile = async () => {
       if (session?.user) {
           await fetchProfile(session.user.id);
@@ -113,8 +135,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = profile?.role === "ADMIN";
 
-  // --- MEMOIZATION ---
-  // Optimisation : On ne recrée l'objet que si une valeur change
   const value = useMemo(() => ({
     session,
     user: session?.user ?? null,
@@ -131,10 +151,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-// ------------------------------------------------------------------
-// HOOK PERSONNALISÉ
-// ------------------------------------------------------------------
 
 export function useAuth() {
   const context = useContext(AuthContext);

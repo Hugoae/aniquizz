@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Check, X, Flame, Skull, Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UserAvatar } from '@/components/shared/UserAvatar';
 
 interface PlayerCardProps {
   player: {
@@ -38,7 +39,6 @@ const rankColors: Record<string, string> = {
 
 export function PlayerCard({ player, isCurrentUser, showResult, compact, onClick, gameMode, hideScore }: PlayerCardProps) {
   const isEliminated = player.isEliminated;
-  const maxLives = 3;
 
   return (
     <div
@@ -57,10 +57,11 @@ export function PlayerCard({ player, isCurrentUser, showResult, compact, onClick
       <div className="flex items-center gap-3">
         {/* Avatar with status indicator */}
         <div className="relative shrink-0">
-          <Avatar className="h-12 w-12 border-2 border-background shadow-lg">
-            <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${player.avatar}`} />
-            <AvatarFallback>{player.name[0]}</AvatarFallback>
-          </Avatar>
+          <UserAvatar 
+            avatar={player.avatar}
+            username={player.name}
+            className="h-12 w-12 border-2 border-background shadow-lg"
+          />
           
           {/* Eliminated skull overlay */}
           {isEliminated && (
@@ -104,11 +105,12 @@ export function PlayerCard({ player, isCurrentUser, showResult, compact, onClick
 
         {/* Score section */}
         <div className="flex flex-col items-end gap-1">
-          {/* Streak */}
-          {player.streak && player.streak > 1 && !isEliminated && !hideScore && (
-            <div className="flex items-center gap-1 text-orange-500">
-              <Flame className="h-3.5 w-3.5" />
-              <span className="text-xs font-bold">{player.streak}</span>
+          
+          {/* Streak Indicator (MODIFIÉ) */}
+          {player.streak && player.streak >= 3 && !isEliminated && !hideScore && (
+            <div className="flex items-center gap-1 text-orange-500 animate-in zoom-in duration-300">
+              <Flame className={cn("h-3.5 w-3.5 fill-orange-500", player.streak >= 5 && "animate-pulse")} />
+              <span className="text-xs font-black italic">{player.streak}</span>
             </div>
           )}
           

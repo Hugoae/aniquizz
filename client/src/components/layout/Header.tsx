@@ -5,6 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { LogIn } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { AuthModal } from '@/components/auth/AuthModal';
+import { UserAvatar } from '@/components/shared/UserAvatar';
+
 
 export function Header() {
   const navigate = useNavigate();
@@ -14,6 +16,13 @@ export function Header() {
   const initials = profile?.username
     ? profile.username.substring(0, 2).toUpperCase()
     : 'INV';
+
+  // 👇 FONCTION MAGIQUE POUR GÉRER URL vs DICEBEAR
+  const getAvatarSrc = (avatar?: string) => {
+    if (!avatar) return undefined;
+    if (avatar.startsWith('http')) return avatar; // C'est ta photo Supabase
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatar}`; // C'est un avatar par défaut
+  };
 
   return (
     <>
@@ -26,16 +35,16 @@ export function Header() {
 
         <div className="flex items-center gap-4">
           {user && profile ? (
-            // Bouton simple qui redirige vers le profil au clic
             <Button
                 variant="ghost"
                 onClick={() => navigate('/profile')}
                 className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-full hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-pointer outline-none focus:ring-0"
             >
-                <Avatar className="h-8 w-8 border border-primary/20">
-                <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile.avatar}`} />
-                <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
+                <UserAvatar 
+                    avatar={profile.avatar} 
+                    username={profile.username} 
+                    className="h-8 w-8" 
+                />
                 <div className="hidden md:flex flex-col items-start text-sm">
                 <span className="font-bold leading-none">{profile.username}</span>
                 </div>

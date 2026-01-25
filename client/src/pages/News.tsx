@@ -1,15 +1,33 @@
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Newspaper, Map, CheckCircle2, Circle, Clock, Rocket } from 'lucide-react';
+import { ArrowLeft, Newspaper, Map, CheckCircle2, Circle, Clock, Rocket, Zap, Sparkles, Bug, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-// IMPORT MIS À JOUR : On importe roadmapData
 import { allNews, typeConfig, roadmapData } from '@/data/newsData'; 
 
 export default function News() {
   const navigate = useNavigate();
+
+  // 👇 FONCTION MAGIQUE POUR LE GRAS
+  const formatContent = (text: string) => {
+    // On découpe le texte quand on croise "**...**"
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    
+    return parts.map((part, index) => {
+      // Si le morceau commence et finit par **, on le met en gras
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+            <strong key={index} className="text-foreground font-black">
+                {part.slice(2, -2)}
+            </strong>
+        );
+      }
+      // Sinon, on retourne le texte normal
+      return part;
+    });
+  };
 
   return (
     <>
@@ -48,7 +66,7 @@ export default function News() {
 
               <div className="space-y-4">
                 {allNews.map((news) => {
-                  const config = typeConfig[news.type as keyof typeof typeConfig] || typeConfig.info;
+                  const config = typeConfig[news.type as keyof typeof typeConfig] || { icon: Newspaper, color: 'text-gray-400', label: 'Info' };
                   const TypeIcon = config.icon;
 
                   return (
@@ -76,9 +94,12 @@ export default function News() {
                           <h2 className="font-bold text-xl mb-2 text-foreground">
                             {news.title}
                           </h2>
-                          <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
-                            {news.content}
-                          </p>
+                          
+                          {/* 👇 ICI ON UTILISE NOTRE FONCTION */}
+                          <div className="text-muted-foreground text-sm leading-relaxed whitespace-pre-wrap">
+                            {formatContent(news.content)}
+                          </div>
+
                         </div>
                       </div>
                     </article>

@@ -28,6 +28,10 @@ export interface ExtendedPlayer extends Player {
     
     // NOUVEAU : Victoires dans la session actuelle (Reset quand on quitte la room)
     sessionWins?: number; 
+
+    anilistUsername?: string;
+    streak?: number;
+    heardSongIds?: number[];
 }
 
 // --- SALON (ROOM) ---

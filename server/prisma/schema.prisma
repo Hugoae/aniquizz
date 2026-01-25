@@ -47,6 +47,9 @@ model Profile {
   
   gamesPlayed Int @default(0)
   gamesWon    Int @default(0)
+  totalGuesses   Int @default(0)   // Total des devinettes tentées
+  correctGuesses Int @default(0)   // Total des bonnes réponses
+  maxStreak      Int @default(0)   // Meilleure série de tous les temps
   
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
