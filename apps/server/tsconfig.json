@@ -8,7 +8,8 @@
     "target": "es2020",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false                // <--- C'EST LA CLÉ DU SUCCÈS !
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
