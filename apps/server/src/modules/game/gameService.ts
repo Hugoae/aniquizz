@@ -221,15 +221,9 @@ export const getAllAnimeNames = async () => {
 export const saveGameHistory = async (players: any[], playlist: any[], winnerId?: string) => {
     logger.info(`[GameService] Sauvegarde des stats pour ${players.length} joueurs...`, 'GameService');
     
-    const songIds = playlist.map(s => s.id);
+    const songIds = playlist.map((s: any) => s.id);
 
-    // On traite chaque joueur (asynchrone mais on attend pas forcément le blocage de l'UI)
     for (const player of players) {
-        // On ignore les joueurs non authentifiés (qui n'ont pas d'ID DB ou qui sont des invités purs)
-        // Note: Ici on suppose que player.id est l'ID socket, il faut mapper avec l'ID user si disponible.
-        // Dans ton architecture actuelle, si le joueur est connecté, on doit avoir son UserID quelque part ?
-        // Si 'username' est unique, on peut chercher par username.
-        
         try {
             const user = await prisma.profile.findUnique({ where: { username: player.username } });
             
@@ -242,35 +236,26 @@ export const saveGameHistory = async (players: any[], playlist: any[], winnerId?
                     data: {
                         gamesPlayed: { increment: 1 },
                         gamesWon: isWinner ? { increment: 1 } : undefined,
-                        totalGuesses: { increment: 10 }, // Approximation ou il faudrait tracker chaque guess
-                        // correctGuesses: ... (Il faudrait que GamePlayer stocke le nombre exact de bonnes réponses)
+                        totalGuesses: { increment: 10 }, 
                         maxStreak: Math.max(user.maxStreak || 0, player.streak || 0)
                     }
                 });
 
-                // 2. Update Pokedex (Sons découverts)
-                // On utilise createMany avec skipDuplicates pour ignorer ceux déjà connus
+                // 2. Update Pokedex (SongHistory)
                 if (songIds.length > 0) {
-                    // On suppose une table de liaison "DiscoveredSong" (User <-> Song)
-                    // Si tu utilises un JSONB 'history' directement dans Profile, la logique serait différente.
-                    // Vu ton Profile.tsx, tu utilises "history[0].count". 
-                    // Je vais utiliser la méthode standard "Relation".
-                    
-                    const entries = songIds.map(songId => ({
+                    // On map avec les noms de ton schema (listenedAt au lieu de discoveredAt)
+                    const entries = songIds.map((songId: number) => ({
                         profileId: user.id,
                         songId: songId,
-                        discoveredAt: new Date()
+                        listenedAt: new Date() // <--- C'est le nom dans ton schema
                     }));
 
-                    // Note: Si 'DiscoveredSong' n'existe pas dans ton schema, 
-                    // assure-toi de l'avoir créé ou adapte ce bloc.
-                    // En attendant, voici la logique générique robuste :
-                    await prisma.discoveredSong.createMany({
+                    // On utilise ta table existante 'songHistory'
+                    await prisma.songHistory.createMany({
                         data: entries,
                         skipDuplicates: true
-                    }).catch(err => {
-                        // Fallback silencieux si la table n'existe pas encore
-                        logger.warn(`Impossible de sauvegarder le Pokedex pour ${user.username} (Table DiscoveredSong manquante ?)`);
+                    }).catch((err: any) => {
+                        logger.warn(`Erreur lors de la sauvegarde de l'historique pour ${user.username}`, err);
                     });
                 }
             }

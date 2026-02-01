@@ -1,7 +1,7 @@
 import { Server } from 'socket.io';
 import { GamePlayer, GAME_CONFIG } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
-import { getRandomSongs, generateChoices, generateDuo, SongFilters, saveGameHistory } from '../gameService'; // <--- Import ajouté
+import { getRandomSongs, generateChoices, generateDuo, SongFilters, saveGameHistory } from '../gameService';
 import { getUserAnimeIds } from '../../anilist/anilistService'; 
 import { prisma } from '@aniquizz/database';
 
@@ -40,9 +40,10 @@ export abstract class GameCore {
     this.settings = settings;
   }
 
+  // ✅ CORRECTION ICI : checkVictory n'est plus abstrait car on l'a codé plus bas
   abstract handleAnswer(playerId: string, answer: string, mode: string): void;
   abstract onRoundEnd(): void;
-  abstract checkVictory(): void;
+  // abstract checkVictory(): void; <--- LIGNE SUPPRIMÉE
 
   addPlayer(socketId: string, username: string, avatar: string, isReady: boolean = false) {
     const newPlayer: GamePlayer = {
@@ -434,15 +435,12 @@ export abstract class GameCore {
       void this.startRound();
   }
 
-  // ⚠️ MODIFICATION : On surcharge la méthode de victoire pour sauvegarder les stats
   checkVictory() {
       const rankedPlayers = Array.from(this.players.values())
         .sort((a, b) => b.score - a.score);
 
       const winner = rankedPlayers.length > 0 ? rankedPlayers[0] : null;
 
-      // ✅ SAUVEGARDE DES STATS EN BDD
-      // On le fait en "fire and forget" (pas de await) pour ne pas bloquer l'interface
       saveGameHistory(Array.from(this.players.values()), this.playlist, winner?.id as string)
         .catch(err => logger.error("Erreur saveGameHistory", "GameCore", err));
 
