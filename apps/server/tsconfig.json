@@ -1,12 +1,15 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "outDir": "./dist",        // <--- C'est ça qui crée le dossier dist
-    "rootDir": "./src",        // <--- C'est là qu'est ton code source
+    "outDir": "./dist",
+    "rootDir": "./src",
     "module": "commonjs",
+    "moduleResolution": "node",
     "target": "es2020",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"],     // <--- Indispensable pour trouver tes fichiers
+  "include": ["src/**/*"],
   "exclude": ["node_modules"]
 }
