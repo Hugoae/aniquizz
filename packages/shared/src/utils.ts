@@ -105,3 +105,4 @@ export const getFuzzySuggestions = (list: any[], query: string, precisionMode: '
     // Retourne les 5 premiers uniques
     return Array.from(new Set(candidates)).slice(0, 5);
 };
+
