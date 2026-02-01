@@ -9,7 +9,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "noEmit": false                // <--- C'EST LA CLÉ DU SUCCÈS !
+    "noEmit": false,            // <--- C'EST LA CLÉ DU SUCCÈS !
+    "allowImportingTsExtensions": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]
