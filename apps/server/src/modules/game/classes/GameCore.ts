@@ -252,7 +252,7 @@ export abstract class GameCore {
                 if ((p as any).anilistUsername) {
                     anilistUsernames.push((p as any).anilistUsername);
                 } else {
-                    const profile = dbProfiles.find(dp => dp.username === p.username);
+                    const profile = dbProfiles.find((dp: any) => dp.username === p.username);
                     if (profile?.anilistUsername) {
                         anilistUsernames.push(profile.anilistUsername);
                     }
