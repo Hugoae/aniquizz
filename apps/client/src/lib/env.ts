@@ -12,6 +12,11 @@ const envSchema = z.object({
   VITE_SERVER_URL: z.string().url().optional(),
   // Optional but required for media playback (Cloudflare R2 public base URL).
   VITE_R2_PUBLIC_URL: z.string().url().optional(),
+  // Enable client-side error reporting outside dev (console for now).
+  VITE_DEBUG_REPORTING: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => v === 'true'),
 });
 
 const parsed = envSchema.safeParse(import.meta.env);

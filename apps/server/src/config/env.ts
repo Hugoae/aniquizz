@@ -11,6 +11,9 @@ const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
+  LOG_LEVEL: z
+    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+    .optional(),
   PORT: z.coerce.number().int().positive().default(3001),
 
   // Client origin(s) used for CORS. Comma-separated list allowed.
@@ -39,5 +42,11 @@ if (!parsed.success) {
   process.exit(1);
 }
 
-export const env = parsed.data;
+const data = parsed.data;
+
+export const env = {
+  ...data,
+  LOG_LEVEL:
+    data.LOG_LEVEL ?? (data.NODE_ENV === 'production' ? 'info' : 'debug'),
+};
 export type Env = typeof env;

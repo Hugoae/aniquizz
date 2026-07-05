@@ -1,14 +1,20 @@
 import 'dotenv/config';
 import { env } from './config/env';
-import { httpServer, io } from './core/Server';
+import { app, httpServer, io } from './core/Server';
 import { prisma } from '@aniquizz/database';
 import { SocketManager } from './core/SocketManager';
+import { registerCrashHandlers } from './core/crashHandlers';
+import { registerShutdownHandlers } from './core/shutdown';
+import { registerHealthRoute } from './routes/health';
 import { logger } from './utils/logger';
+import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
 
 export let gameManager: GameManager;
 
 const PORT = env.PORT;
+
+registerCrashHandlers();
 
 async function main() {
   try {
@@ -18,6 +24,7 @@ async function main() {
 
     // 2. Initialisation du Game Manager
     gameManager = new GameManager(io);
+    registerHealthRoute(app, io, () => gameManager);
     
     // 3. Initialisation du Socket Manager
     // C'est LUI qui va gérer tous les registers (Lobby, Game, Chat, Profile, General)
@@ -30,8 +37,11 @@ async function main() {
       logger.info(`Server running on http://localhost:${PORT}`, 'Server');
     });
 
+    // 5. Arrêt gracieux (Ctrl+C local, restart Render)
+    registerShutdownHandlers({ httpServer, io });
+
   } catch (error) {
-    logger.error('Failed to start server', 'Server', error);
+    captureError(error, { context: 'Server', source: 'bootstrap' });
     process.exit(1);
   }
 }

@@ -66,4 +66,13 @@ export class GameManager {
         settings: game.settings 
       }));
   }
+
+  getStats() {
+    const games = Array.from(this.games.values());
+    return {
+      activeRooms: games.length,
+      activeMatches: games.filter((g) => g.status === 'playing').length,
+      playersInRooms: games.reduce((sum, g) => sum + g.players.size, 0),
+    };
+  }
 }

@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import { env } from "./env";
+import { captureClientError } from "./errorReporter";
 
 // --- CONFIGURATION URL ---
 // Production : L'URL définie, ou celle du site courant
@@ -22,9 +23,7 @@ export const socket: Socket = io(URL, {
   transports: ['websocket'], // Force WebSocket pour éviter le polling (plus rapide)
 });
 
-// --- DEBUG ---
-if (!IS_PROD) {
-  socket.on("connect_error", (err) => {
-    console.error("❌ Socket Error:", err.message);
-  });
-}
+// --- DEBUG / ERROR REPORTING ---
+socket.on("connect_error", (err) => {
+  captureClientError(err, { source: "socket_connect_error" });
+});

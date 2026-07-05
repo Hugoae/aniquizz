@@ -3,6 +3,7 @@ import { gameManager } from '../../index';
 import { getAllAnimeNames } from './gameService';
 import { getUserAnimeIds } from '../anilist/anilistService';
 import { logger } from '../../utils/logger';
+import { captureError } from '../../utils/errorReporter';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 
 export const registerGameHandlers = (io: Server, socket: Socket) => {
@@ -97,6 +98,7 @@ export const registerGameHandlers = (io: Server, socket: Socket) => {
       socket.emit('anime_list', list);
     } catch (error) {
       console.error('Erreur fetching anime list:', error);
+      captureError(error, { context: 'Game', source: 'get_anime_list' });
     }
   });
 };

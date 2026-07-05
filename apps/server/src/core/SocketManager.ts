@@ -1,6 +1,8 @@
 import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
+import { captureError } from '../utils/errorReporter';
 import { socketAuthMiddleware, AuthenticatedSocketData } from './authMiddleware';
+import { instrumentSocket } from './socketInstrumentation';
 
 // Imports des modules
 import { registerChatHandlers } from '../modules/chat/chatHandlers';
@@ -27,13 +29,29 @@ export class SocketManager {
     // Sets the canonical, trusted identity on `socket.data`.
     this.io.use(socketAuthMiddleware);
 
+    this.io.engine.on('connection_error', (err) => {
+      captureError(err, { context: 'Socket', source: 'connection_error' });
+    });
+
     this.io.on('connection', (socket: Socket) => {
       // Identity is set by socketAuthMiddleware (never trust raw client userId).
       const { username, userId, isAuthenticated } = socket.data as AuthenticatedSocketData;
 
-      logger.info(
-        `Connexion : ${username} (${socket.id}) [${isAuthenticated ? `auth:${userId}` : 'guest'}]`,
-        'Socket',
+      instrumentSocket(socket);
+
+      logger.child({
+        context: 'Socket',
+        socketId: socket.id,
+        userId: userId ?? undefined,
+      }).info(
+        'socket:connected',
+        undefined,
+        {
+          lifecycle: 'connect',
+          username,
+          isAuthenticated,
+          authUserId: userId ?? undefined,
+        },
       );
 
       // 3. Attacher les gestionnaires d'événements (Modules)
@@ -46,15 +64,30 @@ export class SocketManager {
 
       // 4. Gestion de la déconnexion globale
       socket.on('disconnect', (reason) => {
-        const name = socket.data.username || "Anonyme";
-        // On réduit le log au niveau debug pour ne pas polluer si c'est fréquent
-        logger.debug(`❌ Déconnexion : ${name} (${socket.id}) - Raison: ${reason}`, 'Socket');
+        const data = socket.data as AuthenticatedSocketData;
+        logger.child({
+          context: 'Socket',
+          socketId: socket.id,
+          userId: data.userId ?? undefined,
+        }).info(
+          'socket:disconnected',
+          undefined,
+          {
+            lifecycle: 'disconnect',
+            username: data.username ?? 'guest',
+            reason,
+          },
+        );
       });
 
       // 5. Gestion des erreurs
       socket.on('error', (err) => {
-        const name = socket.data.username || "Anonyme";
-        logger.error(`Erreur Socket [${name}]:`, 'Socket', err);
+        captureError(err, {
+          context: 'Socket',
+          source: 'socket_error',
+          socketId: socket.id,
+          userId: (socket.data as AuthenticatedSocketData).userId ?? undefined,
+        });
       });
     });
   }
