@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+*-debug.log*
+
+# Build output
+dist/
+build/
+.output/
+dist-ssr/
+*.local
+
+# Environment & secrets (do not commit)
+.env
+.env.local
+.env.*.local
+
+# System & IDE
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+logs/
+*.log
+
+# Monorepo / tooling caches
+.turbo/
+coverage/
+.nyc_output/
+
+# Prisma
+packages/database/prisma/*.db
+
+# Data pipeline: ignore heavy generated intermediates, keep versioned manual edits
+packages/database/data/data_step1.json
+packages/database/data/data_step2.json
+packages/database/data/animethemes_cache.json
+packages/database/data/tmp/
+
+# Stray package manager locks (this repo uses pnpm)
+package-lock.json
+yarn.lock

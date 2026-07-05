@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "es2020",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": false,            // <--- C'EST LA CLÉ DU SUCCÈS !
+    "allowImportingTsExtensions": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}

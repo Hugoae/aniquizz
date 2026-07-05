@@ -1,0 +1,41 @@
+{
+  "name": "@aniquizz/database",
+  "version": "1.0.0",
+  "description": "Prisma schema, shared Prisma client, and the ETL media pipeline (AniList -> AnimeThemes -> Postgres -> R2).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "studio": "prisma studio",
+    "seed": "ts-node scripts/seed_db.ts",
+    "seed:accounts": "ts-node scripts/seed_test_accounts.ts",
+    "pipeline:build": "ts-node scripts/global_build.ts",
+    "pipeline:reset": "ts-node scripts/reset_all.ts"
+  },
+  "prisma": {
+    "seed": "ts-node scripts/seed_db.ts"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "@prisma/client": "^6.19.2",
+    "@supabase/supabase-js": "^2.93.1",
+    "axios": "^1.13.3",
+    "dotenv": "^17.2.3",
+    "fluent-ffmpeg": "^2.1.3"
+  },
+  "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
+    "@types/node": "^22.16.5",
+    "prisma": "^6.19.2",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  }
+}
