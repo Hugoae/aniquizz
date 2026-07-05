@@ -262,7 +262,7 @@ async function enrichData() {
           artist,
           type: `OP${seq}`,
           sequence: seq,
-          videoKey: sourceUrl,
+          sourceUrl,
           difficulty: anime.difficulty ?? "easy",
           tags: franchise.tags ?? [],
         });

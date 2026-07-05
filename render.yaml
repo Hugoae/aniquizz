@@ -1,0 +1,31 @@
+# Render Blueprint — AniQuizz server (Express + Socket.io)
+# Apply via Render Dashboard → Blueprints, or update the existing `aniquizz-server` web service.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# IMPORTANT: rootDir is the repo root (not apps/server), so build/start paths are
+# relative to the monorepo root. The `...` in the build filter compiles the
+# workspace deps (@aniquizz/shared, @aniquizz/database) before the server.
+
+services:
+  - type: web
+    name: aniquizz-server
+    runtime: node
+    plan: starter
+    region: frankfurt
+    branch: main
+    repo: https://github.com/Hugoae/aniquizz
+    buildCommand: pnpm install --frozen-lockfile && pnpm db:generate && pnpm --filter aniquizz-server... build
+    startCommand: node apps/server/dist/index.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CLIENT_URL
+        value: https://aniquizz.vercel.app
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

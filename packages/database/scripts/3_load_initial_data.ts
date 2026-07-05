@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import { parsePipelineJson } from './lib/pipeline-schemas';
 
 const prisma = new PrismaClient();
 const INPUT_FILE = path.join(__dirname, "../data/data_step2.json");
@@ -13,7 +14,8 @@ async function main() {
     process.exit(1);
   }
 
-  const franchisesData = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf-8'));
+  const rawJson = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf-8'));
+  const franchisesData = parsePipelineJson(rawJson, 'data_step2.json');
   console.log(`📦 ${franchisesData.length} Franchises à traiter...`);
 
   for (const fData of franchisesData) {
@@ -106,7 +108,7 @@ async function main() {
       if (!aData.songs) continue;
 
       for (const sData of aData.songs) {
-        if (!sData.videoKey) continue;
+        if (!sData.sourceUrl) continue;
 
         // Clé unique pour identifier le son (inchangé)
         const songNameClean = `${aData.name.replace(/[^a-zA-Z0-9]/g, "")}-${aData.id}-${sData.type}.mp4`;
@@ -127,7 +129,7 @@ async function main() {
             artist: sData.artist,
             type: sData.type,
             tags: sData.tags || [],
-            sourceUrl: sData.videoKey,
+            sourceUrl: sData.sourceUrl,
             difficulty: sData.difficulty || 'medium',
             animeId: aData.id
           },
@@ -137,7 +139,7 @@ async function main() {
             type: sData.type,
             videoKey: songNameClean,
             tags: sData.tags || [],
-            sourceUrl: sData.videoKey,
+            sourceUrl: sData.sourceUrl,
             difficulty: sData.difficulty || 'medium',
             animeId: aData.id,
             downloadStatus: 'PENDING'

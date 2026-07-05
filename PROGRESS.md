@@ -1,60 +1,74 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 0 (review pending)
+## Current phase: Phase 1 ✅ complete — ready for Phase 2
 
-## Done
+## Done (Phase 1)
 
-- [x] Refactor plan agreed (Phases 0–9)
-- [x] `PLAN.md`, `PROGRESS.md`, `WORKFLOW.md` created at repo root
-- [x] `old-AniQuizz/` = read-only reference · `aniquizz/` = clean active workspace
-- [x] Clean monorepo scaffolded: root `package.json`, `pnpm-workspace.yaml`, `turbo.json`, `tsconfig.json`
-- [x] Tooling config: `.gitignore`, `.gitattributes` (LF), `.editorconfig`, `.prettierrc`, `.npmrc`, `.nvmrc` (24)
-- [x] Solid bricks copied from `old-AniQuizz` (apps/client, apps/server, packages/shared, packages/database) — no `node_modules`/`dist`/`.turbo`/`.git`
-- [x] `packages/shared` fully anglicized (utils, constants, types) + clean `package.json` (French kept only for user-facing labels)
-- [x] Prisma unified to `6.x` (server was 5.10.2 → 6.19.2, matches database)
-- [x] Prisma migration baselined under version control: `20260705000000_init` + `migration_lock.toml`
-- [x] Fixed broken `description` in `packages/database/package.json`; removed stray `package-lock.json`
-- [x] Pro docs: `README.md`, `ARCHITECTURE.md`, `CONTRIBUTING.md`, `LICENSE` (MIT), `.env.example` (root + per package)
-- [x] Deterministic dev seed: `packages/database/scripts/seed_test_accounts.ts` (admin/mod/2 players, prod-guarded)
-- [x] Single dev entry: `pnpm dev` (turbo → client + server); `pnpm db:*` helpers
+- [x] Pipeline storage migrated from Supabase Storage → Cloudflare R2 (`@aws-sdk/client-s3`)
+- [x] Shared R2 client helper: `packages/database/scripts/lib/r2-client.ts` (HeadObject, PutObject, List/Delete)
+- [x] `4_sync_storage.ts` rewritten: R2 upload, parallel workers (`p-limit`, `WORKER_CONCURRENCY`), env-driven `RESET_ERRORS_ON_START`
+- [x] `reset_all.ts` rewritten: empty R2 bucket via `ListObjectsV2` + `DeleteObjects`
+- [x] Pipeline clarity fix: `sourceUrl` = AnimeThemes download URL, `videoKey` = R2 object key (generated in step 3)
+- [x] Zod validation on `data_step2.json` load (`pipeline-schemas.ts`)
+- [x] Client: hardcoded Supabase URL removed → `VITE_R2_PUBLIC_URL` via `apps/client/src/lib/video.ts`
+- [x] Server CORS: reads `CLIENT_URL` env (dev + prod), keeps `https://aniquizz.vercel.app`
+- [x] Env examples updated with R2 + worker tuning vars
+- [x] Removed `@supabase/supabase-js` from `@aniquizz/database` (no longer used by pipeline)
+- [x] R2 env vars filled in `packages/database/.env` + `apps/client/.env`
 - [x] Verified: `pnpm install` OK, `pnpm build` OK (4/4 packages)
-- [x] `git init` on `main`, everything staged (194 files, no secrets, no heavy data)
-- [ ] GitHub repo `Hugoae/aniquizz` created (blocked — see notes)
-- [ ] Phase 0 commit `phase(0): ...` + push (at your go-ahead)
+- [x] Live DB explored via Supabase MCP; advisors reviewed
+- [x] Target schema agreed and documented in `SCHEMA-TARGET.md`; `PLAN.md` updated (Phases 2/4/5)
+- [x] Baseline resolved on live DB: `prisma migrate resolve --applied 20260705000000_init`
+- [x] Fixed `.env` load path in pipeline scripts (`../../.env` → `../.env`)
+- [x] Extracted media helpers → `scripts/lib/media.ts` (shared by worker + dev seed)
+- [x] Dev seed script `seed_dev_catalogue.ts` (`seed:dev-catalogue`, `DEV_SEED_LIMIT`)
+- [x] **Dev catalogue live**: 10 openings on R2; DB: 10 `COMPLETED` (all r2.dev), 1450 `PENDING`
+- [x] **Deployments reconnected:**
+  - Vercel: `VITE_R2_PUBLIC_URL` set; prod redeploy triggered
+  - Render: build fixed and successful (monorepo root; see `render.yaml`)
+- [x] `render.yaml` added — Render Blueprint with validated build/start commands
 
-## Key decisions
+## Live DB findings (Supabase MCP)
+
+- Game tables held **1460 `Song` rows** from the old pipeline run (not empty). `_prisma_migrations` was empty → baseline safely resolved.
+- Media was dead: 1234 Supabase (deleted bucket) / 221 AnimeThemes / 5 R2. Server only serves `downloadStatus='COMPLETED'`.
+- **Dev decision (user-approved):** non-R2 songs set to `PENDING` → only 10 R2 openings playable during dev. Reversible; `manual_edits.json` untouched.
+- Identity **already wired**: `handle_new_user()` trigger; Prisma `Profile.id @default(uuid())` is drift → fix in Phase 2.
+- RLS partially set up; advisors flag unindexed FKs, duplicate policies, etc. → Phase 2 cleanup.
+
+## Schema decisions (full design in SCHEMA-TARGET.md)
+
+| # | Decision |
+|---|----------|
+| MatchRound / RoundAnswer | **Yes** — full per-round detail |
+| SongHistory | **Aggregate**; event detail in `RoundAnswer` |
+| SongVote + VoteType | **Removed** (re-addable later) |
+| Anime.format/status, PlayerAnimeList.status | **Keep String** |
+| onDelete Song → Anime | **Cascade** |
+| Match models | Replace `GameSession`/`GameParticipant` in Phase 5 |
+
+## Key decisions (infra)
 
 | Topic | Decision |
 |-------|----------|
-| Repo | New `aniquizz` on GitHub; old → `old-aniquizz` |
-| Local folders | `old-AniQuizz/` reference · `aniquizz/` active workspace |
-| Stack | Vercel (client) · Render Starter (server) · Supabase (Postgres + Auth) · R2 (media) |
-| Game scope | Standard mode only (solo + multi); fixed scoring; AMQ speed mode later |
-| Auth | Login required to play |
-| Media | Regenerate catalogue on R2 (`r2.dev`); no Supabase Storage migration |
-| Code language | English code; French UI strings isolated |
-| Node / pnpm | Node 24 (installed), pnpm 9 via corepack |
-| Copy strategy | Full working tree copied so it builds; dead-mode pruning stays in Phase 4 |
-| Dead code | Challenger/TimeTrial/BattleRoyale kept until Phase 4 (one latent TS error fixed to compile) |
-| Review ritual | Pause + checklist + verify + commit (on request) at every phase boundary |
-| Chat ritual | 1 chat = 1 phase (see `WORKFLOW.md`) |
+| Repo | `Hugoae/aniquizz` on GitHub; old → `old-aniquizz` |
+| Stack | Vercel (client) · Render Starter (server) · Supabase · R2 (media) |
+| Media | Dev: 10 openings on R2; full regen deferred |
+| Render build | Root = repo root; `pnpm --filter aniquizz-server... build`; start `node apps/server/dist/index.js` |
+| Pipeline worker | 3 concurrent workers; `RESET_ERRORS_ON_START=true`; timeout 60s |
+
+## Deferred (post–Phase 1)
+
+- **Full catalogue regeneration** (`pipeline:build`): 1450 songs `PENDING`; ~1229 need AnimeThemes relink from `animethemes_cache.json` before worker can fetch them.
+- **Grow dev set:** bump `DEV_SEED_LIMIT` and re-run `seed:dev-catalogue` (idempotent).
 
 ## Next step
 
-1. **You:** unblock GitHub repo creation (pick one):
-   - `gh auth login` then tell me to create + push, **or**
-   - create an empty `Hugoae/aniquizz` (public, no README) on github.com, **or**
-   - grant the GitHub MCP token repo-creation permission.
-2. **You:** approve the Phase 0 commit message.
-3. **Me:** commit `phase(0): ...`, add remote, push `main`.
-4. **You:** `go Phase 1` in a **new chat**.
+Phase 2 — Security & identity (JWT on Socket.io; `Profile.id` alignment; RLS cleanup; login required to play).
 
-## Notes / blockers
+## Notes
 
-- **GitHub repo creation blocked** — MCP token returns `403 Resource not accessible by personal access token`; `gh` CLI not logged in. Needs one of the options above.
-- **Prisma migration not yet applied to a DB** — the initial migration is version-controlled but not run against Postgres. It will be baselined against Supabase in Phase 1 (`prisma migrate resolve --applied 20260705000000_init`), avoiding an accidental reset of existing data.
-- **Client bundle ~823 kB** (single chunk) — code-splitting deferred to Phase 8 UI rework.
-- **`packages/database/.env`** was copied locally (gitignored) so the pipeline keeps working; never committed.
-- **Render Starter** — upgrade to be done by you before/during Phase 1 (€7/mo, no cold-start).
-- **Vercel/Render** — still pointed at old repo until Phase 1 reconnect.
-- **Dead modes present** — Challenger/TimeTrial/BattleRoyale still in server/client/shared; removed in Phase 4 per plan.
+- **`manual_edits.json` still authoritative** — `isLocked` preserves curated metadata on regeneration.
+- **Render MCP skipped** — dashboard used; build validated manually.
+- **Vercel MCP** reads projects/deployments but cannot write env vars (dashboard used).
+- **Dead modes** — removed in Phase 4. **Client bundle ~823 kB** — code-splitting in Phase 8.

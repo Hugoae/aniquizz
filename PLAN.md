@@ -6,6 +6,8 @@ Strategic refactor: keep solid business logic (song selection, fuzzy match, vict
 
 **Local folders:** `old-AniQuizz/` = read-only reference · `aniquizz/` = new project workspace.
 
+**Database target:** the agreed future-proof schema lives in `SCHEMA-TARGET.md` (design only; implemented across Phases 2/4/5/6/7). Refer to it for all schema decisions.
+
 ---
 
 ## Phase boundary protocol (mandatory)
@@ -87,15 +89,17 @@ flowchart LR
 
 ## Phase 1 — Infra & R2 migration
 
-- Cloudflare R2 (MCP): bucket `aniquizz-videos`, public `r2.dev` URL, S3 API keys.
-- Adapt `packages/database/scripts/4_sync_storage.ts`: Supabase Storage → S3 client (`@aws-sdk/client-s3`, endpoint `https://<account>.r2.cloudflarestorage.com`, region `auto`). Env: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`. Replace `.list` existence check with `HeadObject`; build `r2.dev` public URL.
+- Cloudflare R2: bucket `aniquizz-videos`, public `r2.dev` URL, S3 API keys (manual setup; MCP R2 returned 403).
+- Adapt `packages/database/scripts/4_sync_storage.ts`: Supabase Storage → R2 S3 client; parallel workers (`p-limit`); env flags.
 - Adapt `packages/database/scripts/reset_all.ts`: empty R2 via `ListObjectsV2` + `DeleteObjects`.
-- Pipeline improvements: parallelize worker with `p-limit`, `RESET_ERRORS_ON_START` as env flag, clarify `videoKey` (storage key) vs `sourceUrl` (AnimeThemes URL) — step 2 currently sets `videoKey: sourceUrl`.
-- Keep JSON ETL approach (`data_step1/2.json` gitignored intermediates, versioned `manual_edits.json` with `isLocked`, `animethemes_cache.json`); add zod validation on load if possible. Pipeline runs locally (Render ephemeral FS not affected).
-- Client: remove hardcoded Supabase URL in `Game.tsx` → `VITE_R2_PUBLIC_URL`.
-- Deployments (MCP Vercel/Render): clean existing projects, align env vars, fix CORS/port mismatch (`5173` vs `8080`).
-- Render Starter plan (€7/mo): no sleep, no cold-start — required for Socket.io realtime.
-- Regenerate catalogue on R2 via `global_build.ts` after worker adaptation.
+- Pipeline improvements: `videoKey` (R2 object key) vs `sourceUrl` (AnimeThemes URL → R2 public URL after upload); zod validation on `data_step2.json`.
+- Dev seed: `seed_dev_catalogue.ts` — 10 openings on R2 for playable dev loop without full catalogue regen (~1450 songs left `PENDING`).
+- Client: `VITE_R2_PUBLIC_URL` via `apps/client/src/lib/video.ts` (no hardcoded Supabase Storage URL).
+- Server CORS: `CLIENT_URL` env + `https://aniquizz.vercel.app`.
+- **Deployments:** Vercel `VITE_R2_PUBLIC_URL` set; Render build fixed (monorepo root, `pnpm --filter aniquizz-server... build`, start `node apps/server/dist/index.js`) — see `render.yaml`.
+- Prisma baseline resolved on live Supabase (`20260705000000_init`).
+- Target schema designed in `SCHEMA-TARGET.md` (implementation in Phases 2/4/5).
+- **Deferred:** full catalogue regeneration on R2 (`pipeline:build`) — run when ready; ~1229 songs need AnimeThemes relink from cache before worker can fetch them.
 
 ---
 
@@ -105,7 +109,8 @@ flowchart LR
 - Login required to play: reject unauthenticated sockets on game actions; gate `/play` and `/game` client-side (redirect to login modal).
 - Rate limiting on sensitive socket events (`game:answer`, `chat:sendMessage`, `lobby:create`).
 - Boot-time env validation (zod) client + server; centralize all URLs in env vars.
-- Review Supabase RLS on client-read tables (`Profile`, `SongHistory`).
+- **Identity schema:** remove `Profile.id @default(uuid())` to align with the existing `handle_new_user()` auth trigger (Profile.id = `auth.users.id`). See `SCHEMA-TARGET.md`.
+- Review Supabase RLS on client-read tables (`Profile`, `SongHistory`). Advisor-driven cleanup: consolidate duplicate permissive `SELECT` policies on `Profile`/`SongVote`, wrap `auth.<fn>()` calls in `(select auth.<fn>())`, revoke `EXECUTE` on `handle_new_user()` from anon/authenticated, enable Auth leaked-password protection, enable RLS on `_prisma_migrations`.
 - Remove dead deps (`@tanstack/react-query` unused on client).
 
 ---
@@ -137,7 +142,13 @@ Current `logger.ts` issues: file logs in `logs/` (lost on Render), non-queryable
   - `constants.ts`: remove `CHALLENGER`, `TIME_TRIAL`, `BATTLE_ROYALE`; keep SCORING/VICTORY/TIMERS/FUZZY/DECADES/LIMITS/RANKS/COLLECTION_RANKS/PLAYLISTS.
   - `types.ts`: `GameConfig.gameType` → `'standard'` only; remove `livesCount`/`startingTime`/BattleRoyale types and BR fields on `GamePlayer`.
   - `utils.ts`: keep pure functions; unify `getRank` with `RANKS`; type `getFuzzySuggestions`; consolidate Levenshtein implementations.
-- Prisma cleanup via **new versioned migration** (`SongVote` unused; decide fate of `GameSession`/`GameParticipant`).
+- Prisma cleanup via **new versioned migration** (target in `SCHEMA-TARGET.md`):
+  - Add enums `SongType` (OP/ED/INSERT) + `Difficulty` (EASY/MEDIUM/HARD); split `Song.type` (`"OP1"`...) into `songType` + `sequence` — **impacts pipeline steps 2 & 3** + catalogue regeneration.
+  - Add missing FK indexes (advisor-confirmed) + hot-column indexes (`Song.downloadStatus`, `Profile.xp/level/gamesWon`).
+  - Add `createdAt`/`updatedAt` on `Song`/`Anime`/`Franchise`; set `onDelete: Cascade` on `Song → Anime`.
+  - Drop `SongVote` + `VoteType` (unused; re-addable later); rework `SongHistory` to aggregate (`playCount`/`correctCount`/`lastPlayedAt`).
+  - Keep `Anime.format`/`status` and `PlayerAnimeList.status` as `String` (AniList flexibility). Anglicize schema comments.
+- `GameSession`/`GameParticipant` fate: **replaced in Phase 5** by `Match`/`MatchPlayer`/`MatchRound`/`RoundAnswer`.
 - Keep Daily/Library/Competitive placeholder pages.
 
 ---
@@ -175,6 +186,7 @@ flowchart TB
   hook --> reducer --> layout
 ```
 
+- Persistence models (see `SCHEMA-TARGET.md`): `Match` / `MatchPlayer` / `MatchRound` / `RoundAnswer` (full per-round detail for replay, fine stats, future speed mode) replace `GameSession`/`GameParticipant`.
 - Identity: players keyed by `userId` (JWT); `socketId` mutable → reliable reconnect via `getSyncState`.
 - Strict types + typed socket contract (`Server<ClientToServer, ServerToClient>`) shared both sides.
 - Separation: `Room` / `MatchEngine` / `PlaylistBuilder` / `ScoringStrategy` / `MatchRepository` — no god object, no duplicated victory logic.

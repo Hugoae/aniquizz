@@ -1,139 +1,48 @@
-import { createClient } from "@supabase/supabase-js";
 import { PrismaClient, Prisma } from "@prisma/client";
 import fs from "fs";
 import path from "path";
-import axios from "axios";
-import ffmpeg from "fluent-ffmpeg";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
-import ffprobeInstaller from "@ffprobe-installer/ffprobe";
 import dotenv from "dotenv";
-import https from "https";
+import pLimit from "p-limit";
+import {
+  createR2Client,
+  getR2Bucket,
+  getR2PublicUrl,
+  r2ObjectExists,
+  r2UploadFile,
+} from "./lib/r2-client";
+import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from "./lib/media";
 
-// --- SETUP ---
-// Remonte à la racine du projet pour le .env
-dotenv.config({ path: path.join(__dirname, "../../.env") });
-
-ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-ffmpeg.setFfprobePath(ffprobeInstaller.path);
+dotenv.config({ path: path.join(__dirname, "../.env") });
 
 const prisma = new PrismaClient();
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const BUCKET_NAME = "videos";
+const r2Client = createR2Client();
+const r2Bucket = getR2Bucket();
 const TEMP_DIR = path.join(__dirname, "../data/tmp");
 
-// ⚡ RÉGLAGES
-const HARD_TIMEOUT = 10000; // 10 secondes MAX
-const RESET_ERRORS_ON_START = true; // Retente les erreurs au lancement
-
-const httpsAgent = new https.Agent({ keepAlive: false });
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false } });
+const HARD_TIMEOUT = Number(process.env.WORKER_DOWNLOAD_TIMEOUT_MS ?? 60_000);
+const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 3);
+const RESET_ERRORS_ON_START = process.env.RESET_ERRORS_ON_START === "true";
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-// --- UTILS ---
-
-async function safeUnlink(p: string) {
-  try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch { }
-}
-
-async function getVideoDurationSeconds(filePath: string): Promise<number> {
-  return new Promise((resolve) => {
-    // ✅ FIX: Ajout de types explicites (err: any, metadata: any)
-    ffmpeg.ffprobe(filePath, (err: any, metadata: any) => {
-      if (err) return resolve(0);
-      const d = metadata?.format?.duration;
-      if (!d || !Number.isFinite(d)) return resolve(0);
-      resolve(Math.round(d));
-    });
-  });
-}
-
-// --- CORE FUNCTIONS ---
-
-async function downloadToFile(url: string, outPath: string) {
-  const controller = new AbortController();
-  const writer = fs.createWriteStream(outPath);
-
-  const timeoutId = setTimeout(() => {
-    controller.abort();
-    if (writer && !writer.destroyed) writer.destroy();
-  }, HARD_TIMEOUT);
-
-  try {
-    const response = await axios({
-      url,
-      method: 'GET',
-      responseType: 'stream',
-      signal: controller.signal,
-      httpsAgent: httpsAgent,
-      headers: { 'Connection': 'close' }
-    });
-
-    response.data.pipe(writer);
-
-    await new Promise<void>((resolve, reject) => {
-      writer.on('finish', resolve);
-      writer.on('error', reject);
-      response.data.on('error', reject);
-    });
-  } catch (err: any) {
-    if (axios.isCancel(err) || controller.signal.aborted) {
-      throw new Error(`TIMEOUT (${HARD_TIMEOUT / 1000}s)`);
-    }
-    throw err;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function compressMp4(inputPath: string, outputPath: string) {
-  return new Promise<void>((resolve, reject) => {
-    const safetyTimeout = setTimeout(() => reject(new Error("Compression Timeout")), 20000);
-
-    ffmpeg(inputPath)
-      .outputOptions(["-c:v libx264", "-preset veryfast", "-crf 28", "-c:a aac", "-b:a 128k", "-movflags +faststart", "-vf scale=-2:720"])
-      .on("end", () => { clearTimeout(safetyTimeout); resolve(); })
-      // ✅ FIX: Ajout de type explicite (err: any)
-      .on("error", (err: any) => { clearTimeout(safetyTimeout); reject(err); })
-      .save(outputPath);
-  });
-}
-
-async function uploadFile(filePath: string, fileName: string) {
-  const buffer = fs.readFileSync(filePath);
-  const { error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, buffer, { contentType: "video/mp4", upsert: true });
-  if (error) throw error;
-}
-
-function getPublicUrl(fileName: string): string {
-  const { data } = supabase.storage.from(BUCKET_NAME).getPublicUrl(fileName);
-  return data.publicUrl;
-}
-
-// --- WORKER ---
-
-async function processNextSong() {
-  // 1. Stats
-  const pendingCount = await prisma.song.count({ where: { downloadStatus: 'PENDING' } });
-
+async function processNextSong(): Promise<boolean> {
+  const pendingCount = await prisma.song.count({ where: { downloadStatus: "PENDING" } });
   if (pendingCount === 0) return false;
 
-  const errorCount = await prisma.song.count({ where: { downloadStatus: 'ERROR' } });
-  const completedCount = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+  const errorCount = await prisma.song.count({ where: { downloadStatus: "ERROR" } });
+  const completedCount = await prisma.song.count({ where: { downloadStatus: "COMPLETED" } });
 
-  // 2. Prendre une tâche (Verrouillage via Transaction)
   const song = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const candidate = await tx.song.findFirst({
-      where: { downloadStatus: 'PENDING' },
-      select: { id: true, videoKey: true, sourceUrl: true }
+      where: { downloadStatus: "PENDING" },
+      select: { id: true, videoKey: true, sourceUrl: true },
     });
 
     if (!candidate) return null;
 
     await tx.song.update({
       where: { id: candidate.id },
-      data: { downloadStatus: 'PROCESSING' }
+      data: { downloadStatus: "PROCESSING" },
     });
 
     return candidate;
@@ -149,47 +58,50 @@ async function processNextSong() {
   console.log(`   📊 RESTE: ${pendingCount} | FINIS: ${completedCount} | ERREURS: ${errorCount}`);
 
   try {
-    if (!song.sourceUrl) throw new Error("URL manquante");
+    if (!song.sourceUrl) throw new Error("Missing sourceUrl (AnimeThemes download URL)");
 
-    // Vérification présence Storage
-    const { data: list } = await supabase.storage.from(BUCKET_NAME).list('', { search: fileName });
-    if (list && list.length > 0 && list.find(x => x.name === fileName)) {
-      console.log(`   ☁️  Existe déjà -> SKIP DL`);
-      const publicUrl = getPublicUrl(fileName);
+    if (await r2ObjectExists(r2Client, r2Bucket, fileName)) {
+      console.log("   ☁️  Already in R2 -> SKIP DL");
+      const publicUrl = getR2PublicUrl(fileName);
       await prisma.song.update({
         where: { id: song.id },
-        data: { downloadStatus: 'COMPLETED', sourceUrl: publicUrl }
+        data: { downloadStatus: "COMPLETED", sourceUrl: publicUrl },
       });
       return true;
     }
 
-    process.stdout.write(`   ⬇️  DL... `);
-    await downloadToFile(song.sourceUrl, rawPath);
-    console.log(`OK`);
+    process.stdout.write("   ⬇️  DL... ");
+    await downloadToFile(song.sourceUrl, rawPath, HARD_TIMEOUT);
+    console.log("OK");
 
-    process.stdout.write(`   🔨 Compress... `);
+    process.stdout.write("   🔨 Compress... ");
     await compressMp4(rawPath, outPath);
-    console.log(`OK`);
+    console.log("OK");
 
-    process.stdout.write(`   ⬆️  Upload... `);
-    await uploadFile(outPath, fileName);
-    console.log(`OK`);
+    process.stdout.write("   ⬆️  Upload... ");
+    const buffer = fs.readFileSync(outPath);
+    await r2UploadFile(r2Client, r2Bucket, fileName, buffer);
+    console.log("OK");
 
     const duration = await getVideoDurationSeconds(outPath);
-    const publicUrl = getPublicUrl(fileName);
+    const publicUrl = getR2PublicUrl(fileName);
 
     await prisma.song.update({
       where: { id: song.id },
-      data: { downloadStatus: 'COMPLETED', sourceUrl: publicUrl, duration: duration, errorLog: null }
+      data: {
+        downloadStatus: "COMPLETED",
+        sourceUrl: publicUrl,
+        duration,
+        errorLog: null,
+      },
     });
-
-  } catch (error: any) {
-    const msg = error.message || "Erreur";
-    console.log(`❌ ${msg}`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.log(`❌ ${message}`);
 
     await prisma.song.update({
       where: { id: song.id },
-      data: { downloadStatus: 'ERROR', errorLog: msg }
+      data: { downloadStatus: "ERROR", errorLog: message },
     });
   } finally {
     await safeUnlink(rawPath);
@@ -199,39 +111,51 @@ async function processNextSong() {
   return true;
 }
 
+async function runWorkerPool() {
+  const limit = pLimit(WORKER_CONCURRENCY);
+
+  const workers = Array.from({ length: WORKER_CONCURRENCY }, (_, index) =>
+    limit(async () => {
+      while (await processNextSong()) {
+        // keep draining the queue until empty
+      }
+      console.log(`   Worker ${index + 1} finished.`);
+    }),
+  );
+
+  await Promise.all(workers);
+}
+
 async function main() {
-  console.log("👷 WORKER DATABASE (Mode: 10s Timeout)");
+  console.log(`👷 R2 WORKER (concurrency: ${WORKER_CONCURRENCY}, timeout: ${HARD_TIMEOUT / 1000}s)`);
 
   if (RESET_ERRORS_ON_START) {
-    console.log("♻️  Reset des ERREURS en PENDING...");
+    console.log("♻️  Resetting ERROR songs to PENDING...");
     const updated = await prisma.song.updateMany({
-      where: { downloadStatus: 'ERROR' },
-      data: { downloadStatus: 'PENDING', errorLog: null }
+      where: { downloadStatus: "ERROR" },
+      data: { downloadStatus: "PENDING", errorLog: null },
     });
-    console.log(`   -> ${updated.count} tâches réactivées pour tentative.`);
+    console.log(`   -> ${updated.count} songs re-queued.`);
   }
 
-  while (true) {
-    // Boucle infinie tant qu'il y a du travail
-    const worked = await processNextSong();
-    
-    // Si on a traité un son, on continue tout de suite.
-    // Si pas de son trouvé (false), on arrête le script.
-    if (!worked) break;
-  }
+  await runWorkerPool();
 
-  // Bilan
-  const finalErrors = await prisma.song.count({ where: { downloadStatus: 'ERROR' } });
-  const finalSuccess = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+  const finalErrors = await prisma.song.count({ where: { downloadStatus: "ERROR" } });
+  const finalSuccess = await prisma.song.count({ where: { downloadStatus: "COMPLETED" } });
 
   console.log(`\n============================================`);
-  console.log(`✨ PLUS DE TÂCHES PENDING ! FIN DU JOB.`);
+  console.log("✨ NO MORE PENDING TASKS — JOB DONE.");
   console.log(`--------------------------------------------`);
-  console.log(`✅ SUCCÈS TOTAL : ${finalSuccess}`);
-  console.log(`❌ ERREURS      : ${finalErrors}`);
+  console.log(`✅ TOTAL SUCCESS : ${finalSuccess}`);
+  console.log(`❌ ERRORS        : ${finalErrors}`);
   console.log(`============================================\n`);
 
+  await prisma.$disconnect();
   process.exit(0);
 }
 
-main().catch(console.error);
+main().catch(async (error) => {
+  console.error(error);
+  await prisma.$disconnect();
+  process.exit(1);
+});

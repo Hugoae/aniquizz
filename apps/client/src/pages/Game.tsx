@@ -20,14 +20,7 @@ import {
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { getFuzzySuggestions } from '@aniquizz/shared';
-
-const SUPABASE_PROJECT_URL = "https://qjnfdhmvvledhtwwfrzb.supabase.co"; 
-const BUCKET_NAME = "videos";
-const getVideoUrl = (key: string | undefined | null) => {
-  if (!key) return "";
-  if (key.startsWith('http')) return key;
-  return `${SUPABASE_PROJECT_URL}/storage/v1/object/public/${BUCKET_NAME}/${key}`;
-};
+import { getVideoUrl } from '@/lib/video';
 
 export default function Game() {
   const navigate = useNavigate();

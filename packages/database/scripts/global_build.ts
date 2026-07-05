@@ -65,8 +65,8 @@ const main = () => {
   // 3. Import JSON vers Base de Données
   runScript('3_load_initial_data.ts', '3. Import JSON -> Database (Respect Locks)');
 
-  // 4. Worker (Téléchargement / Upload Supabase)
-  runScript('4_sync_storage.ts', '4. Worker Download & Upload');
+  // 4. Worker (Download / Upload R2)
+  runScript('4_sync_storage.ts', '4. Worker Download & Upload (R2)');
 
   const totalEnd = Date.now();
   const totalDuration = formatDuration(totalEnd - totalStart);

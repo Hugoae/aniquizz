@@ -1,14 +1,19 @@
-import { CorsOptions } from 'cors';
+import { CorsOptions } from "cors";
 
-// Liste des sites autorisés à se connecter à ton API
 const ALLOWED_ORIGINS = [
-  "http://localhost:5173", // Ton Client Vite (Dev)
-  "http://localhost:3000", // Autre éventuel client
-  "https://aniquizz.vercel.app" // Ton Site en Production
-];
+  ...new Set(
+    [
+      process.env.CLIENT_URL,
+      "https://aniquizz.vercel.app",
+      ...(process.env.NODE_ENV !== "production"
+        ? ["http://localhost:5173", "http://localhost:3000"]
+        : []),
+    ].filter(Boolean),
+  ),
+] as string[];
 
 export const securityConfig: CorsOptions = {
   origin: ALLOWED_ORIGINS,
   methods: ["GET", "POST"],
-  credentials: true // Autorise les cookies/sessions si besoin
+  credentials: true,
 };
