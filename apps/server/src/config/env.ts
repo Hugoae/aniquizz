@@ -19,12 +19,13 @@ const envSchema = z.object({
   // Database (consumed by Prisma via @aniquizz/database).
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-  // Supabase identity: JWT secret is required to verify Socket.io handshakes.
-  SUPABASE_JWT_SECRET: z
+  // Supabase identity: used to verify Socket.io handshakes via auth.getUser().
+  SUPABASE_URL: z.string().url('SUPABASE_URL is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z
     .string()
-    .min(1, 'SUPABASE_JWT_SECRET is required to verify auth tokens'),
-  SUPABASE_URL: z.string().url().optional(),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+    .min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+  // Optional legacy fallback for HS256 tokens (not needed with JWT Signing Keys).
+  SUPABASE_JWT_SECRET: z.string().min(1).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
