@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from 'next-themes';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -21,6 +22,24 @@ import Library from '@/pages/Library';
 import NotFound from '@/pages/NotFound';
 
 /**
+ * Route guard: gameplay routes require an authenticated session.
+ * Unauthenticated users are bounced home with the login modal opened.
+ */
+const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
+  const { session, loading, setShowAuthModal } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !session) {
+      setShowAuthModal(true);
+    }
+  }, [loading, session, setShowAuthModal]);
+
+  if (loading) return null;
+  if (!session) return <Navigate to="/" replace />;
+  return children;
+};
+
+/**
  * Composant interne qui a accès au AuthContext via useAuth().
  * C'est ici qu'on gère l'affichage de la modale et les routes.
  */
@@ -34,11 +53,25 @@ const AppContent = () => {
         {/* ACCUEIL */}
         <Route path="/" element={<Home />} />
         
-        {/* HUB DE JEU (Choix mode, Lobby...) - C'est cette route qui manquait peut-être */}
-        <Route path="/play" element={<GameHub />} />
+        {/* HUB DE JEU (Choix mode, Lobby...) - Connexion requise */}
+        <Route
+          path="/play"
+          element={
+            <ProtectedRoute>
+              <GameHub />
+            </ProtectedRoute>
+          }
+        />
         
-        {/* LE JEU EN COURS */}
-        <Route path="/game" element={<Game />} />
+        {/* LE JEU EN COURS - Connexion requise */}
+        <Route
+          path="/game"
+          element={
+            <ProtectedRoute>
+              <Game />
+            </ProtectedRoute>
+          }
+        />
         
         {/* AUTRES ROUTES */}
         <Route path="/daily" element={<Daily />} />

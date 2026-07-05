@@ -1,5 +1,6 @@
 import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
+import { socketAuthMiddleware, AuthenticatedSocketData } from './authMiddleware';
 
 // Imports des modules
 import { registerChatHandlers } from '../modules/chat/chatHandlers';
@@ -22,16 +23,18 @@ export class SocketManager {
   }
 
   public initialize() {
+    // Verify the Supabase token on every handshake before any handler runs.
+    // Sets the canonical, trusted identity on `socket.data`.
+    this.io.use(socketAuthMiddleware);
+
     this.io.on('connection', (socket: Socket) => {
-      // 1. Récupération de l'identité
-      const username = socket.handshake.auth.username || socket.handshake.query.username || "Anonyme";
-      const userId = socket.handshake.auth.userId || "guest";
+      // Identity is set by socketAuthMiddleware (never trust raw client userId).
+      const { username, userId, isAuthenticated } = socket.data as AuthenticatedSocketData;
 
-      // 2. Stockage dans les données du socket
-      socket.data.username = username;
-      socket.data.userId = userId;
-
-      logger.info(`Connexion : ${username} (${socket.id})`, 'Socket');
+      logger.info(
+        `Connexion : ${username} (${socket.id}) [${isAuthenticated ? `auth:${userId}` : 'guest'}]`,
+        'Socket',
+      );
 
       // 3. Attacher les gestionnaires d'événements (Modules)
       // On enregistre tout ici, proprement.

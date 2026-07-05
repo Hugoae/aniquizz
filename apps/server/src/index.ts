@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { env } from './config/env';
 import { httpServer, io } from './core/Server';
 import { prisma } from '@aniquizz/database';
 import { SocketManager } from './core/SocketManager';
@@ -7,7 +8,7 @@ import { GameManager } from './modules/game/gameManager';
 
 export let gameManager: GameManager;
 
-const PORT = process.env.PORT || 3001;
+const PORT = env.PORT;
 
 async function main() {
   try {

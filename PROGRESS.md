@@ -1,6 +1,25 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 1 ✅ complete — ready for Phase 2
+## Current phase: Phase 2 ✅ complete — ready for Phase 3
+
+## Done (Phase 2 — Security & identity)
+
+- [x] **Boot-time env validation (zod):**
+  - Server: `apps/server/src/config/env.ts` (fail-fast, typed `env`); requires `DATABASE_URL` + `SUPABASE_JWT_SECRET`. Wired into `index.ts` (imported before anything reading `process.env`) and `config/security.ts` (CORS now reads validated `CLIENT_URL`, comma-separated list supported).
+  - Client: `apps/client/src/lib/env.ts` (throws on invalid config); `supabase.ts`, `socket.ts`, `video.ts` now read the validated `env` — all URLs centralized.
+- [x] **Supabase JWT validation on Socket.io:** `apps/server/src/core/authMiddleware.ts` verifies `handshake.auth.token` (HS256 via `SUPABASE_JWT_SECRET`). Sets canonical `socket.data = { userId (=JWT sub), username, isAuthenticated }`. `SocketManager` registers it via `io.use(...)`; raw client `userId` is no longer trusted. Present-but-invalid token → connection rejected; no token → guest (read-only).
+- [x] **Login required to play (server):** `apps/server/src/core/guards.ts` — `requireAuth()` wraps all game/lobby/chat mutation events; read-only events (`get_rooms`, `get_anime_list`, `get_game_state`, `get_my_watched`) stay open.
+- [x] **Login required to play (client):** `ProtectedRoute` in `App.tsx` gates `/play` and `/game` (redirect home + open login modal). Client stops sending raw `userId` in `socket.auth` (only the token).
+- [x] **Rate limiting** (per-socket, in-memory sliding window) on `game:answer` (10/5s), `chat:sendMessage` (5/3s), `lobby:create` (3/10s) via `guard()`.
+- [x] **Identity schema:** removed `Profile.id @default(uuid())` (Prisma now `id String @id`). Verified live DB column already has **no default** → schema aligned with the `handle_new_user()` trigger, no DB migration needed.
+- [x] **RLS cleanup** (Supabase migration `phase2_rls_cleanup`, advisor-verified):
+  - Consolidated duplicate permissive `SELECT` policies on `Profile` and `SongVote`.
+  - Wrapped `auth.uid()` in `(select auth.uid())` on `Profile`/`SongHistory`/`PlayerAnimeList`/`SongVote` policies (kills per-row re-eval).
+  - Revoked `EXECUTE` on `handle_new_user()` from `anon`/`authenticated`/`public`.
+  - Enabled RLS on `_prisma_migrations` (deny-all; Prisma bypasses as owner).
+  - Advisors after: security `handle_new_user` warnings gone; performance `auth_rls_initplan` + duplicate-policy warnings gone.
+- [x] **Removed dead dep:** `@tanstack/react-query` (0 usages) from client.
+- [x] Verified: `pnpm build` OK (4/4), no lint errors.
 
 ## Done (Phase 1)
 
@@ -64,7 +83,14 @@
 
 ## Next step
 
-Phase 2 — Security & identity (JWT on Socket.io; `Profile.id` alignment; RLS cleanup; login required to play).
+Phase 3 — Observability, logs & debug (full lobby/match/player story in logs; trace every crash and player action; done before cleanup).
+
+### Phase 2 follow-ups / deferred
+- **Leaked-password protection**: still disabled — this is a Supabase **Auth** setting with no SQL/MCP toggle. Enable manually in the dashboard (Auth → Providers → Password / `password_hibp_enabled`).
+- **Unindexed FKs** (advisor INFO): deferred to **Phase 4** (per `SCHEMA-TARGET.md` mapping).
+- **`GameSession`/`GameParticipant`** RLS-enabled-no-policy (deny-all, harmless): tables replaced in **Phase 5**.
+- **Profile email exposure**: `Profile` SELECT is public (all columns incl. `email`). RLS can't do column-level filtering; revisit with a view or column grants if needed (not in Phase 2 scope).
+- Engine still keys players by `socket.id`; canonical `socket.data.userId` is now available and required — the socket.id → userId migration in the game engine lands in **Phase 5**.
 
 ## Notes
 

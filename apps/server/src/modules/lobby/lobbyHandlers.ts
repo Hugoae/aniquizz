@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { logger } from '../../utils/logger';
 import { gameManager } from '../../index';
+import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 
 export const registerLobbyHandlers = (io: Server, socket: Socket) => {
 
@@ -235,13 +236,13 @@ export const registerLobbyHandlers = (io: Server, socket: Socket) => {
       }
   };
 
-  socket.on('lobby:create', createLobby);
-  socket.on('lobby:join', joinLobby);
+  socket.on('lobby:create', guard(socket, 'lobby:create', RATE_LIMITS.createLobby, createLobby));
+  socket.on('lobby:join', requireAuth(socket, joinLobby));
   socket.on('get_rooms', getRooms);
-  socket.on('transfer_host', transferHost);
-  socket.on('leave_room', handleLeave);
-  socket.on('toggle_ready', toggleReady);
-  socket.on('update_room_settings', updateRoomSettings);
+  socket.on('transfer_host', requireAuth(socket, transferHost));
+  socket.on('leave_room', requireAuth(socket, handleLeave));
+  socket.on('toggle_ready', requireAuth(socket, toggleReady));
+  socket.on('update_room_settings', requireAuth(socket, updateRoomSettings));
   
   socket.on('disconnecting', () => {
       for (const roomId of socket.rooms) { 

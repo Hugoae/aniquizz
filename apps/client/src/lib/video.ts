@@ -1,4 +1,6 @@
-const R2_PUBLIC_URL = import.meta.env.VITE_R2_PUBLIC_URL as string | undefined;
+import { env } from "./env";
+
+const R2_PUBLIC_URL = env.VITE_R2_PUBLIC_URL;
 
 export function getVideoUrl(key: string | undefined | null): string {
   if (!key) return "";

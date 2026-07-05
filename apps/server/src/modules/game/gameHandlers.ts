@@ -3,6 +3,7 @@ import { gameManager } from '../../index';
 import { getAllAnimeNames } from './gameService';
 import { getUserAnimeIds } from '../anilist/anilistService';
 import { logger } from '../../utils/logger';
+import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 
 export const registerGameHandlers = (io: Server, socket: Socket) => {
 
@@ -79,15 +80,15 @@ export const registerGameHandlers = (io: Server, socket: Socket) => {
       }
   };
 
-  socket.on('start_game', startGame);
+  socket.on('start_game', requireAuth(socket, startGame));
   socket.on('get_game_state', getGameState);
-  socket.on('game:answer', submitAnswer);
-  socket.on('vote_pause', votePause);
-  socket.on('vote_skip', voteSkip);
-  socket.on('game:skip_round', skipCurrentRound);
-  socket.on('game:return_to_lobby', returnToLobby);
-  socket.on('game:cancel', cancelGame);
-  socket.on('player_watched_ids', playerWatchedIds);
+  socket.on('game:answer', guard(socket, 'game:answer', RATE_LIMITS.answer, submitAnswer));
+  socket.on('vote_pause', requireAuth(socket, votePause));
+  socket.on('vote_skip', requireAuth(socket, voteSkip));
+  socket.on('game:skip_round', requireAuth(socket, skipCurrentRound));
+  socket.on('game:return_to_lobby', requireAuth(socket, returnToLobby));
+  socket.on('game:cancel', requireAuth(socket, cancelGame));
+  socket.on('player_watched_ids', requireAuth(socket, playerWatchedIds));
   socket.on('get_my_watched', getMyWatched);
 
   socket.on('get_anime_list', async () => {

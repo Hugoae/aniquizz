@@ -128,11 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     // Si l'identité change (ex: Login, Logout, ou Chargement initial)
     if (currentAuth?.username !== newUsername) {
-        // 1. On met à jour la carte d'identité du socket
+        // 1. On met à jour la carte d'identité du socket.
+        // Only the token is trusted server-side; userId is derived from it.
         socket.auth = { 
             username: newUsername,
             token: session?.access_token,
-            userId: profile?.id || "guest"
         };
 
         // 2. On connecte ou reconnecte pour envoyer les nouvelles infos au serveur

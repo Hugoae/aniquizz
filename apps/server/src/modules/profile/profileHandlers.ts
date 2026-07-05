@@ -2,19 +2,15 @@ import { Server, Socket } from 'socket.io';
 import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
 import { prisma } from '@aniquizz/database';
+import { requireAuth } from '../../core/guards';
 
 export const registerProfileHandlers = (io: Server, socket: Socket) => {
     
     // Demande de stats complètes pour la page Profil
     const handleGetStats = async () => {
         try {
-            // L'ID utilisateur est stocké dans le socket lors de la connexion (voir SocketManager)
-            const userId = socket.data.userId;
-            
-            if (!userId || userId === 'guest') {
-                socket.emit('profile:error', { message: "Non authentifié" });
-                return;
-            }
+            // Canonical identity set by socketAuthMiddleware (requireAuth guarantees it).
+            const userId = socket.data.userId as string;
 
             const stats = await getProfileStats(userId);
             socket.emit('profile:stats', stats);
@@ -26,8 +22,7 @@ export const registerProfileHandlers = (io: Server, socket: Socket) => {
 
     // Mise à jour simple (Username, Avatar)
     const handleUpdateProfile = async (payload: { username?: string, avatarUrl?: string }) => {
-        const userId = socket.data.userId;
-        if (!userId) return;
+        const userId = socket.data.userId as string;
 
         try {
             const updateData: any = {};
@@ -47,6 +42,6 @@ export const registerProfileHandlers = (io: Server, socket: Socket) => {
         }
     };
 
-    socket.on('profile:get_stats', handleGetStats);
-    socket.on('update_profile_data', handleUpdateProfile);
+    socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
+    socket.on('update_profile_data', requireAuth(socket, handleUpdateProfile));
 };

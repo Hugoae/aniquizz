@@ -1,6 +1,7 @@
 import { Server, Socket } from 'socket.io';
 import { logger } from '../../utils/logger';
 import { gameManager } from '../../index'; // Import du GameManager
+import { guard, RATE_LIMITS } from '../../core/guards';
 
 export const registerChatHandlers = (io: Server, socket: Socket) => {
   const sendMessage = (payload: any) => {
@@ -29,5 +30,5 @@ export const registerChatHandlers = (io: Server, socket: Socket) => {
     io.to(payload.roomId).emit('chat:message', messageData);
   };
 
-  socket.on('chat:sendMessage', sendMessage);
+  socket.on('chat:sendMessage', guard(socket, 'chat:sendMessage', RATE_LIMITS.chat, sendMessage));
 };

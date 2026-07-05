@@ -1,11 +1,12 @@
 import { io, Socket } from "socket.io-client";
+import { env } from "./env";
 
 // --- CONFIGURATION URL ---
 // Production : L'URL définie, ou celle du site courant
 // Développement : localhost:3001
 const IS_PROD = import.meta.env.MODE === 'production';
 const URL = IS_PROD 
-  ? (import.meta.env.VITE_SERVER_URL || 'https://aniquizz-server.onrender.com') 
+  ? (env.VITE_SERVER_URL || 'https://aniquizz-server.onrender.com') 
   : 'http://localhost:3001';
 
 console.log(`🔌 Socket configuré sur : ${URL}`);
