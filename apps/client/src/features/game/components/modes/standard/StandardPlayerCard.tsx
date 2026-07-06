@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Flame, Check, X } from 'lucide-react'; 
+import { Flame, Check } from 'lucide-react'; 
 import { cn } from '@/lib/utils';
 import { PlayerCardBase } from '../../shared/PlayerCardBase';
 
@@ -15,6 +15,14 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, onClick 
   const isCorrect = player.isCorrect === true;
   const isWrong = showResult && !isCorrect;
   const displayedAnswer = player.currentAnswer || "...";
+  const answeredDuringGuess = !showResult && player.hasAnswered === true;
+
+  // Anti-cheat: signal THAT a player has answered, never the content.
+  const answeredBadge = answeredDuringGuess && (
+    <div className="absolute -top-2 -left-2 z-10 flex items-center justify-center h-5 w-5 rounded-full bg-primary/20 border border-primary/50 shadow-sm animate-in zoom-in duration-300">
+      <Check className="h-3 w-3 text-primary" />
+    </div>
+  );
 
   // Bulle de réponse simple (Sans Timer)
   const bubble = showResult && (
@@ -47,6 +55,7 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, onClick 
       isCurrentUser={isCurrentUser}
       onClick={onClick}
       bubbleContent={bubble}
+      topLeftContent={answeredBadge}
       topRightContent={streakBadge}
       className={cn(
         showResult && isCorrect && "border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]",

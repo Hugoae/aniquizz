@@ -64,6 +64,8 @@ interface StandardGameLayoutProps {
   gameMode: string;
   getVideoUrl: (key: string | undefined | null) => string;
   roomId?: string;
+  /** Room response mode — carré/duo switches only allowed when `mix`. */
+  responseType?: 'typing' | 'qcm' | 'mix';
   
   configBadges?: {
       sourceLabel: string;
@@ -81,14 +83,16 @@ export function StandardGameLayout({
   inputMode, answer, setAnswer, submittedAnswer, suggestions, choices, onAction, onSwitchCarre, onSwitchDuo,
   myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, showPointsAnimation, pointsEarned,
   currentUserId, gameMode, getVideoUrl, roomId,
+  responseType = 'mix',
   configBadges
 }: StandardGameLayoutProps) {
 
   const [isVideoReady, setIsVideoReady] = useState(false);
 
+  const currentVideoKey = currentSong && 'videoKey' in currentSong ? currentSong.videoKey : null;
   useEffect(() => {
       setIsVideoReady(false);
-  }, [currentSong?.videoKey]);
+  }, [currentVideoKey]);
 
   const handleVideoReady = () => {
       if (!isVideoReady) {
@@ -126,7 +130,7 @@ export function StandardGameLayout({
           </div>
         )}
 
-        {inputMode === 'typing' && !submittedAnswer && (
+        {responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && (
           <div className="flex gap-4 mb-2 animate-fade-in items-center">
             <Button variant="secondary" size="sm" onClick={onSwitchCarre} className="gap-2 hover:bg-primary/20 hover:text-primary transition-all">
               <Grid2X2 className="h-4 w-4" /> Carré (2 pts)
@@ -274,7 +278,10 @@ export function StandardGameLayout({
                                     playsInline
                                     onSeeked={handleVideoReady}
                                     onLoadedData={() => {
-                                        if (currentSong?.videoStartTime === 0) handleVideoReady();
+                                        const start = currentSong && 'videoStartTime' in currentSong
+                                          ? currentSong.videoStartTime
+                                          : 0;
+                                        if (start === 0) handleVideoReady();
                                     }}
                                 />
 
@@ -375,6 +382,7 @@ export function StandardGameLayout({
                     isCollapsed={sidebarCollapsed} 
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
                     roomId={roomId || ""} 
+                    currentUserId={currentUserId}
                 />
             )}
         </div>

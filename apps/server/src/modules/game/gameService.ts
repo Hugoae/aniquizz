@@ -1,8 +1,8 @@
 import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
-import { getUserAnimeIds } from '../anilist/anilistService';
+import { shuffleArray, type Precision } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
-import { GAME_CONFIG, formatSongTypeLabel } from '@aniquizz/shared';
+import { GAME_CONFIG } from '@aniquizz/shared';
 
 const toDifficultyEnum = (value: string): Difficulty => {
   switch (value.toLowerCase()) {
@@ -15,398 +15,277 @@ const toDifficultyEnum = (value: string): Difficulty => {
   }
 };
 
-/**
- * Critères de filtrage pour la sélection des musiques.
- */
+/** Filtering criteria for song selection. */
 export interface SongFilters {
-    /** Difficultés acceptées (easy, medium, hard) */
-    difficulty?: string[];
-    /** Types de sons acceptés (opening, ending, insert) */
-    types?: string[];
-    /** Identifiant d'une playlist spécifique (top-50, decades, genres...) */
-    playlist?: string | null;
-    /** Décennie de départ (ex: "2010" pour 2010-2019) */
-    decade?: string;
-    /** Liste des IDs d'animes vus par les joueurs (Mode Watched) */
-    watchedIds?: number[];
+  /** Accepted difficulties (easy, medium, hard). */
+  difficulty?: string[];
+  /** Accepted song types (opening, ending, ost). */
+  types?: string[];
+  /** Specific playlist id (top-50, decades, genres...). */
+  playlist?: string | null;
+  /** Starting decade (e.g. "2010" for 2010-2019). */
+  decade?: string;
+  /** Anime ids watched by the players (Watched mode). */
+  watchedIds?: number[];
+}
+
+/** Shape of a fully-selected song (Prisma Song + anime + franchise). */
+export interface SelectedSong {
+  id: number;
+  title: string;
+  artist: string;
+  songType: SongType;
+  sequence: number;
+  videoKey: string;
+  duration: number | null;
+  difficulty: Difficulty;
+  anime: {
+    id: number;
+    name: string;
+    altNames: string[];
+    coverImage: string | null;
+    seasonYear: number | null;
+    siteUrl: string | null;
+    franchise: { name: string; genres: string[] } | null;
+  };
 }
 
 // ---------------------------------------------------------------------------
-// ALGORITHMES DE SÉLECTION & TRI (INTERNES)
+// SELECTION & ORDERING (internal)
 // ---------------------------------------------------------------------------
 
-/**
- * Sélectionne les candidats en maximisant la diversité des franchises.
- */
-const pickBestCandidates = (candidates: any[], count: number) => {
-    // Mélange initial pour éviter le biais d'ID
-    const pool = [...candidates].sort(() => 0.5 - Math.random());
-    
-    const selected: any[] = [];
-    const usedKeys = new Set<string>();
-    const leftovers: any[] = [];
+interface Candidate {
+  id: number;
+  anime: { name: string; franchiseId: number | null };
+}
 
-    // Passe 1 : Priorité à la diversité (1 par franchise)
-    for (const c of pool) {
-        const key = c.anime?.franchiseId ? `f-${c.anime.franchiseId}` : `a-${c.anime.name}`;
-        
-        if (!usedKeys.has(key)) {
-            selected.push(c);
-            usedKeys.add(key);
-        } else {
-            leftovers.push(c);
-        }
-        
-        if (selected.length >= count) break;
+/** Pick candidates while maximising franchise diversity (unbiased shuffle). */
+const pickBestCandidates = (candidates: Candidate[], count: number): Candidate[] => {
+  const pool = shuffleArray(candidates);
+
+  const selected: Candidate[] = [];
+  const usedKeys = new Set<string>();
+  const leftovers: Candidate[] = [];
+
+  // Pass 1: one song per franchise/anime for diversity.
+  for (const c of pool) {
+    const key = c.anime?.franchiseId ? `f-${c.anime.franchiseId}` : `a-${c.anime.name}`;
+    if (!usedKeys.has(key)) {
+      selected.push(c);
+      usedKeys.add(key);
+    } else {
+      leftovers.push(c);
     }
+    if (selected.length >= count) break;
+  }
 
-    // Passe 2 : Remplissage avec les doublons si nécessaire
-    if (selected.length < count) {
-        const needed = count - selected.length;
-        leftovers.sort(() => 0.5 - Math.random()); // Mélange des restes
-        selected.push(...leftovers.slice(0, needed));
-    }
+  // Pass 2: fill remaining slots with duplicates.
+  if (selected.length < count) {
+    const needed = count - selected.length;
+    selected.push(...shuffleArray(leftovers).slice(0, needed));
+  }
 
-    return selected.slice(0, count);
+  return selected.slice(0, count);
 };
 
-/**
- * Trie la playlist finale pour espacer les répétitions.
- */
-const smartShuffle = (songs: any[]) => {
-    if (!songs || songs.length === 0) return [];
+/** Order the final playlist so same-franchise songs are spread out. */
+const smartShuffle = <T extends { anime: { name: string; franchise: { name: string } | null } }>(
+  songs: T[],
+): T[] => {
+  if (!songs || songs.length === 0) return [];
 
-    // 1. Groupement
-    const groups: Record<string, any[]> = {};
-    for (const song of songs) {
-        const key = song.anime.franchise?.name || song.anime.name || "Unknown";
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(song);
+  const groups: Record<string, T[]> = {};
+  for (const song of songs) {
+    const key = song.anime.franchise?.name || song.anime.name || 'Unknown';
+    (groups[key] ??= []).push(song);
+  }
+
+  // Shuffle within each group, then order groups largest-first.
+  Object.keys(groups).forEach((key) => {
+    groups[key] = shuffleArray(groups[key]);
+  });
+  const sortedGroups = shuffleArray(Object.values(groups)).sort((a, b) => b.length - a.length);
+
+  // Interleave.
+  const result: T[] = [];
+  const maxLen = sortedGroups[0].length;
+  for (let i = 0; i < maxLen; i++) {
+    for (const group of sortedGroups) {
+      if (group[i]) result.push(group[i]);
     }
-
-    // 2. Mélange interne (varier l'ordre des OP/ED d'une même série)
-    Object.keys(groups).forEach(key => {
-        groups[key].sort(() => 0.5 - Math.random());
-    });
-
-    // 3. Tri des groupes (Les plus gros d'abord)
-    const sortedGroups = Object.values(groups).sort((a, b) => {
-        const diff = b.length - a.length;
-        return diff !== 0 ? diff : 0.5 - Math.random();
-    });
-
-    // 4. Entrelacement
-    const result: any[] = [];
-    const maxLen = sortedGroups[0].length;
-
-    for (let i = 0; i < maxLen; i++) {
-        for (const group of sortedGroups) {
-            if (group[i]) {
-                result.push(group[i]);
-            }
-        }
-    }
-
-    return result;
+  }
+  return result;
 };
 
-// Difficulty cascade (hardest → easiest)
+// Difficulty cascade (hardest → easiest).
 const DIFFICULTY_ORDER: Difficulty[] = [Difficulty.HARD, Difficulty.MEDIUM, Difficulty.EASY];
 
-/**
- * Exécute la stratégie de récupération en cascade (Waterfall).
- */
+/** Waterfall retrieval strategy: watched pool first, then global, cascading difficulty. */
 const fetchWithFallback = async (
-    count: number, 
-    baseWhere: any, 
-    watchedIds?: number[], 
-    targetDifficulties: string[] = []
-) => {
-    let finalSongs: any[] = [];
-    let excludedIds: number[] = [];
-    let fallbackUsed = false;
-    
-    const isWatchedMode = Array.isArray(watchedIds) && watchedIds.length > 0;
+  count: number,
+  baseWhere: Record<string, unknown>,
+  watchedIds?: number[],
+  targetDifficulties: string[] = [],
+): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean }> => {
+  const finalSongs: SelectedSong[] = [];
+  const excludedIds: number[] = [];
+  let fallbackUsed = false;
 
-    const getCandidates = async (where: any) => {
-        return await prisma.song.findMany({ 
-            where, 
-            select: { 
-                id: true, 
-                anime: { select: { name: true, franchiseId: true } }
-            } 
-        });
-    };
+  const isWatchedMode = Array.isArray(watchedIds) && watchedIds.length > 0;
 
-    let cascade: Difficulty[][] = [];
-    
-    if (!targetDifficulties || targetDifficulties.length === 0) {
-        cascade = [[]];
-    } else {
-        const mapped = [...new Set(targetDifficulties.map(toDifficultyEnum))];
-        cascade.push(mapped);
-
-        let lowestIndex = -1;
-        mapped.forEach((d) => {
-            const idx = DIFFICULTY_ORDER.indexOf(d);
-            if (idx > lowestIndex) lowestIndex = idx;
-        });
-
-        if (lowestIndex !== -1) {
-            for (let i = lowestIndex + 1; i < DIFFICULTY_ORDER.length; i++) {
-                cascade.push([DIFFICULTY_ORDER[i]]);
-            }
-        }
-    }
-
-    logger.debug(`[GameService] Démarrage Cascade. Demande: ${count} sons. Étapes: ${cascade.map(c => c.join('|')).join(' -> ')}`, 'Service');
-
-    // 2. Boucle Principale de Remplissage
-    for (const difficulties of cascade) {
-        // Si on a assez de sons, on arrête tout
-        if (finalSongs.length >= count) break;
-
-        const diffFilter = difficulties.length === 0 ? undefined : { in: difficulties };
-
-        // --- SOUS-ÉTAPE A : Watched List (Priorité) ---
-        if (isWatchedMode) {
-            const remaining = count - finalSongs.length;
-            const watchedWhere = { 
-                ...baseWhere, 
-                animeId: { in: watchedIds },
-                id: { notIn: excludedIds }
-            };
-            if (diffFilter) watchedWhere.difficulty = diffFilter;
-
-            try {
-                const candidates = await getCandidates(watchedWhere);
-                if (candidates.length > 0) {
-                    const selected = pickBestCandidates(candidates, remaining);
-                    const picked = await prisma.song.findMany({ 
-                        where: { id: { in: selected.map(s => s.id) } }, 
-                        include: { anime: { include: { franchise: true } } } 
-                    });
-                    
-                    finalSongs.push(...picked);
-                    excludedIds.push(...picked.map(s => s.id));
-                    logger.info(`[GameService] Cascade (${difficulties}) [WATCHED]: Trouvé ${candidates.length}, Ajouté ${picked.length} sons.`, 'Service');
-                }
-            } catch (e) {
-                logger.error("[GameService] Erreur Fetch Cascade Watched", 'Service', e);
-            }
-        }
-
-        // --- SOUS-ÉTAPE B : Aléatoire Global (Complétion) ---
-        // On ne passe ici que si la Watched List n'a pas suffi pour cette difficulté
-        if (finalSongs.length < count) {
-            const remaining = count - finalSongs.length;
-            const globalWhere = { 
-                ...baseWhere, 
-                id: { notIn: excludedIds }
-            };
-            if (diffFilter) globalWhere.difficulty = diffFilter;
-
-            // Si on est en mode Watched et qu'on tape dans le global, c'est un fallback
-            if (isWatchedMode) fallbackUsed = true;
-
-            try {
-                const candidates = await getCandidates(globalWhere);
-                if (candidates.length > 0) {
-                    const selected = pickBestCandidates(candidates, remaining);
-                    const picked = await prisma.song.findMany({ 
-                        where: { id: { in: selected.map(s => s.id) } }, 
-                        include: { anime: { include: { franchise: true } } } 
-                    });
-                    
-                    finalSongs.push(...picked);
-                    excludedIds.push(...picked.map(s => s.id));
-                    logger.info(`[GameService] Cascade (${difficulties}) [RANDOM]: Trouvé ${candidates.length}, Ajouté ${picked.length} sons.`, 'Service');
-                }
-            } catch (e) {
-                logger.error("[GameService] Erreur Fetch Cascade Random", 'Service', e);
-            }
-        }
-    }
-
-    if (finalSongs.length < count) {
-        logger.warn(`[GameService] Impossible de remplir totalement la playlist. Demandé: ${count}, Obtenu: ${finalSongs.length}`, 'Service');
-    }
-
-    // Application du tri intelligent final sur la liste complète
-    return { 
-        songs: smartShuffle(finalSongs), 
-        fallbackUsed 
-    };
-};
-
-// ---------------------------------------------------------------------------
-// FONCTIONS EXPORTÉES (API PUBLIQUE)
-// ---------------------------------------------------------------------------
-
-export const getRandomSongs = async (count: number, filters?: SongFilters) => {
-    // Filtre de base : uniquement les sons valides
-    const whereClause: any = { downloadStatus: 'COMPLETED' };
-    
-    // NOTE : On ne met PAS 'difficulty' dans whereClause ici.
-    // C'est fetchWithFallback qui va l'appliquer étape par étape pour gérer la cascade.
-    
-    if (filters?.types?.length) {
-        const songTypes: SongType[] = [];
-        if (filters.types.includes('opening')) songTypes.push(SongType.OP);
-        if (filters.types.includes('ending')) songTypes.push(SongType.ED);
-        if (filters.types.includes('ost')) songTypes.push(SongType.INSERT);
-        if (songTypes.length > 0) whereClause.songType = { in: songTypes };
-    }
-    
-    // Filtre : Playlists Spéciales
-    if (filters?.playlist) {
-        if (filters.playlist === 'top-50') {
-            whereClause.anime = { popularity: { gte: 80 } };
-        } 
-        else if (filters.playlist === 'decades' && filters.decade) {
-            const s = parseInt(filters.decade); 
-            if (!isNaN(s)) {
-                whereClause.anime = { seasonYear: { gte: s, lt: s + 10 } };
-            }
-        }
-        else {
-            // ✅ NOUVELLE LOGIQUE : Utilise la config centralisée
-            const targetPlaylist = GAME_CONFIG.PLAYLISTS.find(p => p.id === filters.playlist);
-            if (targetPlaylist && targetPlaylist.dbValues && targetPlaylist.dbValues.length > 0) {
-                whereClause.anime = {
-                    franchise: {
-                        genres: { hasSome: targetPlaylist.dbValues }
-                    }
-                };
-            }
-        }
-    }
-    
-    return await fetchWithFallback(count, whereClause, filters?.watchedIds, filters?.difficulty);
-};
-
-export const generateChoices = async (correctTarget: string, precisionMode: string, filters?: SongFilters): Promise<string[]> => {
-    const whereClause: any = { name: { not: correctTarget } };
-    
-    // On essaie de garder les choix dans la même décennie pour plus de cohérence/difficulté
-    if (filters?.playlist === 'decades' && filters.decade) {
-        const s = parseInt(filters.decade);
-        if(!isNaN(s)) whereClause.seasonYear = { gte: s, lt: s + 10 };
-    }
-
-    // Récupération d'un pool large pour l'aléatoire
-    let randomAnimes = await prisma.anime.findMany({
-        where: whereClause,
-        select: { name: true, franchise: { select: { name: true } } },
-        take: 60
+  const getCandidates = (where: Record<string, unknown>): Promise<Candidate[]> =>
+    prisma.song.findMany({
+      where,
+      select: { id: true, anime: { select: { name: true, franchiseId: true } } },
     });
 
-    // Fallback si pas assez d'animes dans le filtre (ex: décennie vide)
-    if (randomAnimes.length < 3) {
-        randomAnimes = await prisma.anime.findMany({
-            where: { name: { not: correctTarget } },
-            select: { name: true, franchise: { select: { name: true } } },
-            take: 20
-        });
+  const loadFull = (ids: number[]): Promise<SelectedSong[]> =>
+    prisma.song.findMany({
+      where: { id: { in: ids } },
+      include: { anime: { include: { franchise: true } } },
+    }) as unknown as Promise<SelectedSong[]>;
+
+  let cascade: Difficulty[][] = [];
+  if (!targetDifficulties || targetDifficulties.length === 0) {
+    cascade = [[]];
+  } else {
+    const mapped = [...new Set(targetDifficulties.map(toDifficultyEnum))];
+    cascade.push(mapped);
+    let lowestIndex = -1;
+    mapped.forEach((d) => {
+      const idx = DIFFICULTY_ORDER.indexOf(d);
+      if (idx > lowestIndex) lowestIndex = idx;
+    });
+    if (lowestIndex !== -1) {
+      for (let i = lowestIndex + 1; i < DIFFICULTY_ORDER.length; i++) {
+        cascade.push([DIFFICULTY_ORDER[i]]);
+      }
+    }
+  }
+
+  for (const difficulties of cascade) {
+    if (finalSongs.length >= count) break;
+    const diffFilter = difficulties.length === 0 ? undefined : { in: difficulties };
+
+    // Watched pool first (priority).
+    if (isWatchedMode && finalSongs.length < count) {
+      const remaining = count - finalSongs.length;
+      const watchedWhere: Record<string, unknown> = {
+        ...baseWhere,
+        animeId: { in: watchedIds },
+        id: { notIn: excludedIds },
+      };
+      if (diffFilter) watchedWhere.difficulty = diffFilter;
+      try {
+        const candidates = await getCandidates(watchedWhere);
+        if (candidates.length > 0) {
+          const picked = await loadFull(pickBestCandidates(candidates, remaining).map((s) => s.id));
+          finalSongs.push(...picked);
+          excludedIds.push(...picked.map((s) => s.id));
+        }
+      } catch (e) {
+        logger.error('[GameService] Watched cascade fetch failed', 'Service', e);
+      }
     }
 
-    const candidates = randomAnimes.map(a => 
-        precisionMode === 'franchise' ? (a.franchise?.name || a.name) : a.name
+    // Global random completion.
+    if (finalSongs.length < count) {
+      const remaining = count - finalSongs.length;
+      const globalWhere: Record<string, unknown> = { ...baseWhere, id: { notIn: excludedIds } };
+      if (diffFilter) globalWhere.difficulty = diffFilter;
+      if (isWatchedMode) fallbackUsed = true;
+      try {
+        const candidates = await getCandidates(globalWhere);
+        if (candidates.length > 0) {
+          const picked = await loadFull(pickBestCandidates(candidates, remaining).map((s) => s.id));
+          finalSongs.push(...picked);
+          excludedIds.push(...picked.map((s) => s.id));
+        }
+      } catch (e) {
+        logger.error('[GameService] Global cascade fetch failed', 'Service', e);
+      }
+    }
+  }
+
+  if (finalSongs.length < count) {
+    logger.warn(
+      `[GameService] Playlist under-filled. Requested: ${count}, got: ${finalSongs.length}`,
+      'Service',
     );
+  }
 
-    // Déduplication et nettoyage
-    const unique = [...new Set(candidates)]
-        .filter(c => c && c.trim().toLowerCase() !== correctTarget.trim().toLowerCase());
-
-    // Sélection de 3 mauvais choix
-    const wrongChoices = unique.sort(() => 0.5 - Math.random()).slice(0, 3);
-    
-    // Sécurité ultime
-    while (wrongChoices.length < 3) wrongChoices.push("Autre Anime");
-
-    // Mélange final avec la bonne réponse
-    const finalChoices = [...wrongChoices, correctTarget];
-    return finalChoices.sort(() => 0.5 - Math.random());
+  return { songs: smartShuffle(finalSongs), fallbackUsed };
 };
 
-export const generateDuo = async (correctItem: string, choicesPromise: Promise<string[]>): Promise<string[]> => {
-    const choices = await choicesPromise;
-    const wrongChoices = choices.filter(c => c.trim().toLowerCase() !== correctItem.trim().toLowerCase());
-    
-    let randomWrong = wrongChoices.length > 0 ? wrongChoices[0] : "Unknown Anime";
-    return [correctItem, randomWrong].sort(() => 0.5 - Math.random());
+// ---------------------------------------------------------------------------
+// PUBLIC API
+// ---------------------------------------------------------------------------
+
+export const getRandomSongs = async (
+  count: number,
+  filters?: SongFilters,
+): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean }> => {
+  // Only playable songs. Difficulty is applied per-cascade-step in fetchWithFallback.
+  const whereClause: Record<string, unknown> = { downloadStatus: 'COMPLETED' };
+
+  if (filters?.types?.length) {
+    const songTypes: SongType[] = [];
+    if (filters.types.includes('opening')) songTypes.push(SongType.OP);
+    if (filters.types.includes('ending')) songTypes.push(SongType.ED);
+    if (filters.types.includes('ost')) songTypes.push(SongType.INSERT);
+    if (songTypes.length > 0) whereClause.songType = { in: songTypes };
+  }
+
+  if (filters?.playlist) {
+    if (filters.playlist === 'top-50') {
+      whereClause.anime = { popularity: { gte: 80 } };
+    } else if (filters.playlist === 'decades' && filters.decade) {
+      const s = parseInt(filters.decade, 10);
+      if (!isNaN(s)) whereClause.anime = { seasonYear: { gte: s, lt: s + 10 } };
+    } else {
+      const targetPlaylist = GAME_CONFIG.PLAYLISTS.find((p) => p.id === filters.playlist);
+      if (targetPlaylist?.dbValues?.length) {
+        whereClause.anime = { franchise: { genres: { hasSome: targetPlaylist.dbValues } } };
+      }
+    }
+  }
+
+  return fetchWithFallback(count, whereClause, filters?.watchedIds, filters?.difficulty);
+};
+
+/**
+ * Random pool of candidate display names used to build QCM/duo choices.
+ * Fetched ONCE per match; choices are then assembled in memory (see PlaylistBuilder).
+ */
+export const getChoiceCandidates = async (
+  precision: Precision,
+  filters?: Pick<SongFilters, 'playlist' | 'decade'>,
+): Promise<string[]> => {
+  const where: Record<string, unknown> = {};
+  if (filters?.playlist === 'decades' && filters?.decade) {
+    const s = parseInt(filters.decade, 10);
+    if (!isNaN(s)) where.seasonYear = { gte: s, lt: s + 10 };
+  }
+
+  const select = { name: true, franchise: { select: { name: true } } };
+  let animes = await prisma.anime.findMany({ where, select });
+
+  // Fallback when the filter is too narrow to build 4-way choices.
+  if (animes.length < 4) {
+    animes = await prisma.anime.findMany({ select });
+  }
+
+  const names = animes.map((a) => (precision === 'franchise' ? a.franchise?.name || a.name : a.name));
+  return [...new Set(names)];
 };
 
 export const getAllAnimeNames = async () => {
-    const animes = await prisma.anime.findMany({
-        select: { name: true, altNames: true, franchise: { select: { name: true } } }
-    });
-    return animes.map(a => ({
-        name: a.name,
-        franchise: a.franchise?.name || null,
-        altNames: a.altNames
-    }));
-};
-
-// ✅ MISE A JOUR : Gestion des gagnants multiples (tableau d'IDs)
-export const saveGameHistory = async (players: any[], playlist: any[], winnerIds: string[] = []) => {
-    logger.info(`[GameService] Début sauvegarde stats pour ${players.length} joueurs...`, 'Scoring');
-    
-    const songIds = playlist.map((s: any) => s.id);
-    let successCount = 0;
-
-    for (const player of players) {
-        try {
-            const user = await prisma.profile.findUnique({ where: { username: player.username } });
-            
-            if (user) {
-                // ✅ Vérifie si l'ID du joueur est dans la liste des gagnants
-                const isWinner = winnerIds.includes(String(player.id));
-                
-                // ✅ CORRECTIF STATS : Utilisation des compteurs précis calculés dans StandardGame
-                const roundsPlayed = player.matchTotalCount || playlist.length || 0; 
-                const roundsWon = player.matchCorrectCount || 0;
-
-                // 1. Stats Globales Joueur
-                await prisma.profile.update({
-                    where: { id: user.id },
-                    data: {
-                        gamesPlayed: { increment: 1 },
-                        gamesWon: isWinner ? { increment: 1 } : undefined,
-                        // ✅ On utilise les vraies valeurs ici
-                        totalGuesses: { increment: roundsPlayed }, 
-                        correctGuesses: { increment: roundsWon },
-                        maxStreak: Math.max(user.maxStreak || 0, player.streak || 0)
-                    }
-                });
-
-                // 2. Aggregate song history (Pokedex)
-                for (const songId of songIds) {
-                    await prisma.songHistory.upsert({
-                        where: {
-                            profileId_songId: { profileId: user.id, songId },
-                        },
-                        create: {
-                            profileId: user.id,
-                            songId,
-                            playCount: 1,
-                            correctCount: 0,
-                            lastPlayedAt: new Date(),
-                        },
-                        update: {
-                            playCount: { increment: 1 },
-                            lastPlayedAt: new Date(),
-                        },
-                    }).catch((err: unknown) => {
-                        const message = err instanceof Error ? err.message : String(err);
-                        logger.warn(`[GameService] SongHistory upsert failed for ${user.username}: ${message}`, 'Scoring');
-                    });
-                }
-                successCount++;
-            }
-        } catch (error) {
-            logger.error(`[GameService] Erreur critique sauvegarde stats pour ${player.username}`, 'Scoring', error);
-        }
-    }
-    logger.info(`[GameService] Sauvegarde terminée. Succès: ${successCount}/${players.length}`, 'Scoring');
+  const animes = await prisma.anime.findMany({
+    select: { name: true, altNames: true, franchise: { select: { name: true } } },
+  });
+  return animes.map((a) => ({
+    name: a.name,
+    franchise: a.franchise?.name || null,
+    altNames: a.altNames,
+  }));
 };

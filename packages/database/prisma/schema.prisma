@@ -34,6 +34,23 @@ enum Difficulty {
   HARD
 }
 
+enum GameMode {
+  STANDARD
+  // SPEED (AMQ-style) added later
+}
+
+enum MatchStatus {
+  IN_PROGRESS
+  FINISHED
+  ABANDONED
+}
+
+enum AnswerType {
+  TYPING
+  QCM
+  DUO
+}
+
 // --- IDENTITY ---
 model Profile {
   // = auth.users.id — populated by the Supabase `handle_new_user()` trigger.
@@ -59,34 +76,80 @@ model Profile {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  games  GameParticipant[]
-  history SongHistory[]
-  myList PlayerAnimeList[]
+  matchPlayers MatchPlayer[]
+  history      SongHistory[]
+  myList       PlayerAnimeList[]
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
 }
 
-model GameSession {
-  id           String   @id @default(uuid())
-  mode         String
-  startedAt    DateTime @default(now())
-  endedAt      DateTime?
-  participants GameParticipant[]
+// --- MATCH PERSISTENCE (Phase 5, replaces GameSession/GameParticipant) ---
+model Match {
+  id          String      @id @default(uuid())
+  mode        GameMode    @default(STANDARD)
+  status      MatchStatus @default(IN_PROGRESS)
+  totalRounds Int
+  startedAt   DateTime    @default(now())
+  endedAt     DateTime?
+
+  players MatchPlayer[]
+  rounds  MatchRound[]
+
+  @@index([status])
 }
 
-model GameParticipant {
-  id        String @id @default(uuid())
-  profileId String
-  profile   Profile @relation(fields: [profileId], references: [id])
-  gameId    String
-  game      GameSession @relation(fields: [gameId], references: [id])
-  score     Int     @default(0)
-  rank      Int?
-  isWinner  Boolean @default(false)
+model MatchPlayer {
+  id           String  @id @default(uuid())
+  matchId      String
+  profileId    String
+  score        Int     @default(0)
+  rank         Int?
+  isWinner     Boolean @default(false)
+  correctCount Int     @default(0)
+  xpEarned     Int     @default(0)
 
+  match   Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  profile Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  answers RoundAnswer[]
+
+  @@unique([matchId, profileId])
   @@index([profileId])
-  @@index([gameId])
+}
+
+model MatchRound {
+  id          String   @id @default(uuid())
+  matchId     String
+  roundNumber Int
+  // Nullable so deleting a song does not wipe match history.
+  songId      Int?
+  startedAt   DateTime @default(now())
+
+  match   Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  song    Song?         @relation(fields: [songId], references: [id], onDelete: SetNull)
+  answers RoundAnswer[]
+
+  @@unique([matchId, roundNumber])
+  @@index([songId])
+}
+
+model RoundAnswer {
+  id            String     @id @default(uuid())
+  roundId       String
+  matchPlayerId String
+  answer        String?
+  isCorrect     Boolean    @default(false)
+  answerType    AnswerType
+  // Time-to-answer in ms (stats + future speed mode).
+  timeMs        Int?
+  pointsAwarded Int        @default(0)
+  answeredAt    DateTime   @default(now())
+
+  round       MatchRound  @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  matchPlayer MatchPlayer @relation(fields: [matchPlayerId], references: [id], onDelete: Cascade)
+
+  @@unique([roundId, matchPlayerId])
+  @@index([matchPlayerId])
 }
 
 // --- CATALOGUE ---
@@ -145,6 +208,7 @@ model Song {
 
   anime   Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
   history SongHistory[]
+  rounds  MatchRound[]
 
   @@index([animeId])
   @@index([downloadStatus])

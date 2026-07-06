@@ -1,6 +1,55 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 4 ✅ complete — ready for Phase 5
+## Current phase: Phase 5 ✅ complete — ready for Phase 6
+
+## Done (Phase 5 — Game engine rewrite, Standard mode)
+
+### Shared foundation (`packages/shared`)
+- [x] **Typed socket contract** `events.ts`: `ClientToServerEvents` / `ServerToClientEvents` / `SocketData` (canonical `userId`), input payloads (`CreateLobbyInput`, `JoinLobbyInput`, `AnswerInput`, …), `AnimeListEntry`. Consumed by both sides.
+- [x] **Domain types** `game.ts`: `GameStatus`/`RoundPhase`/`AnswerType`/`ResponseType`, `RoomSettings`, `RevealSong`, `PhaseTiming` (server-clock sync), all wire payloads (`RoundStartPayload`, `RoundRevealPayload`, `AnsweredPayload`, `GameSyncState`, `VictoryData`, …).
+- [x] **Pure, testable logic:** `scoring.ts` (`scoreForAnswer`, `maxPointsPerRound`), `victory.ts` (`computeVictory` solo/multi), `selection.ts` (`buildChoices`/`buildDuo`, Fisher-Yates via `shuffleArray`).
+- [x] `types.ts`: `GamePlayer` gained anti-cheat fields `hasAnswered` + `answerType`.
+
+### Persistence (`packages/database`)
+- [x] **Migration `20260706130000_phase5_match_models`** (applied live): enums `GameMode`/`MatchStatus`/`AnswerType`; models `Match`/`MatchPlayer`/`MatchRound`/`RoundAnswer` (full per-round detail); dropped `GameSession`/`GameParticipant`.
+
+### Server engine (`apps/server/src/modules/game/engine`)
+- [x] **Decoupled components (no god object):** `Room` (lobby + players by `userId`, reconnect via `getSyncState`), `MatchEngine` (round loop, anti-cheat, host votes), `RoundClock` (authoritative single-shot timer), `PlaylistBuilder` (pre-generates all round choices at match start, truly random QCM pool, watched-mode resolution, merged cascade queries), `ScoringStrategy` (isolated fixed points), `MatchRepository` (atomic Prisma persistence + best-effort aggregate stats/`SongHistory`).
+- [x] **Anti-cheat:** during guess only a `game:answered { userId }` boolean is broadcast; answers/correctness/points revealed only at `round_reveal`.
+- [x] **`gameService.ts`:** unbiased selection (`shuffleArray`), `getChoiceCandidates` random pool; removed old `generateChoices`/`generateDuo`/`saveGameHistory`.
+- [x] **`gameManager.ts`** now manages `Room` instances with grace-period cleanup; no longer a global singleton — injected into `SocketManager` and handlers.
+- [x] **Handlers** (`game`/`lobby`/`chat`/`profile`/`general`) rewired to `TypedServer`/`TypedSocket` + `socket.data.userId`; deleted old `classes/GameCore.ts` + `classes/StandardGame.ts`.
+
+### Client (`apps/client`)
+- [x] **Typed socket** `lib/socket.ts` (`Socket<ServerToClientEvents, ClientToServerEvents>`).
+- [x] **`useGameSocket`** (single subscription, translates the contract into actions, owns resume countdown, exposes action emitters) + **`gameReducer`** (`useReducer`, server-clock timing via `localEndsAt = now + (endsAt - serverNow)`).
+- [x] **Thin `Game.tsx`:** UI-only concerns (video, input, dialogs, points animation); presentation-only `StandardGameLayout` unchanged in contract.
+- [x] **Identity by `userId`** everywhere: `GameHub` lobby adapted to the new events (dropped `player_joined`/`player_left`/`room_created`/`room_joined`; player changes flow through `update_players`); `GameSidebar` + `StandardPlayerCard` compare against `userId` (added "answered" anti-cheat badge). Removed dead `components/ui/use-toast.ts` stub.
+
+### Tests & verification
+- [x] **Vitest** added to `packages/shared`; **35 colocated tests** pass: scoring, victory (solo/multi/podium/zero-score), selection (`buildChoices`/`buildDuo`), Fisher-Yates (permutation, no mutation, deterministic trace, no positional bias), fuzzy (`getFuzzySuggestions`, Levenshtein, `isAnswerCorrect`). Test files excluded from the `tsc` build.
+- [x] Verified: `pnpm --filter @aniquizz/shared test` (35/35), shared build, **server typecheck OK**, **client typecheck OK**, **client `vite build` OK**.
+
+### Post-integration fixes (manual playtesting)
+- [x] **Reveal video continuity:** `RevealSong` carries `videoKey`; client keeps the same video element playing from where the guess left off (no restart) via `loadedVideoKeyRef` — reload only when `videoKey` actually changes.
+- [x] **Random guess start preserved:** confirmed `PlaylistBuilder.pickStartTime` still picks a random offset leaving room for guess + reveal + margin.
+- [x] **Game-over round detail:** `gameReducer` accumulates `roundHistory` (incl. the player's own wrong answer as `myAnswer`); `StandardGameOver` renders per-round detail with a strikethrough "Votre réponse" (or "Aucune réponse" when empty), fallback message when history is empty.
+- [x] **Response-mode UI:** QCM/Duo switch buttons only render in `mix`; `Game.tsx` blocks the switch actions unless `responseType === 'mix'`.
+- [x] **Points animation:** shows once per round (`pointsShownForRoundRef`), auto-hidden on the next `guessing` phase (no more lingering across rounds).
+- [x] **Lobby lifecycle hardening:** `isInGame = status !== 'waiting' && !returned` (a player on the game-over screen shows "EN JEU"; badge clears on return); `settleLifecycle()` resolves the room to `waiting` once all **connected** players have returned (disconnected players no longer block); `markInLobby()` on join (refresh/re-entry) frees a stuck badge; `canStartMatch()` enforces host-only + 2-player minimum for multiplayer; removed the "en jeu" emoji.
+- [x] **"Salon introuvable" on `/play` refresh:** `GameHub` clears `history.state` after consuming a `returnToLobby` navigation (and on `goBack`), and `onError` recovers to the modes view on a dead-room error — a refresh no longer retries a stale rejoin.
+- [x] **Anti-cheat — answer type is never trusted:** server clamps the client-claimed `answerType` to what the room's `responseType` allows (`MatchEngine.effectiveAnswerType`) so points can't be inflated (QCM pick claimed as `typing`); `PlaylistBuilder` no longer builds/sends `choices`/`duo` for `typing` rooms (no QCM data on the wire).
+
+### Verification (post-fix)
+- [x] Manual playtesting (solo + 2-player multi) by the user: reveal video, game-over detail, response modes, lobby status transitions, refresh recovery — all confirmed fixed.
+- [x] Server + client typecheck OK; 35/35 shared Vitest tests pass.
+- [x] **`get_advisors` re-run** (post `phase5_match_models`): no new issues — old `GameSession`/`GameParticipant` policies gone. Remaining: `_prisma_migrations` RLS-no-policy (intentional deny-all) + leaked-password protection (Auth dashboard toggle, deferred); performance advisors are only `unused_index` INFO (empty dev DB).
+
+### Phase 5 notes / decisions
+- Timing is fully server-authoritative (`PhaseTiming`); the client only maps to its local clock — no client-driven round ends.
+- `game_state_sync` (`getSyncState`) drives reconnection: a player rejoining mid-match is restored to the correct phase.
+- Scoring strategy is isolated so a future AMQ-style speed mode plugs in without touching the engine.
+- **`mix` response mode is honor-system by design:** its QCM choices must reach the client (the player may switch to QCM mid-round), so a tampered client could claim `typing` while peeking. `typing`/`qcm` pure rooms are fully server-enforced; only `mix` trades strictness for flexibility.
 
 ## Done (Phase 4 — Code cleanup, Standard mode only)
 
@@ -129,7 +178,14 @@
 
 ## Next step
 
-Phase 5 — Game engine rewrite (Standard mode): `Match`/`MatchPlayer`/`MatchRound`/`RoundAnswer`, typed socket contract, `MatchEngine` + `useGameSocket`/`useReducer`, drop `GameSession`/`GameParticipant`.
+Phase 6 — Dev environment, test tooling & Admin: DEV-only simulated players (bots auto-answer), dev auth / quick account switch, scripted scenarios, and a role-gated `/admin` (server-side role check) for users, live rooms/matches, and catalogue moderation.
+
+### Phase 5 follow-ups / deferred
+- **Live smoke test** ✅ done (manual solo + 2-player multi playtesting; see post-integration fixes above). Full reconnect/stress pass deferred to Phase 6 test tooling.
+- **`get_advisors`** ✅ re-run — clean (see Verification (post-fix)).
+- Engine unit coverage today lives in `packages/shared`; server-side engine integration tests land with the test tooling in Phase 6 / e2e in Phase 9.
+- **`mix`-mode client trust:** inherent honor-system (choices must reach the client). Revisit only if a stricter competitive mode needs per-answer-type server proof.
+- **`updateAggregates` writes** are sequential `SongHistory` upserts (N players × N songs), best-effort; batch if it ever shows up in prod latency.
 
 ## Deferred (post–Phase 4)
 

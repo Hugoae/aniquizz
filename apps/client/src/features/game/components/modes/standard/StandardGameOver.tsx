@@ -99,7 +99,7 @@ export function StandardGameOver({
                                 // ✅ rounded-lg pour les items d'historique
                                 <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-background/60 border border-white/5 hover:border-primary/30 hover:bg-secondary/40 transition-all cursor-pointer">
                                     <div className="flex flex-col items-center justify-center w-10 gap-1"><span className="text-[10px] text-muted-foreground font-mono">#{round.round}</span><div className={cn("p-1.5 rounded-full", round.isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500")}>{round.isCorrect ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}</div></div>
-                                    <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="font-bold text-base truncate">{round.song.anime}</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">{round.song.type}</span></div><div className="text-sm text-muted-foreground truncate">{round.song.title}</div></div>
+                                    <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="font-bold text-base truncate">{round.song.anime}</span><span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground border border-border">{round.song.type}</span></div><div className="text-sm text-muted-foreground truncate">{round.song.title}</div>{!round.isCorrect && (round.myAnswer && round.myAnswer.trim() ? (<div className="text-[11px] text-red-400/80 truncate mt-0.5">Votre réponse : <span className="line-through">{round.myAnswer}</span></div>) : (<div className="text-[11px] text-muted-foreground/60 italic truncate mt-0.5">Aucune réponse</div>))}</div>
                                     <div className="text-right min-w-[60px]"><div className={cn("font-bold text-lg", round.isCorrect ? "text-green-400" : "text-muted-foreground/50")}>{round.isCorrect ? `+${round.points}` : "0"}</div></div>
                                 </div>
                             ))}
@@ -265,14 +265,18 @@ export function StandardGameOver({
         <DialogContent className="sm:max-w-2xl bg-card border-border max-h-[85vh] flex flex-col overflow-y-auto custom-scrollbar sm:rounded-xl">
              <DialogHeader><DialogTitle className="flex items-center gap-3 text-xl"><BrainCircuit className="h-5 w-5 text-primary" /> Détail de votre performance</DialogTitle></DialogHeader>
             <div className="flex-1 space-y-3 pt-4">
-                {history?.map((round: any, i: number) => (
+                {history && history.length > 0 ? history.map((round: any, i: number) => (
                     // ✅ rounded-lg pour les items
                     <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-background/50 border border-white/5">
                          <div className="flex flex-col items-center justify-center w-8 gap-1"><span className="text-[10px] text-muted-foreground font-mono">#{round.round}</span><div className={cn("p-1 rounded-full", round.isCorrect ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500")}>{round.isCorrect ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}</div></div>
-                        <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="font-bold text-sm truncate">{round.song.anime}</span></div><div className="text-xs text-muted-foreground truncate">{round.song.title}</div></div>
+                        <div className="flex-1 min-w-0"><div className="flex items-center gap-2 mb-0.5"><span className="font-bold text-sm truncate">{round.song.anime}</span></div><div className="text-xs text-muted-foreground truncate">{round.song.title}</div>{!round.isCorrect && (round.myAnswer && round.myAnswer.trim() ? (<div className="text-[11px] text-red-400/80 truncate mt-0.5">Votre réponse : <span className="line-through">{round.myAnswer}</span></div>) : (<div className="text-[11px] text-muted-foreground/60 italic truncate mt-0.5">Aucune réponse</div>))}</div>
                         <div className="text-right font-bold text-sm">{round.isCorrect ? <span className="text-green-400">+{round.points}</span> : <span className="text-muted-foreground">0</span>}</div>
                     </div>
-                ))}
+                )) : (
+                    <p className="text-center text-muted-foreground text-sm py-8">
+                        Aucun détail de round disponible pour cette partie.
+                    </p>
+                )}
             </div>
         </DialogContent>
       </Dialog>

@@ -1,10 +1,10 @@
-import { Server, Socket } from 'socket.io';
+import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
 import { prisma } from '@aniquizz/database';
 import { requireAuth } from '../../core/guards';
 
-export const registerProfileHandlers = (io: Server, socket: Socket) => {
+export const registerProfileHandlers = (io: TypedServer, socket: TypedSocket) => {
     
     // Demande de stats complètes pour la page Profil
     const handleGetStats = async () => {

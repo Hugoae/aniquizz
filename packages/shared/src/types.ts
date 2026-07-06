@@ -51,6 +51,10 @@ export interface GamePlayer extends BasePlayer {
   currentAnswer?: string | null;
   isCorrect?: boolean | null;
   roundPoints?: number;
+  /** Anti-cheat: set during guessing (no answer content leaked). */
+  hasAnswered?: boolean;
+  /** How the current-round answer was submitted. */
+  answerType?: 'typing' | 'qcm' | 'duo' | null;
 
   matchCorrectCount?: number;
   matchTotalCount?: number;

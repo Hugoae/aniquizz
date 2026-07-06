@@ -7,6 +7,7 @@ interface PlayerCardProps {
   compact?: boolean;
   onClick?: () => void;
   hideScore?: boolean;
+  gameMode?: string;
 }
 
 export function PlayerCard({

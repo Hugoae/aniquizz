@@ -1,33 +1,31 @@
-import { Server, Socket } from 'socket.io';
+import type { TypedServer, TypedSocket } from '../../core/socketTypes';
+import type { GameManager } from '../game/gameManager';
 import { logger } from '../../utils/logger';
-import { gameManager } from '../../index'; // Import du GameManager
 import { guard, RATE_LIMITS } from '../../core/guards';
 
-export const registerChatHandlers = (io: Server, socket: Socket) => {
-  const sendMessage = (payload: any) => {
-    if (!payload.roomId) {
-        logger.warn(`Message sans roomId de ${socket.id}`, 'Chat');
-        return;
-    }
+export const registerChatHandlers = (
+  io: TypedServer,
+  socket: TypedSocket,
+  gameManager: GameManager,
+) => {
+  const sendMessage = (payload: { roomId: string; content: string }) => {
+    if (!payload.roomId || !payload.content?.trim()) return;
 
-    // ✅ Récupération des infos du joueur pour l'affichage
-    const game = gameManager.getGame(payload.roomId);
-    const player = game?.players.get(socket.id);
+    const userId = socket.data.userId as string;
+    const room = gameManager.getRoom(payload.roomId);
+    const player = room?.players.get(userId);
 
-    const messageData = {
-      id: Date.now().toString(), // ID unique pour React keys
-      senderId: socket.id,
-      username: player?.username || "Inconnu",
-      avatar: player?.avatar || "player1",
+    io.to(payload.roomId).emit('chat:message', {
+      id: Date.now().toString(),
+      senderId: userId,
+      username: player?.username || socket.data.username || 'Inconnu',
+      avatar: player?.avatar || 'player1',
       content: payload.content,
       timestamp: Date.now(),
-      isSystem: false
-    };
+      isSystem: false,
+    });
 
-    logger.info(`Message dans ${payload.roomId} de ${player?.username || socket.id}`, 'Chat');
-    
-    // Broadcast à la room
-    io.to(payload.roomId).emit('chat:message', messageData);
+    logger.info(`Chat message in ${payload.roomId} from ${player?.username || userId}`, 'Chat');
   };
 
   socket.on('chat:sendMessage', guard(socket, 'chat:sendMessage', RATE_LIMITS.chat, sendMessage));

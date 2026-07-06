@@ -129,6 +129,8 @@ export default function GameHub() {
     const onConnect = () => { setMySocketId(socket.id || ''); if (view === 'roomList') socket.emit('get_rooms'); };
     const onRoomsUpdate = (rooms: any[]) => setAvailableRooms(rooms);
     
+    const myUserId = user?.id || '';
+
     const onRoomCreated = (data: { roomId: string, room: any }) => {
       if (!hasShownToastRef.current) {
           toast.success("Salon prêt !");
@@ -138,7 +140,7 @@ export default function GameHub() {
 
       setCurrentRoomId(data.roomId);
       setIsAmIHost(true);
-      setLobbyPlayers(mapServerPlayersToLobby(data.room.players, socket.id, data.room.status));
+      setLobbyPlayers(mapServerPlayersToLobby(data.room.players, myUserId, data.room.status));
       if (data.room.status) setGameStatus(data.room.status);
       
       if (data.room.settings) {
@@ -151,8 +153,7 @@ export default function GameHub() {
 
     const onRoomJoined = (data: { roomId: string, players: any[], hostId?: string, settings?: any, status?: any }) => {
       setCurrentRoomId(data.roomId); 
-      const myId = socket.id;
-      if (data.hostId && myId) setIsAmIHost(String(data.hostId) === String(myId));
+      if (data.hostId && myUserId) setIsAmIHost(String(data.hostId) === String(myUserId));
       setLobbyPlayers(mapServerPlayersToLobby(data.players, data.hostId, data.status)); 
       
       if(data.settings) {
@@ -184,21 +185,16 @@ export default function GameHub() {
     const onPasswordRequired = (data: { roomId: string }) => { setPendingRoomId(data.roomId); setShowPasswordModal(true); };
     
     const onUpdatePlayers = (data: { players: any[], hostId?: string, status?: any }) => { 
-        if (data.hostId && socket.id) setIsAmIHost(String(data.hostId) === String(socket.id)); 
+        if (data.hostId && myUserId) {
+            const amINewHost = String(data.hostId) === String(myUserId);
+            setIsAmIHost((prev) => {
+                if (amINewHost && !prev) toast.success("Vous êtes l'hôte !");
+                return amINewHost;
+            });
+        }
         const currentStatus = data.status || gameStatus;
         if (data.status) setGameStatus(data.status);
         setLobbyPlayers(mapServerPlayersToLobby(data.players, data.hostId, currentStatus));
-    };
-    
-    const onPlayerJoined = (data: { players: any[] }) => setLobbyPlayers(mapServerPlayersToLobby(data.players, undefined, gameStatus));
-    
-    const onPlayerLeft = (data: { players: any[], hostId?: string }) => { 
-        if (data.hostId && socket.id) { 
-            const amINewHost = String(data.hostId) === String(socket.id); 
-            setIsAmIHost(amINewHost); 
-            if (amINewHost) toast.success("Vous êtes l'hôte !"); 
-        } 
-        setLobbyPlayers(mapServerPlayersToLobby(data.players, data.hostId, gameStatus)); 
     };
     
     const onGameStarted = (data: any) => {
@@ -216,18 +212,29 @@ export default function GameHub() {
       });
     };
 
-    const onError = (err: { message: string }) => { toast.error(err.message || "Erreur"); if (err.message && err.message.toLowerCase().includes("mot de passe")) setPasswordInput(''); };
+    const onError = (err: { message: string }) => {
+      toast.error(err.message || "Erreur");
+      const msg = (err.message || '').toLowerCase();
+      if (msg.includes("mot de passe")) setPasswordInput('');
+      // A stale rejoin (e.g. after a refresh) targeting a dead room: recover to modes.
+      if (msg.includes("introuvable") || msg.includes("fermé") || msg.includes("complet")) {
+        setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('modes');
+        window.history.replaceState({}, document.title);
+      }
+    };
 
     socket.on('connect', onConnect); socket.on('rooms_update', onRoomsUpdate); 
     socket.on('lobby:joined', (data) => { if (data.isHost) { onRoomCreated({ roomId: data.roomId, room: { players: [], ...data } }); } else { onRoomJoined(data); } });
-    socket.on('room_updated', onRoomUpdated); socket.on('room_closed', onRoomClosed); socket.on('password_required', onPasswordRequired); socket.on('update_players', onUpdatePlayers); socket.on('player_joined', onPlayerJoined); socket.on('player_left', onPlayerLeft); socket.on('game_started', onGameStarted); socket.on('error', onError);
+    socket.on('room_updated', onRoomUpdated); socket.on('room_closed', onRoomClosed); socket.on('password_required', onPasswordRequired); socket.on('update_players', onUpdatePlayers); socket.on('game_started', onGameStarted); socket.on('error', onError);
 
     if (locationState?.returnToLobby && locationState?.roomId && !hasJoinedRef.current) {
         hasJoinedRef.current = true;
         socket.emit('lobby:join', { roomId: locationState.roomId, ...getPlayerIdentity() });
+        // Consume the navigation state so a page refresh doesn't retry a stale rejoin.
+        window.history.replaceState({}, document.title);
     }
 
-    return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('room_created', onRoomCreated); socket.off('room_joined', onRoomJoined); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('player_joined', onPlayerJoined); socket.off('player_left', onPlayerLeft); socket.off('game_started', onGameStarted); socket.off('error', onError); };
+    return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('lobby:joined'); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('game_started', onGameStarted); socket.off('error', onError); };
   }, [gameStatus, view]);
 
   const handleModeSelect = (mode: GameMode) => { if (mode === 'competitive') return; setConfig(prev => ({ ...prev, mode })); if (mode === 'multiplayer') setView('roomList'); else setShowConfig(true); };
@@ -256,7 +263,7 @@ export default function GameHub() {
 
   const handleStartLobbyGame = () => { if (currentRoomId && isAmIHost) socket.emit('start_game', { roomId: currentRoomId }); };
   const handleToggleReady = () => { if (currentRoomId) socket.emit('toggle_ready', { roomId: currentRoomId }); };
-  const handleTransferHost = (targetId: string | number) => { if (currentRoomId && isAmIHost) socket.emit('transfer_host', { roomId: currentRoomId, targetId }); };
+  const handleTransferHost = (targetId: string | number) => { if (currentRoomId && isAmIHost) socket.emit('transfer_host', { roomId: currentRoomId, targetId: String(targetId) }); };
   const handleJoinRoom = (roomId: string) => { const targetRoomId = roomId || joinCode; if (targetRoomId) socket.emit('lobby:join', { roomId: targetRoomId, ...getPlayerIdentity() }); };
   const handlePasswordSubmit = () => { if(!pendingRoomId || !passwordInput) return; socket.emit('lobby:join', { roomId: pendingRoomId, password: passwordInput, ...getPlayerIdentity() }); };
   const handleOpenRoomSettings = () => setShowCreateModal(true);
@@ -272,6 +279,8 @@ export default function GameHub() {
       } else { 
           setView('modes'); 
       } 
+      // Drop any leftover returnToLobby/roomId so a refresh lands cleanly on modes.
+      window.history.replaceState({}, document.title);
   };
 
   if (view === 'lobby') {
@@ -282,7 +291,7 @@ export default function GameHub() {
             players={lobbyPlayers} 
             maxPlayers={roomConfig.maxPlayers} 
             isHost={isAmIHost} 
-            currentUserId={mySocketId} 
+            currentUserId={user?.id || mySocketId} 
             gameSettings={roomConfig} 
             roomCode={currentRoomId} 
             gameStatus={gameStatus} 

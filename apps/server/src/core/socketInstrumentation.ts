@@ -1,5 +1,4 @@
-import { Socket } from 'socket.io';
-import { AuthenticatedSocketData } from './authMiddleware';
+import type { TypedSocket } from './socketTypes';
 import { logger } from '../utils/logger';
 import { summarizeSocketPayload } from '../utils/redact';
 
@@ -45,8 +44,8 @@ const INBOUND_INFO_EVENTS = new Set([
   'vote_skip',
 ]);
 
-const getActor = (socket: Socket) => {
-  const data = socket.data as AuthenticatedSocketData;
+const getActor = (socket: TypedSocket) => {
+  const data = socket.data;
   return {
     userId: data.userId ?? null,
     username: data.username ?? 'guest',
@@ -67,15 +66,18 @@ const shouldLogInboundAtInfo = (event: string): boolean =>
  * Wraps a socket so every inbound event and critical outbound emit is logged
  * with actor identity and a redacted/summarized payload.
  */
-export function instrumentSocket(socket: Socket): void {
+export function instrumentSocket(socket: TypedSocket): void {
   const socketLogger = logger.child({
     context: 'Socket',
     socketId: socket.id,
-    userId: (socket.data as AuthenticatedSocketData).userId ?? undefined,
+    userId: socket.data.userId ?? undefined,
   });
 
-  const originalOn = socket.on.bind(socket);
-  const originalEmit = socket.emit.bind(socket);
+  const originalOn = socket.on.bind(socket) as (
+    event: string,
+    listener: (...args: unknown[]) => void,
+  ) => typeof socket;
+  const originalEmit = socket.emit.bind(socket) as (event: string, ...args: unknown[]) => boolean;
 
   socket.on = ((event: string, listener: (...args: unknown[]) => void) => {
     const wrapped = (...args: unknown[]) => {

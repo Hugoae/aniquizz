@@ -72,10 +72,10 @@ export function MultiplayerLobby({
   const guests = players.filter(p => !p.isHost);
   const allGuestsReady = guests.every(p => p.isReady);
   
-  const minPlayersRequired = 1;
+  const minPlayersRequired = isSolo ? 1 : 2;
   const hasEnoughPlayers = players.length >= minPlayersRequired;
 
-  const canStart = isHost && players.length > 0 && hasEnoughPlayers && (isSolo || allGuestsReady) && !isGameRunning;
+  const canStart = isHost && hasEnoughPlayers && (isSolo || allGuestsReady) && !isGameRunning;
 
   const copyRoomCode = () => {
     navigator.clipboard.writeText(roomCode);
@@ -290,7 +290,7 @@ export function MultiplayerLobby({
                                         ? "bg-green-500/20 text-green-400 border-green-500/20" 
                                         : "bg-white/5 text-muted-foreground border-transparent"
                             )}>
-                                {isPlayerInGame ? "EN JEU 🎮" : (player.isReady ? "PRÊT" : "EN ATTENTE...")}
+                                {isPlayerInGame ? "EN JEU" : (player.isReady ? "PRÊT" : "EN ATTENTE...")}
                             </div>
                         )}
                         {player.isHost && (
@@ -321,7 +321,7 @@ export function MultiplayerLobby({
                 >
                     {!hasEnoughPlayers ? (
                         <>
-                            <Users className="h-6 w-6" /> {minPlayersRequired} JOUEURS MIN
+                            <Users className="h-6 w-6" /> EN ATTENTE DE JOUEURS ({players.length}/{minPlayersRequired})
                         </>
                     ) : (
                         <>
@@ -329,7 +329,7 @@ export function MultiplayerLobby({
                         </>
                     )}
                 </Button>
-                {!canStart && hasEnoughPlayers && !isSolo && players.length > 1 && !isGameRunning && (
+                {!canStart && hasEnoughPlayers && !isSolo && !isGameRunning && (
                     <span className="text-xs text-muted-foreground animate-pulse">Tous les joueurs doivent être "PRÊT"</span>
                 )}
             </div>

@@ -10,8 +10,6 @@ import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
 
-export let gameManager: GameManager;
-
 const PORT = env.PORT;
 
 registerCrashHandlers();
@@ -22,13 +20,12 @@ async function main() {
     await prisma.$connect();
     logger.info('Connected to Database', 'Database');
 
-    // 2. Initialisation du Game Manager
-    gameManager = new GameManager(io);
+    // 2. Game manager (single owner, injected into the socket layer).
+    const gameManager = new GameManager(io);
     registerHealthRoute(app, io, () => gameManager);
-    
-    // 3. Initialisation du Socket Manager
-    // C'est LUI qui va gérer tous les registers (Lobby, Game, Chat, Profile, General)
-    const socketManager = new SocketManager(io);
+
+    // 3. Socket manager wires all feature handlers.
+    const socketManager = new SocketManager(io, gameManager);
     socketManager.initialize();
     logger.info('Socket Manager initialized', 'Server');
 

@@ -1,6 +1,5 @@
-import { Socket } from 'socket.io';
 import { logger } from '../utils/logger';
-import { AuthenticatedSocketData } from './authMiddleware';
+import type { TypedSocket } from './socketTypes';
 
 /**
  * Handler guards for socket events: authentication + in-memory rate limiting.
@@ -8,7 +7,8 @@ import { AuthenticatedSocketData } from './authMiddleware';
  * spam/abuse brake, not a security boundary.
  */
 
-type Handler<T> = (payload: T) => void;
+/** A socket event listener with arbitrary arity (0-arg events included). */
+type Listener<A extends unknown[]> = (...args: A) => void;
 
 interface RateLimitRule {
   /** Max number of calls allowed within the window. */
@@ -18,9 +18,9 @@ interface RateLimitRule {
 }
 
 // Per-socket, per-key timestamps of recent calls.
-const buckets = new WeakMap<Socket, Map<string, number[]>>();
+const buckets = new WeakMap<TypedSocket, Map<string, number[]>>();
 
-const isRateLimited = (socket: Socket, key: string, rule: RateLimitRule): boolean => {
+const isRateLimited = (socket: TypedSocket, key: string, rule: RateLimitRule): boolean => {
   let socketBucket = buckets.get(socket);
   if (!socketBucket) {
     socketBucket = new Map();
@@ -42,14 +42,17 @@ const isRateLimited = (socket: Socket, key: string, rule: RateLimitRule): boolea
 };
 
 /** Wrap a handler so it only runs for authenticated sockets. */
-export const requireAuth = <T>(socket: Socket, handler: Handler<T>): Handler<T> => {
-  return (payload: T) => {
-    const data = socket.data as AuthenticatedSocketData;
+export const requireAuth = <A extends unknown[]>(
+  socket: TypedSocket,
+  handler: Listener<A>,
+): Listener<A> => {
+  return (...args: A) => {
+    const data = socket.data;
     if (!data.isAuthenticated || !data.userId) {
       socket.emit('error', { message: 'Vous devez être connecté pour effectuer cette action.' });
       return;
     }
-    handler(payload);
+    handler(...args);
   };
 };
 
@@ -58,20 +61,20 @@ export const requireAuth = <T>(socket: Socket, handler: Handler<T>): Handler<T> 
  * event is also a game action). Drops calls that exceed the rule and notifies the
  * client once per breach.
  */
-export const guard = <T>(
-  socket: Socket,
+export const guard = <A extends unknown[]>(
+  socket: TypedSocket,
   key: string,
   rule: RateLimitRule,
-  handler: Handler<T>,
-): Handler<T> => {
-  return requireAuth<T>(socket, (payload: T) => {
+  handler: Listener<A>,
+): Listener<A> => {
+  return requireAuth<A>(socket, (...args: A) => {
     if (isRateLimited(socket, key, rule)) {
-      const data = socket.data as AuthenticatedSocketData;
+      const data = socket.data;
       logger.warn(`Rate limit hit on "${key}" by ${data.username} (${data.userId})`, 'Socket');
       socket.emit('error', { message: 'Trop de requêtes, veuillez patienter un instant.' });
       return;
     }
-    handler(payload);
+    handler(...args);
   });
 };
 

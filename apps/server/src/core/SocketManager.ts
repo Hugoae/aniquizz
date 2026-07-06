@@ -1,27 +1,28 @@
-import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
 import { captureError } from '../utils/errorReporter';
-import { socketAuthMiddleware, AuthenticatedSocketData } from './authMiddleware';
+import { socketAuthMiddleware } from './authMiddleware';
 import { instrumentSocket } from './socketInstrumentation';
+import type { TypedServer, TypedSocket } from './socketTypes';
+import type { GameManager } from '../modules/game/gameManager';
 
-// Imports des modules
 import { registerChatHandlers } from '../modules/chat/chatHandlers';
 import { registerLobbyHandlers } from '../modules/lobby/lobbyHandlers';
 import { registerGameHandlers } from '../modules/game/gameHandlers';
 import { registerProfileHandlers } from '../modules/profile/profileHandlers';
-// ✅ Ajout du handler général (Ajuste le chemin si besoin selon où tu as mis le fichier)
-import { registerGeneralHandlers } from '../modules/generalHandlers'; 
+import { registerGeneralHandlers } from '../modules/generalHandlers';
 
 /**
- * SOCKET MANAGER
- * Point d'entrée unique pour la gestion des événements Socket.io
- * Distribue les sockets vers les modules correspondants.
+ * Single entry point for Socket.io event wiring. Distributes each connection
+ * to the feature handler modules. Dependencies (GameManager) are injected —
+ * no module reaches back into the index singleton.
  */
 export class SocketManager {
-  private io: Server;
+  private io: TypedServer;
+  private gameManager: GameManager;
 
-  constructor(io: Server) {
+  constructor(io: TypedServer, gameManager: GameManager) {
     this.io = io;
+    this.gameManager = gameManager;
   }
 
   public initialize() {
@@ -33,9 +34,9 @@ export class SocketManager {
       captureError(err, { context: 'Socket', source: 'connection_error' });
     });
 
-    this.io.on('connection', (socket: Socket) => {
+    this.io.on('connection', (socket: TypedSocket) => {
       // Identity is set by socketAuthMiddleware (never trust raw client userId).
-      const { username, userId, isAuthenticated } = socket.data as AuthenticatedSocketData;
+      const { username, userId, isAuthenticated } = socket.data;
 
       instrumentSocket(socket);
 
@@ -54,17 +55,14 @@ export class SocketManager {
         },
       );
 
-      // 3. Attacher les gestionnaires d'événements (Modules)
-      // On enregistre tout ici, proprement.
-      registerChatHandlers(this.io, socket);
-      registerLobbyHandlers(this.io, socket);
-      registerGameHandlers(this.io, socket);
+      registerChatHandlers(this.io, socket, this.gameManager);
+      registerLobbyHandlers(this.io, socket, this.gameManager);
+      registerGameHandlers(this.io, socket, this.gameManager);
       registerProfileHandlers(this.io, socket);
-      registerGeneralHandlers(this.io, socket); // ✅ Ajouté ici
+      registerGeneralHandlers(this.io, socket);
 
-      // 4. Gestion de la déconnexion globale
       socket.on('disconnect', (reason) => {
-        const data = socket.data as AuthenticatedSocketData;
+        const data = socket.data;
         logger.child({
           context: 'Socket',
           socketId: socket.id,
@@ -86,7 +84,7 @@ export class SocketManager {
           context: 'Socket',
           source: 'socket_error',
           socketId: socket.id,
-          userId: (socket.data as AuthenticatedSocketData).userId ?? undefined,
+          userId: socket.data.userId ?? undefined,
         });
       });
     });

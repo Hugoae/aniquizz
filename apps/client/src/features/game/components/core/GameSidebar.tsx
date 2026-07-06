@@ -21,7 +21,7 @@ interface ChatMessage {
   id: string;
   senderId: string;
   username: string;
-  avatar: string;
+  avatar?: string;
   content: string;
   timestamp: number;
   isSystem?: boolean;
@@ -34,6 +34,8 @@ interface GameSidebarProps {
   onPlayerClick?: (playerId: string | number) => void;
   hideScores?: boolean; 
   roomId: string;
+  /** Canonical userId of the local player (never socket.id). */
+  currentUserId?: string;
 }
 
 const rankColors: Record<string, string> = {
@@ -49,7 +51,8 @@ const formatTime = (timestamp: number) => {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hideScores, roomId }: GameSidebarProps) {
+export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hideScores, roomId, currentUserId }: GameSidebarProps) {
+  const meId = currentUserId ?? socket.id;
   const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -168,7 +171,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                   // ✅ glass-card (donc rounded-xl)
                   className={cn(
                     "glass-card p-3 transition-all cursor-pointer hover:bg-secondary/50",
-                    String(player.id) === String(socket.id) && "border-primary/50"
+                    String(player.id) === String(meId) && "border-primary/50"
                   )}
                 >
                   <div className="flex items-center gap-3">
@@ -191,7 +194,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
 
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate text-sm hover:text-primary transition-colors">
-                        {player.name} {String(player.id) === String(socket.id) && "(Moi)"}
+                        {player.name} {String(player.id) === String(meId) && "(Moi)"}
                       </div>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {player.competitiveRank && (
@@ -223,7 +226,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                     </div>
                 )}
                 {messages.map((msg, index) => {
-                    const isMe = String(msg.senderId) === String(socket.id);
+                    const isMe = String(msg.senderId) === String(meId);
                     const isSystem = msg.isSystem;
 
                     if (isSystem) {
@@ -240,7 +243,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                         <div key={msg.id || index} className={cn("text-sm flex flex-col", isMe ? "items-end" : "items-start")}>
                             <div className="flex items-center gap-2 mb-0.5">
                                 {!isMe && (
-                                    <UserAvatar avatar={msg.avatar} username={msg.username} className="h-4 w-4" />
+                                    <UserAvatar avatar={msg.avatar || ''} username={msg.username} className="h-4 w-4" />
                                 )}
                                 <span className={cn("font-bold text-xs", isMe ? "text-primary" : "text-foreground")}>
                                     {msg.username}

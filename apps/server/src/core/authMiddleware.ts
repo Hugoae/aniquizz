@@ -1,19 +1,16 @@
-import { Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { supabaseAdmin } from '../lib/supabase';
+import type { SocketData } from '@aniquizz/shared';
+import type { TypedSocket } from './socketTypes';
 
 /**
  * Canonical, verified identity attached to every socket.
  * `userId` is the Supabase auth user id — the ONLY trusted identity.
  * Never trust `socket.handshake.auth.userId` sent by the client.
  */
-export interface AuthenticatedSocketData {
-  userId: string | null;
-  username: string;
-  isAuthenticated: boolean;
-}
+export type AuthenticatedSocketData = SocketData;
 
 interface SupabaseJwtPayload extends jwt.JwtPayload {
   sub?: string;
@@ -56,14 +53,14 @@ const verifyLegacyHs256 = (token: string): SupabaseJwtPayload | null => {
  * No token → guest (read-only). Present-but-invalid token → rejected.
  */
 export const socketAuthMiddleware = async (
-  socket: Socket,
+  socket: TypedSocket,
   next: (err?: Error) => void,
 ): Promise<void> => {
   const token = socket.handshake.auth?.token as string | undefined;
   const displayName =
     (socket.handshake.auth?.username as string | undefined)?.trim() || 'Anonyme';
 
-  const data = socket.data as AuthenticatedSocketData;
+  const data = socket.data;
   data.username = displayName;
   data.userId = null;
   data.isAuthenticated = false;

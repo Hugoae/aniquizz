@@ -1,6 +1,9 @@
 import { io, Socket } from "socket.io-client";
+import type { ClientToServerEvents, ServerToClientEvents } from "@aniquizz/shared";
 import { env } from "./env";
 import { captureClientError } from "./errorReporter";
+
+export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
 // --- CONFIGURATION URL ---
 // Production : L'URL définie, ou celle du site courant
@@ -15,7 +18,7 @@ console.log(`🔌 Socket configuré sur : ${URL}`);
 // --- INITIALISATION ---
 // On garde autoConnect: false pour que ce soit le AuthContext qui décide QUAND se connecter
 // On supprime l'option 'auth' ici, car elle sera injectée dynamiquement
-export const socket: Socket = io(URL, {
+export const socket: AppSocket = io(URL, {
   autoConnect: false, 
   reconnection: true,
   reconnectionAttempts: 5,

@@ -1,4 +1,4 @@
-import { Server, Socket } from 'socket.io';
+import type { TypedServer, TypedSocket } from '../core/socketTypes';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../utils/logger';
 
@@ -46,7 +46,7 @@ const getGlobalStats = async () => {
     }
 };
 
-export const registerGeneralHandlers = (io: Server, socket: Socket) => {
+export const registerGeneralHandlers = (io: TypedServer, socket: TypedSocket) => {
 
   const sendHomeStats = async () => {
       const stats = await getGlobalStats();
