@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-
+import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
 const prisma = new PrismaClient();
 // Priorité au fichier manuel s'il existe, sinon le fichier brut
 const MANUAL_FILE = path.join(__dirname, '../data/manual_edits.json');
@@ -21,7 +21,6 @@ async function main() {
   // 1. NETTOYAGE
   console.log("🧹 Nettoyage des anciennes données...");
   await prisma.songHistory.deleteMany();
-  await prisma.songVote.deleteMany();
   await prisma.playerAnimeList.deleteMany();
   await prisma.song.deleteMany();
   await prisma.anime.deleteMany();
@@ -75,23 +74,25 @@ async function main() {
       totalAnimes++;
 
       for (const sData of aData.songs) {
-        if (insertedVideoKeys.has(sData.videoKey)) continue;
+        const { songType, sequence } = normalizePipelineSong(sData);
+        const videoKey = sData.videoKey ?? buildVideoKey(aData.name, aData.id, songType, sequence);
+        if (insertedVideoKeys.has(videoKey)) continue;
 
-        // Création Song
         await prisma.song.create({
           data: {
             title: sData.title,
             artist: sData.artist,
-            type: sData.type,
-            videoKey: sData.videoKey,
+            songType,
+            sequence,
+            videoKey,
             tags: sData.tags || [],
-            difficulty: sData.difficulty || 'medium',
+            difficulty: parsePipelineDifficulty(sData.difficulty),
             duration: sData.duration || 0,
             sourceUrl: sData.sourceUrl || null,
             animeId: anime.id,
           }
         });
-        insertedVideoKeys.add(sData.videoKey);
+        insertedVideoKeys.add(videoKey);
         totalSongs++;
       }
     }

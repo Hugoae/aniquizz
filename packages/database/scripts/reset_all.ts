@@ -26,9 +26,6 @@ async function cleanDatabase() {
     const deletedHistory = await prisma.songHistory.deleteMany({});
     console.log(`   - SongHistory deleted   : ${deletedHistory.count}`);
 
-    const deletedVotes = await prisma.songVote.deleteMany({});
-    console.log(`   - SongVotes deleted     : ${deletedVotes.count}`);
-
     const deletedLists = await prisma.playerAnimeList.deleteMany({});
     console.log(`   - PlayerAnimeLists del. : ${deletedLists.count}`);
 

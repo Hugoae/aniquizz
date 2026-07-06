@@ -3,13 +3,11 @@ import { AudioVisualizer } from '../core/AudioVisualizer'; // Assure-toi que le 
 
 interface CircularGameTimerProps {
   timeLeft: number;
-  maxTime?: number; // Optionnel, pour calculer le % si progress n'est pas fourni direct
-  progress?: number; // De 0 à 100
+  maxTime?: number; // Optional, used to derive % when progress is not passed directly
+  progress?: number; // 0 to 100
   phase: 'loading' | 'guessing' | 'revealed' | 'ended';
   isPaused?: boolean;
   showVisualizer?: boolean;
-  showDiffAnim?: boolean; // Pour le TimeTrial (+5s / -5s)
-  timeDiff?: number | null; // Pour le TimeTrial
   className?: string;
 }
 
@@ -20,25 +18,15 @@ export function CircularGameTimer({
   phase,
   isPaused = false,
   showVisualizer = true,
-  showDiffAnim = false,
-  timeDiff = null,
   className
 }: CircularGameTimerProps) {
   
-  // Calcul du pourcentage si non fourni
   const calculatedProgress = progress ?? Math.min((timeLeft / maxTime) * 100, 100);
   
-  // Gestion de la couleur et de l'animation d'urgence
   const isUrgent = timeLeft <= 3 && timeLeft > 0;
   
   const getTimerColor = () => {
-      // Bonus Time Trial (> 60s) reste en vert
-      if (timeLeft > 60) return "text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]";
-      
-      // ✅ MODIFICATION : Tout ce qui est au-dessus de 3s est blanc (suppression de l'orange à 10s)
       if (timeLeft > 3) return "text-white";
-      
-      // Urgence (<= 3s) en rouge
       return "text-destructive drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]";
   };
 
@@ -82,16 +70,6 @@ export function CircularGameTimer({
                 {timeLeft}
             </span>
         </div>
-
-        {/* Animation flottante (+5s / -5s) pour Time Trial */}
-        {showDiffAnim && timeDiff !== null && (
-            <div className={cn(
-                "absolute top-1/2 -right-24 -translate-y-1/2 text-5xl font-black animate-out zoom-out slide-out-to-top-10 duration-1000 fill-mode-forwards whitespace-nowrap",
-                timeDiff > 0 ? "text-green-400 drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]" : "text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"
-            )}>
-                {timeDiff > 0 ? '+' : ''}{timeDiff}s
-            </div>
-        )}
       </div>
 
       {/* Audio Visualizer */}

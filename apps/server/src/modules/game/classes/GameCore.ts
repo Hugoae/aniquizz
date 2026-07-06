@@ -1,5 +1,5 @@
 import { Server } from 'socket.io';
-import { GamePlayer, GAME_CONFIG } from '@aniquizz/shared';
+import { GamePlayer, GAME_CONFIG, formatSongTypeLabel } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { getRandomSongs, generateChoices, generateDuo, SongFilters, saveGameHistory } from '../gameService';
 import { getUserAnimeIds } from '../../anilist/anilistService'; 
@@ -42,7 +42,7 @@ export abstract class GameCore {
     this.settings = settings;
   }
 
-  // Méthodes abstraites implémentées par les classes enfants (StandardGame, BattleRoyaleGame)
+  // Abstract methods implemented by StandardGame (Phase 5 engine rewrite)
   abstract handleAnswer(playerId: string, answer: string, mode: string): void;
   abstract onRoundEnd(): void;
 
@@ -356,8 +356,8 @@ export abstract class GameCore {
                 validAnswers: [item.anime.name, ...(item.anime.altNames || []), item.anime.franchise?.name].filter(Boolean) as string[],
                 title: item.title, 
                 artist: item.artist, 
-                type: item.type,
-                difficulty: item.difficulty,
+                type: formatSongTypeLabel(item.songType, item.sequence),
+                difficulty: item.difficulty.toLowerCase(),
                 videoKey: item.videoKey, 
                 videoStartTime: randomStart,
                 guessDuration: guessTime, 

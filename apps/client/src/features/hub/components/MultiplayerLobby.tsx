@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/UserAvatar'; 
 import { 
     Trophy, Crown, Check, Settings, ArrowLeft, Copy, Play, 
-    Eye, EyeOff, Mic2, AlertTriangle, ListMusic, Target, Clock, Shuffle, Zap, Users, Hourglass
+    Eye, EyeOff, Mic2, AlertTriangle, ListMusic, Target, Clock, Shuffle, Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -72,11 +72,7 @@ export function MultiplayerLobby({
   const guests = players.filter(p => !p.isHost);
   const allGuestsReady = guests.every(p => p.isReady);
   
-  const gameType = gameSettings?.gameType || 'standard';
-  let minPlayersRequired = 1;
-  
-  if (gameType === 'challenger') minPlayersRequired = 2;
-
+  const minPlayersRequired = 1;
   const hasEnoughPlayers = players.length >= minPlayersRequired;
 
   const canStart = isHost && players.length > 0 && hasEnoughPlayers && (isSolo || allGuestsReady) && !isGameRunning;
@@ -125,34 +121,12 @@ export function MultiplayerLobby({
 
   const difficultyBadge = getDifficultyBadge(gameSettings?.difficulty || []);
 
-  const getModeBadge = () => {
-      const mode = gameSettings?.gameType || 'standard';
-      
-      if (mode === 'challenger') { 
-          return (
-              <div className="flex items-center gap-2 bg-yellow-500 text-black px-4 py-1.5 rounded-lg font-black uppercase tracking-wider shadow-lg shadow-yellow-500/20 animate-in zoom-in">
-                  <Zap className="h-5 w-5 fill-current" />
-                  CHALLENGER
-              </div>
-          );
-      }
-      if (mode === 'time-trial') { 
-          return (
-              <div className="flex items-center gap-2 bg-cyan-500 text-black px-4 py-1.5 rounded-lg font-black uppercase tracking-wider shadow-lg shadow-cyan-500/20 animate-in zoom-in">
-                  <Hourglass className="h-5 w-5 fill-current" />
-                  TIME TRIAL
-              </div>
-          );
-      }
-      
-      // Standard
-      return (
-          <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-black uppercase tracking-wider shadow-lg shadow-primary/20 animate-in zoom-in">
-              <Trophy className="h-5 w-5 fill-current" />
-              STANDARD
-          </div>
-      );
-  };
+  const getModeBadge = () => (
+      <div className="flex items-center gap-2 bg-primary text-primary-foreground px-4 py-1.5 rounded-lg font-black uppercase tracking-wider shadow-lg shadow-primary/20 animate-in zoom-in">
+          <Trophy className="h-5 w-5 fill-current" />
+          STANDARD
+      </div>
+  );
 
   return (
     <div className="w-full max-w-6xl mx-auto flex flex-col gap-6 h-[calc(100vh-140px)] animate-fade-in">
@@ -207,19 +181,11 @@ export function MultiplayerLobby({
         {/* Settings Badges */}
         {gameSettings && (
             <div className="grid grid-cols-2 md:flex md:flex-wrap gap-2 pt-2 border-t border-white/5">
-                {gameSettings.gameType === 'time-trial' ? (
-                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
-                        <Clock className="h-4 w-4 text-cyan-400" />
-                        <span className="text-xs font-bold text-muted-foreground uppercase">Départ :</span>
-                        <span className="text-sm font-bold">{gameSettings.startingTime}s</span>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
-                        <ListMusic className="h-4 w-4 text-primary" />
-                        <span className="text-xs font-bold text-muted-foreground uppercase">Sons :</span>
-                        <span className="text-sm font-bold">{gameSettings.soundCount}</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
+                    <ListMusic className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-bold text-muted-foreground uppercase">Sons :</span>
+                    <span className="text-sm font-bold">{gameSettings.soundCount}</span>
+                </div>
                 
                 <div className={cn("flex items-center gap-2 px-3 py-1.5 rounded-md border", difficultyBadge.className)}>
                     <AlertTriangle className="h-4 w-4 fill-current/10" />
@@ -227,26 +193,22 @@ export function MultiplayerLobby({
                     <span className="text-sm font-bold capitalize">{difficultyBadge.label}</span>
                 </div>
 
-                {gameSettings.gameType !== 'time-trial' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
-                        <Clock className="h-4 w-4 text-orange-400" />
-                        <span className="text-xs font-bold text-muted-foreground uppercase">Temps :</span>
-                        <span className="text-sm font-bold">{gameSettings.guessDuration}s</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
+                    <Clock className="h-4 w-4 text-orange-400" />
+                    <span className="text-xs font-bold text-muted-foreground uppercase">Temps :</span>
+                    <span className="text-sm font-bold">{gameSettings.guessDuration}s</span>
+                </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
                     <Target className="h-4 w-4 text-cyan-400" />
                     <span className="text-xs font-bold text-muted-foreground uppercase">Mode :</span>
                     <span className="text-sm font-bold capitalize">{gameSettings.precision === 'exact' ? 'Nom Exact' : 'Franchise'}</span>
                 </div>
                 
-                {gameSettings.gameType !== 'challenger' && gameSettings.gameType !== 'time-trial' && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
-                        <Mic2 className="h-4 w-4 text-purple-400" />
-                        <span className="text-xs font-bold text-muted-foreground uppercase">Type :</span>
-                        <span className="text-sm font-bold capitalize">{gameSettings.responseType === 'mix' ? 'Typing & QCM' : gameSettings.responseType}</span>
-                    </div>
-                )}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
+                    <Mic2 className="h-4 w-4 text-purple-400" />
+                    <span className="text-xs font-bold text-muted-foreground uppercase">Type :</span>
+                    <span className="text-sm font-bold capitalize">{gameSettings.responseType === 'mix' ? 'Typing & QCM' : gameSettings.responseType}</span>
+                </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-secondary/30 border border-white/5">
                     <Shuffle className="h-4 w-4 text-pink-400" />
                     <span className="text-xs font-bold text-muted-foreground uppercase">Source :</span>

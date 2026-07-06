@@ -1,7 +1,19 @@
+import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
 import { getUserAnimeIds } from '../anilist/anilistService';
 import { logger } from '../../utils/logger';
-import { GAME_CONFIG } from '@aniquizz/shared';
+import { GAME_CONFIG, formatSongTypeLabel } from '@aniquizz/shared';
+
+const toDifficultyEnum = (value: string): Difficulty => {
+  switch (value.toLowerCase()) {
+    case 'easy':
+      return Difficulty.EASY;
+    case 'hard':
+      return Difficulty.HARD;
+    default:
+      return Difficulty.MEDIUM;
+  }
+};
 
 /**
  * Critères de filtrage pour la sélection des musiques.
@@ -98,8 +110,8 @@ const smartShuffle = (songs: any[]) => {
     return result;
 };
 
-// Hiérarchie des difficultés pour la cascade
-const DIFFICULTY_ORDER = ['hard', 'medium', 'easy'];
+// Difficulty cascade (hardest → easiest)
+const DIFFICULTY_ORDER: Difficulty[] = [Difficulty.HARD, Difficulty.MEDIUM, Difficulty.EASY];
 
 /**
  * Exécute la stratégie de récupération en cascade (Waterfall).
@@ -116,7 +128,6 @@ const fetchWithFallback = async (
     
     const isWatchedMode = Array.isArray(watchedIds) && watchedIds.length > 0;
 
-    // Helper pour récupérer les candidats
     const getCandidates = async (where: any) => {
         return await prisma.song.findMany({ 
             where, 
@@ -127,23 +138,20 @@ const fetchWithFallback = async (
         });
     };
 
-    // 1. Déterminer la séquence de difficultés à explorer
-    let cascade: string[][] = [];
+    let cascade: Difficulty[][] = [];
     
     if (!targetDifficulties || targetDifficulties.length === 0) {
-        cascade = [['any']]; 
+        cascade = [[]];
     } else {
-        // Mode Cascade : On commence par la sélection utilisateur
-        cascade.push(targetDifficulties);
+        const mapped = [...new Set(targetDifficulties.map(toDifficultyEnum))];
+        cascade.push(mapped);
 
-        // Puis on ajoute les difficultés inférieures manquantes
         let lowestIndex = -1;
-        targetDifficulties.forEach(d => {
+        mapped.forEach((d) => {
             const idx = DIFFICULTY_ORDER.indexOf(d);
             if (idx > lowestIndex) lowestIndex = idx;
         });
 
-        // On ajoute tout ce qui est après (plus facile)
         if (lowestIndex !== -1) {
             for (let i = lowestIndex + 1; i < DIFFICULTY_ORDER.length; i++) {
                 cascade.push([DIFFICULTY_ORDER[i]]);
@@ -158,8 +166,7 @@ const fetchWithFallback = async (
         // Si on a assez de sons, on arrête tout
         if (finalSongs.length >= count) break;
 
-        // Construction du filtre difficulté pour cette étape
-        const diffFilter = difficulties[0] === 'any' ? undefined : { in: difficulties };
+        const diffFilter = difficulties.length === 0 ? undefined : { in: difficulties };
 
         // --- SOUS-ÉTAPE A : Watched List (Priorité) ---
         if (isWatchedMode) {
@@ -243,13 +250,12 @@ export const getRandomSongs = async (count: number, filters?: SongFilters) => {
     // NOTE : On ne met PAS 'difficulty' dans whereClause ici.
     // C'est fetchWithFallback qui va l'appliquer étape par étape pour gérer la cascade.
     
-    // Filtre : Types (OP/ED/OST)
     if (filters?.types?.length) {
-        const conds = [];
-        if (filters.types.includes('opening')) conds.push({ type: { startsWith: 'OP' } });
-        if (filters.types.includes('ending')) conds.push({ type: { startsWith: 'ED' } });
-        if (filters.types.includes('ost')) conds.push({ type: { startsWith: 'IN' } }); 
-        if (conds.length > 0) whereClause.OR = conds;
+        const songTypes: SongType[] = [];
+        if (filters.types.includes('opening')) songTypes.push(SongType.OP);
+        if (filters.types.includes('ending')) songTypes.push(SongType.ED);
+        if (filters.types.includes('ost')) songTypes.push(SongType.INSERT);
+        if (songTypes.length > 0) whereClause.songType = { in: songTypes };
     }
     
     // Filtre : Playlists Spéciales
@@ -374,19 +380,26 @@ export const saveGameHistory = async (players: any[], playlist: any[], winnerIds
                     }
                 });
 
-                // 2. Historique des sons (Pokedex)
-                if (songIds.length > 0) {
-                    const entries = songIds.map((songId: number) => ({
-                        profileId: user.id,
-                        songId: songId,
-                        listenedAt: new Date()
-                    }));
-
-                    await prisma.songHistory.createMany({
-                        data: entries,
-                        skipDuplicates: true
-                    }).catch((err: any) => {
-                        logger.warn(`[GameService] Doublon ou erreur historique pour ${user.username}: ${err.message}`, 'Scoring');
+                // 2. Aggregate song history (Pokedex)
+                for (const songId of songIds) {
+                    await prisma.songHistory.upsert({
+                        where: {
+                            profileId_songId: { profileId: user.id, songId },
+                        },
+                        create: {
+                            profileId: user.id,
+                            songId,
+                            playCount: 1,
+                            correctCount: 0,
+                            lastPlayedAt: new Date(),
+                        },
+                        update: {
+                            playCount: { increment: 1 },
+                            lastPlayedAt: new Date(),
+                        },
+                    }).catch((err: unknown) => {
+                        const message = err instanceof Error ? err.message : String(err);
+                        logger.warn(`[GameService] SongHistory upsert failed for ${user.username}: ${message}`, 'Scoring');
                     });
                 }
                 successCount++;

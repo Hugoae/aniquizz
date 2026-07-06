@@ -25,7 +25,7 @@ type View = 'modes' | 'roomList' | 'createModal' | 'lobby';
 
 const defaultConfig: GameConfig = {
   mode: 'solo', gameType: 'standard', responseType: 'mix', soundCount: 10, soundTypes: ['opening'], difficulty: ['medium'],
-  guessDuration: 15, soundSelection: 'random', playlist: null, livesCount: 3, precision: 'franchise', decade: '2010', watchedMode: 'union'
+  guessDuration: 15, soundSelection: 'random', playlist: null, precision: 'franchise', decade: '2010', watchedMode: 'union'
 };
 
 const defaultRoomConfig: RoomConfig = { ...defaultConfig, mode: 'multiplayer', roomName: '', isPrivate: false, password: '', maxPlayers: 8 };

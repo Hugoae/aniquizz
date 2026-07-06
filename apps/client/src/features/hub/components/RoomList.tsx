@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, Search, Lock, ListMusic, AlertTriangle, Clock, Target, Mic2, Shuffle, Play, Zap, Trophy, Hourglass } from 'lucide-react';
+import { Users, Search, Lock, ListMusic, AlertTriangle, Clock, Target, Mic2, Shuffle, Play, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -21,8 +21,7 @@ interface RoomSummary {
     precision?: string;
     responseType?: string;
     soundSelection?: string;
-    gameType?: string; 
-    startingTime?: number; 
+    gameType?: string;
   };
 }
 
@@ -80,15 +79,9 @@ export function RoomList({ rooms, onJoin }: RoomListProps) {
       return { label: 'Mixte', className: 'text-blue-400 border-blue-500/20 bg-blue-500/10' };
   };
 
-  const getModeBadge = (type?: string) => {
-      if (type === 'challenger') { 
-          return <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-yellow-500 text-black text-[10px] font-black uppercase tracking-wider shadow-sm"><Zap className="w-3 h-3 fill-current" /> Challenger</span>;
-      }
-      if (type === 'time-trial') { 
-          return <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500 text-black text-[10px] font-black uppercase tracking-wider shadow-sm"><Hourglass className="w-3 h-3 fill-current" /> TT</span>;
-      }
-      return <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider shadow-sm"><Trophy className="w-3 h-3 fill-current" /> STD</span>;
-  };
+  const getModeBadge = () => (
+      <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider shadow-sm"><Trophy className="w-3 h-3 fill-current" /> STD</span>
+  );
 
   return (
     <div className="w-full max-w-5xl space-y-6">
@@ -131,7 +124,7 @@ export function RoomList({ rooms, onJoin }: RoomListProps) {
                   <div className="flex-1 min-w-0 flex flex-col gap-3">
                     <div className="flex items-center justify-between md:justify-start gap-4">
                         <div className="flex items-center gap-2">
-                             {getModeBadge(s.gameType)}
+                             {getModeBadge()}
                              <h3 className="font-black text-xl truncate text-foreground group-hover:text-primary transition-colors tracking-tight">
                                 {room.name}
                             </h3>
@@ -150,41 +143,30 @@ export function RoomList({ rooms, onJoin }: RoomListProps) {
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                        {s.gameType === 'time-trial' ? (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/5 bg-secondary/30 text-xs font-bold text-muted-foreground">
-                                <Clock className="w-3.5 h-3.5 text-cyan-400" />
-                                <span className="text-foreground">{s.startingTime}s</span>
-                            </div>
-                        ) : (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/5 bg-secondary/30 text-xs font-bold text-muted-foreground">
-                                <ListMusic className="w-3.5 h-3.5 text-purple-400" />
-                                <span className="text-foreground">{s.soundCount || 10}</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-white/5 bg-secondary/30 text-xs font-bold text-muted-foreground">
+                            <ListMusic className="w-3.5 h-3.5 text-purple-400" />
+                            <span className="text-foreground">{s.soundCount || 10}</span>
+                        </div>
 
                         <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold", diffBadge.className)}>
                             <AlertTriangle className="w-3.5 h-3.5 fill-current/20" />
                             <span>{diffBadge.label}</span>
                         </div>
 
-                        {s.gameType !== 'time-trial' && (
-                            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-orange-500/20 bg-orange-500/10 text-xs font-bold text-orange-400">
-                                <Clock className="w-3.5 h-3.5" />
-                                <span>{s.guessDuration || 15}s</span>
-                            </div>
-                        )}
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-orange-500/20 bg-orange-500/10 text-xs font-bold text-orange-400">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>{s.guessDuration || 15}s</span>
+                        </div>
 
                         <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-cyan-500/20 bg-cyan-500/10 text-xs font-bold text-cyan-400">
                             <Target className="w-3.5 h-3.5" />
                             <span className="capitalize">{s.precision === 'exact' ? 'Exact' : 'Franchise'}</span>
                         </div>
 
-                        {s.gameType !== 'challenger' && s.gameType !== 'time-trial' && (
-                            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/20 bg-purple-500/10 text-xs font-bold text-purple-400">
-                                <Mic2 className="w-3.5 h-3.5" />
-                                <span className="capitalize">{s.responseType === 'mix' ? 'Typing & QCM' : s.responseType}</span>
-                            </div>
-                        )}
+                        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-purple-500/20 bg-purple-500/10 text-xs font-bold text-purple-400">
+                            <Mic2 className="w-3.5 h-3.5" />
+                            <span className="capitalize">{s.responseType === 'mix' ? 'Typing & QCM' : s.responseType}</span>
+                        </div>
 
                         <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-pink-500/20 bg-pink-500/10 text-xs font-bold text-pink-400">
                             <Shuffle className="w-3.5 h-3.5" />

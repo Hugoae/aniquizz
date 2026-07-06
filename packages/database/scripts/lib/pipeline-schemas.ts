@@ -1,14 +1,18 @@
 import { z } from "zod";
 
-const songSchema = z.object({
-  title: z.string().optional(),
-  artist: z.string().optional(),
-  type: z.string(),
-  sequence: z.number().optional(),
-  sourceUrl: z.string().url(),
-  difficulty: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-});
+const songSchema = z
+  .object({
+    title: z.string().optional(),
+    artist: z.string().optional(),
+    songType: z.enum(['OP', 'ED', 'INSERT']).optional(),
+    sequence: z.number().int().positive().optional(),
+    /** @deprecated legacy pipeline field — use songType + sequence */
+    type: z.string().optional(),
+    sourceUrl: z.string().url(),
+    difficulty: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  })
+  .refine((s) => s.songType || s.type, { message: 'songType or legacy type required' });
 
 const animeSchema = z.object({
   id: z.number(),

@@ -1,42 +1,26 @@
 import { StandardPlayerCard } from '../modes/standard/StandardPlayerCard';
-import { ChallengerPlayerCard } from '../modes/challenger/ChallengerPlayerCard';
 
 interface PlayerCardProps {
   player: any;
-  isCurrentUser?: boolean; 
-  showResult?: boolean;    
-  compact?: boolean;       
+  isCurrentUser?: boolean;
+  showResult?: boolean;
+  compact?: boolean;
   onClick?: () => void;
-  gameMode?: 'standard' | 'challenger';
-  hideScore?: boolean; // Gardé pour compatibilité mais non utilisé dans la nouvelle structure pour l'instant
+  hideScore?: boolean;
 }
 
-export function PlayerCard({ 
-  player, 
-  isCurrentUser, 
-  showResult, 
-  onClick, 
-  gameMode 
+export function PlayerCard({
+  player,
+  isCurrentUser,
+  showResult,
+  onClick,
 }: PlayerCardProps) {
-  
-  if (gameMode === 'challenger'){
-      return (
-        <ChallengerPlayerCard 
-            player={player} 
-            isCurrentUser={isCurrentUser} 
-            showResult={showResult} 
-            onClick={onClick} 
-        />
-      );
-  }
-
-  // Par défaut Standard
   return (
-    <StandardPlayerCard 
-        player={player} 
-        isCurrentUser={isCurrentUser} 
-        showResult={showResult} 
-        onClick={onClick} 
+    <StandardPlayerCard
+      player={player}
+      isCurrentUser={isCurrentUser}
+      showResult={showResult}
+      onClick={onClick}
     />
   );
 }

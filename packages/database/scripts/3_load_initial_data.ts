@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import { parsePipelineJson } from './lib/pipeline-schemas';
+import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
 
 const prisma = new PrismaClient();
 const INPUT_FILE = path.join(__dirname, "../data/data_step2.json");
@@ -111,7 +112,8 @@ async function main() {
         if (!sData.sourceUrl) continue;
 
         // Clé unique pour identifier le son (inchangé)
-        const songNameClean = `${aData.name.replace(/[^a-zA-Z0-9]/g, "")}-${aData.id}-${sData.type}.mp4`;
+        const { songType, sequence } = normalizePipelineSong(sData);
+        const songNameClean = buildVideoKey(aData.name, aData.id, songType, sequence);
 
         // Vérification du Lock
         const existingSong = await prisma.song.findUnique({
@@ -127,20 +129,22 @@ async function main() {
           update: {
             title: sData.title,
             artist: sData.artist,
-            type: sData.type,
+            songType,
+            sequence,
             tags: sData.tags || [],
             sourceUrl: sData.sourceUrl,
-            difficulty: sData.difficulty || 'medium',
+            difficulty: parsePipelineDifficulty(sData.difficulty),
             animeId: aData.id
           },
           create: {
             title: sData.title,
             artist: sData.artist,
-            type: sData.type,
+            songType,
+            sequence,
             videoKey: songNameClean,
             tags: sData.tags || [],
             sourceUrl: sData.sourceUrl,
-            difficulty: sData.difficulty || 'medium',
+            difficulty: parsePipelineDifficulty(sData.difficulty),
             animeId: aData.id,
             downloadStatus: 'PENDING'
           }

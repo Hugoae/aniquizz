@@ -1,24 +1,15 @@
 // packages/shared/src/constants.ts
 // Game configuration constants shared by the client and the server.
-// NOTE: Challenger / Time Trial / Battle Royale config is kept until Phase 4
-// (dead-mode removal). Human-readable labels remain French (user-facing UI).
+// Human-readable labels remain French (user-facing UI).
 
 export const GAME_CONFIG = {
   // --- SCORING ---
   SCORING: {
-    TYPING: 5, // typed answer (input)
-    MIX: 5, // mix mode
-    QCM: 2, // multiple choice (4 options)
-    DUO: 1, // duo mode (50/50)
+    TYPING: 5,
+    MIX: 5,
+    QCM: 2,
+    DUO: 1,
     DEFAULT: 0,
-
-    // Challenger mode
-    CHALLENGER: {
-      BASE: 5, // base points on a correct guess
-      BONUS_GOLD: 3, // 1st place bonus
-      BONUS_SILVER: 2, // 2nd place bonus
-      BONUS_BRONZE: 1, // 3rd place bonus
-    },
   },
 
   // --- VICTORY CONDITIONS ---
@@ -31,14 +22,6 @@ export const GAME_CONFIG = {
     },
     MULTI: {
       PODIUM_THRESHOLD: 5,
-    },
-    // Time Trial: score goal (number of anime to guess).
-    // Shape: { 'INITIAL_TIME': { DIFFICULTY: GOAL } }
-    TIME_TRIAL: {
-      '15': { EASY: 8, MEDIUM: 5, HARD: 3 }, // very short, intense
-      '30': { EASY: 15, MEDIUM: 10, HARD: 5 }, // standard
-      '45': { EASY: 23, MEDIUM: 15, HARD: 8 }, // long haul
-      '60': { EASY: 30, MEDIUM: 20, HARD: 10 }, // marathon
     },
   },
 
@@ -59,43 +42,6 @@ export const GAME_CONFIG = {
 
   // --- DECADES ---
   DECADES: ['1970', '1980', '1990', '2000', '2010', '2020'],
-
-  // --- CHALLENGER MODE ---
-  CHALLENGER: {
-    MAX_LIVES: 3,
-  },
-
-  // --- TIME TRIAL MODE ---
-  TIME_TRIAL: {
-    BONUS_TIME: 5, // +5s on a correct answer
-    PENALTY_SKIP: 5, // -5s on skip
-    MAX_TIME: 120, // cap
-
-    // Transition timings (3-step sequence)
-    FEEDBACK_DURATION: 1500,
-    REVEAL_DURATION: 3000,
-    RESUME_DELAY: 3000,
-
-    START_OPTIONS: [15, 30, 45, 60], // options available in the lobby
-  },
-
-  // --- BATTLE ROYALE ---
-  BATTLE_ROYALE: {
-    MAX_LIVES: 3,
-    HEAL_STREAK: 5,
-    TOTAL_ROUNDS: 30,
-    GOULAG_ROUND_INDEX: 15,
-    PHASES: [
-      { min: 1, max: 5, time: 20, diff: 'easy', label: 'Phase 1' },
-      { min: 6, max: 10, time: 15, diff: 'easy', label: 'Phase 2' },
-      { min: 11, max: 14, time: 15, diff: 'medium', label: 'Phase 3' },
-      { min: 15, max: 15, time: 20, diff: 'easy', label: 'Phase 4 : Goulag' },
-      { min: 16, max: 20, time: 10, diff: 'medium', label: 'Phase 5' },
-      { min: 21, max: 25, time: 10, diff: 'hard', label: 'Phase 6' },
-      { min: 26, max: 29, time: 5, diff: 'hard', label: 'Phase 7' },
-      { min: 30, max: 30, time: 5, diff: 'hard', label: 'Phase 8 : Mort Subite' },
-    ],
-  },
 
   // --- LIMITS ---
   LIMITS: {

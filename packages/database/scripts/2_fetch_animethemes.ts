@@ -260,10 +260,10 @@ async function enrichData() {
         songsForThisAnime.push({
           title: rawTitle,
           artist,
-          type: `OP${seq}`,
+          songType: 'OP',
           sequence: seq,
           sourceUrl,
-          difficulty: anime.difficulty ?? "easy",
+          difficulty: anime.difficulty ?? 'easy',
           tags: franchise.tags ?? [],
         });
       }

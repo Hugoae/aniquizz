@@ -29,7 +29,7 @@ export const registerGameHandlers = (io: Server, socket: Socket) => {
 
   const voteSkip = ({ roomId }: { roomId: string }) => {
     const game = gameManager.getGame(roomId);
-    // Dans TimeTrialGame, ceci déclenche le skip avec pénalité
+    // Skip vote with penalty (legacy Time Trial — removed in Phase 4)
     if (game) game.voteSkip(socket.id);
   };
 

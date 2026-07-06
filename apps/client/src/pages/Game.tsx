@@ -7,9 +7,6 @@ import { Button } from '@/components/ui/button';
 
 import { GameOver } from '@/features/game/components/GameOver';
 import { StandardGameLayout } from '@/features/game/components/modes/standard/StandardGameLayout';
-import { ChallengerGameLayout } from '@/features/game/components/modes/challenger/ChallengerGameLayout';
-import { TimeTrialGameLayout } from '@/features/game/components/modes/time-trial/TimeTrialGameLayout'; 
-import { TimeTrialGameOver } from '@/features/game/components/modes/time-trial/TimeTrialGameOver';
 
 import { GlobalSettingsModal } from '@/features/settings/components/GlobalSettingsModal';
 import { 
@@ -32,10 +29,7 @@ export default function Game() {
   
   const initialPlayers = initialState.players || [];
   
-  const settings = initialState.settings || { gameType: 'Standard' };
-  
-  const isChallenger = settings.gameType === 'challenger'; 
-  const isTimeTrial = settings.gameType === 'time-trial'; 
+  const settings = initialState.settings || { gameType: 'standard' };
   
   const gameMode = (initialState.mode === 'solo' || settings.maxPlayers === 1) ? 'solo' : 'multiplayer';
   
@@ -58,13 +52,11 @@ export default function Game() {
   const [storedQcmChoices, setStoredQcmChoices] = useState<string[]>([]);
   const [storedDuoChoices, setStoredDuoChoices] = useState<string[]>([]);
 
-  const [timeLeft, setTimeLeft] = useState(settings.startingTime || 0);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [progress, setProgress] = useState(100);
   const [phaseEndTime, setPhaseEndTime] = useState<number>(0);
   const [phaseTotalDuration, setPhaseTotalDuration] = useState<number>(settings.guessDuration);
   
-  const [timeDiff, setTimeDiff] = useState<number | null>(null);
-
   const [gameHistory, setGameHistory] = useState<any[]>([]); 
   const [victoryData, setVictoryData] = useState<any>(null);
   const [animeList, setAnimeList] = useState<any[]>([]);
@@ -206,7 +198,7 @@ export default function Game() {
       setSubmittedAnswer(null); setAnswer('');
       setProgress(100); setCurrentRound(data.round); setTotalRounds(data.totalRounds);
       
-      // Sync Historique Time Trial
+      // Sync history
       if (data.history) {
           setGameHistory(data.history);
       }
@@ -231,11 +223,8 @@ export default function Game() {
     const onRoundReveal = async (data: any) => {
       setPhase('revealed');
       setCurrentSong(data.song);
-      
-      if (!isTimeTrial) {
-          setPhaseEndTime(Date.now() + (data.duration * 1000));
-          setPhaseTotalDuration(data.duration);
-      }
+      setPhaseEndTime(Date.now() + (data.duration * 1000));
+      setPhaseTotalDuration(data.duration);
       
       if (data.nextVideo) setNextVideoKey(data.nextVideo);
       setHasVotedSkip(false);
@@ -247,28 +236,13 @@ export default function Game() {
       const myPoints = myPlayer?.roundPoints || 0;
       const myIsCorrect = myPlayer?.isCorrect || false;
 
-      // Historique Standard
-      if (!isTimeTrial) {
-          setGameHistory(prev => [...prev, { round: currentRound, song: data.song, isCorrect: myIsCorrect, points: myPoints }]);
-      }
+      setGameHistory(prev => [...prev, { round: currentRound, song: data.song, isCorrect: myIsCorrect, points: myPoints }]);
       
-      if (myPoints > 0 && !isTimeTrial) { 
+      if (myPoints > 0) { 
           setPointsEarned(myPoints); 
           setShowPointsAnimation(true); 
           setTimeout(() => setShowPointsAnimation(false), 3000); 
       }
-    };
-
-    const onTimerSync = (data: { time: number }) => {
-        setTimeLeft(data.time);
-    };
-
-    const onAnswerResult = (data: any) => {
-        if (String(data.playerId) === String(socket.id)) {
-            if (data.bonus) setTimeDiff(data.bonus);
-            if (data.penalty) setTimeDiff(-data.penalty);
-            if (data.time) setTimeLeft(data.time);
-        }
     };
 
     const onUpdatePlayers = (data: { players: any[] }) => { 
@@ -319,8 +293,6 @@ export default function Game() {
     socket.on('game_state_sync', onGameStateSync);
     socket.on('round_start', onRoundStart);
     socket.on('round_reveal', onRoundReveal);
-    socket.on('timer_sync', onTimerSync);
-    socket.on('answer_result', onAnswerResult);
     socket.on('update_players', onUpdatePlayers);
     socket.on('game_over', onGameOver);
     socket.on('vote_update', onVoteUpdate);
@@ -336,8 +308,6 @@ export default function Game() {
         socket.off('game_state_sync', onGameStateSync);
         socket.off('round_start', onRoundStart);
         socket.off('round_reveal', onRoundReveal);
-        socket.off('timer_sync', onTimerSync);
-        socket.off('answer_result', onAnswerResult); // ✅ Ne retire QUE cette fonction
         socket.off('update_players', onUpdatePlayers);
         socket.off('game_over', onGameOver);
         socket.off('vote_update', onVoteUpdate);
@@ -348,10 +318,10 @@ export default function Game() {
         socket.off('error', onError);
         socket.off('player_left', onPlayerLeft);
     };
-  }, [roomId, settings, animeList, currentRound, isTimeTrial]);
+  }, [roomId, settings, animeList, currentRound]);
 
   useEffect(() => {
-    if (phase === 'loading' || isGamePaused || phase === 'ended' || isTimeTrial) return;
+    if (phase === 'loading' || isGamePaused || phase === 'ended') return;
     const interval = setInterval(() => {
       const now = Date.now();
       const remainingTotalMs = Math.max(0, phaseEndTime - now); 
@@ -362,7 +332,7 @@ export default function Game() {
       setProgress(pct);
     }, 100); 
     return () => clearInterval(interval);
-  }, [phaseEndTime, phase, isGamePaused, phaseTotalDuration, isTimeTrial]);
+  }, [phaseEndTime, phase, isGamePaused, phaseTotalDuration]);
 
   useEffect(() => {
     if (phase === 'loading') {
@@ -408,7 +378,7 @@ export default function Game() {
           sourceLabel: "Playlist", 
           difficultyLabel: "Moyen", 
           precisionLabel: "Exact", 
-          modeLabel: isChallenger ? 'Challenger' : isTimeTrial ? 'Time Trial' : 'Standard' 
+          modeLabel: 'Standard' 
       };
   };
 
@@ -426,19 +396,6 @@ export default function Game() {
   };
 
   if (phase === 'ended') {
-      if (isTimeTrial) {
-          return (
-            <TimeTrialGameOver
-              players={players}
-              currentUserId={socket.id || ""}
-              onLeave={handleReturnToLobby}
-              onReplay={handleReplay}
-              history={gameHistory}
-              settings={settings}
-              victoryData={victoryData}
-            />
-          );
-      }
       return <GameOver players={players} currentUserId={socket.id || ""} onLeave={handleReturnToLobby} onReplay={handleReplay} victoryData={victoryData} />;
   }
 
@@ -458,13 +415,7 @@ export default function Game() {
             )}
         </div>
       ) : (
-          isChallenger ? (
-            <ChallengerGameLayout {...commonProps} videoRef={videoRef} myWatchedIds={myWatchedIds} inputMode={inputMode} choices={choices} onSwitchCarre={() => {}} onSwitchDuo={() => {}} showPointsAnimation={showPointsAnimation} pointsEarned={pointsEarned} />
-          ) : isTimeTrial ? ( 
-            <TimeTrialGameLayout {...commonProps} inputMode={inputMode} timeDiff={timeDiff} pointsEarned={players.find(p => String(p.id) === String(socket.id))?.score || 0} showPointsAnimation={false} history={gameHistory} />
-          ) : (
             <StandardGameLayout {...commonProps} videoRef={videoRef} myWatchedIds={myWatchedIds} inputMode={inputMode} choices={choices} onSwitchCarre={() => { setInputMode('carre'); setChoices(storedQcmChoices); }} onSwitchDuo={() => { setInputMode('duo'); setChoices(storedDuoChoices); }} showPointsAnimation={showPointsAnimation} pointsEarned={pointsEarned} />
-          )
       )}
       
       <GlobalSettingsModal open={showSettings} onOpenChange={setShowSettings} />

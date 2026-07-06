@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
+import { normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -94,13 +95,15 @@ async function main() {
       // --- 3. GESTION SONGS ---
       for (const song of anime.songs) {
         if (song.id) {
+          const { songType, sequence } = normalizePipelineSong(song);
           await prisma.song.update({
             where: { id: song.id },
             data: {
               title: song.title,
               artist: song.artist,
-              difficulty: song.difficulty,
-              type: song.type,
+              difficulty: parsePipelineDifficulty(song.difficulty),
+              songType,
+              sequence,
               tags: song.tags || [],
               isLocked: song.isLocked,
               animeId: anime.id

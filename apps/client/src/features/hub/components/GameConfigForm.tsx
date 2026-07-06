@@ -1,8 +1,7 @@
-import { useEffect } from 'react';
-import { 
-  Skull, Lock, RotateCcw, Music2, 
+import {
+  Lock, RotateCcw, Music2,
   Eye, Link2, Ungroup, Target, Globe2, Gamepad2,
-  Keyboard, MousePointer, Shuffle, Calendar, SlidersHorizontal, Trophy, Disc, AudioWaveform, HelpCircle, Zap, Hourglass, Timer
+  Keyboard, MousePointer, Shuffle, Calendar, SlidersHorizontal, Trophy, Disc, AudioWaveform, HelpCircle
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from '@/lib/utils';
 
-import { GameConfig, RoomConfig, GAME_CONFIG } from '@aniquizz/shared';
+import { GameConfig, RoomConfig } from '@aniquizz/shared';
 
 interface GameConfigFormProps {
   config: GameConfig | RoomConfig;
@@ -97,28 +96,7 @@ export function GameConfigForm({
   const isTop50Selected = (config.soundSelection as string) === 'playlist' && config.playlist === 'top-50';
   const isDecadeSelected = (config.soundSelection as string) === 'playlist' && config.playlist === 'decades';
   
-  // Casts pour vérifications
-  const isChallengerMode = (config.gameType as string) === 'challenger';
-  const isTimeTrialMode = (config.gameType as string) === 'time-trial'; // ✅ Détection Time Trial
-
-  // Options Time Trial
-  const timeTrialOptions = GAME_CONFIG.TIME_TRIAL.START_OPTIONS;
-
-  // Verification pour Watched
   const isWatchedDisabled = !user;
-
-  // ✅ FIX CRITIQUE : Forcer 100 sons en mode Time Trial
-  // Dès que l'utilisateur bascule sur Time Trial, on met le compteur de sons au max (100)
-  // pour permettre au "Back-fill" du serveur de fonctionner correctement.
-  useEffect(() => {
-    if (config.gameType === 'time-trial') {
-        setConfig((prev: any) => ({ ...prev, soundCount: 100 }));
-    } else if (config.gameType === 'standard' && config.soundCount === 100) {
-        // Optionnel : remettre à une valeur raisonnable (ex: 20) si on revient en standard
-        // et que c'était resté à 100.
-        setConfig((prev: any) => ({ ...prev, soundCount: 20 }));
-    }
-  }, [config.gameType, setConfig]);
 
   return (
     <div className="flex flex-col h-full max-h-[80vh]">
@@ -150,104 +128,45 @@ export function GameConfigForm({
             </div>
         )}
 
-        {/* Sélection Mode de Jeu */}
         <div className="space-y-3">
-            <SectionHeader icon={Gamepad2} title="Mode de Jeu" tooltip="Standard: Points classiques. Challenger: Vitesse et vies. Time Trial: Contre la montre." />
-            
-            <div className={cn("grid gap-4", "grid-cols-2")}>
-                
-                {/* STANDARD */}
-                <button onClick={() => setConfig((prev: any) => ({ ...prev, gameType: 'standard' }))} className={cn("flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all relative overflow-hidden", config.gameType === 'standard' ? "border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(var(--primary),0.3)]" : "border-border bg-card/50 text-muted-foreground hover:border-primary/50")}>
-                    <Trophy className="w-6 h-6" /><span className="font-bold text-sm">Standard</span>
-                </button>
-
-                {/* ✅ TIME TRIAL (Solo UNIQUEMENT) */}
-                {!isRoom && (
-                    <button 
-                        onClick={() => setConfig((prev: any) => ({ ...prev, gameType: 'time-trial', responseType: 'typing', startingTime: 30 }))} // Force 30s et Typing
-                        className={cn(
-                            "flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all relative overflow-hidden", 
-                            isTimeTrialMode ? "border-cyan-500 bg-cyan-500/10 text-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "border-border bg-card/50 text-muted-foreground hover:border-cyan-500/50"
-                        )}
-                    >
-                        <Hourglass className="w-6 h-6" /><span className="font-bold text-sm">Time Trial</span>
-                    </button>
-                )}
-
-                {/* CHALLENGER (Uniquement en Multi) */}
-                {isRoom && !hideRoomSettings && (
-                     <button onClick={() => setConfig((prev: any) => ({ ...prev, gameType: 'challenger', responseType: 'typing' }))} className={cn("flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all relative overflow-hidden", (config.gameType as string) === 'challenger' ? "border-yellow-500 bg-yellow-500/10 text-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)]" : "border-border bg-card/50 text-muted-foreground hover:border-yellow-500/50")}>
-                        <Zap className="w-6 h-6" /><span className="font-bold text-sm">Challenger</span>
-                    </button>
-                )}
+            <SectionHeader icon={Gamepad2} title="Mode de Jeu" tooltip="Mode Standard : points classiques par manche." />
+            <div className="flex items-center gap-2 p-3 rounded-lg border-2 border-primary bg-primary/10 text-primary shadow-[0_0_20px_rgba(var(--primary),0.3)] w-fit">
+                <Trophy className="w-6 h-6" />
+                <span className="font-bold text-sm">Standard</span>
             </div>
         </div>
 
-        {/* GRID PRINCIPALE */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
             <div className="space-y-6">
-                
-                {/* ✅ LOGIQUE DYNAMIQUE : Si Time Trial, on affiche le slider de Temps de départ au lieu du nb de sons */}
-                {!isTimeTrialMode ? (
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                            <div className="flex justify-between"><Label>Sons</Label><span className="font-mono text-primary font-bold">{config.soundCount}</span></div>
-                            <Slider value={[config.soundCount]} min={5} max={50} step={5} onValueChange={(v) => setConfig((prev: any) => ({ ...prev, soundCount: v[0] }))} />
-                        </div>
-                        <div className="space-y-3">
-                            <div className="flex justify-between"><Label>Durée</Label><span className="font-mono text-primary font-bold">{config.guessDuration}s</span></div>
-                            <Slider value={[config.guessDuration]} min={5} max={60} step={5} onValueChange={(v) => setConfig((prev: any) => ({ ...prev, guessDuration: v[0] }))} />
-                        </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                        <div className="flex justify-between"><Label>Sons</Label><span className="font-mono text-primary font-bold">{config.soundCount}</span></div>
+                        <Slider value={[config.soundCount]} min={5} max={50} step={5} onValueChange={(v) => setConfig((prev: any) => ({ ...prev, soundCount: v[0] }))} />
                     </div>
-                ) : (
-                    <div className="space-y-3 animate-in fade-in">
-                        <SectionHeader icon={Timer} title="Temps Initial" tooltip="Le temps dont vous disposez au départ." />
-                        <div className="grid grid-cols-4 gap-2">
-                            {timeTrialOptions.map((time) => (
-                                <button 
-                                    key={time} 
-                                    onClick={() => setConfig((prev: any) => ({ ...prev, startingTime: time }))} 
-                                    className={cn(
-                                        "py-2 rounded-lg font-bold border-2 transition-all text-sm",
-                                        config.startingTime === time 
-                                            ? "border-cyan-500 bg-cyan-500/20 text-cyan-400 shadow-sm" 
-                                            : "border-white/10 bg-card hover:bg-white/5 text-muted-foreground"
-                                    )}
-                                >
-                                    {time}s
-                                </button>
-                            ))}
-                        </div>
-                        <p className="text-[10px] text-muted-foreground text-center mt-1">
-                            Bonne réponse : <span className="text-green-400 font-bold">+5s</span> • Skip : <span className="text-red-400 font-bold">-5s</span> • Max : 120s
-                        </p>
+                    <div className="space-y-3">
+                        <div className="flex justify-between"><Label>Durée</Label><span className="font-mono text-primary font-bold">{config.guessDuration}s</span></div>
+                        <Slider value={[config.guessDuration]} min={5} max={60} step={5} onValueChange={(v) => setConfig((prev: any) => ({ ...prev, guessDuration: v[0] }))} />
                     </div>
-                )}
+                </div>
 
                 <div className="space-y-3">
                     <SectionHeader icon={Keyboard} title="Mode de réponse" tooltip="Comment les joueurs doivent-ils répondre ?" />
                     <div className="grid grid-cols-3 gap-2">
-                        {['typing', 'qcm', 'mix'].map((mode) => {
-                            // ✅ Désactivation si Challenger OU Time Trial (Typing Only)
-                            const isDisabled = (isChallengerMode || isTimeTrialMode) && mode !== 'typing';
-                            return (
+                        {['typing', 'qcm', 'mix'].map((mode) => (
                                 <button 
                                     key={mode} 
-                                    onClick={() => !isDisabled && setConfig((prev: any) => ({ ...prev, responseType: mode }))} 
-                                    disabled={isDisabled}
+                                    onClick={() => setConfig((prev: any) => ({ ...prev, responseType: mode }))} 
                                     className={cn(
                                         "p-2 rounded-lg border flex flex-col items-center gap-1 transition-all", 
                                         config.responseType === mode 
                                             ? "bg-primary/20 border-primary text-primary" 
                                             : "bg-card border-white/10 hover:bg-white/5",
-                                        isDisabled && "opacity-30 cursor-not-allowed grayscale bg-secondary/20"
                                     )}
                                 >
                                     {mode === 'typing' ? <Keyboard className="w-4 h-4" /> : mode === 'qcm' ? <MousePointer className="w-4 h-4" /> : <Shuffle className="w-4 h-4" />}
                                     <span className="text-[10px] font-bold uppercase">{mode}</span>
                                 </button>
-                            );
-                        })}
+                        ))}
                     </div>
                 </div>
 

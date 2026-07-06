@@ -1,6 +1,31 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 3 ✅ complete — ready for Phase 4
+## Current phase: Phase 4 ✅ complete — ready for Phase 5
+
+## Done (Phase 4 — Code cleanup, Standard mode only)
+
+- [x] **Removed dead game modes (server):** deleted `ChallengerGame.ts`, `TimeTrialGame.ts`; `GameManager` always instantiates `StandardGame`.
+- [x] **Removed dead game modes (client):** deleted `modes/challenger/` and `modes/time-trial/`; `Game.tsx` renders `StandardGameLayout` only; simplified `GameConfigForm`, `MultiplayerLobby`, `RoomList`, `PlayerCard`, `GameOver`.
+- [x] **`packages/shared` cleanup:**
+  - `constants.ts`: removed `CHALLENGER`, `TIME_TRIAL`, `BATTLE_ROYALE` blocks.
+  - `types.ts`: `gameType` → `'standard'` only; removed `livesCount`/`startingTime`/BattleRoyale types and mode-specific `GamePlayer` fields.
+  - `utils.ts`: `getRank` now driven by `GAME_CONFIG.RANKS`; added `formatSongTypeLabel`; typed `getFuzzySuggestions` with `FuzzyAnimeCandidate`.
+- [x] **Prisma schema + migration `20260706120000_phase4_schema_cleanup`** (applied on live Supabase):
+  - Enums `SongType` (OP/ED/INSERT) + `Difficulty` (EASY/MEDIUM/HARD); `Song.type` split → `songType` + `sequence`.
+  - Timestamps on `Song`/`Anime`/`Franchise`/`PlayerAnimeList`; `onDelete: Cascade` on `Song → Anime`.
+  - Dropped `SongVote` + `VoteType`; `SongHistory` reworked to aggregate (`playCount`/`correctCount`/`lastPlayedAt`).
+  - FK + hot-column indexes (advisor-confirmed); `Profile` leaderboard indexes.
+  - Anglicized schema comments.
+- [x] **Pipeline scripts:** `2_fetch_animethemes.ts` outputs `songType` + `sequence`; `3_load_initial_data.ts`, `seed_db.ts`, `seed_dev_catalogue.ts`, `import_edits_to_db.ts` updated; `lib/song-helpers.ts` normalizes legacy `type: "OP1"` from `data_step2.json` / `manual_edits.json`.
+- [x] **`gameService.ts`:** song filters use `songType` enum; difficulty cascade uses `Difficulty` enum; `saveGameHistory` upserts aggregate `SongHistory`.
+- [x] **`GameCore`:** playlist items expose `formatSongTypeLabel(songType, sequence)` for UI compatibility.
+- [x] Verified: `pnpm build` OK (4/4); `prisma migrate deploy` OK on live DB.
+
+### Phase 4 notes
+- `GameSession`/`GameParticipant` kept until Phase 5 (`Match`/`MatchPlayer`/`MatchRound`/`RoundAnswer`).
+- Daily/Library/Competitive placeholder pages unchanged.
+- `data_step2.json` still has legacy `type` fields — scripts normalize at load time; regenerate catalogue (`pipeline:build`) when ready for fresh JSON with `songType`/`sequence`.
+- Dev catalogue (10 R2 openings) survives migration via SQL type parsing (`OP1` → `songType=OP`, `sequence=1`).
 
 ## Done (Phase 3 — Observability, logs & debug)
 
@@ -19,7 +44,9 @@
 - [x] Verified: `pnpm build` OK (4/4), no lint errors; manual smoke test (create room → play rounds → return to lobby → Ctrl+C) with `LOG_LEVEL=info`.
 
 ### Dev environment note (Windows)
-- Git Bash set as Cursor's default terminal + `~/.bashrc`/`~/.bash_profile` init `fnm` so `node`/`pnpm` resolve there. Avoids the PowerShell "Terminer le programme de commandes (O/N)" prompt on Ctrl+C. (User-machine setup, not repo files.)
+- Git Bash set as Cursor's default terminal + `~/.bashrc`/`~/.bash_profile` init `fnm` so `node`/`pnpm` resolve there.
+- Root `.npmrc` sets `script-shell` to Git Bash so pnpm lifecycle scripts skip `cmd.exe` (fixes the "Terminer le programme de commandes (O/N)" Ctrl+C trap).
+- Fallback if Turbo still hangs: run `pnpm dev:server` and `pnpm dev:client` in **two separate** Git Bash tabs (single process per tab → clean Ctrl+C).
 
 ## Done (Phase 2 — Security & identity)
 
@@ -71,8 +98,8 @@
 - Game tables held **1460 `Song` rows** from the old pipeline run (not empty). `_prisma_migrations` was empty → baseline safely resolved.
 - Media was dead: 1234 Supabase (deleted bucket) / 221 AnimeThemes / 5 R2. Server only serves `downloadStatus='COMPLETED'`.
 - **Dev decision (user-approved):** non-R2 songs set to `PENDING` → only 10 R2 openings playable during dev. Reversible; `manual_edits.json` untouched.
-- Identity **already wired**: `handle_new_user()` trigger; Prisma `Profile.id @default(uuid())` is drift → fix in Phase 2.
-- RLS partially set up; advisors flag unindexed FKs, duplicate policies, etc. → Phase 2 cleanup.
+- Identity **already wired**: `handle_new_user()` trigger; Prisma `Profile.id @default(uuid())` is drift → fixed in Phase 2.
+- RLS partially set up; advisors flag unindexed FKs, duplicate policies, etc. → fixed in Phase 4 migration.
 
 ## Schema decisions (full design in SCHEMA-TARGET.md)
 
@@ -102,7 +129,13 @@
 
 ## Next step
 
-Phase 4 — Code cleanup (Standard mode only): remove dead game modes, shared constants/types cleanup, Prisma migration toward `SCHEMA-TARGET.md`.
+Phase 5 — Game engine rewrite (Standard mode): `Match`/`MatchPlayer`/`MatchRound`/`RoundAnswer`, typed socket contract, `MatchEngine` + `useGameSocket`/`useReducer`, drop `GameSession`/`GameParticipant`.
+
+## Deferred (post–Phase 4)
+
+- **Re-run `get_advisors`** on live Supabase after migration (SongVote RLS policies auto-dropped with table).
+- **Regenerate `data_step2.json`** with native `songType`/`sequence` when running full `pipeline:build`.
+- **Client bundle ~842 kB** — code-splitting in Phase 8.
 
 ## Deferred (post–Phase 3)
 
@@ -114,7 +147,6 @@ Phase 4 — Code cleanup (Standard mode only): remove dead game modes, shared co
 
 ### Phase 2 follow-ups / deferred
 - **Leaked-password protection**: still disabled — this is a Supabase **Auth** setting with no SQL/MCP toggle. Enable manually in the dashboard (Auth → Providers → Password / `password_hibp_enabled`).
-- **Unindexed FKs** (advisor INFO): deferred to **Phase 4** (per `SCHEMA-TARGET.md` mapping).
 - **`GameSession`/`GameParticipant`** RLS-enabled-no-policy (deny-all, harmless): tables replaced in **Phase 5**.
 - **Profile email exposure**: `Profile` SELECT is public (all columns incl. `email`). RLS can't do column-level filtering; revisit with a view or column grants if needed (not in Phase 2 scope).
 - Engine still keys players by `socket.id`; canonical `socket.data.userId` is now available and required — the socket.id → userId migration in the game engine lands in **Phase 5**.
@@ -124,4 +156,4 @@ Phase 4 — Code cleanup (Standard mode only): remove dead game modes, shared co
 - **`manual_edits.json` still authoritative** — `isLocked` preserves curated metadata on regeneration.
 - **Render MCP skipped** — dashboard used; build validated manually.
 - **Vercel MCP** reads projects/deployments but cannot write env vars (dashboard used).
-- **Dead modes** — removed in Phase 4. **Client bundle ~823 kB** — code-splitting in Phase 8.
+- **Client bundle** — dead modes removed in Phase 4; code-splitting in Phase 8.

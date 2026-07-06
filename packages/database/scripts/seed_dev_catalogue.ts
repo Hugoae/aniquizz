@@ -15,6 +15,8 @@ import path from "path";
 import dotenv from "dotenv";
 import { createR2Client, getR2Bucket, getR2PublicUrl, r2UploadFile } from "./lib/r2-client";
 import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from "./lib/media";
+import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from "./lib/song-helpers";
+import { formatSongTypeLabel } from "@aniquizz/shared";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -36,7 +38,8 @@ const COMPRESS_TIMEOUT = 120_000;
 interface RawSong {
   title: string;
   artist: string;
-  type: string;
+  songType?: string;
+  type?: string;
   sequence?: number;
   sourceUrl?: string;
   videoKey?: string;
@@ -73,8 +76,9 @@ interface Candidate {
   source: string;
 }
 
-function buildVideoKey(animeName: string, animeId: number, type: string): string {
-  return `${animeName.replace(/[^a-zA-Z0-9]/g, "")}-${animeId}-${type}.mp4`;
+function buildVideoKeyFromSong(animeName: string, animeId: number, song: RawSong): string {
+  const { songType, sequence } = normalizePipelineSong(song);
+  return buildVideoKey(animeName, animeId, songType, sequence);
 }
 
 function isPlayableUrl(url: string | undefined): url is string {
@@ -113,7 +117,7 @@ function collectCandidates(franchises: RawFranchise[]): Candidate[] {
 
 async function seedOne(candidate: Candidate): Promise<boolean> {
   const { anime, song } = candidate;
-  const videoKey = buildVideoKey(anime.name, anime.id, song.type);
+  const videoKey = buildVideoKeyFromSong(anime.name, anime.id, song);
   const rawPath = path.join(TEMP_DIR, `${videoKey}.raw`);
   const outPath = path.join(TEMP_DIR, videoKey);
 
@@ -162,17 +166,20 @@ async function seedOne(candidate: Candidate): Promise<boolean> {
     await r2UploadFile(r2Client, r2Bucket, videoKey, buffer);
     const publicUrl = getR2PublicUrl(videoKey);
 
+    const { songType, sequence } = normalizePipelineSong(song);
+
     await prisma.song.upsert({
       where: { videoKey },
       create: {
         title: song.title,
         artist: song.artist,
-        type: song.type,
+        songType,
+        sequence,
         videoKey,
         tags: song.tags ?? [],
         sourceUrl: publicUrl,
         duration,
-        difficulty: song.difficulty ?? "medium",
+        difficulty: parsePipelineDifficulty(song.difficulty),
         animeId: anime.id,
         downloadStatus: DownloadStatus.COMPLETED,
       },
@@ -210,7 +217,7 @@ async function main() {
 
   let ok = 0;
   for (const [index, candidate] of candidates.entries()) {
-    console.log(`\n[${index + 1}/${candidates.length}] ${candidate.anime.name} — ${candidate.song.type}`);
+    console.log(`\n[${index + 1}/${candidates.length}] ${candidate.anime.name} — ${formatSongTypeLabel(normalizePipelineSong(candidate.song).songType, normalizePipelineSong(candidate.song).sequence)}`);
     if (await seedOne(candidate)) ok++;
   }
 
