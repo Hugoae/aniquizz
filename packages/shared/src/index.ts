@@ -5,4 +5,5 @@ export * from './game';
 export * from './scoring';
 export * from './victory';
 export * from './selection';
+export * from './roles';
 export * from './events';

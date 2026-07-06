@@ -47,6 +47,7 @@ export default function Game() {
     initialFirstVideo: initialState.gameData?.firstVideo ?? null,
     anilistUsername: profile?.anilistUsername,
     onCancelled: () => navigate('/play', { state: { returnToLobby: true, roomId }, replace: true }),
+    onClosed: () => navigate('/play', { replace: true }),
   });
 
   const { phase, players, currentSong } = state;

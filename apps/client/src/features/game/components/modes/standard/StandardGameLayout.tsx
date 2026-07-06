@@ -276,6 +276,11 @@ export function StandardGameLayout({
                                             : "opacity-0"
                                     )}
                                     playsInline
+                                    // Disable Picture-in-Picture: Firefox's native PiP pops the video
+                                    // into a floating window, bypassing our opacity-based hiding and
+                                    // revealing the anime during the blind-test guessing phase.
+                                    disablePictureInPicture
+                                    controlsList="nodownload noplaybackrate noremoteplayback"
                                     onSeeked={handleVideoReady}
                                     onLoadedData={() => {
                                         const start = currentSong && 'videoStartTime' in currentSong

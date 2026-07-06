@@ -6,6 +6,7 @@ import { SocketManager } from './core/SocketManager';
 import { registerCrashHandlers } from './core/crashHandlers';
 import { registerShutdownHandlers } from './core/shutdown';
 import { registerHealthRoute } from './routes/health';
+import { registerAdminRoutes } from './modules/admin/adminRoutes';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
@@ -23,6 +24,7 @@ async function main() {
     // 2. Game manager (single owner, injected into the socket layer).
     const gameManager = new GameManager(io);
     registerHealthRoute(app, io, () => gameManager);
+    registerAdminRoutes(app, io, gameManager);
 
     // 3. Socket manager wires all feature handlers.
     const socketManager = new SocketManager(io, gameManager);

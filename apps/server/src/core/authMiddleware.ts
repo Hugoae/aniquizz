@@ -1,8 +1,9 @@
 import jwt from 'jsonwebtoken';
+import { prisma } from '@aniquizz/database';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { supabaseAdmin } from '../lib/supabase';
-import type { SocketData } from '@aniquizz/shared';
+import type { SocketData, UserRole } from '@aniquizz/shared';
 import type { TypedSocket } from './socketTypes';
 
 /**
@@ -15,6 +16,11 @@ export type AuthenticatedSocketData = SocketData;
 interface SupabaseJwtPayload extends jwt.JwtPayload {
   sub?: string;
   user_metadata?: { username?: string; user_name?: string; name?: string };
+}
+
+export interface ResolvedIdentity {
+  userId: string;
+  username: string;
 }
 
 /** Extract a display name from Supabase user metadata (display only, not auth). */
@@ -43,14 +49,66 @@ const verifyLegacyHs256 = (token: string): SupabaseJwtPayload | null => {
 };
 
 /**
- * Socket.io connection middleware: verifies the Supabase access token from the
- * handshake and derives a trusted identity.
+ * Verify a Supabase access token and derive a trusted identity.
  *
  * Primary path: supabase.auth.getUser(token) — handles RS256 (JWT Signing Keys)
- * and legacy HS256 transparently.
- * Fallback: local HS256 verify when SUPABASE_JWT_SECRET is set.
+ * and legacy HS256 transparently. Fallback: local HS256 verify.
+ * Returns null when the token is present but invalid.
+ */
+export const resolveIdentityFromToken = async (
+  token: string,
+  fallbackName = 'Anonyme',
+): Promise<ResolvedIdentity | null> => {
+  const { data: authData, error } = await supabaseAdmin.auth.getUser(token);
+  if (!error && authData.user) {
+    return {
+      userId: authData.user.id,
+      username: usernameFromMetadata(authData.user.user_metadata, fallbackName),
+    };
+  }
+
+  const legacy = verifyLegacyHs256(token);
+  if (legacy?.sub) {
+    return {
+      userId: legacy.sub,
+      username: usernameFromMetadata(legacy.user_metadata, fallbackName),
+    };
+  }
+
+  return null;
+};
+
+/** DB-resolved moderation state for an authenticated user. */
+interface ModerationState {
+  role: UserRole;
+  bannedUntil: Date | null;
+  mutedUntil: Date | null;
+}
+
+const loadModeration = async (userId: string): Promise<ModerationState | null> => {
+  try {
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { role: true, bannedUntil: true, mutedUntil: true },
+    });
+    if (!profile) return null;
+    return {
+      role: profile.role as UserRole,
+      bannedUntil: profile.bannedUntil,
+      mutedUntil: profile.mutedUntil,
+    };
+  } catch (e) {
+    logger.error('Failed to load moderation state', 'Socket', e);
+    return null;
+  }
+};
+
+/**
+ * Socket.io connection middleware: verifies the Supabase access token from the
+ * handshake and derives a trusted identity + role + moderation state.
  *
  * No token → guest (read-only). Present-but-invalid token → rejected.
+ * Banned user → rejected.
  */
 export const socketAuthMiddleware = async (
   socket: TypedSocket,
@@ -64,31 +122,36 @@ export const socketAuthMiddleware = async (
   data.username = displayName;
   data.userId = null;
   data.isAuthenticated = false;
+  data.role = null;
+  data.mutedUntil = null;
 
   if (!token) {
     return next();
   }
 
-  // Primary: Supabase Auth API (works with RS256 signing keys).
-  const { data: authData, error } = await supabaseAdmin.auth.getUser(token);
-
-  if (!error && authData.user) {
-    data.userId = authData.user.id;
-    data.isAuthenticated = true;
-    data.username = usernameFromMetadata(authData.user.user_metadata, displayName);
-    return next();
+  const identity = await resolveIdentityFromToken(token, displayName);
+  if (!identity) {
+    logger.warn('Rejected socket with invalid token', 'Socket');
+    return next(new Error('INVALID_TOKEN'));
   }
 
-  // Fallback: legacy HS256 local verify (older projects / dev).
-  const legacy = verifyLegacyHs256(token);
-  if (legacy?.sub) {
-    data.userId = legacy.sub;
-    data.isAuthenticated = true;
-    data.username = usernameFromMetadata(legacy.user_metadata, displayName);
-    return next();
+  data.userId = identity.userId;
+  data.isAuthenticated = true;
+  data.username = identity.username;
+
+  const moderation = await loadModeration(identity.userId);
+  const now = Date.now();
+
+  if (moderation?.bannedUntil && moderation.bannedUntil.getTime() > now) {
+    logger.warn(`Rejected banned user ${identity.userId}`, 'Socket');
+    return next(new Error('BANNED'));
   }
 
-  const reason = error?.message ?? 'verification failed';
-  logger.warn(`Rejected socket with invalid token (${reason})`, 'Socket');
-  return next(new Error('INVALID_TOKEN'));
+  data.role = moderation?.role ?? 'USER';
+  data.mutedUntil =
+    moderation?.mutedUntil && moderation.mutedUntil.getTime() > now
+      ? moderation.mutedUntil.toISOString()
+      : null;
+
+  return next();
 };

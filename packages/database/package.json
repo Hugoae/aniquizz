@@ -15,6 +15,7 @@
     "studio": "prisma studio",
     "seed": "ts-node scripts/seed_db.ts",
     "seed:accounts": "ts-node scripts/seed_test_accounts.ts",
+    "seed:bots": "ts-node scripts/seed_bots.ts",
     "seed:dev-catalogue": "ts-node scripts/seed_dev_catalogue.ts",
     "pipeline:build": "ts-node scripts/global_build.ts",
     "pipeline:reset": "ts-node scripts/reset_all.ts"

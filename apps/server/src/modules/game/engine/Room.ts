@@ -1,11 +1,12 @@
 import type { GamePlayer, GameStatus, GameSyncState, RoomSettings } from '@aniquizz/shared';
+import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
 import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
 import { MatchRepository } from './MatchRepository';
 import { PlaylistBuilder } from './PlaylistBuilder';
 import { standardScoring } from './ScoringStrategy';
-import { toPublicPlayer, type RoomPlayer } from './types';
+import { toPublicPlayer, type AdminMatchProgress, type BotConfig, type RoomPlayer } from './types';
 
 /**
  * A game room: owns the lobby (players keyed by `userId`), settings, host, and
@@ -17,6 +18,8 @@ export class Room {
   public settings: RoomSettings;
   public hostId: string;
   public status: GameStatus = 'waiting';
+  /** When the room was created — surfaced in the admin panel ("open since"). */
+  public readonly createdAt = new Date();
 
   public readonly players = new Map<string, RoomPlayer>();
   public readonly returnedPlayers = new Set<string>();
@@ -80,12 +83,70 @@ export class Room {
     return player;
   }
 
+  /**
+   * DEV-only: add a simulated player. Picks the next free bot profile from the
+   * roster. Returns the created player, or null if the room is full / no bot
+   * profile is available.
+   */
+  addBot(config: BotConfig): RoomPlayer | null {
+    if (this.players.size >= this.settings.maxPlayers) return null;
+    const used = new Set(this.players.keys());
+    const profile = BOT_PROFILES.find((b) => !used.has(b.id));
+    if (!profile) return null;
+
+    const player: RoomPlayer = {
+      userId: profile.id,
+      username: profile.username,
+      avatar: profile.avatar,
+      socketId: `bot:${profile.id}`,
+      isConnected: true,
+      isReady: true,
+      anilistUsername: null,
+      isBot: true,
+      botConfig: config,
+      score: 0,
+      streak: 0,
+      maxStreak: 0,
+      matchCorrectCount: 0,
+      matchTotalCount: 0,
+      correctSongIds: new Set(),
+      hasAnswered: false,
+      currentAnswer: null,
+      isCorrect: null,
+      roundPoints: 0,
+      answerType: null,
+      answerTimeMs: null,
+    };
+    this.players.set(profile.id, player);
+    logger.info(`[Room ${this.id}] Bot added: ${profile.username}`, 'Dev');
+    this.emitLobbyUpdate();
+    return player;
+  }
+
+  /** Number of human (non-bot) players currently in the room. */
+  get humanCount(): number {
+    return [...this.players.values()].filter((p) => !p.isBot).length;
+  }
+
+  /**
+   * Admin/kick removal of a player. Returns the removed player's socketId (for a
+   * human) so the caller can force the socket out of the room, or null.
+   */
+  kickPlayer(userId: string): string | null {
+    const player = this.players.get(userId);
+    if (!player) return null;
+    const socketId = player.isBot ? null : player.socketId;
+    this.removePlayer(userId);
+    return socketId;
+  }
+
   /** Explicit leave. Returns true if the room is now empty. */
   removePlayer(userId: string): boolean {
-    if (!this.players.delete(userId)) return this.players.size === 0;
+    if (!this.players.delete(userId)) return this.humanCount === 0;
     this.returnedPlayers.delete(userId);
 
-    if (this.players.size === 0) {
+    // A room with only bots (or none) left has no reason to exist.
+    if (this.humanCount === 0) {
       this.engine?.cancel();
       this.engine = null;
       return true;
@@ -130,7 +191,7 @@ export class Room {
     if (this.status === 'waiting') return;
 
     const connectedIds = [...this.players.values()]
-      .filter((p) => p.isConnected)
+      .filter((p) => p.isConnected && !p.isBot)
       .map((p) => p.userId);
     const allConnectedReturned =
       connectedIds.length === 0 || connectedIds.every((id) => this.returnedPlayers.has(id));
@@ -138,6 +199,18 @@ export class Room {
     if (this.status === 'playing' || this.status === 'paused') {
       // A running match with no live engine is impossible → recover.
       if (!this.engine) {
+        this.resetToWaiting();
+        return;
+      }
+      // Everyone who is still connected has navigated back to the lobby (e.g. a
+      // solo host who quit mid-match). Nobody is playing → cancel and reset.
+      // Note: `allConnectedReturned` is also true when nobody is connected, so
+      // require at least one connected human to avoid killing a match during a
+      // transient full disconnect (that path keeps the grace-period cleanup).
+      const hasConnectedHuman = connectedIds.length > 0;
+      if (hasConnectedHuman && allConnectedReturned) {
+        this.engine.cancel();
+        this.engine = null;
         this.resetToWaiting();
       }
       return;
@@ -151,7 +224,8 @@ export class Room {
   }
 
   get hasConnectedPlayers(): boolean {
-    return [...this.players.values()].some((p) => p.isConnected);
+    // Bots never count: a room with only bots must still be cleaned up.
+    return [...this.players.values()].some((p) => p.isConnected && !p.isBot);
   }
 
   getPlayerBySocket(socketId: string): RoomPlayer | undefined {
@@ -159,9 +233,9 @@ export class Room {
   }
 
   private promoteNextHost(): void {
-    const candidates = [...this.players.values()].sort((a, b) =>
-      a.username.localeCompare(b.username),
-    );
+    const candidates = [...this.players.values()]
+      .filter((p) => !p.isBot)
+      .sort((a, b) => a.username.localeCompare(b.username));
     const next = candidates[0];
     if (!next) return;
     this.hostId = next.userId;
@@ -280,10 +354,15 @@ export class Room {
 
   cancelMatch(userId: string): void {
     if (userId !== this.hostId) return;
+    this.forceCancel();
+  }
+
+  /** Admin/system cancel of the running match (no host check). */
+  forceCancel(reason?: string): void {
     this.engine?.cancel();
     this.engine = null;
     this.resetToWaiting();
-    this.io.to(this.id).emit('game_cancelled');
+    this.io.to(this.id).emit('game_cancelled', reason ? { reason } : undefined);
     this.emitLobbyUpdate();
   }
 
@@ -311,6 +390,9 @@ export class Room {
       p.roundPoints = 0;
       p.answerType = null;
       p.answerTimeMs = null;
+      // Bots come straight back to the lobby ready to play — they never need to
+      // click "return to lobby", so they should not linger in a "waiting" state.
+      if (p.isBot) p.isReady = true;
     }
   }
 
@@ -327,6 +409,12 @@ export class Room {
       round: null,
       reveal: null,
     };
+  }
+
+  /** Admin-only live match progress, or null when not in a match. */
+  getAdminProgress(): AdminMatchProgress | null {
+    if (!this.engine || (this.status !== 'playing' && this.status !== 'paused')) return null;
+    return this.engine.getAdminProgress();
   }
 
   dispose(): void {

@@ -11,6 +11,13 @@ export const registerChatHandlers = (
   const sendMessage = (payload: { roomId: string; content: string }) => {
     if (!payload.roomId || !payload.content?.trim()) return;
 
+    // Admin mute: silently drop the message and notify the sender.
+    const mutedUntil = socket.data.mutedUntil;
+    if (mutedUntil && new Date(mutedUntil).getTime() > Date.now()) {
+      socket.emit('error', { message: 'Vous êtes réduit au silence par la modération.' });
+      return;
+    }
+
     const userId = socket.data.userId as string;
     const room = gameManager.getRoom(payload.roomId);
     const player = room?.players.get(userId);

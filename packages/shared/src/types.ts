@@ -45,6 +45,8 @@ export interface GamePlayer extends BasePlayer {
   isConnected?: boolean;
   isHost?: boolean;
   isInGame?: boolean;
+  /** DEV-only simulated player. */
+  isBot?: boolean;
 
   anilistUsername?: string | null;
 

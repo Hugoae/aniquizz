@@ -16,6 +16,8 @@ export type Profile = {
   role: "USER" | "ADMIN" | "MODERATOR";
   gamesPlayed: number;
   gamesWon: number;
+  bannedUntil?: string | null;
+  mutedUntil?: string | null;
   anilistUsername?: string | null;
   lastListSync?: string | null;
   totalGuesses?: number;

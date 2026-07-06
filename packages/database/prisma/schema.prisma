@@ -67,6 +67,12 @@ model Profile {
 
   role UserRole @default(USER)
 
+  // Admin moderation (Phase 6). Null = not banned / not muted.
+  bannedUntil DateTime?
+  mutedUntil  DateTime?
+  // Presence heartbeat (used by admin now; friends presence in Phase 7).
+  lastSeenAt  DateTime?
+
   gamesPlayed    Int @default(0)
   gamesWon       Int @default(0)
   totalGuesses   Int @default(0)
@@ -82,6 +88,7 @@ model Profile {
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
+  @@index([lastSeenAt])
 }
 
 // --- MATCH PERSISTENCE (Phase 5, replaces GameSession/GameParticipant) ---

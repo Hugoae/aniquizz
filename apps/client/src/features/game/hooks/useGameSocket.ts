@@ -32,6 +32,7 @@ interface UseGameSocketOptions {
   initialFirstVideo?: string | null;
   anilistUsername?: string | null;
   onCancelled?: () => void;
+  onClosed?: () => void;
 }
 
 export interface GameActions {
@@ -59,6 +60,7 @@ export function useGameSocket({
   initialFirstVideo = null,
   anilistUsername,
   onCancelled,
+  onClosed,
 }: UseGameSocketOptions): UseGameSocketResult {
   const [state, dispatch] = useReducer(
     gameReducer,
@@ -76,6 +78,8 @@ export function useGameSocket({
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCancelledRef = useRef(onCancelled);
   onCancelledRef.current = onCancelled;
+  const onClosedRef = useRef(onClosed);
+  onClosedRef.current = onClosed;
 
   // --- Anime autocomplete list + personal watched list ---
   useEffect(() => {
@@ -133,9 +137,13 @@ export function useGameSocket({
       'game:fallback_notification': (p: { message: string }) => {
         toast.warning('Info Playlist', { description: p.message, duration: 6000 });
       },
-      game_cancelled: () => {
-        toast.info("Partie annulée par l'hôte.");
+      game_cancelled: (p?: { reason?: string }) => {
+        toast.error(p?.reason || "Partie annulée par l'hôte.");
         onCancelledRef.current?.();
+      },
+      room_closed: (p?: { reason?: string }) => {
+        toast.error(p?.reason || 'Salon fermé.');
+        onClosedRef.current?.();
       },
       error: (p: { message: string }) => {
         toast.error(p.message || 'Erreur');
@@ -154,6 +162,7 @@ export function useGameSocket({
     socket.on('game_resuming', handlers.game_resuming);
     socket.on('game:fallback_notification', handlers['game:fallback_notification']);
     socket.on('game_cancelled', handlers.game_cancelled);
+    socket.on('room_closed', handlers.room_closed);
     socket.on('error', handlers.error);
 
     return () => {
@@ -170,6 +179,7 @@ export function useGameSocket({
       socket.off('game_resuming', handlers.game_resuming);
       socket.off('game:fallback_notification', handlers['game:fallback_notification']);
       socket.off('game_cancelled', handlers.game_cancelled);
+      socket.off('room_closed', handlers.room_closed);
       socket.off('error', handlers.error);
     };
   }, [roomId, currentUserId]);

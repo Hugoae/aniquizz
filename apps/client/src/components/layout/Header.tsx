@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { hasRole } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
-import { LogIn } from 'lucide-react';
+import { LogIn, Shield } from 'lucide-react';
 
 // Features & Context
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModal } from '@/features/auth/components/AuthModal';
+import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 
 export function Header() {
   const navigate = useNavigate();
   const { user, profile } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const isStaff = hasRole(profile?.role, 'MODERATOR');
 
   return (
     <>
@@ -25,6 +28,18 @@ export function Header() {
 
         {/* ACTIONS UTILISATEUR */}
         <div className="flex items-center gap-4">
+          {user && profile && <SuspensionBadge />}
+          {user && profile && isStaff && (
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/admin')}
+              className="h-auto gap-2 rounded-lg px-3 py-1 hover:bg-white/5"
+              title="Administration"
+            >
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="hidden md:inline text-sm font-semibold">Admin</span>
+            </Button>
+          )}
           {user && profile ? (
             // --- CONNECTÉ ---
             <Button

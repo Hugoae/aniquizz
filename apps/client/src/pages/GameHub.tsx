@@ -181,7 +181,7 @@ export default function GameHub() {
         setShowCreateModal(false);
     };
 
-    const onRoomClosed = () => { toast.info("Salon fermé."); setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('roomList'); };
+    const onRoomClosed = (payload?: { reason?: string }) => { toast.error(payload?.reason || "Salon fermé."); setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('roomList'); };
     const onPasswordRequired = (data: { roomId: string }) => { setPendingRoomId(data.roomId); setShowPasswordModal(true); };
     
     const onUpdatePlayers = (data: { players: any[], hostId?: string, status?: any }) => { 

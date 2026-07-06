@@ -1,6 +1,62 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 5 ✅ complete — ready for Phase 6
+## Current phase: Phase 6 ✅ complete — ready for Phase 7
+
+## Done (Phase 6 — Dev environment, test tooling & Admin)
+
+### Schema (`packages/database`)
+- [x] **Migration `20260706160000_phase6_admin_fields`** (applied live): `Profile.bannedUntil`, `Profile.mutedUntil`, `Profile.lastSeenAt?` + `@@index([lastSeenAt])`. `role` (`UserRole`) already existed. Prisma client regenerated.
+- [x] **Bot roster** in `src/bots.ts` (`BOT_PROFILES`, `BOT_ID_PREFIX`, `isBotId`) — 8 deterministic `bot-*` profiles, re-exported from `@aniquizz/database`. `bot-` prefix → trivial future leaderboard exclusion.
+- [x] **Seed script** `scripts/seed_bots.ts` (`seed:bots`, dev-guarded) — upserts the 8 bot profiles; **run live** (8 profiles seeded).
+
+### Shared (`packages/shared`)
+- [x] **`roles.ts`**: `UserRole` union + `hasRole`/`isStaff`/`isAdmin` hierarchy (USER < MODERATOR < ADMIN), dependency-free, used by client + server.
+- [x] `SocketData` gained server-resolved `role` + `mutedUntil`; `GamePlayer` gained `isBot?`.
+
+### Server — role infra & moderation
+- [x] **`authMiddleware` refactor**: extracted `resolveIdentityFromToken()` (reused by HTTP admin auth); the socket handshake now loads DB `role` + `bannedUntil`/`mutedUntil`, **rejects banned users**, and sets `socket.data.role`/`mutedUntil`.
+- [x] **Mute enforcement** in `chatHandlers` (muted sender's message dropped + notified).
+- [x] **`core/httpAuth.ts`**: `requireRole(min)` Express middleware — Bearer token → DB role check (server-authoritative), attaches `req.actor`.
+- [x] **Presence heartbeat**: `SocketManager` writes `Profile.lastSeenAt` on connect/disconnect (best-effort; ignored for guests) — powers admin presence + "last seen".
+- [x] **Single active socket per user**: on each new connection older sockets of the same user are dropped, so a reconnect (auth `disconnect().connect()`) can't leave a ghost socket delivering every emit twice (root cause of duplicate toasts).
+
+### Server — Admin REST (`modules/admin`, mounted at `/admin`)
+- [x] **Users** (`adminService` + routes): paginated list/search (50/page) with live filtering; `GET /users/:id/profile` (full profile for the detail modal); change role (ADMIN); **ban/unban (MODERATOR)**; mute/unmute (MODERATOR); reset stats (ADMIN); **disconnect** a user's live sockets (MODERATOR). Configurable durations (1h…permanent). Ban/mute push a live `force_logout`/sanction to the target's sockets so it applies immediately; self-role/self-ban guarded.
+- [x] **Live rooms/matches**: `GET /rooms` returns a rich snapshot (settings, `createdAt`, private code/password, `humanCount`/bot split, live `AdminMatchProgress` — round X/Y, current anime/title, `endsAt`); force-end match, close room, kick player (MODERATOR).
+- [x] **Catalogue — full manager**: hierarchical `GET /catalogue/tree` (Franchise → Anime → Song, A→Z, franchise-paginated, "Sans franchise" bucket, multi-level search, status/difficulty/lock filters, global counts) + legacy flat list kept. Full CRUD: extended `PATCH` on song/anime/franchise (**all** fields incl. `videoKey`, `sourceUrl`, `songType`/`sequence`, tags, move via `animeId`/`franchiseId`), create/delete (ADMIN), bulk song update (MODERATOR). Prisma write errors mapped to 409/404/400.
+- [x] **Stats — overview**: `GET /stats/overview?period=` aggregates live metrics (`gameManager.getLiveRoomStats`: uptime, sockets, unique online, rooms public/private/waiting/playing/paused, humans vs bots, RSS, Node) + DB metrics (players total/new/active, sanctions, role split, AniList adoption, matches total/period/per-day, avg duration, correct rate, catalogue health, discovered songs, top animes/songs, top difficulty/mode). `POST /stats/reset-activity` (ADMIN) wipes match history + song discovery.
+- [x] **`GameManager`** admin ops: `getRoomDetails` (enriched), `getLiveRoomStats`, `forceEndMatch`, `closeRoom`, `kickPlayer`, `addBotsToRoom`, `removeBotsFromRoom`, `createBotScenario` (headless **or** hosted-by-caller); `Room` gained `addBot`/`kickPlayer`/`forceCancel`/`humanCount`/`createdAt`/`getAdminProgress`; solo mid-match quit now resets the room to `waiting`.
+
+### Server — Dev tooling (DEV ONLY, env-guarded)
+- [x] **Simulated players (bots)**: in-process virtual players (no socket). `Room.addBot` pulls from the roster; `MatchEngine.scheduleBotAnswers` makes each bot answer once per round with configurable accuracy + delay (correct → a valid answer, wrong → a decoy choice). Bots return to the lobby ready after a match. Bot timers cleared on round/end/cancel.
+- [x] **Lifecycle hardened for bots**: `hasConnectedPlayers`/`settleLifecycle`/`promoteNextHost`/vote-quorum all **ignore bots**; a bot-only room is torn down (no human ⇒ empty).
+- [x] **Dev endpoints** (ADMIN + dev): `POST /dev/rooms/:id/bots` (add N bots w/ behavior config), `POST /dev/rooms/:id/remove-bots` (−N / clear), `POST /dev/scenario` (bots room, `join` = hosted-by-caller so the admin lands in the lobby, or headless auto-start; rich settings), `GET /dev/info`, `POST /dev/claim-admin` (first-admin self-bootstrap when no admin exists yet).
+
+### Client (`apps/client`)
+- [x] **`lib/adminApi.ts`**: typed admin REST client (Supabase Bearer token, French error surfacing) — users, rooms, catalogue tree + CRUD, stats overview, dev tooling.
+- [x] **`/admin` route** (session-gated in `App.tsx`, role verified server-side on every call): `pages/Admin.tsx` with tabs — Users / Rooms / Catalogue / Stats / (Dev Tools in dev). `onGoToRoom` cross-links Users/Dev → Rooms with highlight. Non-staff see an access-denied card with a dev-only "Devenir admin" button.
+- [x] **UsersPanel**: bots after humans then A→Z, live search, filter chips (role/muted/banned/online/in-game), clickable column sort (XP/games/created/seen), header counters, presence badges (online/in-game/offline), "current lobby" link, last-seen, pagination (50/page), full-row click → real profile modal (`ProfileView`), bots non-clickable & read-only. Confirmations on ban/mute/reset; mute+**ban** available to mods, disconnect/reset admin-only.
+- [x] **RoomsPanel**: colored/translated status badges (waiting/playing-pulse/paused/finished), player avatars + connection dots, enriched header (lock, game mode, bot vs human), config badges, live match progress (round X/Y, anime/title, progress bar, countdown), "open since", ghost-room badge, search/filter/sort, player→profile modal, copy code/password, confirmations, header counters, skeleton + smooth transitions.
+- [x] **StatsPanel**: 3 sections (Temps réel / Communauté / Activité de jeu) with rich `StatCard`s, `SegmentBar`s, `TopList`s and a `recharts` matches-per-day chart; period selector (24h/7d/30d/all), 60 s auto-refresh toggle, admin-only "reset activity".
+- [x] **CataloguePanel — full manager**: accordion tree Franchise → Anime → Song, debounced search, status/difficulty/lock filters, counters + coverage, franchise-level pagination (smooth scroll-to-top), inline quick edits (difficulty/status/lock, optimistic), bulk-edit bar, video preview dialog (R2), Save/Cancel edit dialogs for song/anime/franchise (create + edit, all fields, move), delete with cascade-aware confirmations (create/delete ADMIN-gated via `canManage`).
+- [x] **Suspension surfacing**: `features/auth/components/SuspensionBadge` shows ban/mute + remaining time in the header (`lib/suspension.ts`).
+- [x] **Toasts**: repositioned bottom-right, `richColors`; critical/victim events (ban, mute, disconnect, admin-terminated game/lobby) shown as red `toast.error`.
+- [x] **Header**: "Admin" shield link shown to staff (`hasRole(role,'MODERATOR')`).
+
+### Verification
+- [x] Server typecheck OK; client `tsc --noEmit` OK; changed files ESLint-clean.
+- [x] `pnpm --filter @aniquizz/shared test` — **35/35** pass (no regressions).
+- [x] Remaining `pnpm lint` failures are pre-existing debt in `Game.tsx`/`Profile.tsx`/`tailwind.config.ts` (Phase 8).
+- [x] **`get_advisors` re-run** (post `phase6_admin_fields`): no new issues — only `_prisma_migrations` RLS-no-policy (intentional deny-all), leaked-password protection (Auth dashboard, deferred), and `unused_index` INFO (incl. new `Profile_lastSeenAt_idx`, expected on empty dev DB).
+
+### Phase 6 notes / decisions
+- **Bots = in-process virtual players** (user-approved) with seeded `bot-*` profiles so matches persist realistically; excluded from lobby quorum/host logic. Fully DEV-only (env guard on every dev endpoint).
+- **Admin auth is fully server-authoritative**: role read from DB on each request; the client UI gating (`canManage`) is convenience only.
+- **Permission split**: MODERATOR = day-to-day moderation (view users/rooms, mute, **ban**, disconnect, end/close/kick, edit catalogue metadata). ADMIN adds high-impact/irreversible actions (change roles, reset stats, catalogue create/delete, reset activity, dev tools).
+- **First-admin bootstrap** via dev-only `claim-admin` (allowed only when no admin exists yet) so the panel is reachable without manual DB edits.
+- **Ban/mute** stored as `*Until` timestamps; ban enforced at socket handshake, mute at chat send; both pushed live to the target's sockets.
+- **Catalogue edits are direct-to-DB** via the admin API; the `manual_edits.json` pipeline import is untouched. `altNames` partial search unsupported (Postgres array), so search covers anime name + song title/artist.
+- **Removed the dev account-switcher** (`features/dev/DevBar`): confusing and low-value; seed scripts for the `@aniquizz.test` accounts remain.
 
 ## Done (Phase 5 — Game engine rewrite, Standard mode)
 
@@ -178,7 +234,14 @@
 
 ## Next step
 
-Phase 6 — Dev environment, test tooling & Admin: DEV-only simulated players (bots auto-answer), dev auth / quick account switch, scripted scenarios, and a role-gated `/admin` (server-side role check) for users, live rooms/matches, and catalogue moderation.
+Phase 7 — Features: XP/Level (curve + XP calc in `packages/shared`, persist in match save, profile/header bar + level-up event), Friends (`Friendship` model + server module + UI, presence via `Profile.lastSeenAt`), Leaderboard (server `leaderboard:get` by XP/level/wins, replace mock data in `Leaderboard.tsx`, exclude `bot-*` ids).
+
+### Phase 6 follow-ups / deferred
+- **Dev test accounts**: the in-app account-switcher was removed; sign in manually with the seeded `@aniquizz.test` accounts (or `seed:test-accounts`). Roles start at USER (elevate via the panel / `claim-admin`).
+- **Bots & leaderboard**: bot matches persist to `Profile` aggregates; exclude `bot-*` ids when Phase 7 wires the real leaderboard.
+- **Soak loop** (Dev Tools) is a client-side relauncher of headless scenarios (self-limited to ~1 concurrent); a true server-side auto-restart is deferred.
+- **Spectating** a running match from the admin/dev "Rejoindre" is lobby-limited (no dedicated spectator mode) — deferred.
+- **Admin UI polish** deferred to Phase 8; pre-existing client lint debt (`Game.tsx`, `Profile.tsx`, `tailwind.config.ts`) also Phase 8.
 
 ### Phase 5 follow-ups / deferred
 - **Live smoke test** ✅ done (manual solo + 2-player multi playtesting; see post-integration fixes above). Full reconnect/stress pass deferred to Phase 6 test tooling.

@@ -1,6 +1,16 @@
 import type { AnswerType, GamePlayer } from '@aniquizz/shared';
 
 /**
+ * Behaviour of a DEV-only simulated player.
+ * `accuracy` in [0,1]; answer delay drawn uniformly in [minDelayMs, maxDelayMs].
+ */
+export interface BotConfig {
+  accuracy: number;
+  minDelayMs: number;
+  maxDelayMs: number;
+}
+
+/**
  * Internal, server-authoritative player record. Keyed by `userId` in the Room.
  * `socketId` is mutable (reconnects); identity is always `userId`.
  */
@@ -12,6 +22,10 @@ export interface RoomPlayer {
   isConnected: boolean;
   isReady: boolean;
   anilistUsername: string | null;
+
+  /** DEV-only simulated player. Never has a real socket. */
+  isBot?: boolean;
+  botConfig?: BotConfig;
 
   // Cumulative match state
   score: number;
@@ -56,6 +70,20 @@ export interface PlaylistItem {
   duo: string[];
 }
 
+/**
+ * Live match progress for the admin panel. Admin-only, so it may include the
+ * current anime/title (never leaked to players mid-round via the sync state).
+ */
+export interface AdminMatchProgress {
+  currentRound: number;
+  totalRounds: number;
+  phase: 'intro' | 'guessing' | 'reveal' | null;
+  anime: string | null;
+  title: string | null;
+  /** Server timestamp (ms) at which the current phase ends, or null. */
+  endsAt: number | null;
+}
+
 /** An answer recorded in memory during the match, flushed to DB at finalize. */
 export interface RecordedAnswer {
   userId: string;
@@ -86,6 +114,7 @@ export const toPublicPlayer = (
     isReady: player.isReady,
     isConnected: player.isConnected,
     isHost: player.userId === opts.hostId,
+    isBot: player.isBot === true,
     // "In game" = still in the match flow (playing, paused, or on the game-over
     // screen) and has NOT returned to the lobby yet. Cleared on return / reset.
     isInGame: opts.status !== 'waiting' && !opts.returned,

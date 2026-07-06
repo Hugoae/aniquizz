@@ -1,3 +1,4 @@
+import { prisma } from '@aniquizz/database';
 import { logger } from '../utils/logger';
 import { captureError } from '../utils/errorReporter';
 import { socketAuthMiddleware } from './authMiddleware';
@@ -16,6 +17,16 @@ import { registerGeneralHandlers } from '../modules/generalHandlers';
  * to the feature handler modules. Dependencies (GameManager) are injected —
  * no module reaches back into the index singleton.
  */
+/** Presence heartbeat: best-effort, never blocks the socket lifecycle. */
+const touchLastSeen = (userId: string | null | undefined): void => {
+  if (!userId) return;
+  prisma.profile
+    .update({ where: { id: userId }, data: { lastSeenAt: new Date() } })
+    .catch(() => {
+      /* profile may not exist yet (guest) — ignore */
+    });
+};
+
 export class SocketManager {
   private io: TypedServer;
   private gameManager: GameManager;
@@ -38,6 +49,24 @@ export class SocketManager {
       // Identity is set by socketAuthMiddleware (never trust raw client userId).
       const { username, userId, isAuthenticated } = socket.data;
 
+      // Single active session per user. The client reconnects on identity
+      // changes (disconnect().connect()), which can leave a lingering "ghost"
+      // socket alongside the fresh one until its ping times out. While both are
+      // live, every server->user emit is delivered twice (duplicate toasts).
+      // Dropping older sockets of the same user on each new connection keeps
+      // exactly one live connection per user.
+      if (userId) {
+        for (const other of this.io.sockets.sockets.values()) {
+          if (other.id !== socket.id && other.data.userId === userId) {
+            // Tell the (rare) still-listening old client this is a benign
+            // replacement, not a ban, so it doesn't show a scary toast.
+            other.emit('session_replaced');
+            other.disconnect(true);
+          }
+        }
+      }
+
+      touchLastSeen(userId);
       instrumentSocket(socket);
 
       logger.child({
@@ -63,6 +92,7 @@ export class SocketManager {
 
       socket.on('disconnect', (reason) => {
         const data = socket.data;
+        touchLastSeen(data.userId);
         logger.child({
           context: 'Socket',
           socketId: socket.id,

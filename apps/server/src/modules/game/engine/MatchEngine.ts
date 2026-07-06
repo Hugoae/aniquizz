@@ -17,7 +17,7 @@ import { RoundClock } from './RoundClock';
 import type { PlaylistBuilder } from './PlaylistBuilder';
 import type { MatchRepository } from './MatchRepository';
 import type { ScoringStrategy } from './ScoringStrategy';
-import type { PlaylistItem, RecordedRound, RoomPlayer } from './types';
+import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
 
 interface EngineDeps {
@@ -40,6 +40,7 @@ export class MatchEngine {
   private readonly clock = new RoundClock();
   private introTimer: NodeJS.Timeout | null = null;
   private resumeTimer: NodeJS.Timeout | null = null;
+  private botTimers: NodeJS.Timeout[] = [];
 
   private guessStartAt = 0;
   private isRoundLoading = false;
@@ -119,7 +120,7 @@ export class MatchEngine {
       p.matchCorrectCount = 0;
       p.matchTotalCount = 0;
       p.correctSongIds = new Set();
-      p.isReady = p.userId === this.room.hostId;
+      p.isReady = p.isBot ? true : p.userId === this.room.hostId;
       this.resetRoundState(p);
     }
   }
@@ -137,6 +138,7 @@ export class MatchEngine {
 
   private startRound(): void {
     this.clock.clear();
+    this.clearBotTimers();
     this.isRoundLoading = true;
     this.currentRoundIndex++;
 
@@ -161,6 +163,7 @@ export class MatchEngine {
     const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS;
     this.guessStartAt = Date.now();
     this.clock.start(guessDurationMs, () => this.endRound());
+    this.scheduleBotAnswers(item);
     this.isRoundLoading = false;
 
     logger.info(
@@ -218,6 +221,7 @@ export class MatchEngine {
     this.isRoundEnded = true;
     this.phase = 'reveal';
     this.clock.clear();
+    this.clearBotTimers();
 
     const item = this.playlist[this.currentRoundIndex];
     if (!item) return;
@@ -440,13 +444,67 @@ export class MatchEngine {
     return base;
   }
 
+  /** Admin-only live progress snapshot (may reveal the current anime/title). */
+  getAdminProgress(): AdminMatchProgress {
+    const item = this.currentRoundIndex >= 0 ? this.playlist[this.currentRoundIndex] : null;
+    return {
+      currentRound: Math.max(0, this.currentRoundIndex + 1),
+      totalRounds: this.playlist.length,
+      phase: this.phase,
+      anime: item?.anime ?? null,
+      title: item?.title ?? null,
+      endsAt: this.clock.endsAt || null,
+    };
+  }
+
   cancel(): void {
     this.clock.clear();
+    this.clearBotTimers();
     if (this.introTimer) clearTimeout(this.introTimer);
     if (this.resumeTimer) clearTimeout(this.resumeTimer);
     this.introTimer = null;
     this.resumeTimer = null;
     this.phase = null;
+  }
+
+  // --- BOTS (DEV ONLY) ------------------------------------------------------
+
+  private clearBotTimers(): void {
+    for (const t of this.botTimers) clearTimeout(t);
+    this.botTimers = [];
+  }
+
+  /** Schedule each bot's single answer for the current guessing round. */
+  private scheduleBotAnswers(item: PlaylistItem): void {
+    const responseType = (this.room.settings.responseType ?? 'mix') as ResponseType;
+    const botAnswerType: AnswerType = responseType === 'typing' ? 'typing' : 'qcm';
+    const maxDelay = Math.max(200, item.guessDuration * 1000 - 400);
+
+    for (const p of this.room.players.values()) {
+      if (!p.isBot || !p.botConfig) continue;
+      const cfg = p.botConfig;
+      const lo = Math.min(cfg.minDelayMs, maxDelay);
+      const hi = Math.min(Math.max(cfg.maxDelayMs, cfg.minDelayMs), maxDelay);
+      const delay = lo + Math.random() * Math.max(0, hi - lo);
+
+      const willBeCorrect = Math.random() < cfg.accuracy;
+      const answer = willBeCorrect
+        ? item.validAnswers[0] ?? item.anime
+        : this.pickWrongAnswer(item);
+
+      const botId = p.userId;
+      const timer = setTimeout(() => {
+        this.handleAnswer(botId, answer, botAnswerType);
+      }, delay);
+      this.botTimers.push(timer);
+    }
+  }
+
+  /** A plausible-but-wrong answer for a bot (a decoy choice, else a placeholder). */
+  private pickWrongAnswer(item: PlaylistItem): string {
+    const valid = new Set(item.validAnswers.map((a) => a.toLowerCase()));
+    const decoy = item.choices.find((c) => !valid.has(c.toLowerCase()));
+    return decoy ?? '—';
   }
 
   // --- HELPERS --------------------------------------------------------------
@@ -455,8 +513,13 @@ export class MatchEngine {
     return [...this.room.players.values()].filter((p) => p.isConnected);
   }
 
+  /** Human, connected players — bots never vote to pause/skip. */
+  private humanVoters(): RoomPlayer[] {
+    return [...this.room.players.values()].filter((p) => p.isConnected && !p.isBot);
+  }
+
   private requiredVotes(): number {
-    return Math.max(1, Math.ceil(this.connectedPlayers().length / 2));
+    return Math.max(1, Math.ceil(this.humanVoters().length / 2));
   }
 
   private allConnectedAnswered(): boolean {

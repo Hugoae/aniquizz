@@ -4,6 +4,7 @@
 // Client:  Socket<ServerToClientEvents, ClientToServerEvents>
 
 import type { GamePlayer } from './types';
+import type { UserRole } from './roles';
 import type {
   AnswerType,
   ChatMessage,
@@ -28,6 +29,10 @@ export interface SocketData {
   userId: string | null;
   username: string;
   isAuthenticated: boolean;
+  /** DB-resolved role (server-authoritative). Null for guests. */
+  role: UserRole | null;
+  /** ISO timestamp until which the user is muted, if any (server-resolved). */
+  mutedUntil: string | null;
 }
 
 // --- CLIENT → SERVER INPUT PAYLOADS ---
@@ -61,9 +66,13 @@ export interface ServerToClientEvents {
   'lobby:joined': (payload: LobbyJoinedPayload) => void;
   rooms_update: (rooms: RoomListItem[]) => void;
   room_updated: (payload: RoomUpdatedPayload) => void;
-  room_closed: () => void;
+  room_closed: (payload?: { reason?: string }) => void;
   password_required: (payload: { roomId: string }) => void;
   host_promoted: () => void;
+  /** Admin forced the account to sign out (kick without ban). */
+  force_logout: (payload?: { reason?: string }) => void;
+  /** This connection is being replaced by a newer one for the same user. */
+  session_replaced: () => void;
   update_players: (payload: PlayersUpdatePayload) => void;
 
   // Match lifecycle
@@ -76,7 +85,7 @@ export interface ServerToClientEvents {
   vote_update: (payload: VoteUpdatePayload) => void;
   game_paused: (payload: { isPaused: boolean }) => void;
   game_resuming: (payload: { duration: number }) => void;
-  game_cancelled: () => void;
+  game_cancelled: (payload?: { reason?: string }) => void;
   'game:fallback_notification': (payload: { message: string }) => void;
 
   // Data
