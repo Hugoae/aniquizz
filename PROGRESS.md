@@ -30,7 +30,7 @@
 ### Server — Dev tooling (DEV ONLY, env-guarded)
 - [x] **Simulated players (bots)**: in-process virtual players (no socket). `Room.addBot` pulls from the roster; `MatchEngine.scheduleBotAnswers` makes each bot answer once per round with configurable accuracy + delay (correct → a valid answer, wrong → a decoy choice). Bots return to the lobby ready after a match. Bot timers cleared on round/end/cancel.
 - [x] **Lifecycle hardened for bots**: `hasConnectedPlayers`/`settleLifecycle`/`promoteNextHost`/vote-quorum all **ignore bots**; a bot-only room is torn down (no human ⇒ empty).
-- [x] **Dev endpoints** (ADMIN + dev): `POST /dev/rooms/:id/bots` (add N bots w/ behavior config), `POST /dev/rooms/:id/remove-bots` (−N / clear), `POST /dev/scenario` (bots room, `join` = hosted-by-caller so the admin lands in the lobby, or headless auto-start; rich settings), `GET /dev/info`, `POST /dev/claim-admin` (first-admin self-bootstrap when no admin exists yet).
+- [x] **Dev endpoints** (MODERATOR + dev): `POST /dev/rooms/:id/bots` (add N bots w/ behavior config), `POST /dev/rooms/:id/remove-bots` (−N / clear), `POST /dev/scenario` (bots room, `join` = hosted-by-caller so the caller lands in the lobby, or headless auto-start; rich settings), `GET /dev/info`; `POST /dev/claim-admin` (first-admin self-bootstrap when no admin exists yet).
 
 ### Client (`apps/client`)
 - [x] **`lib/adminApi.ts`**: typed admin REST client (Supabase Bearer token, French error surfacing) — users, rooms, catalogue tree + CRUD, stats overview, dev tooling.
@@ -52,7 +52,7 @@
 ### Phase 6 notes / decisions
 - **Bots = in-process virtual players** (user-approved) with seeded `bot-*` profiles so matches persist realistically; excluded from lobby quorum/host logic. Fully DEV-only (env guard on every dev endpoint).
 - **Admin auth is fully server-authoritative**: role read from DB on each request; the client UI gating (`canManage`) is convenience only.
-- **Permission split**: MODERATOR = day-to-day moderation (view users/rooms, mute, **ban**, disconnect, end/close/kick, edit catalogue metadata). ADMIN adds high-impact/irreversible actions (change roles, reset stats, catalogue create/delete, reset activity, dev tools).
+- **Permission split**: MODERATOR = day-to-day moderation (view users/rooms, mute, **ban**, disconnect, end/close/kick, edit catalogue metadata, **dev tools**). ADMIN adds high-impact/irreversible actions (change roles, reset stats, catalogue create/delete, reset activity).
 - **First-admin bootstrap** via dev-only `claim-admin` (allowed only when no admin exists yet) so the panel is reachable without manual DB edits.
 - **Ban/mute** stored as `*Until` timestamps; ban enforced at socket handshake, mute at chat send; both pushed live to the target's sockets.
 - **Catalogue edits are direct-to-DB** via the admin API; the `manual_edits.json` pipeline import is untouched. `altNames` partial search unsupported (Postgres array), so search covers anime name + song title/artist.
