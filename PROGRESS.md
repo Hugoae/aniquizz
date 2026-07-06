@@ -1,8 +1,102 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 6 ✅ complete — ready for Phase 7
+## Current phase: Phase 7 — Features ✅ complete
 
-## Done (Phase 6 — Dev environment, test tooling & Admin)
+Order: **(1) XP/Level ✅ → (2) Victory conditions revamp ✅ → (3) Friends ✅.** Leaderboard deferred to **Update 1** (after Phase 9). Next up: **Phase 8 — UI/UX rework**.
+
+## Done (Phase 7 — Features) ✅
+
+### XP / Level ✅ (step 1)
+
+#### Shared (`packages/shared`)
+- [x] **`leveling.ts`** (pure, unit-tested): `xpForMatch`, `levelFromXp`, `totalXpForLevel`, `levelProgress` + `GAME_CONFIG.LEVELING` constants. Exported from `index.ts`.
+  - **XP formula:** `12 × correct` weighted by song difficulty (`easy ×0.75 · medium ×1.0 · hard ×1.25`) + `3 × roundsPlayed` (participation, anti-farm) + placement (multi: 1st +40 · 2nd +25 · 3rd +12 · else +6 if top-half, all only when `score > 0`; solo: objective reached +25). Solo `×0.8`. Win-streak: flat `+5%` while `currentWinStreak ≥ 3` (solo + multi). Floor 5 XP if ≥1 round played; 0 XP if none.
+  - **Level curve:** quadratic, XP to go L→L+1 = `100 × L`; `Profile.xp` = lifetime total, `Profile.level` = derived (`levelFromXp`). **Hard cap at level 100** (`MAX_LEVEL`; XP keeps accruing, level stops, progress shows 100%). `levelFromXp` is fp-drift-safe (boundary correction loop).
+- [x] **`leveling.test.ts`**: 15 tests (difficulty weighting, participation/floor, placement incl. top-half, solo multiplier+bonus, win-streak on/off, curve thresholds, `levelFromXp`↔`totalXpForLevel` inverse at boundaries, monotonicity, `levelProgress` bounds). **50/50** shared tests pass.
+- [x] Contract: `ServerToClientEvents.level_up` (`{ oldLevel, newLevel, xp }`); `LevelUpPayload` in `game.ts`; `GamePlayer.xpEarned?` (revealed on game-over).
+
+#### Database (`packages/database`)
+- [x] **Migration `20260706170000_phase7_win_streak`** (applied live): `Profile.currentWinStreak Int @default(0)`. `xp`/`level`/`MatchPlayer.xpEarned` already existed (Phase 5). Prisma client regenerated.
+
+#### Server
+- [x] **`MatchEngine.finish()`** now async: computes per-player XP via `xpForMatch` (excludes bots + guests), tallies correct answers by song difficulty (`correctSongIds` × playlist), reads prior state via `repo.getXpState`, derives old/new level, injects `xpEarned` into the `game_over` payload, and emits `level_up` to each leveled-up player's own socket (never broadcast). Best-effort: any XP failure still ends the match cleanly.
+- [x] **`MatchRepository`**: `getXpState(userIds)` (prior `xp` + `currentWinStreak`); `persistMatch` writes `xp += earned`, `level`, `currentWinStreak` (precomputed by the engine) alongside the existing aggregates.
+
+#### Client
+- [x] **`AuthContext`**: listens to `level_up` → success toast + profile refresh.
+- [x] **Profile page**: Level + XP progress bar (`levelProgress(profile.xp)`) in the identity card; refreshes profile on mount so post-match XP is fresh.
+- [x] **Header**: level shown as a small corner badge on the profile avatar bubble.
+- [x] **`StandardGameOver`**: `+X XP` shown per player (multi ranking) and on the solo result card (from `victoryData.rankings[].xpEarned`).
+
+#### Verification
+- [x] `pnpm --filter @aniquizz/shared test` — **50/50**; server typecheck OK; client `tsc --noEmit` OK; changed files lint-clean.
+
+### Victory conditions revamp ✅ (step 2)
+
+**Metric = mastery ratio, not raw accuracy.** Points are fixed per answer type (Typing 5 · QCM 2 · Duo 1), and Duo is a per-round *choice* in `mix` lobbies. Raw accuracy caps at 100% and is blind to that choice, so acing trivial Duo rounds wrongly earned Platine (a 5/25 game). The medal is now graded on **`score / bestObtainable`** (best = Typing ceiling for `mix`/`typing`, QCM for `qcm`), so choosing the easy option correctly caps the medal low.
+
+#### Shared (`packages/shared`)
+- [x] **`grading.ts`** (pure, unit-tested): medals replace letter ranks. `computeMedal(ratio, songDifficulties)` → `bronze | silver | gold | platinum | null`; `effectiveMedalThresholds` (mean of per-difficulty thresholds across the songs actually played); `getMedalMeta` (FR label + color).
+  - **Thresholds** = a **% of the best obtainable score**, per song difficulty (`GAME_CONFIG.MEDALS.THRESHOLDS`). Easier songs demand a higher %, harder songs are more lenient; Platinum keeps a small margin (not strict 100%):
+    - easy: `bronze 55 · silver 65 · gold 80 · platinum 95`
+    - medium: `bronze 50 · silver 58 · gold 70 · platinum 90`
+    - hard: `bronze 45 · silver 50 · gold 62 · platinum 80`
+  - **Mixed-difficulty matches:** the effective threshold is the **mean of the per-difficulty thresholds across the songs actually played** (10 songs = 5 easy + 5 hard → threshold = mean(easy, hard) per tier). More hard songs → lower bar automatically.
+- [x] **`victory.ts` refactor**: `computeVictory` takes per-player `correctCount`/`totalCount` + `songDifficulties`.
+  - **Solo:** victory = ≥ Bronze, graded on `score / (bestPerRound × roundsPlayed)` (per-player denominator handles early quits). Returns `soloMedal` + `soloTargetRatio`. Replaces the stale score-% target and drives `gamesWon`/`isWinner`/win-streak/solo XP bonus.
+  - **Multi:** podium unchanged (top-1, or top-3 when ≥ `PODIUM_THRESHOLD` players, score > 0). **No per-player medals** — ranking is the story (avoids the "Platine at 2nd place" confusion).
+  - Removed `VICTORY_CONDITIONS.SOLO` ratios + `RANKS`/`getRank`/`RANK_COLOR_CLASSES`.
+- [x] **`victory.test.ts`** rewritten (mastery-ratio solo win/loss incl. the Duo case, difficulty-scaled thresholds, early-quit denominator, podium sizing, zero-score guard, `soloMedal` null in multi). `VictoryData` gains `soloMedal`/`soloTargetRatio`. **54/54** shared tests pass (thresholds retuned: lowered overall, Platinum given a margin + scaled by difficulty).
+
+#### Server
+- [x] **`MatchEngine.finish()`**: passes per-player `matchCorrectCount`/`matchTotalCount` + normalized `songDifficulties` to `computeVictory`; solo `isWinner` now = Bronze+. Injects `soloMedal`/`soloTargetRatio` into the `game_over` payload (medals no longer attached per player).
+
+#### Client
+- [x] **`StandardGameOver`**: solo shows the medal badge on the avatar + a mastery progress bar (score vs the required Bronze score), VICTOIRE/DÉFAITE driven by the medal. Multi ranking rows show each player's `X/Y bonnes réponses` (no medals).
+
+#### Verification
+- [x] `pnpm --filter @aniquizz/shared test` — **54/54**; server typecheck OK; client `tsc --noEmit` OK.
+
+### Friends ✅ (step 3 — core + enhancements)
+
+Delivered in two passes: **core** (add by exact username, requests, presence dot, Profile panel) then a full **enhancement** pass (play-together, contextual add, recent players, rich presence, header dropdown, blocking + privacy, public-profile modal).
+
+#### Database (`packages/database`)
+- [x] **Migration `20260706180000_phase7_friendship`**: `Friendship` (`requesterId`/`addresseeId`/`status`), enum `FriendshipStatus (PENDING|ACCEPTED|BLOCKED)`, `Profile.sentRequests`/`receivedRequests`. `@@unique([requesterId, addresseeId])` + `@@index([addresseeId, status])`.
+- [x] **Migration `20260706190000_phase7_friend_privacy`** (applied via `prisma migrate deploy`): `Profile.allowFriendRequests Boolean @default(true)`. Client regenerated (engine DLL rename = benign Windows lock from the running dev server; JS/types written).
+
+#### Shared (`packages/shared`)
+- [x] `game.ts`: **`PresenceStatus`** (`offline|online|in_lobby|in_game`); `FriendSummary` now carries `status` + `roomId`/`roomName`/`joinable` (replaces the `online` boolean); `FriendsState` gains `blocked` + `allowFriendRequests`; `FriendPresencePayload` carries rich status + room; new `RecentPlayer`, `LobbyInvitePayload`, `PublicProfile`.
+- [x] `events.ts`: `FriendRequestInput` accepts **username OR userId**; `JoinLobbyInput.fromInvite`. New C→S: `friends:block`/`unblock`/`invite`/`recent`/`set_privacy`, `profile:get_public`. New S→C: `friends:recent`/`invite_received`/`info`, `profile:public`.
+
+#### Server
+- [x] **`friendsService.ts`**: presence-aware `getState` (injected `ResolvePresence`, partitions accepted/incoming/outgoing/**blocked**, status-ranked sort, returns `allowFriendRequests`); `sendRequest` by username **or** userId (guards self/dup/already-friends/blocked + honors target privacy; mutual auto-accept); `blockUser` (wipes relationship → directional `BLOCKED` row), `unblockUser`, `setPrivacy`, `getRecentPlayers` (non-bot co-players from recent `MatchPlayer`, excludes existing relations), `isBlockedEitherWay`, `getProfileLite`.
+- [x] **`friendsPresence.ts`**: `resolvePresence`/`presenceResolver` derive status from `GameManager.getUserPresence` (offline if no socket, else online/in_lobby/in_game + joinable room); `broadcastPresence` emits the rich payload to online friends.
+- [x] **`GameManager.getUserPresence`**: user → `{status, roomId, roomName, joinable}` from live rooms.
+- [x] **`friendsHandlers.ts`**: adds `block`/`unblock`/`invite`/`recent`/`set_privacy`/`get_public`. Invite validates the caller is in a room + not blocked + target online, then emits `friends:invite_received` (notification/shortcut only). `profile:get_public` → `profileService.getPublicProfile` (stats + `relation`).
+- [x] **`profileService.getPublicProfile`**: public card (level/xp/role/games/wins/bestScore/presence) + viewer `relation`.
+- [x] **`lobbyHandlers.joinLobby`**: private rooms **always require the password** (invites/"Rejoindre" are shortcuts, not a bypass — `password_required` opens the client prompt).
+- [x] **`SocketManager`**: passes `gameManager` to friends handlers + `broadcastPresence`; **re-broadcasts presence** on `lobby:create`/`join`, `leave_room`, `start_game`, `game:return_to_lobby`/`cancel` (next-tick, after room state settles).
+
+#### Client (`features/friends`)
+- [x] **`FriendsContext`** (app-wide provider, replaces the old `useFriends` hook): single live state (friends/incoming/outgoing/blocked/privacy/recent + `onlineCount`), all actions (`sendRequest`/`addById`/`accept`/`reject`/`remove`/`block`/`unblock`/`invite`/`setPrivacy`/`refreshRecent`/`openProfile`), `relationOf`, presence patching, invite toast with a **"Rejoindre"** action, and the mounted `PublicProfileDialog`. `presence.ts` holds the shared helpers (`presenceLabel`, `formatLastSeen`).
+- [x] **`FriendsPanel`**: rich presence (colored dot + label + current room), "vu il y a X", privacy toggle, **recent-players** section (1-click add), **blocked** section (unblock), **"Rejoindre"** on a friend in a joinable lobby, click a row → profile modal.
+- [x] **`FriendsMenu`** (header dropdown): online count + pending-request badge, quick accept/reject, join a friend's lobby, "Gérer mes amis".
+- [x] **`AddFriendButton`** (contextual, relation-aware): on **game-over** ranking rows + **lobby** player cards (hidden for self/bots/friends; incoming → mutual-accept).
+- [x] **`InviteFriendsButton`**: lobby-side dropdown to invite online friends into the current room.
+- [x] **`PublicProfileDialog`**: avatar/level/role badge/presence/stats + relation-driven actions (add/accept/remove/block/unblock).
+- [x] **`GameHub`**: joins via invite (`fromInvite`) navigation state.
+
+#### Verification
+- [x] Shared build OK; server `tsc --noEmit` OK; client `tsc --noEmit` OK; friends folder lint = 0 errors (1 idiomatic `react-refresh` provider+hook warning). Pre-existing `no-explicit-any` debt in `GameHub`/`Profile`/`StandardGameOver` untouched. Live socket flow to smoke-test in-app.
+
+### Multiplayer room list
+- [x] **`RoomList`**: new **"Amis"** filter (next to Tous/Publics/Privés) — keeps only rooms hosting a friend, derived from live friend presence (`FriendSummary.roomId`), no server change.
+
+### Deferred → Update 1 (after Phase 9)
+- **Leaderboard:** server `leaderboard:get` (Profile by XP/level/wins, exclude `bot-*`); replace mock data in `Leaderboard.tsx`.
+
+## Done (Phase 6 — Dev environment, test tooling & Admin) ✅ complete
 
 ### Schema (`packages/database`)
 - [x] **Migration `20260706160000_phase6_admin_fields`** (applied live): `Profile.bannedUntil`, `Profile.mutedUntil`, `Profile.lastSeenAt?` + `@@index([lastSeenAt])`. `role` (`UserRole`) already existed. Prisma client regenerated.

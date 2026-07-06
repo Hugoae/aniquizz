@@ -232,6 +232,11 @@ export default function GameHub() {
         socket.emit('lobby:join', { roomId: locationState.roomId, ...getPlayerIdentity() });
         // Consume the navigation state so a page refresh doesn't retry a stale rejoin.
         window.history.replaceState({}, document.title);
+    } else if (locationState?.fromInvite && locationState?.roomId && !hasJoinedRef.current) {
+        // Joining through a friend invite: the server bypasses the password.
+        hasJoinedRef.current = true;
+        socket.emit('lobby:join', { roomId: locationState.roomId, fromInvite: true, ...getPlayerIdentity() });
+        window.history.replaceState({}, document.title);
     }
 
     return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('lobby:joined'); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('game_started', onGameStarted); socket.off('error', onError); };

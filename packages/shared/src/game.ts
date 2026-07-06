@@ -3,6 +3,7 @@
 // Player identity is ALWAYS `userId` (Supabase auth). Never socket.id.
 
 import type { GamePlayer, RoomConfig } from './types';
+import type { MedalTier } from './grading';
 
 // --- STATUS & PHASES ---
 export type GameStatus = 'waiting' | 'playing' | 'paused' | 'finished';
@@ -117,7 +118,10 @@ export interface VictoryData {
   winnerIds: string[];
   rankings: GamePlayer[];
   totalMaxScore: number;
-  soloTargetScore: number;
+  /** Mastery ratio (0–1) required for a Bronze medal / a solo win. */
+  soloTargetRatio: number;
+  /** The solo player's medal (null = defeat). Multiplayer has no medals. */
+  soloMedal: MedalTier;
   soloDifficulty: string;
   multiWinnerCount: number;
 }
@@ -161,6 +165,110 @@ export interface RoomUpdatedPayload {
   roomSettings: RoomSettings;
   roomName: string;
   players: GamePlayer[];
+}
+
+// --- XP / LEVELING ---
+/** Pushed to a player's own socket when a finished match makes them level up. */
+export interface LevelUpPayload {
+  oldLevel: number;
+  newLevel: number;
+  /** New lifetime XP total. */
+  xp: number;
+}
+
+// --- SOCIAL / FRIENDS (Phase 7) ---
+/**
+ * Rich presence, computed server-side from the socket rooms + GameManager.
+ * `offline` = no live socket; `online` = connected but idle (menu);
+ * `in_lobby` = in a waiting room; `in_game` = in a running match.
+ */
+export type PresenceStatus = 'offline' | 'online' | 'in_lobby' | 'in_game';
+
+/** A user in the friends UI (confirmed friend or the other party of a request). */
+export interface FriendSummary {
+  /** Profile id = auth userId. */
+  id: string;
+  username: string;
+  avatar: string;
+  level: number;
+  /** Rich presence status. */
+  status: PresenceStatus;
+  /** ISO timestamp of last presence, null if never seen. */
+  lastSeenAt: string | null;
+  /** Room the friend is currently in, if any (used for "Rejoindre"). */
+  roomId?: string | null;
+  /** Display name of that room, if any. */
+  roomName?: string | null;
+  /** True when the friend's room is a joinable lobby (waiting + not full). */
+  joinable?: boolean;
+}
+
+/** A pending friend request (either incoming or outgoing). */
+export interface FriendRequest {
+  /** Friendship row id — used to accept / reject. */
+  id: string;
+  /** The other party (not the current user). */
+  user: FriendSummary;
+  /** ISO timestamp the request was created. */
+  createdAt: string;
+}
+
+/** A user recently played with, offered for a 1-click add. */
+export interface RecentPlayer {
+  id: string;
+  username: string;
+  avatar: string;
+  level: number;
+  /** ISO timestamp of the most recent shared match. */
+  lastPlayedAt: string;
+}
+
+/** Full friends snapshot pushed on `friends:state`. */
+export interface FriendsState {
+  friends: FriendSummary[];
+  incoming: FriendRequest[];
+  outgoing: FriendRequest[];
+  /** Users the current user has blocked. */
+  blocked: FriendSummary[];
+  /** Privacy: when false, the user refuses all incoming friend requests. */
+  allowFriendRequests: boolean;
+}
+
+/** Pushed to a user's own sockets when a friend's presence changes. */
+export interface FriendPresencePayload {
+  userId: string;
+  status: PresenceStatus;
+  lastSeenAt: string | null;
+  roomId?: string | null;
+  roomName?: string | null;
+  joinable?: boolean;
+}
+
+/** Pushed to a user when a friend invites them to a lobby. */
+export interface LobbyInvitePayload {
+  /** Friendship-agnostic: who sent the invite. */
+  from: { id: string; username: string; avatar: string };
+  roomId: string;
+  roomName: string;
+  isPrivate: boolean;
+}
+
+/** Public profile/stats returned by `profile:get_public`. */
+export interface PublicProfile {
+  id: string;
+  username: string;
+  avatar: string;
+  level: number;
+  xp: number;
+  role: string;
+  createdAt: string;
+  gamesPlayed: number;
+  gamesWon: number;
+  bestScore: number;
+  status: PresenceStatus;
+  lastSeenAt: string | null;
+  /** Relationship of the viewer to this profile. */
+  relation: 'self' | 'friends' | 'incoming' | 'outgoing' | 'blocked' | 'none';
 }
 
 // --- CHAT ---

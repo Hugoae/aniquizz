@@ -60,6 +60,8 @@ export interface GamePlayer extends BasePlayer {
 
   matchCorrectCount?: number;
   matchTotalCount?: number;
+  /** XP earned this match (revealed on the game-over screen). */
+  xpEarned?: number;
 }
 
 // --- VISUAL & FEEDBACK ---

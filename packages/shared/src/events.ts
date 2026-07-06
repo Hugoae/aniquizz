@@ -9,11 +9,18 @@ import type {
   AnswerType,
   ChatMessage,
   ErrorPayload,
+  FriendPresencePayload,
+  FriendsState,
+  FriendSummary,
   GameStartedPayload,
   GameSyncState,
+  LevelUpPayload,
+  LobbyInvitePayload,
   LobbyJoinedPayload,
   AnsweredPayload,
   PlayersUpdatePayload,
+  PublicProfile,
+  RecentPlayer,
   RoomListItem,
   RoomSettings,
   RoomUpdatedPayload,
@@ -48,6 +55,11 @@ export interface JoinLobbyInput {
   username: string;
   avatar: string;
   password?: string;
+  /**
+   * Marks a join triggered from a friend invite / "Rejoindre" shortcut.
+   * Purely informational — private rooms still require the password.
+   */
+  fromInvite?: boolean;
 }
 
 export interface RoomIdInput {
@@ -58,6 +70,39 @@ export interface AnswerInput {
   roomId: string;
   answer: string;
   answerType: AnswerType;
+}
+
+// --- FRIENDS (Phase 7) ---
+export interface FriendRequestInput {
+  /** Exact username of the user to befriend (contextless add). */
+  username?: string;
+  /** OR the target profile id (contextual add from game-over/lobby). */
+  userId?: string;
+}
+
+export interface FriendRequestActionInput {
+  /** Friendship row id to accept / reject. */
+  requestId: string;
+}
+
+export interface FriendRemoveInput {
+  /** Profile id (userId) of the friend to remove. */
+  userId: string;
+}
+
+export interface FriendUserIdInput {
+  /** Profile id (userId) target of a block/unblock/invite/profile action. */
+  userId: string;
+}
+
+export interface FriendInviteInput {
+  /** Friend to invite to the current lobby. */
+  userId: string;
+}
+
+export interface FriendPrivacyInput {
+  /** When false, refuse all incoming friend requests. */
+  allow: boolean;
 }
 
 // --- SERVER → CLIENT ---
@@ -81,6 +126,8 @@ export interface ServerToClientEvents {
   'game:answered': (payload: AnsweredPayload) => void;
   round_reveal: (payload: RoundRevealPayload) => void;
   game_over: (payload: { victoryData: VictoryData }) => void;
+  /** Sent to a player's own socket when a finished match levels them up. */
+  level_up: (payload: LevelUpPayload) => void;
   game_state_sync: (state: GameSyncState) => void;
   vote_update: (payload: VoteUpdatePayload) => void;
   game_paused: (payload: { isPaused: boolean }) => void;
@@ -98,6 +145,22 @@ export interface ServerToClientEvents {
   'profile:error': (payload: ErrorPayload) => void;
   user_profile: (payload: { success: boolean }) => void;
   home_stats: (stats: { animes: number; users: number; songs: number }) => void;
+
+  // Friends (Phase 7)
+  'friends:state': (state: FriendsState) => void;
+  /** A new incoming request arrived (for a toast, on top of the state refresh). */
+  'friends:request_received': (payload: { from: FriendSummary }) => void;
+  'friends:presence': (payload: FriendPresencePayload) => void;
+  /** Recent non-bot players the user played with, offered for a 1-click add. */
+  'friends:recent': (payload: { players: RecentPlayer[] }) => void;
+  /** A friend invited the user to their lobby. */
+  'friends:invite_received': (payload: LobbyInvitePayload) => void;
+  /** Lightweight success ack (e.g. "invitation envoyée"). */
+  'friends:info': (payload: { message: string }) => void;
+  'friends:error': (payload: ErrorPayload) => void;
+
+  // Public profile (Phase 7)
+  'profile:public': (payload: PublicProfile) => void;
 
   // Misc
   error: (payload: ErrorPayload) => void;
@@ -132,6 +195,21 @@ export interface ClientToServerEvents {
   'profile:get_stats': () => void;
   update_profile_data: (payload: { username?: string; avatarUrl?: string }) => void;
   get_home_stats: () => void;
+
+  // Friends (Phase 7)
+  'friends:list': () => void;
+  'friends:request': (payload: FriendRequestInput) => void;
+  'friends:accept': (payload: FriendRequestActionInput) => void;
+  'friends:reject': (payload: FriendRequestActionInput) => void;
+  'friends:remove': (payload: FriendRemoveInput) => void;
+  'friends:block': (payload: FriendUserIdInput) => void;
+  'friends:unblock': (payload: FriendUserIdInput) => void;
+  'friends:invite': (payload: FriendInviteInput) => void;
+  'friends:recent': () => void;
+  'friends:set_privacy': (payload: FriendPrivacyInput) => void;
+
+  // Public profile (Phase 7)
+  'profile:get_public': (payload: FriendUserIdInput) => void;
 }
 
 /** Anime autocomplete entry served to the client for typing suggestions. */

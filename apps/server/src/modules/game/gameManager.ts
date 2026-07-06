@@ -183,6 +183,34 @@ export class GameManager {
     return ids;
   }
 
+  /**
+   * Rich presence for a single user derived from live rooms:
+   * - in a running match → `in_game`
+   * - in a waiting room → `in_lobby` (+ `joinable` if not full)
+   * - not in any room → `online`
+   * Caller decides `offline` (no live socket).
+   */
+  getUserPresence(userId: string): {
+    status: 'online' | 'in_lobby' | 'in_game';
+    roomId?: string;
+    roomName?: string;
+    joinable?: boolean;
+  } {
+    for (const room of this.rooms.values()) {
+      for (const p of room.players.values()) {
+        if (p.isBot || p.userId !== userId) continue;
+        const inGame = room.status === 'playing' || room.status === 'paused';
+        return {
+          status: inGame ? 'in_game' : 'in_lobby',
+          roomId: room.id,
+          roomName: room.settings.name,
+          joinable: room.status === 'waiting' && room.players.size < room.settings.maxPlayers,
+        };
+      }
+    }
+    return { status: 'online' };
+  }
+
   /** Map of userId → the room they currently belong to (lobby or match). */
   getUserRoomMap(): Map<string, { id: string; name: string }> {
     const map = new Map<string, { id: string; name: string }>();

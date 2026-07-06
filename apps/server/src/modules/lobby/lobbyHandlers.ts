@@ -60,6 +60,8 @@ export const registerLobbyHandlers = (
 
       const isReturning = room.players.has(uid());
 
+      // Private rooms always require the password — even from a friend invite
+      // (the invite is only a shortcut; `password_required` opens the prompt).
       if (
         !isReturning &&
         room.settings.isPrivate &&

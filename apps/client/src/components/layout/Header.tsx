@@ -9,6 +9,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModal } from '@/features/auth/components/AuthModal';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { FriendsMenu } from '@/features/friends/FriendsMenu';
 
 export function Header() {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ export function Header() {
         {/* ACTIONS UTILISATEUR */}
         <div className="flex items-center gap-4">
           {user && profile && <SuspensionBadge />}
+          {user && profile && <FriendsMenu />}
           {user && profile && isStaff && (
             <Button
               variant="ghost"
@@ -48,11 +50,16 @@ export function Header() {
                 // ✅ MODIF : rounded-full -> rounded-lg pour la cohérence "Tech"
                 className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-pointer outline-none focus:ring-0"
             >
-                <UserAvatar 
-                    avatar={profile.avatar} 
-                    username={profile.username} 
-                    className="h-8 w-8" 
-                />
+                <div className="relative shrink-0">
+                    <UserAvatar 
+                        avatar={profile.avatar} 
+                        username={profile.username} 
+                        className="h-8 w-8" 
+                    />
+                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-primary text-[9px] font-black leading-none text-primary-foreground border border-background shadow-sm">
+                        {profile.level ?? 1}
+                    </span>
+                </div>
                 <div className="hidden md:flex flex-col items-start text-sm">
                     <span className="font-bold leading-none">{profile.username}</span>
                 </div>

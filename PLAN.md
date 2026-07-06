@@ -219,11 +219,26 @@ After engine rewrite — make testing features/UI easy.
 
 ---
 
-## Phase 7 — Features
+## Phase 7 — Features ✅ complete
 
-- **XP / Level:** level curve + XP calc in `packages/shared` (pure + unit tests); persist in `saveGameHistory`; profile/header bar + level-up event.
-- **Friends:** Prisma `Friendship` model; server `friends` module (request/accept/reject/remove, online presence); UI panel + lobby invite.
-- **Leaderboard:** server `leaderboard:get` querying `Profile` by XP/level and wins; replace mock data in `Leaderboard.tsx`.
+Order: **(1) XP/Level ✅ → (2) Victory conditions revamp ✅ → (3) Friends ✅.** (Leaderboard deferred to **Update 1**, after Phase 9.)
+
+- **XP / Level:** pure XP + level-curve logic in `packages/shared` (`leveling.ts`, unit tested).
+  - XP formula (per match): `12 XP × correct answers` weighted by song difficulty (`easy ×0.75 · medium ×1.0 · hard ×1.25`) + `3 XP × rounds played` (participation, anti-farm) + placement bonus (multi: 1st +40 · 2nd +25 · 3rd +12 · else +6 if top-half, all only when `score > 0`; solo: objective reached +25). Solo total `×0.8`. Win-streak: flat `+5%` while `currentWinStreak ≥ 3` (solo + multi count). Floor 5 XP if ≥1 round played.
+  - Level curve: quadratic, XP to go L→L+1 = `100 × L`; `Profile.xp` = lifetime total, `Profile.level` = derived/cached (`levelFromXp`), no cap.
+  - **Migration:** add `Profile.currentWinStreak` (win `+1`, loss `reset 0`). `xp`/`level`/`MatchPlayer.xpEarned` already exist.
+  - Server: compute XP in `MatchEngine.finish()` (exclude bots/guests), apply + recompute level + emit `level_up` in `MatchRepository`/engine.
+  - Client: level+XP bar on profile, level badge in header, `+X XP` and level-up highlight on `StandardGameOver`; `AuthContext` listens to `level_up`.
+- **Solo victory conditions revamp:** ✅ done. Replaced the stale score-% thresholds with a **mastery-ratio** criterion — medals are earned by hitting a **% of the best obtainable score** (`score / bestObtainable`), so the answer-mode choice matters (acing easy Duo rounds can't reach a top medal). Difficulty-scaled thresholds (easier = higher %, harder = more lenient; Platinum keeps a small margin): easy `55/65/80/95`, medium `50/58/70/90`, hard `45/50/62/80`. Mixed-difficulty matches use the **mean threshold across the songs played**. **Bronze/Silver/Gold/Platinum** (Bronze = "win" → drives `gamesWon`/`isWinner`/win-streak/solo XP bonus). New pure `grading.ts` (`computeMedal`, `effectiveMedalThresholds`, `getMedalMeta`); `computeVictory` returns `soloMedal`/`soloTargetRatio`. **Medals are solo-only** — multi stays podium/ranking. Removed `RANKS`/`getRank`.
+- **Friends:** ✅ core done. Prisma `Friendship` + `FriendshipStatus` enum; server `modules/friends` (`friendsService` request/accept/reject/remove with mutual-request auto-accept, `friendsPresence` via per-user socket rooms + connect/disconnect broadcast); shared `friends:*` socket contract; client `useFriends` + `FriendsPanel` in the Profile page. Core scope: add by exact username.
+- **Friends — enhancements:** ✅ done.
+  - **Play together:** invite a friend to your lobby + "Rejoindre" on a friend who is in a joinable lobby. Invite is a notification/shortcut only — private lobbies still require the password (same as any join).
+  - **Add from context:** "Ajouter en ami" button on the game-over screen and in the lobby/in-game player list (request by `userId`, not just username).
+  - **Recent players:** auto list of non-bot users recently played with (from `MatchPlayer`), 1-click add; excludes existing friends/pending.
+  - **Rich presence:** status `offline | online | in_lobby | in_game` (computed from `GameManager`) + the room, re-broadcast on lobby join/leave and game start/over — not just connect/disconnect. Show "vu il y a X" from `lastSeenAt`.
+  - **Header dropdown:** friends quick-access in the header (online count + pending-requests badge), via a shared `FriendsProvider` context.
+  - **Blocking:** activate `FriendshipStatus.BLOCKED` (blocked user can't send a request/invite) + a privacy toggle `Profile.allowFriendRequests` (refuse all incoming requests).
+  - **View a friend's profile:** click a friend → public profile/stats modal (`profile:get_public`).
 
 ---
 
@@ -236,6 +251,10 @@ After engine (Phase 5) and features (Phase 7). Mature visual identity; organic d
 **IMPROVE:** refactor `GameHub` (`useLobbySocket`), light mode toggle + remove hardcoded `text-white`, unify `AuthModal`, route guards, `NotFound`, a11y, DRY news display.
 
 **DELETE:** ~35 unused shadcn components, dead `NavLink`, unused `ui/sonner`, fake "online" badge on profile.
+
+**ADD:**
+- **Role rings on avatars:** colored ring around a user's profile picture based on role (red = ADMIN, blue = MODERATOR, none for USER). Centralize in `UserAvatar` so it applies everywhere (header, lobby, game, ranking, admin).
+- **XP breakdown button on the game-over screen:** a "détail de l'XP" button opening a breakdown of the XP earned (base per correct answer weighted by difficulty, participation, placement bonus, solo modifier, win-streak bonus). Requires surfacing the per-component XP breakdown from the server (extend the `xpForMatch` result / `game_over` payload) rather than just the final total.
 
 Note: `Game.tsx` refactor is Phase 5; this phase covers the rest of the client.
 
@@ -250,6 +269,14 @@ Unit tests already colocated in Phases 5–7. This phase adds higher levels + au
 - e2e (Playwright): create match → play one round → game over.
 - GitHub Actions: `lint` + `test` + `build` on PR (Turbo cache); README badges.
 - CI "English code" check: lint + grep excluding isolated French UI strings.
+
+---
+
+## Update 1 — Post-launch (after Phase 9)
+
+Deferred features to ship after all phases are complete.
+
+- **Leaderboard:** server `leaderboard:get` querying `Profile` by XP/level and wins; replace mock data in `Leaderboard.tsx`; exclude `bot-*` ids.
 
 ---
 

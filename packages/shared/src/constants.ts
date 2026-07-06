@@ -14,14 +14,32 @@ export const GAME_CONFIG = {
 
   // --- VICTORY CONDITIONS ---
   VICTORY_CONDITIONS: {
-    SOLO: {
-      EASY: 0.6,
-      MEDIUM: 0.55,
-      HARD: 0.5,
-      EXACT: 0.5,
-    },
     MULTI: {
+      // Lobbies with at least this many players crown a top-3 podium.
       PODIUM_THRESHOLD: 5,
+    },
+  },
+
+  // --- MEDALS (performance grade, replaces letter ranks) ---
+  // Mastery ratio (earned score / best obtainable score) required per song
+  // difficulty, per medal tier. Easier songs demand a higher ratio for the same
+  // medal; harder songs are more lenient. Platinum keeps a small margin (not a
+  // strict 100%). For a mixed-difficulty match the effective threshold is the
+  // mean across the songs actually played (see effectiveMedalThresholds).
+  MEDALS: {
+    THRESHOLDS: {
+      easy: { bronze: 0.55, silver: 0.65, gold: 0.8, platinum: 0.95 },
+      medium: { bronze: 0.5, silver: 0.58, gold: 0.7, platinum: 0.9 },
+      hard: { bronze: 0.45, silver: 0.5, gold: 0.62, platinum: 0.8 },
+    },
+    // Highest → lowest, used to resolve a medal from an accuracy.
+    TIERS: ['platinum', 'gold', 'silver', 'bronze'] as const,
+    // Display metadata (labels are user-facing FR).
+    META: {
+      bronze: { label: 'Bronze', color: '#CD7F32' },
+      silver: { label: 'Argent', color: '#C0C0C0' },
+      gold: { label: 'Or', color: '#FFD700' },
+      platinum: { label: 'Platine', color: '#67E8F9' },
     },
   },
 
@@ -38,6 +56,32 @@ export const GAME_CONFIG = {
   FUZZY: {
     THRESHOLD_RATIO: 0.6,
     MIN_LENGTH_TOLERANCE: 4,
+  },
+
+  // --- XP / LEVELING ---
+  LEVELING: {
+    /** Base XP for a single correct answer, before the difficulty weight. */
+    XP_PER_CORRECT: 12,
+    /** Difficulty multiplier applied to each correct answer's base XP. */
+    DIFFICULTY_WEIGHT: { easy: 0.75, medium: 1.0, hard: 1.25 } as const,
+    /** Participation XP granted per round the player took part in (anti-farm). */
+    XP_PER_ROUND: 3,
+    /** Placement bonuses (multiplayer), only when the player scored > 0. */
+    PLACEMENT: { FIRST: 40, SECOND: 25, THIRD: 12, TOP_HALF: 6 },
+    /** Solo bonus when the victory objective is reached. */
+    SOLO_WIN_BONUS: 25,
+    /** Solo matches award slightly less XP than multiplayer. */
+    SOLO_MULTIPLIER: 0.8,
+    /** Consecutive won matches from which the win-streak bonus kicks in. */
+    WIN_STREAK_MIN: 3,
+    /** Flat XP multiplier bonus while on a qualifying win streak (+5%). */
+    WIN_STREAK_BONUS: 0.05,
+    /** Minimum XP awarded to a player who played at least one round. */
+    MIN_XP: 5,
+    /** Level curve base: XP to go from level L to L+1 is CURVE_BASE * L. */
+    CURVE_BASE: 100,
+    /** Hard level cap. XP keeps accumulating but the level stops here. */
+    MAX_LEVEL: 100,
   },
 
   // --- DECADES ---

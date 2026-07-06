@@ -11,6 +11,8 @@ import { registerLobbyHandlers } from '../modules/lobby/lobbyHandlers';
 import { registerGameHandlers } from '../modules/game/gameHandlers';
 import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
+import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
+import { broadcastPresence, isUserOnline, userRoom } from '../modules/friends/friendsPresence';
 
 /**
  * Single entry point for Socket.io event wiring. Distributes each connection
@@ -48,6 +50,13 @@ export class SocketManager {
     this.io.on('connection', (socket: TypedSocket) => {
       // Identity is set by socketAuthMiddleware (never trust raw client userId).
       const { username, userId, isAuthenticated } = socket.data;
+
+      // Join a per-user room BEFORE dropping older sockets, so friend presence
+      // stays "online" across a reconnect (the fresh socket is already in the
+      // room when the old one leaves → no offline flicker).
+      if (userId) {
+        socket.join(userRoom(userId));
+      }
 
       // Single active session per user. The client reconnects on identity
       // changes (disconnect().connect()), which can leave a lingering "ghost"
@@ -89,10 +98,37 @@ export class SocketManager {
       registerGameHandlers(this.io, socket, this.gameManager);
       registerProfileHandlers(this.io, socket);
       registerGeneralHandlers(this.io, socket);
+      registerFriendsHandlers(this.io, socket, this.gameManager);
+
+      // Tell online friends this user just came online (best-effort).
+      if (userId) {
+        void broadcastPresence(this.io, this.gameManager, userId);
+
+        // Re-broadcast rich presence when the user's room membership changes.
+        // Runs after the handler mutated room state (next tick).
+        const reemitPresence = () => {
+          setTimeout(() => void broadcastPresence(this.io, this.gameManager, userId), 50);
+        };
+        for (const ev of [
+          'lobby:join',
+          'lobby:create',
+          'leave_room',
+          'start_game',
+          'game:return_to_lobby',
+          'game:cancel',
+        ] as const) {
+          socket.on(ev, reemitPresence);
+        }
+      }
 
       socket.on('disconnect', (reason) => {
         const data = socket.data;
         touchLastSeen(data.userId);
+        // Notify friends the user went offline, unless another socket of theirs
+        // is still connected (e.g. a reconnect replaced this one).
+        if (data.userId && !isUserOnline(this.io, data.userId)) {
+          void broadcastPresence(this.io, this.gameManager, data.userId);
+        }
         logger.child({
           context: 'Socket',
           socketId: socket.id,

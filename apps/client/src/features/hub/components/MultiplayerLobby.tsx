@@ -17,6 +17,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { AddFriendButton } from '@/features/friends/AddFriendButton';
+import { InviteFriendsButton } from '@/features/friends/InviteFriendsButton';
 
 export interface LobbyPlayer {
   id: string | number;
@@ -170,12 +172,15 @@ export function MultiplayerLobby({
                 </div>
             </div>
 
-            {isHost && (
-                <Button variant="secondary" onClick={onOpenSettings} className="gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg">
-                    <Settings className="h-4 w-4" />
-                    Paramètres
-                </Button>
-            )}
+            <div className="flex items-center gap-2">
+                {!isSolo && <InviteFriendsButton />}
+                {isHost && (
+                    <Button variant="secondary" onClick={onOpenSettings} className="gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg">
+                        <Settings className="h-4 w-4" />
+                        Paramètres
+                    </Button>
+                )}
+            </div>
         </div>
         
         {/* Settings Badges */}
@@ -251,6 +256,12 @@ export function MultiplayerLobby({
                             >
                                 <Crown className="h-4 w-4" />
                             </button>
+                        )}
+
+                        {!isMe && typeof player.id === 'string' && !player.id.startsWith('bot-') && (
+                            <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AddFriendButton userId={player.id} compact />
+                            </div>
                         )}
 
                         {player.isHost && (

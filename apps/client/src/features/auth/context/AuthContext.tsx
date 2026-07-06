@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { Session, User } from "@supabase/supabase-js";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { socket } from "@/lib/socket"; // ✅ Import du socket
 
@@ -147,6 +148,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }
   }, [profile, session, loading]);
+
+  // --- LEVEL-UP (Phase 7) ---
+  // Pushed to the player's own socket when a finished match levels them up.
+  useEffect(() => {
+    const onLevelUp = (payload: { oldLevel: number; newLevel: number; xp: number }) => {
+      toast.success(`Niveau ${payload.newLevel} atteint !`, {
+        description: "Continue comme ça pour grimper les niveaux.",
+      });
+      if (session?.user) fetchProfile(session.user.id);
+    };
+    socket.on("level_up", onLevelUp);
+    return () => {
+      socket.off("level_up", onLevelUp);
+    };
+  }, [session, fetchProfile]);
 
   // --- ACTIONS ---
 

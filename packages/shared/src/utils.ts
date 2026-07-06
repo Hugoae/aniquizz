@@ -1,34 +1,6 @@
 // packages/shared/src/utils.ts
 // Framework-agnostic pure helpers shared by the client and the server.
 
-import { GAME_CONFIG } from './constants';
-
-const RANK_COLOR_CLASSES: Record<string, string> = {
-  gold: 'text-yellow-400 border-yellow-400 bg-yellow-400/10',
-  yellow: 'text-yellow-500 border-yellow-500 bg-yellow-500/10',
-  green: 'text-emerald-400 border-emerald-400 bg-emerald-400/10',
-  blue: 'text-blue-400 border-blue-400 bg-blue-400/10',
-  orange: 'text-orange-400 border-orange-400 bg-orange-400/10',
-  red: 'text-red-500 border-red-500 bg-red-500/10',
-};
-
-// --- RANKS (score grade) ---
-export const getRank = (score: number, maxPossibleScore: number) => {
-  if (maxPossibleScore === 0) return { label: '?', color: 'text-gray-500 border-gray-500' };
-
-  const ratio = score / maxPossibleScore;
-  const rank = [...GAME_CONFIG.RANKS].reverse().find((r) => ratio >= r.percent);
-
-  if (!rank) {
-    return { label: 'D', color: RANK_COLOR_CLASSES.red };
-  }
-
-  return {
-    label: rank.label,
-    color: RANK_COLOR_CLASSES[rank.color] ?? 'text-gray-500 border-gray-500',
-  };
-};
-
 // --- SONG TYPE HELPERS ---
 /** Display / video-key label, e.g. OP + 1 → "OP1". */
 export const formatSongTypeLabel = (songType: string, sequence: number): string =>

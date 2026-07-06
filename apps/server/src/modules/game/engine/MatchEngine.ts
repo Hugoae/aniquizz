@@ -2,14 +2,17 @@ import {
   GAME_CONFIG,
   computeVictory,
   isAnswerCorrect,
+  levelFromXp,
+  xpForMatch,
   type AnswerType,
+  type CorrectByDifficulty,
   type GamePlayer,
   type GameSyncState,
-  type Precision,
   type ResponseType,
   type RevealSong,
   type RoundStartPayload,
   type RoundRevealPayload,
+  type SongDifficulty,
   type VictoryData,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
@@ -143,7 +146,7 @@ export class MatchEngine {
     this.currentRoundIndex++;
 
     if (this.currentRoundIndex >= this.playlist.length) {
-      this.finish();
+      void this.finish();
       return;
     }
 
@@ -277,22 +280,28 @@ export class MatchEngine {
     this.channel.emit('round_reveal', payload);
   }
 
-  private finish(): void {
+  private async finish(): Promise<void> {
     this.phase = null;
     this.clock.clear();
     this.room.status = 'finished';
 
     const settings = this.room.settings;
     const responseType = (settings.responseType ?? 'mix') as ResponseType;
-    const precision: Precision = settings.precision === 'exact' ? 'exact' : 'franchise';
+
+    const songDifficulties = this.playlist.map((s) => MatchEngine.normalizeDifficulty(s.difficulty));
 
     const result = computeVictory({
-      players: [...this.room.players.values()].map((p) => ({ userId: p.userId, score: p.score })),
+      players: [...this.room.players.values()].map((p) => ({
+        userId: p.userId,
+        score: p.score,
+        correctCount: p.matchCorrectCount,
+        totalCount: p.matchTotalCount,
+      })),
       totalRounds: this.playlist.length,
       responseType,
       isSolo: this.room.isSolo,
-      precision,
       difficulties: settings.difficulty ?? [],
+      songDifficulties,
     });
 
     const rankByUser = new Map(result.rankings.map((r, i) => [r.userId, i + 1]));
@@ -303,12 +312,22 @@ export class MatchEngine {
         ? rankings.find((p) => String(p.id) === result.winnerIds[0]) ?? null
         : null;
 
+    // --- XP / leveling (Phase 7) ---
+    const xpByUser = await this.computeMatchXp(result.winnerIds, rankByUser, rankings.length);
+
+    // Reveal per-player XP on the game-over screen.
+    for (const rp of rankings) {
+      const outcome = xpByUser.get(String(rp.id));
+      if (outcome) rp.xpEarned = outcome.earned;
+    }
+
     const victoryData: VictoryData = {
       winner,
       winnerIds: result.winnerIds,
       rankings,
       totalMaxScore: result.maxPossibleScore,
-      soloTargetScore: result.soloTargetScore,
+      soloTargetRatio: result.soloTargetRatio,
+      soloMedal: result.soloMedal,
       soloDifficulty: result.soloDifficultyLabel,
       multiWinnerCount: result.multiWinnerCount,
     };
@@ -320,26 +339,123 @@ export class MatchEngine {
 
     this.channel.emit('game_over', { victoryData });
 
+    // Push a level-up to each player's own socket (never broadcast).
+    for (const p of this.room.players.values()) {
+      const outcome = xpByUser.get(p.userId);
+      if (outcome && outcome.newLevel > outcome.oldLevel && p.socketId) {
+        this.room.io
+          .to(p.socketId)
+          .emit('level_up', { oldLevel: outcome.oldLevel, newLevel: outcome.newLevel, xp: outcome.newXp });
+      }
+    }
+
     void this.deps.repo
       .persistMatch({
         totalRounds: this.playlist.length,
         startedAt: this.startedAt,
         endedAt: new Date(),
-        players: [...this.room.players.values()].map((p) => ({
-          userId: p.userId,
-          score: p.score,
-          rank: rankByUser.get(p.userId) ?? 0,
-          isWinner: result.winnerIds.includes(p.userId),
-          correctCount: p.matchCorrectCount,
-          totalCount: p.matchTotalCount,
-          maxStreak: p.maxStreak,
-          xpEarned: 0, // XP wired in Phase 7
-          correctSongIds: [...p.correctSongIds],
-        })),
+        players: [...this.room.players.values()].map((p) => {
+          const outcome = xpByUser.get(p.userId);
+          return {
+            userId: p.userId,
+            score: p.score,
+            rank: rankByUser.get(p.userId) ?? 0,
+            isWinner: result.winnerIds.includes(p.userId),
+            correctCount: p.matchCorrectCount,
+            totalCount: p.matchTotalCount,
+            maxStreak: p.maxStreak,
+            xpEarned: outcome?.earned ?? 0,
+            newLevel: outcome?.newLevel,
+            newWinStreak: outcome?.newWinStreak,
+            correctSongIds: [...p.correctSongIds],
+          };
+        }),
         rounds: this.recordedRounds,
         songIds: this.playlist.map((s) => s.id),
       })
       .catch((e) => logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e));
+  }
+
+  /**
+   * Computes per-player match XP + level transitions. Bots and guests (no
+   * Profile) are excluded. Best-effort: on any failure the match still ends
+   * (players simply earn no XP this round).
+   */
+  private async computeMatchXp(
+    winnerIds: string[],
+    rankByUser: Map<string, number>,
+    playerCount: number,
+  ): Promise<Map<string, { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }>> {
+    const outcomes = new Map<
+      string,
+      { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }
+    >();
+
+    const humans = [...this.room.players.values()].filter((p) => !p.isBot);
+    if (!humans.length) return outcomes;
+
+    const difficultyBySong = new Map<number, SongDifficulty>(
+      this.playlist.map((s) => [s.id, MatchEngine.normalizeDifficulty(s.difficulty)]),
+    );
+
+    try {
+      const priors = await this.deps.repo.getXpState(humans.map((p) => p.userId));
+      for (const player of humans) {
+        const prior = priors.get(player.userId);
+        if (!prior) continue; // guest without a Profile row
+
+        const isWinner = winnerIds.includes(player.userId);
+        const newWinStreak = isWinner ? prior.currentWinStreak + 1 : 0;
+
+        const earned = xpForMatch({
+          correctByDifficulty: this.tallyCorrectByDifficulty(player.correctSongIds, difficultyBySong),
+          roundsPlayed: player.matchTotalCount,
+          score: player.score,
+          isWinner,
+          rank: rankByUser.get(player.userId) ?? playerCount,
+          playerCount,
+          isSolo: this.room.isSolo,
+          winStreak: newWinStreak,
+        });
+
+        const oldLevel = levelFromXp(prior.xp);
+        const newXp = prior.xp + earned;
+        outcomes.set(player.userId, {
+          earned,
+          oldLevel,
+          newLevel: levelFromXp(newXp),
+          newXp,
+          newWinStreak,
+        });
+      }
+    } catch (e) {
+      logger.error(`[MatchEngine ${this.room.id}] XP computation failed`, 'Scoring', e);
+    }
+
+    return outcomes;
+  }
+
+  private tallyCorrectByDifficulty(
+    correctSongIds: Set<number>,
+    difficultyBySong: Map<number, SongDifficulty>,
+  ): CorrectByDifficulty {
+    const tally: CorrectByDifficulty = { easy: 0, medium: 0, hard: 0 };
+    for (const songId of correctSongIds) {
+      const diff = difficultyBySong.get(songId);
+      if (diff) tally[diff] += 1;
+    }
+    return tally;
+  }
+
+  private static normalizeDifficulty(raw: string): SongDifficulty {
+    switch ((raw ?? '').toLowerCase()) {
+      case 'easy':
+        return 'easy';
+      case 'hard':
+        return 'hard';
+      default:
+        return 'medium';
+    }
   }
 
   // --- VOTES ----------------------------------------------------------------

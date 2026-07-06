@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Users, Search, Lock, ListMusic, AlertTriangle, Clock, Target, Mic2, Shuffle, Play, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { useFriends } from '@/features/friends/FriendsContext';
 
 interface RoomSummary {
   id: string;
@@ -30,14 +31,22 @@ interface RoomListProps {
   onJoin: (roomId: string) => void;
 }
 
-type FilterType = 'all' | 'public' | 'private';
+type FilterType = 'all' | 'public' | 'private' | 'friends';
 
 export function RoomList({ rooms, onJoin }: RoomListProps) {
   const [filter, setFilter] = useState<FilterType>('all');
+  const { friends } = useFriends();
+
+  // Rooms currently hosting at least one friend (from live presence).
+  const friendRoomIds = useMemo(
+    () => new Set(friends.map((f) => f.roomId).filter((id): id is string => !!id)),
+    [friends],
+  );
 
   const filteredRooms = rooms.filter(room => {
     if (filter === 'public') return !room.isPrivate;
     if (filter === 'private') return room.isPrivate;
+    if (filter === 'friends') return friendRoomIds.has(room.id);
     return true;
   });
 
@@ -45,6 +54,7 @@ export function RoomList({ rooms, onJoin }: RoomListProps) {
     { id: 'all', label: 'Tous' },
     { id: 'public', label: 'Publics' },
     { id: 'private', label: 'Privés' },
+    { id: 'friends', label: 'Amis' },
   ];
 
   const getDifficultyBadge = (diffs: string[] = []) => {

@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 
 // --- CONTEXT ---
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
+import { FriendsProvider } from '@/features/friends/FriendsContext';
 
 // --- FEATURES ---
 import { AuthModal } from '@/features/auth/components/AuthModal';
@@ -162,7 +163,9 @@ function App() {
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
       <TooltipProvider>
         <AuthProvider>
-          <AppContent />
+          <FriendsProvider>
+            <AppContent />
+          </FriendsProvider>
         </AuthProvider>
       </TooltipProvider>
     </ThemeProvider>

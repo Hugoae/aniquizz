@@ -83,4 +83,5 @@ export const RATE_LIMITS = {
   answer: { points: 10, durationMs: 5_000 },
   chat: { points: 5, durationMs: 3_000 },
   createLobby: { points: 3, durationMs: 10_000 },
+  friends: { points: 15, durationMs: 10_000 },
 } as const;

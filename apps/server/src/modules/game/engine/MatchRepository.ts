@@ -14,7 +14,17 @@ export interface PersistPlayerInput {
   totalCount: number;
   maxStreak: number;
   xpEarned: number;
+  /** New derived level (from lifetime XP). Undefined = don't touch xp/level. */
+  newLevel?: number;
+  /** New consecutive-win counter (win +1, loss 0). Undefined = don't touch. */
+  newWinStreak?: number;
   correctSongIds: number[];
+}
+
+/** Prior XP state read before a match's XP is computed. */
+export interface XpState {
+  xp: number;
+  currentWinStreak: number;
 }
 
 export interface PersistMatchInput {
@@ -45,6 +55,25 @@ const toPrismaAnswerType = (t: AnswerType): PrismaAnswerType => {
  * best-effort afterwards (a stats hiccup must not lose match history).
  */
 export class MatchRepository {
+  /**
+   * Reads the prior XP / win-streak of the given profiles so the engine can
+   * compute match XP and detect level-ups. Only returns rows that exist
+   * (guests without a Profile are naturally excluded).
+   */
+  async getXpState(userIds: string[]): Promise<Map<string, XpState>> {
+    if (!userIds.length) return new Map();
+    try {
+      const rows = await prisma.profile.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, xp: true, currentWinStreak: true },
+      });
+      return new Map(rows.map((r) => [r.id, { xp: r.xp, currentWinStreak: r.currentWinStreak }]));
+    } catch (e) {
+      logger.error('[MatchRepository] Failed to read XP state', 'Scoring', e);
+      return new Map();
+    }
+  }
+
   async persistMatch(input: PersistMatchInput): Promise<void> {
     // Only persist for players that actually have a Profile row.
     const existing = await prisma.profile.findMany({
@@ -144,6 +173,11 @@ export class MatchRepository {
             totalGuesses: { increment: player.totalCount },
             correctGuesses: { increment: player.correctCount },
             maxStreak: Math.max(prevMaxStreak, player.maxStreak),
+            // XP / leveling (Phase 7). Level + win-streak are precomputed by the
+            // engine from the prior state; xp is incremented for consistency.
+            xp: player.xpEarned > 0 ? { increment: player.xpEarned } : undefined,
+            level: player.newLevel,
+            currentWinStreak: player.newWinStreak,
           },
         });
 

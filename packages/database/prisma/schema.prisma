@@ -51,6 +51,12 @@ enum AnswerType {
   DUO
 }
 
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
 // --- IDENTITY ---
 model Profile {
   // = auth.users.id — populated by the Supabase `handle_new_user()` trigger.
@@ -72,12 +78,16 @@ model Profile {
   mutedUntil  DateTime?
   // Presence heartbeat (used by admin now; friends presence in Phase 7).
   lastSeenAt  DateTime?
+  // Friends privacy (Phase 7): when false, the user refuses all incoming friend requests.
+  allowFriendRequests Boolean @default(true)
 
   gamesPlayed    Int @default(0)
   gamesWon       Int @default(0)
   totalGuesses   Int @default(0)
   correctGuesses Int @default(0)
   maxStreak      Int @default(0)
+  // Consecutive won matches (Phase 7 XP win-streak bonus): +1 on win, reset on loss.
+  currentWinStreak Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -85,10 +95,31 @@ model Profile {
   matchPlayers MatchPlayer[]
   history      SongHistory[]
   myList       PlayerAnimeList[]
+  // Social (Phase 7). Friendship rows where this profile is the requester / addressee.
+  sentRequests     Friendship[] @relation("SentRequests")
+  receivedRequests Friendship[] @relation("ReceivedRequests")
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
   @@index([lastSeenAt])
+}
+
+// --- SOCIAL (Phase 7) ---
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester Profile @relation("SentRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee Profile @relation("ReceivedRequests", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  // One row per ordered pair; the service also guards the reverse direction.
+  @@unique([requesterId, addresseeId])
+  // Incoming-requests lookup ("who wants to friend me").
+  @@index([addresseeId, status])
 }
 
 // --- MATCH PERSISTENCE (Phase 5, replaces GameSession/GameParticipant) ---

@@ -1,5 +1,6 @@
 import { prisma } from '@aniquizz/database';
 import { GAME_CONFIG } from '@aniquizz/shared';
+import type { PublicProfile, PresenceStatus } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 
 export const getProfileStats = async (userId: string) => {
@@ -63,4 +64,72 @@ export const getProfileStats = async (userId: string) => {
         logger.error("Erreur calcul stats profil", "ProfileService", error);
         throw error;
     }
+};
+
+/** Relationship of a viewer to another profile (drives the public-profile UI). */
+const resolveRelation = async (
+  viewerId: string,
+  targetId: string,
+): Promise<PublicProfile['relation']> => {
+  if (viewerId === targetId) return 'self';
+  const fr = await prisma.friendship.findFirst({
+    where: {
+      OR: [
+        { requesterId: viewerId, addresseeId: targetId },
+        { requesterId: targetId, addresseeId: viewerId },
+      ],
+    },
+    select: { status: true, requesterId: true },
+  });
+  if (!fr) return 'none';
+  if (fr.status === 'ACCEPTED') return 'friends';
+  if (fr.status === 'BLOCKED') return fr.requesterId === viewerId ? 'blocked' : 'none';
+  return fr.requesterId === viewerId ? 'outgoing' : 'incoming';
+};
+
+/** Public profile card + stats for any user, viewed by `viewerId`. */
+export const getPublicProfile = async (
+  viewerId: string,
+  targetId: string,
+  presence: { status: PresenceStatus },
+): Promise<PublicProfile> => {
+  const profile = await prisma.profile.findUnique({
+    where: { id: targetId },
+    select: {
+      id: true,
+      username: true,
+      avatar: true,
+      level: true,
+      xp: true,
+      role: true,
+      createdAt: true,
+      gamesPlayed: true,
+      gamesWon: true,
+      lastSeenAt: true,
+    },
+  });
+  if (!profile) throw new Error('Profil introuvable');
+
+  const best = await prisma.matchPlayer.aggregate({
+    where: { profileId: targetId },
+    _max: { score: true },
+  });
+
+  const relation = await resolveRelation(viewerId, targetId);
+
+  return {
+    id: profile.id,
+    username: profile.username,
+    avatar: profile.avatar,
+    level: profile.level,
+    xp: profile.xp,
+    role: profile.role,
+    createdAt: profile.createdAt.toISOString(),
+    gamesPlayed: profile.gamesPlayed,
+    gamesWon: profile.gamesWon,
+    bestScore: best._max.score ?? 0,
+    status: presence.status,
+    lastSeenAt: profile.lastSeenAt ? profile.lastSeenAt.toISOString() : null,
+    relation,
+  };
 };

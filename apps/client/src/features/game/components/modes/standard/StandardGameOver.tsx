@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar'; 
-import { getRank } from '@aniquizz/shared';
+import { getMedalMeta } from '@aniquizz/shared';
+import { AddFriendButton } from '@/features/friends/AddFriendButton';
 
 interface StandardGameOverProps {
     players: any[];
@@ -35,18 +36,23 @@ export function StandardGameOver({
   const score = myPlayerLive?.score || 0;
   const totalRounds = history && history.length > 0 ? history.length : (settings?.soundCount || 10);
   const maxPossibleScore = victoryData?.totalMaxScore || (totalRounds * 5);
-  const rankData = getRank(score, maxPossibleScore);
 
   // ===========================================================================
   // MODE SOLO
   // ===========================================================================
   if (gameMode === 'solo') {
-      const targetScore = victoryData?.soloTargetScore || Math.ceil(maxPossibleScore * 0.5);
-      const isSuccess = score >= targetScore;
-      const progressPercent = Math.min(100, (score / maxPossibleScore) * 100);
-      const targetPercent = Math.min(100, (targetScore / maxPossibleScore) * 100);
+      const me = victoryData?.rankings?.find((p: any) => String(p.id) === String(currentUserId));
+      const soloMedal = victoryData?.soloMedal ?? null;
+      const medalMeta = getMedalMeta(soloMedal);
+      const isSuccess = !!soloMedal;
       const correctCount = history ? history.filter((r: any) => r.isCorrect).length : 0;
       const accuracy = Math.round((correctCount / (history?.length || 1)) * 100);
+      // Mastery ratio (earned score / best obtainable) drives the medal + bar.
+      const scoreRatio = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+      const targetRatio = typeof victoryData?.soloTargetRatio === 'number' ? victoryData.soloTargetRatio : 0.5;
+      const progressPercent = Math.min(100, scoreRatio * 100);
+      const targetPercent = Math.min(100, targetRatio * 100);
+      const myXpEarned = me?.xpEarned;
 
       return (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background animate-fade-in overflow-y-auto custom-scrollbar">
@@ -70,11 +76,20 @@ export function StandardGameOver({
                             </div>
                             <div className="relative z-10">
                                 <UserAvatar avatar={myPlayerLive?.avatar} username={myPlayerLive?.name || myPlayerLive?.username} className={cn("h-32 w-32 border-4 shadow-2xl", isSuccess ? "border-green-500" : "border-red-500/50 grayscale-[0.5]")} />
-                                {/* ✅ rounded-lg pour le badge de rang */}
-                                <div className={cn("absolute -bottom-2 -right-2 px-3 py-1 bg-card border border-border rounded-lg font-black text-2xl shadow-lg", rankData.color)}>{rankData.label}</div>
+                                {/* Médaille de performance (précision), ou rien si non atteinte */}
+                                {medalMeta && (
+                                    <div className="absolute -bottom-2 -right-2 flex items-center gap-1 px-3 py-1 bg-card border border-border rounded-lg font-black text-sm shadow-lg" style={{ color: medalMeta.color }}>
+                                        <Medal className="h-4 w-4" /> {medalMeta.label}
+                                    </div>
+                                )}
                             </div>
                             <div className="text-center space-y-1 z-10">
                                 <h2 className="text-5xl font-black tracking-tighter">{score} <span className="text-lg text-muted-foreground font-medium">/ {maxPossibleScore}</span></h2>
+                                {typeof myXpEarned === 'number' && (
+                                    <div className="flex items-center justify-center gap-1.5 text-primary font-bold text-sm">
+                                        <Sparkles className="h-4 w-4" /> +{myXpEarned} XP
+                                    </div>
+                                )}
                             </div>
                             <div className="w-full space-y-2 z-10">
                                 {/* ✅ rounded-full conservé pour la barre de progression (standard) */}
@@ -82,7 +97,7 @@ export function StandardGameOver({
                                     <div className={cn("h-full transition-all duration-1000 ease-out rounded-full", isSuccess ? "bg-green-500" : "bg-primary")} style={{ width: `${progressPercent}%` }} />
                                     <div className="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] z-20" style={{ left: `${targetPercent}%` }} />
                                 </div>
-                                <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>0</span><span className={isSuccess ? "text-green-400" : "text-red-400"}>Requis: {targetScore}</span><span>Max: {maxPossibleScore}</span></div>
+                                <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase"><span>0</span><span className={isSuccess ? "text-green-400" : "text-red-400"}>Requis: {Math.round(targetRatio * maxPossibleScore)}</span><span>Max: {maxPossibleScore}</span></div>
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -235,14 +250,32 @@ export function StandardGameOver({
                                             {p.username || p.name}
                                             {isMe && <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded border border-primary/20">Moi</span>}
                                         </span>
-                                        <span className="text-xs text-muted-foreground/60 truncate">Niveau {p.level || 1}</span>
+                                        {typeof p.matchCorrectCount === 'number' && typeof p.matchTotalCount === 'number' && p.matchTotalCount > 0 ? (
+                                            <span className="text-xs text-muted-foreground/60 truncate flex items-center gap-1">
+                                                <Check className="h-3 w-3 text-green-500/70" /> {p.matchCorrectCount}/{p.matchTotalCount} bonnes réponses
+                                            </span>
+                                        ) : null}
                                     </div>
                                 </div>
 
                                 <div className="text-right">
-                                    <span className={cn("font-mono font-black text-xl", isPodium ? "text-white" : "text-white/60")}>{p.score}</span>
-                                    <span className="text-[10px] text-muted-foreground ml-1">pts</span>
+                                    <div>
+                                        <span className={cn("font-mono font-black text-xl", isPodium ? "text-white" : "text-white/60")}>{p.score}</span>
+                                        <span className="text-[10px] text-muted-foreground ml-1">pts</span>
+                                    </div>
+                                    {typeof p.xpEarned === 'number' && p.xpEarned > 0 && (
+                                        <div className="flex items-center justify-end gap-0.5 text-[10px] font-bold text-primary">
+                                            <Sparkles className="h-2.5 w-2.5" /> +{p.xpEarned} XP
+                                        </div>
+                                    )}
                                 </div>
+                                {!isMe && (
+                                    <AddFriendButton
+                                        userId={String(p.id)}
+                                        compact
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                    />
+                                )}
                             </div>
                         );
                     })}

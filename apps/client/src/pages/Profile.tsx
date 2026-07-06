@@ -6,8 +6,9 @@ import Cropper from 'react-easy-crop';
 
 import {
   LogOut, Loader2, Camera, Check, X, Edit2, 
-  Trophy, Target, Music2, Disc, Flame, Zap, Users, ArrowLeft
+  Trophy, Target, Music2, Disc, Flame, Zap, ArrowLeft, Star
 } from 'lucide-react';
+import { levelProgress } from '@aniquizz/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ import {
 
 import { Header } from '@/components/layout/Header';
 import { StatCard } from '@/features/profile/components/StatCard';
+import { FriendsPanel } from '@/features/friends/FriendsPanel';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { socket } from '@/lib/socket';
@@ -60,6 +62,13 @@ export default function Profile() {
       setNewUsername(profile.username);
     }
   }, [profile]);
+
+  // Refresh XP/level from the DB when opening the profile (a match may have
+  // changed them without a level-up event).
+  useEffect(() => {
+    refreshProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
       if (!socket.connected) socket.connect();
@@ -200,6 +209,27 @@ export default function Profile() {
                         <span>Lié à : <b>{profile.anilistUsername}</b></span>
                     </div>
                 )}
+
+                {/* NIVEAU & XP */}
+                {(() => {
+                    const lvl = levelProgress(profile.xp ?? 0);
+                    return (
+                        <div className="mt-4 w-full max-w-md mx-auto md:mx-0">
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                                <span className="flex items-center gap-1.5 font-bold text-primary">
+                                    <Star className="h-3.5 w-3.5 fill-primary" /> Niveau {lvl.level}
+                                </span>
+                                <span className="text-muted-foreground font-mono">{lvl.xpIntoLevel} / {lvl.xpForNextLevel} XP</span>
+                            </div>
+                            <div className="h-2.5 bg-secondary/50 rounded-lg overflow-hidden border border-white/5">
+                                <div
+                                    className="h-full bg-gradient-to-r from-primary to-purple-500 transition-all duration-700 ease-out"
+                                    style={{ width: `${lvl.percent}%` }}
+                                />
+                            </div>
+                        </div>
+                    );
+                })()}
               </div>
 
               <div className="flex flex-col gap-3 min-w-[160px]">
@@ -273,14 +303,7 @@ export default function Profile() {
               </div>
 
               <div className="col-span-12 lg:col-span-3">
-                  <div className="flex items-center gap-2 mb-4 opacity-50">
-                      <Users className="h-5 w-5" />
-                      <h2 className="text-xl font-bold">Amis (0)</h2>
-                  </div>
-                  {/* ✅ FIX: rounded-2xl -> rounded-xl */}
-                  <div className="h-[400px] border-2 border-dashed border-white/10 rounded-xl flex items-center justify-center text-muted-foreground/50 text-sm">
-                      Liste d'amis bientôt disponible
-                  </div>
+                  <FriendsPanel />
               </div>
           </div>
         </main>
