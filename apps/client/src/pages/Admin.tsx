@@ -91,7 +91,7 @@ export default function Admin() {
               <TabsTrigger value="rooms">Salons</TabsTrigger>
               <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
               <TabsTrigger value="stats">Statistiques</TabsTrigger>
-              {IS_DEV && <TabsTrigger value="dev">Dev Tools</TabsTrigger>}
+              {IS_DEV && canManage && <TabsTrigger value="dev">Dev Tools</TabsTrigger>}
             </TabsList>
 
             <TabsContent value="users">
@@ -106,7 +106,7 @@ export default function Admin() {
             <TabsContent value="stats">
               <StatsPanel />
             </TabsContent>
-            {IS_DEV && (
+            {IS_DEV && canManage && (
               <TabsContent value="dev">
                 <DevToolsPanel onGoToRoom={goToRoom} />
               </TabsContent>

@@ -668,7 +668,7 @@ export function registerAdminRoutes(
 
   // --- DEV TOOLING (bots / scenarios) — DEV ONLY ----------------------------
 
-  router.post('/dev/rooms/:id/bots', requireRole('MODERATOR'), (req: AuthedRequest, res) => {
+  router.post('/dev/rooms/:id/bots', requireRole('ADMIN'), (req: AuthedRequest, res) => {
     if (!isDevEnv()) {
       res.status(403).json({ error: 'Dev tooling disabled in production.' });
       return;
@@ -691,7 +691,7 @@ export function registerAdminRoutes(
 
   router.post(
     '/dev/scenario',
-    requireRole('MODERATOR'),
+    requireRole('ADMIN'),
     wrap(async (req, res) => {
       if (!isDevEnv()) {
         res.status(403).json({ error: 'Dev tooling disabled in production.' });
@@ -743,7 +743,7 @@ export function registerAdminRoutes(
     }),
   );
 
-  router.post('/dev/rooms/:id/remove-bots', requireRole('MODERATOR'), (req: AuthedRequest, res) => {
+  router.post('/dev/rooms/:id/remove-bots', requireRole('ADMIN'), (req: AuthedRequest, res) => {
     if (!isDevEnv()) {
       res.status(403).json({ error: 'Dev tooling disabled in production.' });
       return;
@@ -760,7 +760,7 @@ export function registerAdminRoutes(
     res.json({ removed });
   });
 
-  router.get('/dev/info', requireRole('MODERATOR'), (_req, res) => {
+  router.get('/dev/info', requireRole('ADMIN'), (_req, res) => {
     res.json({ devEnabled: isDevEnv(), botRosterSize: 8, isBotId: isBotId('bot-0001') });
   });
 
