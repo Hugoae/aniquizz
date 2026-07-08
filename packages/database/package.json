@@ -16,9 +16,11 @@
     "seed": "ts-node scripts/seed_db.ts",
     "seed:accounts": "ts-node scripts/seed_test_accounts.ts",
     "seed:bots": "ts-node scripts/seed_bots.ts",
+    "cleanup:bots": "ts-node scripts/cleanup_bot_history.ts",
     "seed:dev-catalogue": "ts-node scripts/seed_dev_catalogue.ts",
     "pipeline:build": "ts-node scripts/global_build.ts",
-    "pipeline:reset": "ts-node scripts/reset_all.ts"
+    "pipeline:reset": "ts-node scripts/reset_all.ts",
+    "r2:cache-control": "ts-node scripts/set_video_cache_control.ts"
   },
   "prisma": {
     "seed": "ts-node scripts/seed_db.ts"

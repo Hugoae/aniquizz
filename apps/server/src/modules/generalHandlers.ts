@@ -1,6 +1,7 @@
 import type { TypedServer, TypedSocket } from '../core/socketTypes';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../utils/logger';
+import type { GameManager } from './game/gameManager';
 
 // --- CONFIGURATION CACHE STATS ---
 const STATS_CACHE_DURATION = 10 * 60 * 1000; // 10 Minutes
@@ -46,11 +47,25 @@ const getGlobalStats = async () => {
     }
 };
 
-export const registerGeneralHandlers = (io: TypedServer, socket: TypedSocket) => {
+/** Count distinct authenticated users currently connected (live, never cached). */
+const countOnlineUsers = (io: TypedServer): number => {
+    const users = new Set<string>();
+    for (const [, s] of io.of('/').sockets) {
+        const uid = s.data?.userId;
+        if (uid) users.add(uid);
+    }
+    return users.size;
+};
+
+export const registerGeneralHandlers = (io: TypedServer, socket: TypedSocket, gameManager: GameManager) => {
 
   const sendHomeStats = async () => {
       const stats = await getGlobalStats();
-      socket.emit('home_stats', stats);
+      socket.emit('home_stats', {
+          ...stats,
+          online: countOnlineUsers(io),
+          inMultiplayer: gameManager.countMultiplayerPlayers(),
+      });
   };
 
   // Écoute de la demande du client

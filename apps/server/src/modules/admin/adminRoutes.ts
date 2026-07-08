@@ -2,7 +2,7 @@ import { Router, type Application, type Response } from 'express';
 // Express param values are typed `string | string[]`; normalize to a plain id.
 
 import { z } from 'zod';
-import { prisma, isBotId, Prisma } from '@aniquizz/database';
+import { prisma, isBotId, Prisma, BOT_PROFILES } from '@aniquizz/database';
 import type { Difficulty, DownloadStatus, UserRole } from '@aniquizz/database';
 import { env } from '../../config/env';
 import { logger } from '../../utils/logger';
@@ -115,7 +115,7 @@ export function registerAdminRoutes(
       const inGameIds = [...inGame];
 
       const allowedFilters = new Set([
-        'all', 'players', 'bots', 'moderators', 'admins', 'muted', 'banned', 'online', 'in_game',
+        'all', 'players', 'moderators', 'admins', 'muted', 'banned', 'online', 'in_game',
       ]);
       const allowedSorts = new Set(['username', 'xp', 'games', 'created', 'seen']);
 
@@ -674,7 +674,7 @@ export function registerAdminRoutes(
       return;
     }
     const parsed = z
-      .object({ count: z.coerce.number().int().min(1).max(8), config: botConfigSchema })
+      .object({ count: z.coerce.number().int().min(1).max(BOT_PROFILES.length), config: botConfigSchema })
       .safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid payload.' });
@@ -699,7 +699,7 @@ export function registerAdminRoutes(
       }
       const parsed = z
         .object({
-          botCount: z.coerce.number().int().min(1).max(8),
+          botCount: z.coerce.number().int().min(1).max(BOT_PROFILES.length),
           autoStart: z.boolean().default(true),
           // When true, the room is hosted by the caller so they can join & watch.
           join: z.boolean().default(false),
@@ -749,7 +749,7 @@ export function registerAdminRoutes(
       return;
     }
     const parsed = z
-      .object({ count: z.coerce.number().int().min(1).max(8).optional() })
+      .object({ count: z.coerce.number().int().min(1).max(BOT_PROFILES.length).optional() })
       .safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid payload.' });
@@ -761,7 +761,7 @@ export function registerAdminRoutes(
   });
 
   router.get('/dev/info', requireRole('ADMIN'), (_req, res) => {
-    res.json({ devEnabled: isDevEnv(), botRosterSize: 8, isBotId: isBotId('bot-0001') });
+    res.json({ devEnabled: isDevEnv(), botRosterSize: BOT_PROFILES.length, isBotId: isBotId('bot-0001') });
   });
 
   /**

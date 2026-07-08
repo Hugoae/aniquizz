@@ -1,4 +1,4 @@
-import { Play, Music, Calendar } from 'lucide-react';
+import { Play, Music, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,30 +8,26 @@ export function HeroSection() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative min-h-[calc(100vh-64px)]">
-      {/* Background Effects */}
+    <div className="relative w-full flex flex-col items-center">
+      {/* Ambient stage light — two soft neon washes, static (motion lives in the CTA) */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/15 rounded-full blur-[150px] animate-float" />
-        <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-accent/15 rounded-full blur-[150px] animate-float" style={{ animationDelay: '-3s' }} />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-primary/10 rounded-full blur-[200px]" />
-        <div className="absolute bottom-0 left-1/3 w-[300px] h-[300px] bg-primary/8 rounded-full blur-[120px]" />
+        <div className="absolute -top-1/4 left-1/2 -translate-x-1/2 w-[820px] h-[520px] bg-primary/12 rounded-full blur-[180px]" />
+        <div className="absolute bottom-0 right-1/4 w-[420px] h-[420px] bg-aqua/8 rounded-full blur-[160px]" />
       </div>
 
-      <section className="relative flex flex-col items-center justify-center px-4 pt-24 pb-8">
+      <section className="relative flex flex-col items-center justify-center px-4 pt-4 pb-2">
         <div className="relative z-10 text-center max-w-4xl mx-auto animate-fade-in">
           
-          {/* Badge "Nouvelle génération" */}
-          {/* ✅ FIX : rounded-lg au lieu de rounded-full pour le style Tech */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 mb-5 shadow-sm backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+          {/* Eyebrow — the audio signature made literal */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-secondary/60 border border-border mb-5 backdrop-blur-sm">
+            <span className="eq h-3 text-aqua" aria-hidden="true">
+              <i></i><i></i><i></i><i></i>
             </span>
-            <span className="text-sm font-medium text-primary/90">Le blindtest anime nouvelle génération</span>
+            <span className="text-sm font-medium text-muted-foreground">Devine l'anime rien qu'à sa musique</span>
           </div>
 
           {/* Main Heading */}
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight">
+          <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-[1.05] text-balance">
             Testez votre{' '}
             <span className="gradient-text">culture anime</span>
           </h1>
@@ -48,10 +44,10 @@ export function HeroSection() {
               variant="glow"
               size="xxl"
               onClick={() => navigate('/play')}
-              className="group animate-pulse-glow"
+              className="group font-display"
             >
               <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
-              JOUER
+              Jouer
             </Button>
 
             {/* Secondary Buttons */}
@@ -68,11 +64,11 @@ export function HeroSection() {
               <Button
                 variant="glass"
                 size="lg"
-                onClick={() => navigate('/daily')}
+                onClick={() => navigate('/leaderboard')}
                 className="hover-lift gap-2"
               >
-                <Calendar className="h-5 w-5" />
-                Quiz du Jour
+                <Trophy className="h-5 w-5" />
+                Classement
               </Button>
             </div>
           </div>

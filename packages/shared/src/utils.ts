@@ -1,6 +1,8 @@
 // packages/shared/src/utils.ts
 // Framework-agnostic pure helpers shared by the client and the server.
 
+import { GAME_CONFIG } from './constants';
+
 // --- SONG TYPE HELPERS ---
 /** Display / video-key label, e.g. OP + 1 → "OP1". */
 export const formatSongTypeLabel = (songType: string, sequence: number): string =>
@@ -37,6 +39,13 @@ export const normalizeString = (str: string): string => {
     .trim();
 };
 
+/** Split a display string into normalized word tokens (spaces / punctuation). */
+export const tokenizeWords = (str: string): string[] =>
+  str
+    .split(/[^a-zA-Z0-9\u00C0-\u024F]+/)
+    .map(normalizeString)
+    .filter((t) => t.length > 0);
+
 // --- FUZZY MATCHING (Levenshtein) ---
 export const getLevenshteinDistance = (a: string, b: string): number => {
   if (a.length === 0) return b.length;
@@ -71,18 +80,19 @@ export const getLevenshteinDistance = (a: string, b: string): number => {
 export const isAnswerCorrect = (userAnswer: string, validAnswers: string[]): boolean => {
   if (!userAnswer) return false;
   const normalizedUser = normalizeString(userAnswer);
+  const { ANSWER_SIMILARITY, MIN_LENGTH_FOR_FUZZY } = GAME_CONFIG.FUZZY;
 
   return validAnswers.some((valid) => {
     const normalizedValid = normalizeString(valid);
 
     if (normalizedUser === normalizedValid) return true;
-    if (normalizedValid.length < 4) return false;
+    if (normalizedValid.length < MIN_LENGTH_FOR_FUZZY) return false;
 
     const dist = getLevenshteinDistance(normalizedUser, normalizedValid);
     const maxLength = Math.max(normalizedUser.length, normalizedValid.length);
     const similarity = 1 - dist / maxLength;
 
-    return similarity >= 0.8;
+    return similarity >= ANSWER_SIMILARITY;
   });
 };
 
@@ -92,35 +102,295 @@ export interface FuzzyAnimeCandidate {
   altNames?: string[];
 }
 
+export interface AnimeSuggestion {
+  label: string;
+  score: number;
+  /** Character range in `label` to highlight (accent/case-insensitive match). */
+  highlight: { start: number; end: number } | null;
+}
+
+const SCORE_PREFIX = 100;
+const SCORE_WORD_PREFIX = 85;
+const SCORE_ACRONYM = 88;
+
+/** Map a normalized-prefix length back to a slice end index in the original string. */
+function normPrefixEndIndex(raw: string, normPrefixLen: number): number {
+  for (let i = 1; i <= raw.length; i++) {
+    if (normalizeString(raw.slice(0, i)).length >= normPrefixLen) return i;
+  }
+  return raw.length;
+}
+
+/**
+ * Character range in `raw` where `query` matches (prefix on full string or on a
+ * word token). Mid-word substrings (e.g. "ga" inside "darwinsgame") are ignored.
+ */
+export function findSuggestionHighlight(
+  raw: string,
+  query: string,
+): { start: number; end: number } | null {
+  const term = normalizeString(query);
+  if (!term) return null;
+
+  const fullNorm = normalizeString(raw);
+  if (fullNorm.startsWith(term)) {
+    return { start: 0, end: normPrefixEndIndex(raw, term.length) };
+  }
+
+  const wordRe = /[a-zA-Z0-9\u00C0-\u024F]+/g;
+  let match: RegExpExecArray | null;
+  while ((match = wordRe.exec(raw)) !== null) {
+    const word = match[0];
+    const wordNorm = normalizeString(word);
+    const wordStart = match.index;
+
+    if (wordNorm.startsWith(term)) {
+      return {
+        start: wordStart,
+        end: wordStart + normPrefixEndIndex(word, term.length),
+      };
+    }
+  }
+
+  return null;
+}
+
+interface FieldScore {
+  score: number;
+  highlightSource: string;
+}
+
+/** First letters of each word, e.g. "Shingeki no Kyojin" → "snk". */
+function titleAcronym(raw: string): string {
+  const parts = raw.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((p) => p.length > 0);
+  if (parts.length < 2) return '';
+  return normalizeString(parts.map((p) => p[0]).join(''));
+}
+
+function scoreAcronym(term: string, raw: string): FieldScore | null {
+  const acronym = titleAcronym(raw);
+  if (!acronym) return null;
+  if (acronym === term) return { score: SCORE_ACRONYM, highlightSource: raw };
+  if (acronym.startsWith(term)) return { score: SCORE_WORD_PREFIX, highlightSource: raw };
+  return null;
+}
+
+/** Score how well `term` matches a single display field. */
+function scoreField(term: string, raw: string, allowFuzzy: boolean): FieldScore | null {
+  const acronymHit = scoreAcronym(term, raw);
+  const norm = normalizeString(raw);
+  if (!norm && !acronymHit) return null;
+
+  let best = acronymHit;
+
+  if (norm.startsWith(term)) {
+    const candidate = { score: SCORE_PREFIX, highlightSource: raw };
+    if (!best || candidate.score > best.score) best = candidate;
+  }
+
+  const words = tokenizeWords(raw);
+
+  for (const wordNorm of words) {
+    if (wordNorm.startsWith(term)) {
+      const candidate = { score: SCORE_WORD_PREFIX, highlightSource: raw };
+      if (!best || candidate.score > best.score) best = candidate;
+    }
+  }
+
+  if (!allowFuzzy) return best;
+
+  const { SUGGESTION_DISTANCE_RATIO } = GAME_CONFIG.FUZZY;
+  const allowedErrors = Math.ceil(norm.length * SUGGESTION_DISTANCE_RATIO);
+  if (Math.abs(norm.length - term.length) <= allowedErrors) {
+    const dist = getLevenshteinDistance(term, norm);
+    if (dist <= allowedErrors) {
+      const fuzzyScore = Math.max(1, 40 - dist * 10);
+      const candidate = { score: fuzzyScore, highlightSource: raw };
+      if (!best || candidate.score > best.score) best = candidate;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * Stricter alt-name matching: full-string prefix / acronym / fuzzy, plus
+ * word-prefix on the first few title words only (avoids "2nd Attack" noise).
+ */
+function scoreAltField(term: string, raw: string, allowFuzzy: boolean): FieldScore | null {
+  const acronymHit = scoreAcronym(term, raw);
+  const norm = normalizeString(raw);
+  if (!norm && !acronymHit) return null;
+
+  let best = acronymHit;
+
+  if (norm.startsWith(term)) {
+    const candidate = { score: SCORE_PREFIX, highlightSource: raw };
+    if (!best || candidate.score > best.score) best = candidate;
+  }
+
+  const words = raw.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 0);
+  for (let i = 0; i < Math.min(words.length, 3); i++) {
+    const word = words[i];
+    if (/^\d/.test(word)) continue;
+    const wordNorm = normalizeString(word);
+    if (wordNorm.startsWith(term)) {
+      const candidate = { score: SCORE_WORD_PREFIX, highlightSource: raw };
+      if (!best || candidate.score > best.score) best = candidate;
+    }
+  }
+
+  if (!allowFuzzy) return best;
+
+  const { SUGGESTION_DISTANCE_RATIO } = GAME_CONFIG.FUZZY;
+  const allowedErrors = Math.ceil(norm.length * SUGGESTION_DISTANCE_RATIO);
+  if (Math.abs(norm.length - term.length) <= allowedErrors) {
+    const dist = getLevenshteinDistance(term, norm);
+    if (dist <= allowedErrors) {
+      const fuzzyScore = Math.max(1, 40 - dist * 10);
+      const candidate = { score: fuzzyScore, highlightSource: raw };
+      if (!best || candidate.score > best.score) best = candidate;
+    }
+  }
+
+  return best;
+}
+
+const DERIVATIVE_FRANCHISE_RE =
+  /(:\s|\bOVA\b|\bGaiden\b|\bSpecial\b|\bTHE FINAL\b|\bPart \d|\bSeason \d|\bFinal Season)/i;
+
+function isDerivativeFranchise(name: string): boolean {
+  return DERIVATIVE_FRANCHISE_RE.test(name);
+}
+
+function buildFranchiseCounts(list: FuzzyAnimeCandidate[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const anime of list) {
+    if (!anime.franchise) continue;
+    counts.set(anime.franchise, (counts.get(anime.franchise) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Strip spin-off suffixes to compare against a parent franchise name. */
+function franchiseStem(s: string): string {
+  const base = s.split(/[:(]/)[0]?.trim() ?? s;
+  return base.replace(/\s+(OVA|Gaiden|Season|Part|Final).*$/i, '').trim();
+}
+
+/**
+ * Spin-offs often have their own Franchise row in the DB (OVA, Gaiden…). When
+ * their alt names reference a larger series ("Attack on Titan: No Regrets"),
+ * bubble the suggestion up to that parent franchise instead.
+ */
+function findParentFranchise(
+  anime: FuzzyAnimeCandidate,
+  franchiseCounts: Map<string, number>,
+): string | null {
+  const popular = [...franchiseCounts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1]);
+
+  const haystacks = [...(anime.altNames ?? []), anime.name];
+  for (const [parentName] of popular) {
+    const normParent = normalizeString(parentName);
+    for (const h of haystacks) {
+      const normH = normalizeString(h);
+      if (normH.startsWith(normParent) || normParent.startsWith(normalizeString(franchiseStem(h)))) {
+        return parentName;
+      }
+    }
+  }
+  return null;
+}
+
+function bestScoreForCandidate(
+  term: string,
+  anime: FuzzyAnimeCandidate,
+  precisionMode: 'franchise' | 'exact',
+  allowFuzzy: boolean,
+): FieldScore | null {
+  let best: FieldScore | null = null;
+
+  const consider = (scored: FieldScore | null) => {
+    if (!scored) return;
+    if (!best || scored.score > best.score) best = scored;
+  };
+
+  consider(scoreField(term, anime.name, allowFuzzy));
+
+  for (const alt of anime.altNames ?? []) {
+    consider(scoreAltField(term, alt, allowFuzzy));
+  }
+
+  if (precisionMode === 'franchise' && anime.franchise) {
+    consider(scoreField(term, anime.franchise, allowFuzzy));
+  }
+
+  return best;
+}
+
+/** Resolve the dropdown label for a catalogue row. */
+function suggestionLabel(
+  anime: FuzzyAnimeCandidate,
+  precisionMode: 'franchise' | 'exact',
+  franchiseCounts: Map<string, number>,
+): string | null {
+  if (precisionMode === 'franchise') {
+    if (!anime.franchise) return null;
+
+    const count = franchiseCounts.get(anime.franchise) ?? 0;
+    if (count >= 2) return anime.franchise;
+
+    const parent = findParentFranchise(anime, franchiseCounts);
+    if (parent) return parent;
+
+    if (isDerivativeFranchise(anime.franchise)) return null;
+
+    return anime.franchise;
+  }
+  return anime.name;
+}
+
+/**
+ * Ranked anime autocomplete for the in-game typing bar.
+ * prefix (100) > word-prefix (85) > fuzzy (40−).
+ * Matches are word-scoped so "ga" hits "Steins Gate" but not "Darwinsgame".
+ */
 export const getFuzzySuggestions = (
   list: FuzzyAnimeCandidate[],
   query: string,
   precisionMode: 'franchise' | 'exact' = 'franchise',
-  thresholdRatio: number = 0.3,
-): string[] => {
-  if (!query || query.trim().length < 2) return [];
+): AnimeSuggestion[] => {
+  const { SUGGESTION_MIN_QUERY_LENGTH, SUGGESTION_MIN_QUERY_FOR_FUZZY, SUGGESTION_LIMIT } =
+    GAME_CONFIG.FUZZY;
+
+  if (!query || query.trim().length < SUGGESTION_MIN_QUERY_LENGTH) return [];
 
   const term = normalizeString(query);
+  const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
+  const franchiseCounts =
+    precisionMode === 'franchise' ? buildFranchiseCounts(list) : new Map<string, number>();
 
-  const filteredMatches = list.filter((anime) => {
-    const nameNorm = normalizeString(anime.name);
-    const franchiseNorm = anime.franchise ? normalizeString(anime.franchise) : '';
+  const byLabel = new Map<string, AnimeSuggestion>();
 
-    if (nameNorm.includes(term)) return true;
-    if (franchiseNorm && franchiseNorm.includes(term)) return true;
-    if (anime.altNames?.some((alt) => normalizeString(alt).includes(term))) return true;
+  for (const anime of list) {
+    const label = suggestionLabel(anime, precisionMode, franchiseCounts);
+    if (!label) continue;
 
-    const allowedErrors = Math.ceil(nameNorm.length * thresholdRatio);
-    if (Math.abs(nameNorm.length - term.length) > allowedErrors) return false;
+    const scored = bestScoreForCandidate(term, anime, precisionMode, allowFuzzy);
+    if (!scored) continue;
 
-    return getLevenshteinDistance(term, nameNorm) <= allowedErrors;
-  });
+    const highlight = findSuggestionHighlight(label, query);
+    const entry: AnimeSuggestion = { label, score: scored.score, highlight };
 
-  const candidates = filteredMatches.map((a) =>
-    precisionMode === 'franchise' ? a.franchise || a.name : a.name,
-  );
+    const prev = byLabel.get(label);
+    if (!prev || entry.score > prev.score) byLabel.set(label, entry);
+  }
 
-  return Array.from(new Set(candidates)).slice(0, 5);
+  return [...byLabel.values()]
+    .sort((a, b) => b.score - a.score || a.label.localeCompare(b.label))
+    .slice(0, SUGGESTION_LIMIT);
 };
 
 export const shuffleArray = <T>(array: T[]): T[] => {

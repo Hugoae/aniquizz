@@ -31,8 +31,6 @@ export class PlaylistBuilder {
     const filters: SongFilters = {
       difficulty: settings.difficulty,
       types: settings.soundTypes,
-      playlist: settings.playlist,
-      decade: settings.decade,
       watchedIds,
     };
 
@@ -45,12 +43,7 @@ export class PlaylistBuilder {
     // Typing-only rooms never expose QCM/duo choices — don't even build them, so
     // the answer options never reach the client and can't be abused.
     const needsChoices = (settings.responseType ?? 'mix') !== 'typing';
-    const candidatePool = needsChoices
-      ? await getChoiceCandidates(precision, {
-          playlist: settings.playlist,
-          decade: settings.decade,
-        })
-      : [];
+    const candidatePool = needsChoices ? await getChoiceCandidates(precision) : [];
 
     const guessDuration = settings.guessDuration || 20;
     const playlist = songs.map((song) =>
@@ -73,13 +66,17 @@ export class PlaylistBuilder {
     const choices = needsChoices ? buildChoices(correctTarget, candidatePool, 4) : [];
     const duo = needsChoices ? buildDuo(correctTarget, choices) : [];
 
+    const baseAnswers = [song.anime.name, ...(song.anime.altNames || [])];
+    const validAnswers =
+      precision === 'franchise' && franchise
+        ? ([...baseAnswers, franchise] as string[])
+        : (baseAnswers.filter(Boolean) as string[]);
+
     return {
       id: song.id,
       anime: song.anime.name,
       franchise,
-      validAnswers: [song.anime.name, ...(song.anime.altNames || []), franchise].filter(
-        Boolean,
-      ) as string[],
+      validAnswers,
       title: song.title,
       artist: song.artist,
       typeLabel: formatSongTypeLabel(song.songType, song.sequence),
@@ -97,13 +94,18 @@ export class PlaylistBuilder {
     };
   }
 
-  /** Random offset that leaves room for guess + reveal + safety margin. */
+  /**
+   * Random offset into the clip. We reserve the whole guess + reveal window so
+   * the video never runs out (and freezes on its last frame) during the reveal.
+   * The safety margin is kept small (2s) so the random range stays as wide as
+   * possible; only genuinely short songs (< ~guess + reveal) fall back to 0.
+   */
   private pickStartTime(totalDuration: number | null, guessDuration: number): number {
     const total = totalDuration || 0;
     const revealTime = GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000;
-    const safetyMargin = 5;
+    const safetyMargin = 2;
     const maxStart = total - (guessDuration + revealTime + safetyMargin);
-    return maxStart > 0 ? Math.floor(Math.random() * maxStart) : 0;
+    return maxStart > 1 ? Math.floor(Math.random() * maxStart) : 0;
   }
 
   /** Resolve the union/intersection of players' AniList watched ids. */

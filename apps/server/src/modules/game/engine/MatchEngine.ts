@@ -1,12 +1,14 @@
 import {
   GAME_CONFIG,
   computeVictory,
+  computeCompetitionRanks,
   isAnswerCorrect,
   levelFromXp,
   xpForMatch,
   type AnswerType,
   type CorrectByDifficulty,
   type GamePlayer,
+  type GameReadyPayload,
   type GameSyncState,
   type ResponseType,
   type RevealSong,
@@ -14,6 +16,10 @@ import {
   type RoundRevealPayload,
   type SongDifficulty,
   type VictoryData,
+  type RoundHistoryEntry,
+  type GameOverPayload,
+  type MatchSettingsSnapshot,
+  pickMatchSettings,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { RoundClock } from './RoundClock';
@@ -29,7 +35,11 @@ interface EngineDeps {
   scoring: ScoringStrategy;
 }
 
-const START_BUFFER_MS = 250;
+const START_BUFFER_MS = GAME_CONFIG.TIMERS.GUESS_START_BUFFER;
+// Extra grace after the chosen guess duration so the countdown visibly reaches
+// (and lingers on) 0 instead of cutting the instant time runs out. Answers are
+// still accepted during this window; it only softens the round's end.
+const GUESS_END_GRACE_MS = GAME_CONFIG.TIMERS.GUESS_END_GRACE;
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
 export class MatchEngine {
@@ -38,10 +48,13 @@ export class MatchEngine {
 
   private playlist: PlaylistItem[] = [];
   private currentRoundIndex = -1;
-  private phase: 'intro' | 'guessing' | 'reveal' | null = null;
+  private phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null = null;
 
   private readonly clock = new RoundClock();
   private introTimer: NodeJS.Timeout | null = null;
+  private readyTimer: NodeJS.Timeout | null = null;
+  /** When `round_start` fires during the round-1 ready beat (for reconnect sync). */
+  private readyStartsAt: number | null = null;
   private resumeTimer: NodeJS.Timeout | null = null;
   private botTimers: NodeJS.Timeout[] = [];
 
@@ -55,6 +68,9 @@ export class MatchEngine {
 
   private startedAt = new Date();
   private readonly recordedRounds: RecordedRound[] = [];
+  private finishedVictoryData: VictoryData | null = null;
+  private finishedRoundHistoryByUserId: Record<string, RoundHistoryEntry[]> | null = null;
+  private finishedMatchSettings: MatchSettingsSnapshot | null = null;
 
   constructor(room: Room, deps: EngineDeps) {
     this.room = room;
@@ -63,44 +79,57 @@ export class MatchEngine {
 
   // --- START ----------------------------------------------------------------
 
-  async start(): Promise<void> {
+  async start(): Promise<boolean> {
     this.resetMatchState();
+    this.startedAt = new Date();
+    this.room.status = 'playing';
+    this.currentRoundIndex = -1;
+    this.phase = 'intro';
+
+    const introStartedAt = Date.now();
+
+    // Send everyone to the game screen immediately, then build the playlist while
+    // the intro countdown plays. The DB/AniList work is thus hidden behind the
+    // countdown instead of blocking the lobby. `firstVideo` is intentionally null
+    // here (unused for preload; the client loads the clip at `round_start`).
+    this.channel.emit('game_started', {
+      roomId: this.room.id,
+      settings: this.room.settings,
+      players: this.room.toPublicPlayers(),
+      introDuration: GAME_CONFIG.TIMERS.INTRO_DELAY,
+      firstVideo: null,
+    });
 
     let built;
     try {
       built = await this.deps.builder.build(this.room.settings, [...this.room.players.values()]);
     } catch (e) {
       logger.error(`[MatchEngine ${this.room.id}] Playlist build crashed`, 'Game', e);
-      this.room.status = 'waiting';
-      this.channel.emit('error', { message: 'Erreur technique lors de la préparation.' });
-      return;
+      return this.abortStart('Erreur technique lors de la préparation.');
     }
 
     if (!built.playlist.length) {
       logger.error(`[MatchEngine ${this.room.id}] Empty playlist (0 songs).`, 'Game');
-      this.room.status = 'waiting';
-      this.channel.emit('error', { message: 'Aucun son trouvé pour ces paramètres.' });
-      return;
+      return this.abortStart('Aucun son trouvé pour ces paramètres.');
     }
 
     this.playlist = built.playlist;
-    this.startedAt = new Date();
-    this.room.status = 'playing';
-    this.currentRoundIndex = -1;
-    this.phase = 'intro';
 
     logger.info(
       `[MatchEngine ${this.room.id}] Match start — ${this.playlist.length} songs, ${this.room.players.size} players.`,
       'Game',
     );
 
-    this.channel.emit('game_started', {
-      roomId: this.room.id,
-      settings: this.room.settings,
-      players: this.room.toPublicPlayers(),
-      introDuration: GAME_CONFIG.TIMERS.INTRO_DELAY,
-      firstVideo: this.playlist[0]?.videoKey ?? null,
-    });
+    // Warm the round-1 clip while the intro countdown plays out, so playback is
+    // instant when the first round starts (no cold buffering). Safe to expose the
+    // key here: nobody is guessing yet.
+    const first = this.playlist[0];
+    if (first) {
+      this.channel.emit('game:preload', {
+        videoKey: first.videoKey,
+        videoStartTime: first.videoStartTime,
+      });
+    }
 
     if (built.fallbackUsed) {
       setTimeout(() => {
@@ -112,7 +141,57 @@ export class MatchEngine {
       }, 1000);
     }
 
-    this.introTimer = setTimeout(() => this.startRound(), GAME_CONFIG.TIMERS.INTRO_DELAY);
+    // Start round 1 once the intro has visibly elapsed AND the playlist is ready.
+    // The build usually finishes within the intro, so the round starts exactly at
+    // the end of the countdown; a slow build only pushes it slightly later.
+    const remaining = Math.max(0, GAME_CONFIG.TIMERS.INTRO_DELAY - (Date.now() - introStartedAt));
+    this.introTimer = setTimeout(() => this.beginRound1Ready(), remaining);
+    return true;
+  }
+
+  /**
+   * Round-1 only: show the game UI with a short "À vous !" beat before audio and
+   * the guess timer start. Later rounds call `startRound()` directly from reveal.
+   */
+  private beginRound1Ready(): void {
+    this.introTimer = null;
+    if (this.currentRoundIndex >= 0) {
+      this.startRound();
+      return;
+    }
+
+    const first = this.playlist[0];
+    if (!first) {
+      void this.finish();
+      return;
+    }
+
+    const readyMs = GAME_CONFIG.TIMERS.ROUND1_READY_DELAY;
+    const serverNow = Date.now();
+    const startsAt = serverNow + readyMs;
+
+    this.phase = 'ready';
+    this.readyStartsAt = startsAt;
+    this.channel.emit('game:ready', {
+      serverNow,
+      startsAt,
+      durationSeconds: first.guessDuration,
+    });
+
+    this.readyTimer = setTimeout(() => {
+      this.readyTimer = null;
+      this.readyStartsAt = null;
+      this.startRound();
+    }, readyMs);
+  }
+
+  /** Bail out after `game_started` was already sent: send players back to the
+   *  lobby (cancel) and reset the room so a retry can start cleanly. */
+  private abortStart(message: string): boolean {
+    this.room.status = 'waiting';
+    this.channel.emit('error', { message });
+    this.channel.emit('game_cancelled', { reason: message });
+    return false;
   }
 
   private resetMatchState(): void {
@@ -140,8 +219,10 @@ export class MatchEngine {
   // --- ROUND LOOP -----------------------------------------------------------
 
   private startRound(): void {
+    this.readyStartsAt = null;
     this.clock.clear();
     this.clearBotTimers();
+    this.room.touch();
     this.isRoundLoading = true;
     this.currentRoundIndex++;
 
@@ -163,7 +244,7 @@ export class MatchEngine {
     this.channel.emit('vote_update', { type: 'skip', count: 0, required });
     this.channel.emit('vote_update', { type: 'pause', count: 0, required, isPending: false });
 
-    const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS;
+    const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
     this.guessStartAt = Date.now();
     this.clock.start(guessDurationMs, () => this.endRound());
     this.scheduleBotAnswers(item);
@@ -194,7 +275,9 @@ export class MatchEngine {
     const player = this.room.players.get(userId);
     const item = this.playlist[this.currentRoundIndex];
     if (!player || !item) return;
-    if (player.hasAnswered) return; // answer lock
+    // Players may change their answer until the round ends — bots answer once,
+    // so guard only their re-entry (their timer fires a single time anyway).
+    if (player.isBot && player.hasAnswered) return;
 
     // Anti-cheat: never trust the client's claimed answer type — clamp it to what
     // the room's response mode actually allows so points can't be inflated
@@ -216,7 +299,10 @@ export class MatchEngine {
     // Anti-cheat: only signal THAT they answered — never the content/correctness.
     this.channel.emit('game:answered', { userId });
 
-    if (this.allConnectedAnswered()) this.endRound();
+    // Solo ends as soon as the lone player answers (fast flow). In multiplayer the
+    // round runs the full timer so everyone can still change their pick until the
+    // end — ending early would prevent last-second changes and feel abrupt.
+    if (this.room.isSolo && this.allConnectedAnswered()) this.endRound();
   }
 
   private endRound(): void {
@@ -268,11 +354,13 @@ export class MatchEngine {
 
     logger.info(`[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1} reveal.`, 'GameLoop');
 
+    const next = this.playlist[this.currentRoundIndex + 1];
     const payload: RoundRevealPayload = {
       round: this.currentRoundIndex + 1,
       song: this.toRevealSong(item),
       players: this.room.toPublicPlayers(true),
-      nextVideo: this.playlist[this.currentRoundIndex + 1]?.videoKey ?? null,
+      nextVideo: next?.videoKey ?? null,
+      nextVideoStartTime: next?.videoStartTime ?? null,
       serverNow: Date.now(),
       endsAt: this.clock.endsAt,
       durationSeconds: revealSeconds,
@@ -304,7 +392,9 @@ export class MatchEngine {
       songDifficulties,
     });
 
-    const rankByUser = new Map(result.rankings.map((r, i) => [r.userId, i + 1]));
+    const rankByUser = computeCompetitionRanks(
+      result.rankings.map((r) => ({ id: r.userId, score: r.score })),
+    );
     const publicPlayers = this.room.toPublicPlayers(true);
     const rankings = [...publicPlayers].sort((a, b) => b.score - a.score);
     const winner =
@@ -332,12 +422,19 @@ export class MatchEngine {
       multiWinnerCount: result.multiWinnerCount,
     };
 
+    const roundHistoryByUserId = this.buildRoundHistoryByUser();
+    const matchSettings = pickMatchSettings(this.room.settings);
+    this.finishedVictoryData = victoryData;
+    this.finishedRoundHistoryByUserId = roundHistoryByUserId;
+    this.finishedMatchSettings = matchSettings;
+
     logger.info(
       `[MatchEngine ${this.room.id}] Match over. Winners: ${result.winnerIds.length || 'none'}.`,
       'Game',
     );
 
-    this.channel.emit('game_over', { victoryData });
+    const gameOverPayload: GameOverPayload = { victoryData, roundHistoryByUserId, matchSettings };
+    this.channel.emit('game_over', gameOverPayload);
 
     // Push a level-up to each player's own socket (never broadcast).
     for (const p of this.room.players.values()) {
@@ -354,7 +451,9 @@ export class MatchEngine {
         totalRounds: this.playlist.length,
         startedAt: this.startedAt,
         endedAt: new Date(),
-        players: [...this.room.players.values()].map((p) => {
+        players: [...this.room.players.values()]
+          .filter((p) => !p.isBot)
+          .map((p) => {
           const outcome = xpByUser.get(p.userId);
           return {
             userId: p.userId,
@@ -503,12 +602,14 @@ export class MatchEngine {
   private pause(): void {
     this.clock.clear();
     this.room.status = 'paused';
+    this.room.markPaused();
     this.isPausePending = false;
     this.pauseVotes.clear();
     this.channel.emit('game_paused', { isPaused: true });
   }
 
   private resume(): void {
+    this.room.markResumed();
     this.channel.emit('game_resuming', { duration: 3 });
     this.resumeTimer = setTimeout(() => {
       this.room.status = 'playing';
@@ -521,18 +622,37 @@ export class MatchEngine {
 
   getSyncState(): GameSyncState {
     const item = this.currentRoundIndex >= 0 ? this.playlist[this.currentRoundIndex] : null;
-    const base = {
+    const base: GameSyncState = {
       status: this.room.status,
-      currentRound: this.currentRoundIndex + 1,
+      currentRound:
+        this.currentRoundIndex >= 0
+          ? this.currentRoundIndex + 1
+          : this.phase === 'ready'
+            ? 1
+            : 0,
       totalRounds: this.playlist.length,
       players: this.room.toPublicPlayers(this.phase === 'reveal'),
       phase: this.phase,
       round: null as RoundStartPayload | null,
       reveal: null as RoundRevealPayload | null,
+      ready: null as GameReadyPayload | null,
       introFirstVideo: this.phase === 'intro' ? this.playlist[0]?.videoKey ?? null : undefined,
     };
 
-    if (this.phase === 'guessing' && item) {
+    if (this.room.status === 'finished' && this.finishedVictoryData) {
+      base.victoryData = this.finishedVictoryData;
+      base.roundHistoryByUserId = this.finishedRoundHistoryByUserId ?? undefined;
+      base.matchSettings = this.finishedMatchSettings ?? undefined;
+      return base;
+    }
+
+    if (this.phase === 'ready' && this.playlist[0] && this.readyStartsAt) {
+      base.ready = {
+        serverNow: Date.now(),
+        startsAt: this.readyStartsAt,
+        durationSeconds: this.playlist[0].guessDuration,
+      };
+    } else if (this.phase === 'guessing' && item) {
       base.round = {
         round: this.currentRoundIndex + 1,
         totalRounds: this.playlist.length,
@@ -546,11 +666,13 @@ export class MatchEngine {
         duo: item.duo,
       };
     } else if (this.phase === 'reveal' && item) {
+      const nextItem = this.playlist[this.currentRoundIndex + 1];
       base.reveal = {
         round: this.currentRoundIndex + 1,
         song: this.toRevealSong(item),
         players: this.room.toPublicPlayers(true),
-        nextVideo: this.playlist[this.currentRoundIndex + 1]?.videoKey ?? null,
+        nextVideo: nextItem?.videoKey ?? null,
+        nextVideoStartTime: nextItem?.videoStartTime ?? null,
         serverNow: Date.now(),
         endsAt: this.clock.endsAt,
         durationSeconds: Math.max(1, Math.round(GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000)),
@@ -577,8 +699,11 @@ export class MatchEngine {
     this.clock.clear();
     this.clearBotTimers();
     if (this.introTimer) clearTimeout(this.introTimer);
+    if (this.readyTimer) clearTimeout(this.readyTimer);
     if (this.resumeTimer) clearTimeout(this.resumeTimer);
     this.introTimer = null;
+    this.readyTimer = null;
+    this.readyStartsAt = null;
     this.resumeTimer = null;
     this.phase = null;
   }
@@ -673,6 +798,37 @@ export class MatchEngine {
       videoKey: item.videoKey,
       videoStartTime: 0,
     };
+  }
+
+  /** Authoritative per-player round recap for game-over and reconnect sync. */
+  private buildRoundHistoryByUser(): Record<string, RoundHistoryEntry[]> {
+    const playlistBySongId = new Map(this.playlist.map((item) => [item.id, item]));
+    const byUser = new Map<string, RoundHistoryEntry[]>();
+    const playerIds = [...this.room.players.keys()];
+
+    for (const recorded of this.recordedRounds) {
+      const item = playlistBySongId.get(recorded.songId) ?? this.playlist[recorded.roundNumber - 1];
+      if (!item) continue;
+      const song = this.toRevealSong(item);
+      const answersByUser = new Map(recorded.answers.map((a) => [a.userId, a]));
+
+      for (const userId of playerIds) {
+        const answer = answersByUser.get(userId);
+        const entry: RoundHistoryEntry = {
+          round: recorded.roundNumber,
+          song,
+          isCorrect: answer?.isCorrect ?? false,
+          points: answer?.pointsAwarded ?? 0,
+          myAnswer: answer?.answer ?? null,
+          answerType: answer?.answerType ?? null,
+        };
+        const list = byUser.get(userId) ?? [];
+        list.push(entry);
+        byUser.set(userId, list);
+      }
+    }
+
+    return Object.fromEntries(byUser);
   }
 
   /** Typed broadcast channel for this room. */

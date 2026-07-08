@@ -143,10 +143,14 @@ export const registerFriendsHandlers = (
     const targetId = payload?.userId ?? '';
     try {
       if (!targetId) throw new FriendServiceError('Ami introuvable.');
+      if (targetId.startsWith('bot-')) throw new FriendServiceError('Ami introuvable.');
       const mine = gameManager.getUserPresence(userId);
       if (!mine.roomId) throw new FriendServiceError("Vous n'êtes pas dans un salon.");
       const room = gameManager.getRoom(mine.roomId);
       if (!room) throw new FriendServiceError('Salon introuvable.');
+      // Only the host manages the guest list — prevents invite spam and keeps
+      // control of who joins with the room owner.
+      if (userId !== room.hostId) throw new FriendServiceError("Seul l'hôte peut inviter des joueurs.");
       if (await friendsService.isBlockedEitherWay(userId, targetId)) {
         throw new FriendServiceError('Action impossible.');
       }
@@ -174,7 +178,9 @@ export const registerFriendsHandlers = (
     const targetId = payload?.userId ?? '';
     try {
       if (!targetId) throw new FriendServiceError('Profil introuvable.');
-      const profile = await getPublicProfile(userId, targetId, presence(targetId));
+      if (targetId.startsWith('bot-')) throw new FriendServiceError('Profil introuvable.');
+      const friends = await friendsService.getPublicFriends(targetId, presence);
+      const profile = await getPublicProfile(userId, targetId, presence(targetId), friends);
       socket.emit('profile:public', profile);
     } catch (e) {
       fail(e, 'get_public');

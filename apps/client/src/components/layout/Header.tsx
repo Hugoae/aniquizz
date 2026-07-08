@@ -1,86 +1,63 @@
-import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { hasRole } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { LogIn, Shield } from 'lucide-react';
 
-// Features & Context
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { AuthModal } from '@/features/auth/components/AuthModal';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
-import { UserAvatar } from '@/components/ui/UserAvatar';
-import { FriendsMenu } from '@/features/friends/FriendsMenu';
+import { ProfileButton } from '@/components/layout/ProfileButton';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { user, profile, setShowAuthModal } = useAuth();
   const isStaff = hasRole(profile?.role, 'MODERATOR');
 
   return (
-    <>
-      <header className="fixed top-0 left-0 right-0 h-16 border-b border-white/5 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
-        {/* LOGO */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <span className="text-2xl font-black tracking-tighter gradient-text group-hover:scale-105 transition-transform">
-            AniQuizz
-          </span>
-        </Link>
+    <header className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
+      <Link to="/" className="flex items-center gap-2.5 group">
+        <span className="eq h-4 text-primary transition-transform group-hover:scale-110" aria-hidden="true">
+          <i></i><i></i><i></i><i></i>
+        </span>
+        <span className="font-display text-2xl font-extrabold tracking-tight gradient-text">
+          AniQuizz
+        </span>
+      </Link>
 
-        {/* ACTIONS UTILISATEUR */}
-        <div className="flex items-center gap-4">
-          {user && profile && <SuspensionBadge />}
-          {user && profile && <FriendsMenu />}
-          {user && profile && isStaff && (
-            <Button
-              variant="ghost"
-              onClick={() => navigate('/admin')}
-              className="h-auto gap-2 rounded-lg px-3 py-1 hover:bg-white/5"
-              title="Administration"
-            >
-              <Shield className="h-4 w-4 text-primary" />
-              <span className="hidden md:inline text-sm font-semibold">Admin</span>
-            </Button>
-          )}
-          {user && profile ? (
-            // --- CONNECTÉ ---
-            <Button
-                variant="ghost"
-                onClick={() => navigate('/profile')}
-                // ✅ MODIF : rounded-full -> rounded-lg pour la cohérence "Tech"
-                className="flex items-center gap-3 pl-2 pr-4 py-1 h-auto rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all cursor-pointer outline-none focus:ring-0"
-            >
-                <div className="relative shrink-0">
-                    <UserAvatar 
-                        avatar={profile.avatar} 
-                        username={profile.username} 
-                        className="h-8 w-8" 
-                    />
-                    <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-primary text-[9px] font-black leading-none text-primary-foreground border border-background shadow-sm">
-                        {profile.level ?? 1}
-                    </span>
-                </div>
-                <div className="hidden md:flex flex-col items-start text-sm">
-                    <span className="font-bold leading-none">{profile.username}</span>
-                </div>
-            </Button>
-          ) : (
-            // --- DÉCONNECTÉ ---
-            <Button
-              onClick={() => setShowAuthModal(true)}
-              variant="default"
-              // Le variant default utilise déjà le radius global (rounded-lg désormais)
-              className="font-bold shadow-lg shadow-primary/20"
-            >
-              <LogIn className="mr-2 h-4 w-4" />
-              Se connecter
-            </Button>
-          )}
-        </div>
-      </header>
-
-      {/* MODALE D'AUTH */}
-      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
-    </>
+      <div className="flex items-center gap-3">
+        {user && profile && <SuspensionBadge />}
+        {user && profile && isStaff && (
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/admin')}
+            className="h-auto gap-2 rounded-lg px-3 py-1"
+            aria-label="Administration"
+            title="Administration"
+          >
+            <Shield className="h-4 w-4 text-primary" aria-hidden />
+            <span className="hidden md:inline text-sm font-semibold">Admin</span>
+          </Button>
+        )}
+        {user && profile && isStaff && (
+          <div className="h-6 w-px bg-border/70" aria-hidden="true" />
+        )}
+        {user && profile ? (
+          <ProfileButton
+            username={profile.username}
+            avatar={profile.avatar}
+            xp={profile.xp}
+            onClick={() => navigate('/profile')}
+          />
+        ) : (
+          <Button
+            onClick={() => setShowAuthModal(true)}
+            variant="default"
+            className="font-bold"
+          >
+            <LogIn className="mr-2 h-4 w-4" aria-hidden />
+            Se connecter
+          </Button>
+        )}
+      </div>
+    </header>
   );
 }

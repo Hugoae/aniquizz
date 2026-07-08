@@ -2,7 +2,6 @@ import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
 import { shuffleArray, type Precision } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
-import { GAME_CONFIG } from '@aniquizz/shared';
 
 const toDifficultyEnum = (value: string): Difficulty => {
   switch (value.toLowerCase()) {
@@ -19,12 +18,8 @@ const toDifficultyEnum = (value: string): Difficulty => {
 export interface SongFilters {
   /** Accepted difficulties (easy, medium, hard). */
   difficulty?: string[];
-  /** Accepted song types (opening, ending, ost). */
+  /** Accepted song types (opening, ending). */
   types?: string[];
-  /** Specific playlist id (top-50, decades, genres...). */
-  playlist?: string | null;
-  /** Starting decade (e.g. "2010" for 2010-2019). */
-  decade?: string;
   /** Anime ids watched by the players (Watched mode). */
   watchedIds?: number[];
 }
@@ -232,22 +227,7 @@ export const getRandomSongs = async (
     const songTypes: SongType[] = [];
     if (filters.types.includes('opening')) songTypes.push(SongType.OP);
     if (filters.types.includes('ending')) songTypes.push(SongType.ED);
-    if (filters.types.includes('ost')) songTypes.push(SongType.INSERT);
     if (songTypes.length > 0) whereClause.songType = { in: songTypes };
-  }
-
-  if (filters?.playlist) {
-    if (filters.playlist === 'top-50') {
-      whereClause.anime = { popularity: { gte: 80 } };
-    } else if (filters.playlist === 'decades' && filters.decade) {
-      const s = parseInt(filters.decade, 10);
-      if (!isNaN(s)) whereClause.anime = { seasonYear: { gte: s, lt: s + 10 } };
-    } else {
-      const targetPlaylist = GAME_CONFIG.PLAYLISTS.find((p) => p.id === filters.playlist);
-      if (targetPlaylist?.dbValues?.length) {
-        whereClause.anime = { franchise: { genres: { hasSome: targetPlaylist.dbValues } } };
-      }
-    }
   }
 
   return fetchWithFallback(count, whereClause, filters?.watchedIds, filters?.difficulty);
@@ -255,31 +235,50 @@ export const getRandomSongs = async (
 
 /**
  * Random pool of candidate display names used to build QCM/duo choices.
- * Fetched ONCE per match; choices are then assembled in memory (see PlaylistBuilder).
+ * The underlying set (every anime/franchise name) changes only when the catalogue
+ * is edited, so we cache it in memory per precision. This removes a full
+ * `anime` table scan from every match start (the heaviest constant cost of the
+ * playlist build). Promises are cached to collapse concurrent match starts.
  */
-export const getChoiceCandidates = async (
-  precision: Precision,
-  filters?: Pick<SongFilters, 'playlist' | 'decade'>,
-): Promise<string[]> => {
-  const where: Record<string, unknown> = {};
-  if (filters?.playlist === 'decades' && filters?.decade) {
-    const s = parseInt(filters.decade, 10);
-    if (!isNaN(s)) where.seasonYear = { gte: s, lt: s + 10 };
-  }
+const CHOICE_CANDIDATES_TTL_MS = 10 * 60 * 1000;
 
+interface ChoiceCandidatesEntry {
+  timestamp: number;
+  promise: Promise<string[]>;
+}
+
+const choiceCandidatesCache = new Map<Precision, ChoiceCandidatesEntry>();
+
+const loadChoiceCandidates = async (precision: Precision): Promise<string[]> => {
   const select = { name: true, franchise: { select: { name: true } } };
-  let animes = await prisma.anime.findMany({ where, select });
-
-  // Fallback when the filter is too narrow to build 4-way choices.
-  if (animes.length < 4) {
-    animes = await prisma.anime.findMany({ select });
-  }
-
+  const animes = await prisma.anime.findMany({ select });
   const names = animes.map((a) => (precision === 'franchise' ? a.franchise?.name || a.name : a.name));
   return [...new Set(names)];
 };
 
-export const getAllAnimeNames = async () => {
+export const getChoiceCandidates = async (precision: Precision): Promise<string[]> => {
+  const now = Date.now();
+  const cached = choiceCandidatesCache.get(precision);
+  if (cached && now - cached.timestamp < CHOICE_CANDIDATES_TTL_MS) {
+    return cached.promise;
+  }
+
+  const promise = loadChoiceCandidates(precision).catch((error) => {
+    // Never poison the cache with a rejected promise: drop it so the next call retries.
+    choiceCandidatesCache.delete(precision);
+    throw error;
+  });
+  choiceCandidatesCache.set(precision, { timestamp: now, promise });
+  return promise;
+};
+
+/** Invalidate autocomplete + QCM candidate caches (call after catalogue edits). */
+export const invalidateChoiceCandidates = (): void => {
+  choiceCandidatesCache.clear();
+  animeNamesCache = null;
+};
+
+const loadAllAnimeNames = async () => {
   const animes = await prisma.anime.findMany({
     select: { name: true, altNames: true, franchise: { select: { name: true } } },
   });
@@ -288,4 +287,25 @@ export const getAllAnimeNames = async () => {
     franchise: a.franchise?.name || null,
     altNames: a.altNames,
   }));
+};
+
+interface AnimeNamesCacheEntry {
+  timestamp: number;
+  promise: Promise<Awaited<ReturnType<typeof loadAllAnimeNames>>>;
+}
+
+let animeNamesCache: AnimeNamesCacheEntry | null = null;
+
+export const getAllAnimeNames = async () => {
+  const now = Date.now();
+  if (animeNamesCache && now - animeNamesCache.timestamp < CHOICE_CANDIDATES_TTL_MS) {
+    return animeNamesCache.promise;
+  }
+
+  const promise = loadAllAnimeNames().catch((error) => {
+    animeNamesCache = null;
+    throw error;
+  });
+  animeNamesCache = { timestamp: now, promise };
+  return promise;
 };

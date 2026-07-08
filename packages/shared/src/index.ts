@@ -4,6 +4,7 @@ export * from './utils';
 export * from './game';
 export * from './scoring';
 export * from './grading';
+export * from './ranking';
 export * from './victory';
 export * from './leveling';
 export * from './selection';

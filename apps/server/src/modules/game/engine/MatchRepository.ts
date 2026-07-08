@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { AnswerType as PrismaAnswerType, Prisma } from '@prisma/client';
-import { prisma } from '@aniquizz/database';
+import { prisma, isBotId } from '@aniquizz/database';
 import type { AnswerType } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import type { RecordedRound } from './types';
@@ -61,10 +61,11 @@ export class MatchRepository {
    * (guests without a Profile are naturally excluded).
    */
   async getXpState(userIds: string[]): Promise<Map<string, XpState>> {
-    if (!userIds.length) return new Map();
+    const humanIds = userIds.filter((id) => !isBotId(id));
+    if (!humanIds.length) return new Map();
     try {
       const rows = await prisma.profile.findMany({
-        where: { id: { in: userIds } },
+        where: { id: { in: humanIds } },
         select: { id: true, xp: true, currentWinStreak: true },
       });
       return new Map(rows.map((r) => [r.id, { xp: r.xp, currentWinStreak: r.currentWinStreak }]));
@@ -75,13 +76,19 @@ export class MatchRepository {
   }
 
   async persistMatch(input: PersistMatchInput): Promise<void> {
+    const humanPlayers = input.players.filter((p) => !isBotId(p.userId));
+    if (!humanPlayers.length) {
+      logger.warn('[MatchRepository] No human players to persist; skipping match persistence.', 'Scoring');
+      return;
+    }
+
     // Only persist for players that actually have a Profile row.
     const existing = await prisma.profile.findMany({
-      where: { id: { in: input.players.map((p) => p.userId) } },
+      where: { id: { in: humanPlayers.map((p) => p.userId) } },
       select: { id: true, maxStreak: true },
     });
     const profileById = new Map(existing.map((p) => [p.id, p]));
-    const players = input.players.filter((p) => profileById.has(p.userId));
+    const players = humanPlayers.filter((p) => profileById.has(p.userId));
 
     if (!players.length) {
       logger.warn('[MatchRepository] No persistable players; skipping match persistence.', 'Scoring');

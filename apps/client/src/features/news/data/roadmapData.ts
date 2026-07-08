@@ -5,47 +5,54 @@ export interface RoadmapItem {
   date: string;
 }
 
+// Ordered chronologically: shipped first, then the current focus, then upcoming.
 export const roadmapData: RoadmapItem[] = [
   {
     title: "Lancement V0.1",
     description: "Sortie publique de la base du jeu (Solo, Multi standard, Profil).",
     status: "done",
-    date: "Janvier 2026"
+    date: "Q1 2026"
   },
   {
     title: "Intégration AniList & Profil",
-    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vu. Mise en place d'un système de profil avec statistiques.",
+    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vus. Mise en place d'un système de profil avec statistiques.",
     status: "done",
     date: "Q1 2026"
   },
   {
-    title: "Mode 'Battle Royale' & More",
-    description: "Nouveaux modes de jeu multijoueur.",
+    title: "Système d'XP & Amis",
+    description: "Niveaux et expérience, liste d'amis, présence en ligne et invitations en partie.",
+    status: "done",
+    date: "Q1 2026"
+  },
+  {
+    title: "Refonte visuelle (UI/UX)",
+    description: "Nouvelle identité graphique, typographie et interface plus soignée sur tout le site.",
     status: "in-progress",
-    date: "Q1 2026"
-  },
-  {
-    title: "Système d'Xp et Amis",
-    description: "Système d'xp et fonctionnalités d'amis.",
-    status: "planned",
-    date: "Q1 2026"
-  },
-  {
-    title: "Paramètre et Traduction en Anglais",
-    description: "Ajout de paramètres pour le site et votre compte & Traduction en Anglais",
-    status: "planned",
-    date: "Q2 2026"
-  },
-  {
-    title: "Collection des sons & Coup de coeurs",
-    description: "Collection des sons et possiblité de liké les sons pour les avoir en favoris",
-    status: "planned",
-    date: "Q2 2026"
-  },
-  {
-    title: "Ajout Endings",
-    description: "Support d'autres plateformes en plus d'AniList.",
-    status: "planned",
     date: "Q3 2026"
+  },
+  {
+    title: "Nouveaux modes de jeu",
+    description: "Modes multijoueur inédits (dont un mode de rapidité façon AMQ).",
+    status: "planned",
+    date: "Q4 2026"
+  },
+  {
+    title: "Paramètres & Traduction anglaise",
+    description: "Ajout de paramètres pour le site et votre compte, et traduction anglaise.",
+    status: "planned",
+    date: "Q4 2026"
+  },
+  {
+    title: "Collection de sons & Coups de cœur",
+    description: "Collection de sons et possibilité d'aimer les sons pour les ajouter à vos favoris.",
+    status: "planned",
+    date: "Q1 2027"
+  },
+  {
+    title: "Ajout des Endings",
+    description: "Ajout des génériques de fin (Endings) en plus des Openings.",
+    status: "planned",
+    date: "Q1 2027"
   }
 ];

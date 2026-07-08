@@ -11,14 +11,12 @@ const settingsSchema = z
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
     gameType: z.literal('standard').default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
-    soundCount: z.coerce.number().int().min(1).max(50).default(10),
+    soundCount: z.coerce.number().int().min(5).max(100).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
     difficulty: z.array(z.string()).default(['medium']),
     guessDuration: z.coerce.number().int().min(5).max(120).default(20),
     soundSelection: z.enum(['random', 'mix', 'watched', 'playlist']).default('random'),
-    playlist: z.string().nullable().default(null),
     precision: z.enum(['exact', 'franchise']).default('franchise'),
-    decade: z.string().optional(),
     watchedMode: z.enum(['union', 'intersection']).optional(),
     isPrivate: z.boolean().default(false),
     password: z.string().default(''),
@@ -27,7 +25,7 @@ const settingsSchema = z
       .int()
       .min(1)
       .max(GAME_CONFIG.LIMITS.MAX_PLAYERS_PER_LOBBY)
-      .default(8),
+      .default(16),
     roomName: z.string().optional(),
   })
   .strip();

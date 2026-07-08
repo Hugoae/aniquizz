@@ -1,10 +1,19 @@
 import {
+  CopyObjectCommand,
   DeleteObjectsCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+
+/**
+ * Videos are content-addressed (the key never points at different bytes), so they
+ * can be cached forever. A long, immutable Cache-Control lets the browser reuse
+ * the buffer warmed during the intro/reveal for instant playback, and lets the
+ * CDN edge serve repeats without hitting the origin.
+ */
+export const VIDEO_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -65,8 +74,52 @@ export async function r2UploadFile(
       Key: key,
       Body: body,
       ContentType: "video/mp4",
+      CacheControl: VIDEO_CACHE_CONTROL,
     }),
   );
+}
+
+/**
+ * Backfill `Cache-Control` on every existing object (in-place copy with
+ * `MetadataDirective: REPLACE`). Run once after adding the header to uploads so
+ * previously-stored videos also become cacheable. Returns the count updated.
+ */
+export async function r2BackfillCacheControl(
+  client: S3Client,
+  bucket: string,
+): Promise<number> {
+  let updated = 0;
+  let continuationToken: string | undefined;
+
+  do {
+    const listResponse = await client.send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        MaxKeys: 1000,
+        ContinuationToken: continuationToken,
+      }),
+    );
+
+    const objects = listResponse.Contents ?? [];
+    for (const object of objects) {
+      if (!object.Key) continue;
+      await client.send(
+        new CopyObjectCommand({
+          Bucket: bucket,
+          Key: object.Key,
+          CopySource: `${bucket}/${encodeURIComponent(object.Key)}`,
+          MetadataDirective: "REPLACE",
+          ContentType: "video/mp4",
+          CacheControl: VIDEO_CACHE_CONTROL,
+        }),
+      );
+      updated += 1;
+    }
+
+    continuationToken = listResponse.IsTruncated ? listResponse.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  return updated;
 }
 
 export async function r2EmptyBucket(client: S3Client, bucket: string): Promise<number> {

@@ -22,7 +22,7 @@ export const registerGameHandlers = (
       socket.emit('error', { message: check.reason ?? 'Impossible de lancer la partie.' });
       return;
     }
-    void room.startMatch();
+    void room.startMatch(() => gameManager.broadcastRoomList());
   };
 
   const submitAnswer = ({

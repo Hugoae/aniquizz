@@ -1,21 +1,15 @@
-import { ExternalLink, Calendar, Music2, User, Star } from 'lucide-react';
+import { ExternalLink, Calendar, Music2, User, Star, Check, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Mapping des couleurs pour les badges de genres
-const GENRE_COLORS: Record<string, string> = {
-  'Action': 'bg-red-500/10 text-red-400 border-red-500/20',
-  'Adventure': 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  'Comedy': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  'Drama': 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  'Fantasy': 'bg-pink-500/10 text-pink-400 border-pink-500/20',
-  'Romance': 'bg-rose-500/10 text-rose-400 border-rose-500/20',
-  'Sci-Fi': 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-  'Slice of Life': 'bg-green-500/10 text-green-400 border-green-500/20',
-  'Supernatural': 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
-  'Horror': 'bg-stone-500/10 text-stone-400 border-stone-500/20',
-  'Sports': 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  'Mecha': 'bg-sky-500/10 text-sky-400 border-sky-500/20',
-};
+// Decorative genre tags cycle through the token palette (no raw colors).
+const TAG_TONES = [
+  'bg-primary/10 text-primary border-primary/20',
+  'bg-accent/10 text-accent border-accent/20',
+  'bg-aqua/10 text-aqua border-aqua/20',
+  'bg-info/10 text-info border-info/20',
+  'bg-success/10 text-success border-success/20',
+  'bg-warning/10 text-warning border-warning/20',
+];
 
 interface SongInfoCardProps {
   animeName: string;
@@ -30,6 +24,8 @@ interface SongInfoCardProps {
   isRevealed: boolean;
   tags?: string[];
   isWatched?: boolean;
+  /** `card` = tall side panel; `band` = compact horizontal strip under the video. */
+  variant?: 'card' | 'band';
 }
 
 export function SongInfoCard({
@@ -44,120 +40,159 @@ export function SongInfoCard({
   siteUrl,
   isRevealed,
   tags,
-  isWatched
+  isWatched,
+  variant = 'card',
 }: SongInfoCardProps) {
-  
   if (!isRevealed) {
+    // Guessing phase: a themed "mystery" placeholder (not a fake loading
+    // skeleton) that holds the reveal card's footprint so the layout is stable.
     return (
-      // ✅ rounded-xl pour le squelette
-      <div className="w-[500px] h-[250px] bg-card/40 border border-white/5 rounded-xl p-4 backdrop-blur-md shadow-xl flex gap-4 animate-pulse">
-        <div className="flex-1 flex flex-col gap-3 pt-2">
-            <div className="h-4 w-3/4 bg-white/10 rounded" />
-            <div className="h-3 w-1/2 bg-white/5 rounded" />
-            <div className="h-3 w-1/3 bg-white/5 rounded mt-auto" />
+      <div className="glass-card flex h-full min-h-[200px] w-full max-w-[640px] flex-col items-center justify-center gap-4 border-dashed p-6 text-center">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-dashed border-primary/30 text-primary/60">
+          <HelpCircle className="h-10 w-10" aria-hidden="true" />
         </div>
-        <div className="w-36 h-full bg-white/5 rounded-lg shrink-0" />
+        <div>
+          <p className="text-lg font-black uppercase tracking-tight text-foreground/80">Quel est cet anime ?</p>
+          <p className="mt-1 text-sm text-muted-foreground">Les infos apparaîtront à la révélation.</p>
+        </div>
       </div>
     );
   }
 
-  const diffColor = 
-    difficulty === 'easy' ? 'text-green-400 border-green-500/30 bg-green-500/10' :
-    difficulty === 'hard' ? 'text-red-400 border-red-500/30 bg-red-500/10' :
-    'text-blue-400 border-blue-500/30 bg-blue-500/10';
+  const diffColor =
+    difficulty === 'easy'
+      ? 'text-success border-success/30 bg-success/10'
+      : difficulty === 'hard'
+        ? 'text-destructive border-destructive/30 bg-destructive/10'
+        : 'text-info border-info/30 bg-info/10';
 
-  const diffLabel = difficulty ? difficulty.toUpperCase() : "NORMAL";
+  const diffLabel = difficulty ? difficulty.toUpperCase() : 'NORMAL';
   const formattedType = type.replace(/(\d+)$/, ' $1');
 
-  return (
-    // ✅ rounded-xl pour la card principale
-    <div className="w-full max-w-[550px] h-[250px] flex bg-[#0a0a0a]/90 border border-white/10 rounded-xl overflow-hidden shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-4 duration-500 group hover:border-primary/30 transition-all">
-      
-      <div className="flex-1 flex flex-col p-5 min-w-0 relative">
-        
-        {franchise && (
-            <div className="flex items-center gap-1 text-[10px] font-bold text-yellow-500/80 uppercase tracking-wider mb-0.5">
-                <Star className="w-3 h-3 fill-yellow-500/50 shrink-0" />
-                <span className="truncate">{franchise}</span>
-            </div>
+  if (variant === 'band') {
+    return (
+      <div className="group flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card/90 shadow-xl backdrop-blur-xl transition-all duration-300 hover:border-primary/30">
+        {coverImage && (
+          <div className="relative w-[104px] shrink-0 overflow-hidden">
+            <img src={coverImage} alt={animeName} className="h-full w-full object-cover" />
+            {isWatched && (
+              <div className="absolute left-1 top-1 flex items-center gap-1 rounded bg-success px-1.5 py-0.5 text-success-foreground shadow">
+                <Check className="h-3 w-3 stroke-[4]" />
+                <span className="text-[9px] font-black leading-none">VU</span>
+              </div>
+            )}
+          </div>
         )}
 
-        <a 
-            href={siteUrl || '#'} 
-            target="_blank" 
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3">
+          {franchise && (
+            <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-warning">
+              <Star className="h-3 w-3 shrink-0 fill-warning/50" />
+              <span className="truncate">{franchise}</span>
+            </div>
+          )}
+
+          <a
+            href={siteUrl || '#'}
+            target="_blank"
             rel="noopener noreferrer"
-            className="font-black text-xl leading-tight hover:text-primary hover:underline decoration-primary decoration-2 underline-offset-4 transition-all mb-2 text-white block line-clamp-2"
+            className="line-clamp-1 text-lg font-black leading-tight text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
             title="Voir sur AniList"
-        >
+          >
             {animeName}
-            <ExternalLink className="inline ml-2 w-3.5 h-3.5 opacity-50 relative -top-0.5" />
+            <ExternalLink className="relative -top-0.5 ml-1.5 inline h-3 w-3 opacity-50" />
+          </a>
+
+          <div className="flex min-w-0 items-center gap-2 text-sm">
+            <Music2 className="h-3.5 w-3.5 shrink-0 text-primary" />
+            <span className="truncate font-semibold text-foreground/90">{songTitle}</span>
+            <span className="shrink-0 text-muted-foreground">·</span>
+            <span className="truncate text-muted-foreground">{artist}</span>
+          </div>
+
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className={cn('rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider shadow-sm', diffColor)}>{diffLabel}</span>
+            <span className="rounded border border-border bg-secondary/50 px-1.5 py-0.5 text-[10px] font-black text-foreground shadow-sm">{formattedType}</span>
+            {year && (
+              <span className="flex items-center gap-1 rounded border border-border/60 bg-secondary/30 px-1.5 py-0.5 text-[10px] font-bold text-secondary-foreground">
+                <Calendar className="h-3 w-3" /> {year}
+              </span>
+            )}
+            {tags?.slice(0, 3).map((tag, i) => (
+              <span key={tag} className={cn('hidden rounded border px-1.5 py-0.5 text-[9px] font-medium sm:inline', TAG_TONES[i % TAG_TONES.length])}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group flex h-full min-h-[200px] w-full max-w-[640px] animate-in slide-in-from-right-4 overflow-hidden rounded-xl border border-border bg-card/90 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:border-primary/30">
+      <div className="relative flex min-w-0 flex-1 flex-col p-4">
+        {franchise && (
+          <div className="mb-1 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-warning">
+            <Star className="h-3 w-3 shrink-0 fill-warning/50" />
+            <span className="truncate">{franchise}</span>
+          </div>
+        )}
+
+        <a
+          href={siteUrl || '#'}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-2 block line-clamp-2 text-xl font-black leading-tight text-foreground underline-offset-4 transition-all hover:text-primary hover:underline"
+          title="Voir sur AniList"
+        >
+          {animeName}
+          <ExternalLink className="relative -top-0.5 ml-1.5 inline h-3.5 w-3.5 opacity-50" />
         </a>
 
-        <div className="flex flex-col gap-1 pl-1 border-l-2 border-white/10 mb-2">
-            <div className="flex items-center gap-2 text-base font-bold text-white/90 truncate">
-                <Music2 className="w-4 h-4 text-primary shrink-0" />
-                <span className="truncate">{songTitle}</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
-                <User className="w-4 h-4 shrink-0" />
-                <span className="truncate">{artist}</span>
-            </div>
+        <div className="mb-2 flex flex-col gap-1 border-l-2 border-border pl-2">
+          <div className="flex items-center gap-2 truncate text-base font-bold text-foreground/90">
+            <Music2 className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate">{songTitle}</span>
+          </div>
+          <div className="flex items-center gap-2 truncate text-sm text-muted-foreground">
+            <User className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">{artist}</span>
+          </div>
         </div>
 
-        <div className="mt-auto pt-3 border-t border-white/5 flex flex-wrap gap-2 items-center">
-            
-            {/* ✅ rounded-md pour les badges (Layer 3) */}
-            <span className={cn("px-2 py-1 rounded-md text-[10px] font-bold uppercase border tracking-wider shadow-sm", diffColor)}>
-                {diffLabel}
+        <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-border/60 pt-2.5">
+          <span className={cn('rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider shadow-sm', diffColor)}>{diffLabel}</span>
+          <span className="rounded-md border border-border bg-secondary/50 px-2 py-0.5 text-[11px] font-black text-foreground shadow-sm">{formattedType}</span>
+          {year && (
+            <span className="flex items-center gap-1 rounded-md border border-border/60 bg-secondary/30 px-2 py-0.5 text-[11px] font-bold text-secondary-foreground">
+              <Calendar className="h-3 w-3" /> {year}
             </span>
-
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-black bg-white/10 text-white border border-white/10 shadow-sm">
-                {formattedType}
-            </span>
-
-            {year && (
-                <span className="flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold bg-secondary/30 text-secondary-foreground border border-white/5">
-                    <Calendar className="w-3 h-3" /> {year}
-                </span>
-            )}
-
+          )}
         </div>
 
         {tags && tags.length > 0 && (
-            <div className="flex gap-1.5 mt-2 overflow-hidden mask-fade-right">
-                {tags.slice(0, 4).map((tag, i) => {
-                    const style = GENRE_COLORS[tag] || 'bg-slate-500/10 text-slate-400 border-slate-500/20';
-                    return (
-                        <span key={i} className={cn("text-[9px] px-1.5 py-0.5 rounded border whitespace-nowrap font-medium", style)}>
-                            {tag}
-                        </span>
-                    );
-                })}
-            </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {tags.slice(0, 6).map((tag, i) => (
+              <span key={tag} className={cn('whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-medium', TAG_TONES[i % TAG_TONES.length])}>
+                {tag}
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
-      <div className="relative w-[160px] h-full shrink-0">
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a] to-transparent z-10 w-10" />
-        <img 
-            src={coverImage || '/placeholder.png'} 
-            alt={animeName} 
-            className="w-full h-full object-cover"
-        />
-        
+      <div className="relative h-full w-[200px] shrink-0">
+        <div className="absolute inset-0 z-10 w-10 bg-gradient-to-r from-card to-transparent" />
+        <img src={coverImage || '/placeholder.png'} alt={animeName} className="h-full w-full object-cover" />
+
         {isWatched && (
-            // ✅ rounded-md pour le badge VU
-            <div className="absolute top-2 right-2 px-2 py-1 bg-green-500 text-white rounded-md shadow-lg z-20 border border-green-400 flex items-center gap-1">
-                <CheckIcon className="w-3 h-3 stroke-[4]" />
-                <span className="text-[10px] font-black leading-none">VU</span>
-            </div>
+          <div className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-md border border-success/60 bg-success px-2 py-1 text-success-foreground shadow-lg">
+            <Check className="h-3 w-3 stroke-[4]" />
+            <span className="text-[10px] font-black leading-none">VU</span>
+          </div>
         )}
       </div>
-
     </div>
   );
-}
-
-function CheckIcon(props: any) {
-    return <svg {...props} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
 }

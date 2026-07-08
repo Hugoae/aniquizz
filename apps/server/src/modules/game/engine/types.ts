@@ -1,4 +1,4 @@
-import type { AnswerType, GamePlayer } from '@aniquizz/shared';
+import type { AnswerType, GamePlayer, UserRole } from '@aniquizz/shared';
 
 /**
  * Behaviour of a DEV-only simulated player.
@@ -22,6 +22,10 @@ export interface RoomPlayer {
   isConnected: boolean;
   isReady: boolean;
   anilistUsername: string | null;
+  /** Trusted account role (from socket auth), for the staff badge. */
+  role?: UserRole;
+  /** Player level (from lifetime XP, resolved at socket auth). */
+  level?: number;
 
   /** DEV-only simulated player. Never has a real socket. */
   isBot?: boolean;
@@ -77,7 +81,7 @@ export interface PlaylistItem {
 export interface AdminMatchProgress {
   currentRound: number;
   totalRounds: number;
-  phase: 'intro' | 'guessing' | 'reveal' | null;
+  phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
   /** Server timestamp (ms) at which the current phase ends, or null. */
@@ -115,9 +119,12 @@ export const toPublicPlayer = (
     isConnected: player.isConnected,
     isHost: player.userId === opts.hostId,
     isBot: player.isBot === true,
+    role: player.role ?? 'USER',
+    level: player.isBot ? undefined : player.level,
     // "In game" = still in the match flow (playing, paused, or on the game-over
     // screen) and has NOT returned to the lobby yet. Cleared on return / reset.
-    isInGame: opts.status !== 'waiting' && !opts.returned,
+    isInGame:
+      opts.status !== 'waiting' && opts.status !== 'starting' && !opts.returned,
     anilistUsername: player.anilistUsername,
     hasAnswered: player.hasAnswered,
     matchCorrectCount: player.matchCorrectCount,

@@ -5,18 +5,10 @@ interface PointsBadgeProps {
   className?: string;
 }
 
-/**
- * Petit badge affichant les points gagnés (+5 pts).
- */
+/** Floating reward badge showing points earned this round (accent = reward token). */
 export function PointsBadge({ points, className }: PointsBadgeProps) {
   return (
-    <div className={cn(
-      // ✅ rounded-md (Layer 3 - Detail)
-      "inline-flex items-center gap-1 px-3 py-1 rounded-md",
-      "bg-primary/20 border border-primary/30",
-      "text-primary font-bold text-sm",
-      className
-    )}>
+    <div className={cn('inline-flex items-center gap-1 rounded-md border border-accent/30 bg-accent/20 px-3 py-1 text-sm font-bold text-accent', className)}>
       <span>+{points}</span>
       <span className="text-xs font-normal">pts</span>
     </div>

@@ -12,17 +12,21 @@ import type {
   GamePlayer,
   GameStartedPayload,
   GameSyncState,
+  GameReadyPayload,
   PlayersUpdatePayload,
+  PreloadVideoPayload,
   RoundRevealPayload,
   RoundStartPayload,
   VictoryData,
   VoteUpdatePayload,
+  GameOverPayload,
 } from '@aniquizz/shared';
 import {
   createInitialState,
   gameReducer,
   type GameState,
 } from '../state/gameReducer';
+import { playerDisplayName } from '../utils/ranking';
 
 interface UseGameSocketOptions {
   roomId: string;
@@ -81,6 +85,31 @@ export function useGameSocket({
   const onClosedRef = useRef(onClosed);
   onClosedRef.current = onClosed;
 
+  // Track connection state across PLAYERS_UPDATE payloads so we can announce when
+  // someone drops or leaves. Seeded from the initial roster (all assumed present).
+  interface PresenceEntry {
+    connected: boolean;
+    inGame: boolean;
+    username: string;
+    isBot: boolean;
+  }
+  const connStateRef = useRef<Map<string, PresenceEntry>>(
+    new Map(
+      initialPlayers.map((p) => {
+        const ext = p as GamePlayer & { name?: string };
+        return [
+          String(p.id),
+          {
+            connected: ext.isConnected !== false,
+            inGame: ext.isInGame !== false,
+            username: playerDisplayName(ext),
+            isBot: ext.isBot === true,
+          },
+        ];
+      }),
+    ),
+  );
+
   // --- Anime autocomplete list + personal watched list ---
   useEffect(() => {
     const onAnimeList = (list: AnimeListEntry[]) => setAnimeList(list);
@@ -108,16 +137,66 @@ export function useGameSocket({
       }
     };
 
+    // Compare the incoming roster against the last known presence to surface
+    // drop/leave toasts. Disconnected players stay in the roster (greyed out) so
+    // they can reconnect during the grace window; a removed id means a hard leave.
+    const announcePresenceChanges = (incoming: GamePlayer[]) => {
+      const prev = connStateRef.current;
+      const next = new Map<string, PresenceEntry>();
+      const seen = new Set<string>();
+
+      for (const player of incoming) {
+        const id = String(player.id);
+        seen.add(id);
+        const connected = player.isConnected !== false;
+        const inGame = player.isInGame !== false;
+        const isBot = player.isBot === true;
+        const label = playerDisplayName(player);
+        next.set(id, { connected, inGame, username: label, isBot });
+        const before = prev.get(id);
+        if (id === String(currentUserId) || isBot) continue;
+
+        if (before?.connected === true && !connected) {
+          toast.warning(`${label} s'est déconnecté.`);
+        } else if (before?.inGame === true && !inGame) {
+          // Returned to the lobby or otherwise left the active match roster.
+          toast.info(`${label} a quitté la partie.`);
+        }
+      }
+
+      // Hard leave (`leave_room`) — only toast if they hadn't already left the match.
+      for (const [id, before] of prev) {
+        if (!seen.has(id) && id !== String(currentUserId) && !before.isBot && before.inGame) {
+          toast.info(`${before.username} a quitté la partie.`);
+        }
+      }
+
+      connStateRef.current = next;
+    };
+
     const handlers = {
-      game_state_sync: (s: GameSyncState) => dispatch({ type: 'SYNC', state: s }),
+      game_state_sync: (s: GameSyncState) =>
+        dispatch({ type: 'SYNC', state: s, myUserId: currentUserId }),
       game_started: (p: GameStartedPayload) => dispatch({ type: 'GAME_STARTED', payload: p }),
+      'game:ready': (p: GameReadyPayload) => dispatch({ type: 'GAME_READY', payload: p }),
       round_start: (p: RoundStartPayload) => dispatch({ type: 'ROUND_START', payload: p }),
       'game:answered': (p: AnsweredPayload) => dispatch({ type: 'ANSWERED', userId: p.userId }),
       round_reveal: (p: RoundRevealPayload) =>
         dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserId }),
-      update_players: (p: PlayersUpdatePayload) => dispatch({ type: 'PLAYERS_UPDATE', payload: p }),
-      game_over: (p: { victoryData: VictoryData }) =>
-        dispatch({ type: 'GAME_OVER', victoryData: p.victoryData }),
+      'game:preload': (p: PreloadVideoPayload) =>
+        dispatch({ type: 'PRELOAD', videoKey: p.videoKey, videoStartTime: p.videoStartTime }),
+      update_players: (p: PlayersUpdatePayload) => {
+        announcePresenceChanges(p.players);
+        dispatch({ type: 'PLAYERS_UPDATE', payload: p });
+      },
+      game_over: (p: GameOverPayload) =>
+        dispatch({
+          type: 'GAME_OVER',
+          victoryData: p.victoryData,
+          roundHistoryByUserId: p.roundHistoryByUserId,
+          matchSettings: p.matchSettings,
+          myUserId: currentUserId,
+        }),
       vote_update: (p: VoteUpdatePayload) => dispatch({ type: 'VOTE_UPDATE', payload: p }),
       game_paused: (p: { isPaused: boolean }) => dispatch({ type: 'PAUSED', isPaused: p.isPaused }),
       game_resuming: (p: { duration: number }) => {
@@ -152,9 +231,11 @@ export function useGameSocket({
 
     socket.on('game_state_sync', handlers.game_state_sync);
     socket.on('game_started', handlers.game_started);
+    socket.on('game:ready', handlers['game:ready']);
     socket.on('round_start', handlers.round_start);
     socket.on('game:answered', handlers['game:answered']);
     socket.on('round_reveal', handlers.round_reveal);
+    socket.on('game:preload', handlers['game:preload']);
     socket.on('update_players', handlers.update_players);
     socket.on('game_over', handlers.game_over);
     socket.on('vote_update', handlers.vote_update);
@@ -169,9 +250,11 @@ export function useGameSocket({
       clearResumeTimer();
       socket.off('game_state_sync', handlers.game_state_sync);
       socket.off('game_started', handlers.game_started);
+      socket.off('game:ready', handlers['game:ready']);
       socket.off('round_start', handlers.round_start);
       socket.off('game:answered', handlers['game:answered']);
       socket.off('round_reveal', handlers.round_reveal);
+      socket.off('game:preload', handlers['game:preload']);
       socket.off('update_players', handlers.update_players);
       socket.off('game_over', handlers.game_over);
       socket.off('vote_update', handlers.vote_update);

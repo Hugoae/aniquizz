@@ -21,7 +21,7 @@ export interface MatchXpInput {
   score: number;
   /** Whether the player won (solo objective reached or multi podium). */
   isWinner: boolean;
-  /** 1-based final rank in the match (used for the multiplayer placement bonus). */
+  /** 1-based competition rank (1-2-2-4 ties) for the multiplayer placement bonus. */
   rank: number;
   /** Total players in the match (for the top-half placement bonus). */
   playerCount: number;

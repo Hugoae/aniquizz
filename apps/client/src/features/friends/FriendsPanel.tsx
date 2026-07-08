@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import {
   Users,
   UserPlus,
@@ -17,23 +17,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 import { cn } from '@/lib/utils';
 import { useFriends } from './FriendsContext';
-import { presenceLabel, formatLastSeen } from './presence';
-
-const DOT_COLOR: Record<PresenceStatus, string> = {
-  in_game: 'bg-amber-400',
-  in_lobby: 'bg-sky-400',
-  online: 'bg-green-500',
-  offline: 'bg-muted-foreground/40',
-};
+import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
 
 function PresenceDot({ status }: { status: PresenceStatus }) {
   return (
     <span
       className={cn(
         'absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card',
-        DOT_COLOR[status],
+        PRESENCE_DOT[status],
       )}
       title={presenceLabel(status)}
     />
@@ -57,34 +51,39 @@ function FriendRow({
       : friend.roomName
         ? `${presenceLabel(friend.status)} · ${friend.roomName}`
         : presenceLabel(friend.status);
+  const joinRoomId = friend.joinable && friend.roomId ? friend.roomId : null;
 
   return (
-    <div className="group flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+    <div className="group flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors">
       <button className="relative shrink-0" onClick={() => onOpen(friend.id)} title="Voir le profil">
         <UserAvatar avatar={friend.avatar} username={friend.username} className="h-9 w-9" />
         <PresenceDot status={friend.status} />
       </button>
       <button className="flex-1 min-w-0 text-left" onClick={() => onOpen(friend.id)}>
-        <div className="font-semibold text-sm truncate">{friend.username}</div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-semibold text-sm truncate">{friend.username}</span>
+          <RoleBadge role={friend.role} size={14} />
+        </div>
         <div className="text-[11px] text-muted-foreground truncate">
           {subtitle} · Niv. {friend.level}
         </div>
       </button>
-      {friend.joinable && friend.roomId && (
+      {joinRoomId ? (
         <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
           title="Rejoindre le salon"
-          onClick={() => onJoin(friend.roomId as string)}
+          aria-label="Rejoindre le salon"
+          onClick={() => onJoin(joinRoomId)}
         >
           <LogIn className="h-4 w-4" />
         </Button>
-      )}
+      ) : null}
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-opacity"
+        className="h-8 w-8 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
         title="Retirer"
         onClick={() => onRemove(friend.id)}
       >
@@ -111,13 +110,16 @@ function IncomingRow({
         <UserAvatar avatar={request.user.avatar} username={request.user.username} className="h-9 w-9" />
       </button>
       <div className="flex-1 min-w-0">
-        <div className="font-semibold text-sm truncate">{request.user.username}</div>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="font-semibold text-sm truncate">{request.user.username}</span>
+          <RoleBadge role={request.user.role} size={14} />
+        </div>
         <div className="text-[11px] text-muted-foreground">Souhaite vous ajouter</div>
       </div>
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-green-400 hover:text-green-300 hover:bg-green-500/10"
+        className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
         title="Accepter"
         onClick={() => onAccept(request.id)}
       >
@@ -126,7 +128,7 @@ function IncomingRow({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
+        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         title="Refuser"
         onClick={() => onReject(request.id)}
       >
@@ -138,7 +140,7 @@ function IncomingRow({
 
 function RecentRow({ player, onAdd }: { player: RecentPlayer; onAdd: (id: string) => void }) {
   return (
-    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+    <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors">
       <UserAvatar avatar={player.avatar} username={player.username} className="h-9 w-9 shrink-0" />
       <div className="flex-1 min-w-0">
         <div className="font-semibold text-sm truncate">{player.username}</div>
@@ -176,13 +178,32 @@ export function FriendsPanel() {
     openProfile,
   } = useFriends();
   const [username, setUsername] = useState('');
+  const [adding, setAdding] = useState(false);
   const navigate = useNavigate();
+
+  // Online first, then offline; alphabetical within each group.
+  const sortedFriends = useMemo(
+    () =>
+      [...friends].sort((a, b) => {
+        const rank = (f: FriendSummary) => (f.status === 'offline' ? 1 : 0);
+        const byStatus = rank(a) - rank(b);
+        if (byStatus !== 0) return byStatus;
+        return a.username.localeCompare(b.username, 'fr', { sensitivity: 'base' });
+      }),
+    [friends],
+  );
 
   const handleAdd = (e: FormEvent) => {
     e.preventDefault();
     if (!username.trim()) return;
     sendRequest(username);
     setUsername('');
+    setAdding(false);
+  };
+
+  const cancelAdd = () => {
+    setUsername('');
+    setAdding(false);
   };
 
   const handleJoin = (roomId: string) => navigate('/play', { state: { fromInvite: true, roomId } });
@@ -203,22 +224,45 @@ export function FriendsPanel() {
         </label>
       </div>
 
-      <div className="h-[440px] glass-card bg-card/40 rounded-xl flex flex-col overflow-hidden">
-        <form onSubmit={handleAdd} className="p-3 border-b border-white/5 flex gap-2">
-          <Input
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            placeholder="Pseudo exact…"
-            className="h-9 bg-background/50"
-          />
-          <Button type="submit" size="icon" variant="glow" className="h-9 w-9 shrink-0" title="Envoyer une demande">
-            <UserPlus className="h-4 w-4" />
-          </Button>
-        </form>
+      <div className="glass-card bg-card/40 rounded-xl flex flex-col overflow-hidden">
+        {adding ? (
+          <form onSubmit={handleAdd} className="p-3 border-b border-border/60 flex gap-2">
+            <Input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="Pseudo exact…"
+              className="h-9 bg-background/50"
+              autoFocus
+            />
+            <Button type="submit" size="icon" variant="glow" className="h-9 w-9 shrink-0" title="Envoyer la demande">
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="h-9 w-9 shrink-0 text-muted-foreground"
+              title="Annuler"
+              onClick={cancelAdd}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </form>
+        ) : (
+          <div className="p-3 border-b border-border/60">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => setAdding(true)}
+            >
+              <UserPlus className="h-4 w-4" /> Ajouter un ami
+            </Button>
+          </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-4 max-h-[300px]">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground">
+            <div className="h-[200px] flex items-center justify-center text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           ) : (
@@ -241,7 +285,7 @@ export function FriendsPanel() {
                     Aucun ami pour l'instant. Ajoute quelqu'un par son pseudo !
                   </div>
                 ) : (
-                  friends.map((f) => (
+                  sortedFriends.map((f) => (
                     <FriendRow key={f.id} friend={f} onRemove={remove} onOpen={openProfile} onJoin={handleJoin} />
                   ))
                 )}
@@ -256,7 +300,10 @@ export function FriendsPanel() {
                     <div key={r.id} className="flex items-center gap-3 p-2 rounded-lg opacity-70">
                       <UserAvatar avatar={r.user.avatar} username={r.user.username} className="h-9 w-9 shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm truncate">{r.user.username}</div>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-semibold text-sm truncate">{r.user.username}</span>
+                          <RoleBadge role={r.user.role} size={14} />
+                        </div>
                         <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                           <Clock className="h-3 w-3" /> Demande envoyée
                         </div>
@@ -264,7 +311,7 @@ export function FriendsPanel() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-red-400"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
                         title="Annuler"
                         onClick={() => reject(r.id)}
                       >
@@ -288,7 +335,7 @@ export function FriendsPanel() {
 
               {blocked.length > 0 && (
                 <section className="space-y-1">
-                  <h3 className="px-2 text-[11px] font-bold uppercase tracking-wider text-red-400/70 flex items-center gap-1">
+                  <h3 className="px-2 text-[11px] font-bold uppercase tracking-wider text-destructive/70 flex items-center gap-1">
                     <Ban className="h-3 w-3" /> Bloqués ({blocked.length})
                   </h3>
                   {blocked.map((b) => (

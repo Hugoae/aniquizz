@@ -66,6 +66,20 @@ describe('xpForMatch - participation & floor', () => {
 });
 
 describe('xpForMatch - placement (multiplayer)', () => {
+  it('gives tied podium ranks the same placement bonus', () => {
+    const common = {
+      ...baseMulti,
+      roundsPlayed: 2,
+      correctByDifficulty: correct(),
+      score: 10,
+      playerCount: 5,
+    };
+    const tiedThirdA = xpForMatch({ ...common, rank: 3 });
+    const tiedThirdB = xpForMatch({ ...common, rank: 3 });
+    expect(tiedThirdA).toBe(tiedThirdB);
+    expect(tiedThirdA).toBe(2 * L.XP_PER_ROUND + L.PLACEMENT.THIRD);
+  });
+
   it('awards the top-half bonus beyond the podium', () => {
     // rank 4 of 8 -> top half (ceil(8/2)=4) ; rank 5 -> below half
     const common = { ...baseMulti, roundsPlayed: 2, correctByDifficulty: correct(), score: 5, playerCount: 8 };

@@ -1,52 +1,74 @@
-import { useState, useEffect } from 'react';
-import { Flame, Check } from 'lucide-react'; 
+import { Flame, Check } from 'lucide-react';
+import type { GamePlayer } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { rankAccent, rankNeutralAccent } from '../../../utils/ranking';
 import { PlayerCardBase } from '../../shared/PlayerCardBase';
 
 interface StandardPlayerCardProps {
-  player: any;
+  player: GamePlayer;
   isCurrentUser?: boolean;
   showResult?: boolean;
+  /** Competition rank (1-based); ties share a place. Drives the corner medal. */
+  rank?: number;
+  /** All scores still tied — show a neutral `#-` pill instead of `#1` for everyone. */
+  rankPending?: boolean;
+  /** Briefly glow + lift the card (e.g. when the player climbs the ranking). */
+  flash?: boolean;
   onClick?: () => void;
 }
 
-export function StandardPlayerCard({ player, isCurrentUser, showResult, onClick }: StandardPlayerCardProps) {
-  
+export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick }: StandardPlayerCardProps) {
   const isCorrect = player.isCorrect === true;
   const isWrong = showResult && !isCorrect;
-  const displayedAnswer = player.currentAnswer || "...";
+  const displayedAnswer = player.currentAnswer || '…';
   const answeredDuringGuess = !showResult && player.hasAnswered === true;
+  const streak = player.streak ?? 0;
 
-  // Anti-cheat: signal THAT a player has answered, never the content.
+  // Rank pill, half on the top-left corner / half in the void. Matches the
+  // sidebar style (squared, `#N`, shared accent) for consistency.
+  const rankMedal = (rank !== undefined || rankPending) && (
+    <div
+      className={cn(
+        'absolute -left-2.5 -top-2.5 z-20 flex h-6 min-w-[1.5rem] items-center justify-center rounded-md px-1 text-[11px] font-black shadow-md',
+        rankPending ? rankNeutralAccent() : rankAccent(rank!),
+      )}
+    >
+      #{rankPending ? '-' : rank}
+    </div>
+  );
+
+  // Anti-cheat: signal THAT a player has answered, never the content. Centered on
+  // the card's bottom border so it never collides with the rank pill.
   const answeredBadge = answeredDuringGuess && (
-    <div className="absolute -top-2 -left-2 z-10 flex items-center justify-center h-5 w-5 rounded-full bg-primary/20 border border-primary/50 shadow-sm animate-in zoom-in duration-300">
-      <Check className="h-3 w-3 text-primary" />
+    <div className="absolute -bottom-2.5 left-1/2 z-10 flex h-5 w-5 -translate-x-1/2 animate-in zoom-in items-center justify-center rounded-full border-2 border-card bg-primary shadow-sm duration-300">
+      <Check className="h-3 w-3 text-primary-foreground" />
     </div>
   );
 
-  // Bulle de réponse simple (Sans Timer)
+  // Answer bubble revealed at round end.
   const bubble = showResult && (
-    <div className={cn(
-      "absolute bottom-[calc(100%+12px)] left-1/2 -translate-x-1/2 px-3 py-2 rounded-xl text-[11px] font-bold shadow-xl border z-30 transition-all duration-300 animate-in zoom-in slide-in-from-bottom-2",
-      "text-center w-max max-w-[150px]", 
-      isCorrect ? "bg-green-500 text-white border-green-400" : "bg-red-500 text-white border-red-400"
-    )}>
-      <span className="break-words whitespace-normal line-clamp-2 leading-tight w-full">
-        {displayedAnswer}
-      </span>
-      <div className={cn(
-        "absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-b border-r",
-        isCorrect ? "bg-green-500 border-green-400" : "bg-red-500 border-red-400"
-      )} />
+    <div
+      className={cn(
+        'absolute bottom-[calc(100%+12px)] left-1/2 z-30 w-max max-w-[150px] -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 rounded-xl border px-3 py-2 text-center text-[11px] font-bold shadow-xl duration-300',
+        isCorrect ? 'border-success/60 bg-success text-success-foreground' : 'border-destructive/60 bg-destructive text-destructive-foreground',
+      )}
+    >
+      <span className="line-clamp-2 w-full whitespace-normal break-words leading-tight">{displayedAnswer}</span>
+      <div
+        className={cn(
+          'absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r',
+          isCorrect ? 'border-success/60 bg-success' : 'border-destructive/60 bg-destructive',
+        )}
+      />
     </div>
   );
 
-  // Badge Streak
-  const streakBadge = (player.streak || 0) >= 3 && (
-      <div className="absolute -top-2 -right-2 z-10 flex items-center gap-0.5 bg-orange-500/10 border border-orange-500/50 px-1.5 py-0.5 rounded-md shadow-sm animate-in zoom-in duration-300">
-        <Flame className={cn("h-3 w-3 fill-orange-500 text-orange-500", (player.streak || 0) >= 5 && "animate-pulse")} />
-        <span className="text-[10px] font-black italic text-orange-500">{player.streak}</span>
-      </div>
+  // Reveal focuses on answers; streak stays visible in the sidebar roster.
+  const streakBadge = !showResult && streak >= 3 && (
+    <div className="absolute -right-2 -top-2 z-10 flex animate-in zoom-in items-center gap-0.5 rounded-md border border-warning/50 bg-warning/10 px-1.5 py-0.5 shadow-sm duration-300">
+      <Flame className={cn('h-3 w-3 fill-warning text-warning', streak >= 5 && 'animate-pulse')} />
+      <span className="text-[10px] font-black italic text-warning">{streak}</span>
+    </div>
   );
 
   return (
@@ -55,11 +77,17 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, onClick 
       isCurrentUser={isCurrentUser}
       onClick={onClick}
       bubbleContent={bubble}
-      topLeftContent={answeredBadge}
+      topLeftContent={
+        <>
+          {rankMedal}
+          {answeredBadge}
+        </>
+      }
       topRightContent={streakBadge}
       className={cn(
-        showResult && isCorrect && "border-green-500/50 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.1)]",
-        showResult && isWrong && "border-red-500/50 bg-red-500/10"
+        showResult && isCorrect && 'border-success/50 bg-success/10 shadow-[0_0_15px_hsl(var(--success)/0.15)]',
+        showResult && isWrong && 'border-destructive/50 bg-destructive/10',
+        flash && 'animate-rank-flash',
       )}
     />
   );

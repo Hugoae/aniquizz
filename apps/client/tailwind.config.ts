@@ -1,8 +1,17 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./pages/**/*.{ts,tsx}",
+    "./components/**/*.{ts,tsx}",
+    "./app/**/*.{ts,tsx}",
+    "./src/**/*.{ts,tsx}",
+    // Shared package emits Tailwind class strings (e.g. medal token classes in
+    // getMedalMeta) that must be scanned so they aren't purged.
+    "../../packages/shared/src/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -14,7 +23,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Outfit', 'system-ui', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        display: ['Bricolage Grotesque', 'Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -47,6 +58,29 @@ export default {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
         },
+        aqua: {
+          DEFAULT: "hsl(var(--aqua))",
+          foreground: "hsl(var(--aqua-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        bronze: {
+          DEFAULT: "hsl(var(--bronze))",
+          foreground: "hsl(var(--bronze-foreground))",
+        },
+        "medal-bronze": {
+          DEFAULT: "hsl(var(--medal-bronze))",
+        },
+        silver: {
+          DEFAULT: "hsl(var(--silver))",
+          foreground: "hsl(var(--silver-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
@@ -56,36 +90,18 @@ export default {
           foreground: "hsl(var(--card-foreground))",
           elevated: "hsl(var(--card-elevated))",
         },
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
       },
-      // ✅ MODIFICATION : Échelle explicite pour l'Option C (Hiérarchie)
+      // Real radius hierarchy (base --radius = 10px)
       borderRadius: {
-        lg: "var(--radius)",               // 8px (Standard Shadcn - Boutons, Inputs)
-        md: "calc(var(--radius) - 2px)",   // 6px (Petits éléments)
-        sm: "calc(var(--radius) - 4px)",   // 4px (Badges)
-        xl: "1rem",                        // 16px (CONTENEURS / CARDS)
-        "2xl": "1.5rem",                   // 24px (Grandes Modales)
-        "3xl": "2rem",                     // 32px
-        full: "9999px",                    // Avatars (inchangé)
+        sm: "calc(var(--radius) - 4px)",   // 6px  — badges, chips
+        md: "calc(var(--radius) - 2px)",   // 8px  — small controls, inputs
+        lg: "var(--radius)",               // 10px — buttons (default)
+        xl: "0.875rem",                    // 14px — cards
+        "2xl": "1.25rem",                  // 20px — modals, large panels
+        "3xl": "1.75rem",                  // 28px — hero / feature blocks
+        full: "9999px",                    // avatars, pills, dots
       },
       keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
         "fade-in": {
           from: { opacity: "0", transform: "translateY(10px)" },
           to: { opacity: "1", transform: "translateY(0)" },
@@ -104,9 +120,7 @@ export default {
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.5s ease-out",
+        "fade-in": "fade-in 0.5s ease-out both",
         "scale-in": "scale-in 0.3s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         shimmer: "shimmer 2s linear infinite",
@@ -114,6 +128,7 @@ export default {
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
         'gradient-primary': 'var(--gradient-primary)',
+        'gradient-stage': 'var(--gradient-stage)',
         'gradient-glow': 'var(--gradient-glow)',
       },
       boxShadow: {
@@ -123,5 +138,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

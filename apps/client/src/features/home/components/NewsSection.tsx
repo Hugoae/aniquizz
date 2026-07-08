@@ -7,9 +7,8 @@ import { allNews, typeConfig } from '@/features/news/data/newsData';
 export function NewsSection() {
   const navigate = useNavigate();
 
-  const handleClick = () => {
-    navigate('/news');
-  };
+  const openNewsList = () => navigate('/news');
+  const openNewsItem = (id: number) => navigate(`/news#news-${id}`);
 
   const latestNews = allNews.slice(0, 2);
 
@@ -20,16 +19,15 @@ export function NewsSection() {
         {/* Header Section */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            {/* ✅ rounded-lg pour l'icône titre */}
-            <div className="p-1.5 rounded-lg bg-primary/20">
-              <typeConfig.update.icon className="h-4 w-4 text-primary" />
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <typeConfig.update.icon className="h-4 w-4" />
             </div>
             <h2 className="text-base font-semibold">Actualités</h2>
           </div>
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={handleClick}
+            onClick={openNewsList}
             className="gap-1 text-muted-foreground hover:text-primary text-xs h-7 px-2"
           >
             Voir tout
@@ -46,14 +44,16 @@ export function NewsSection() {
             return (
               <div
                 key={news.id}
-                onClick={handleClick}
-                // ✅ rounded-xl pour le conteneur de la news (Layer 1)
-                className="p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-all cursor-pointer group border border-border/30 hover:border-primary/20 relative overflow-hidden"
+                role="button"
+                tabIndex={0}
+                onClick={() => openNewsItem(news.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openNewsItem(news.id); } }}
+                aria-label={`Actualité : ${news.title}`}
+                className="p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group border border-border/40 hover:border-primary/30 relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-center gap-4 relative z-10">
-                  {/* ✅ rounded-lg pour l'icône interne */}
-                  <div className={`p-2 rounded-lg ${config.color} shrink-0 bg-opacity-20 border border-white/5`}>
-                    <TypeIcon className={`h-4 w-4 ${config.color.replace('bg-', 'text-')}`} />
+                  <div className={`p-2 rounded-lg ${config.bg} shrink-0`}>
+                    <TypeIcon className={`h-4 w-4 ${config.text}`} />
                   </div>
                   
                   <div className="flex-1 min-w-0">

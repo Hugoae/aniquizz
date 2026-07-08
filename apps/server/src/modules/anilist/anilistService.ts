@@ -15,6 +15,38 @@ query ($username: String) {
 }
 `;
 
+const USER_EXISTS_QUERY = `
+query ($name: String) {
+  User(name: $name) { id }
+}
+`;
+
+export type AnilistVerifyResult = 'exists' | 'not_found' | 'unverified';
+
+/**
+ * Check whether an AniList username exists, used before linking it to a profile.
+ * `unverified` (403 IP block, network, rate-limit) is deliberately non-fatal so
+ * a transient AniList outage never blocks a legitimate link.
+ */
+export const verifyAnilistUser = async (username: string): Promise<AnilistVerifyResult> => {
+    const name = username.trim();
+    if (!name) return 'not_found';
+    try {
+        const response = await axios.post('https://graphql.anilist.co', {
+            query: USER_EXISTS_QUERY,
+            variables: { name },
+        });
+        if (response.data?.data?.User?.id) return 'exists';
+        // AniList can answer 200 with `data.User = null` + an errors array.
+        return 'not_found';
+    } catch (error: any) {
+        const status = error.response?.status;
+        if (status === 404) return 'not_found';
+        logger.warn(`[AniList] Could not verify user "${name}" (status ${status ?? 'n/a'})`, 'AniList');
+        return 'unverified';
+    }
+};
+
 // --- CONFIGURATION CACHE ---
 const CACHE_DURATION = 10 * 60 * 1000; // 10 Minutes de mémoire tampon
 

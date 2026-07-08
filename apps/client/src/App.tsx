@@ -1,35 +1,42 @@
-import { useEffect } from 'react';
+/**
+ * App shell: providers, global socket moderation handlers, and route table.
+ *
+ * Auth-gated routes use ProtectedRoute (redirect home + open login modal).
+ * Both /profile and /profile/:userId require a session.
+ */
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from 'next-themes';
+import { Loader2 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { socket } from '@/lib/socket';
 import { supabase } from '@/lib/supabase';
 
-// --- CONTEXT ---
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
-
-// --- FEATURES ---
 import { AuthModal } from '@/features/auth/components/AuthModal';
 
-// --- PAGES ---
-import Home from '@/pages/Home';
-import GameHub from '@/pages/GameHub';
-import Game from '@/pages/Game';
-import Profile from '@/pages/Profile';
-import Daily from '@/pages/Daily';
-import News from '@/pages/News';
-import Leaderboard from '@/pages/Leaderboard';
-import Library from '@/pages/Library';
-import Admin from '@/pages/Admin';
-import NotFound from '@/pages/NotFound';
+const Home = lazy(() => import('@/pages/Home'));
+const GameHub = lazy(() => import('@/pages/GameHub'));
+const Game = lazy(() => import('@/pages/Game'));
+const Profile = lazy(() => import('@/pages/Profile'));
+const News = lazy(() => import('@/pages/News'));
+const Leaderboard = lazy(() => import('@/pages/Leaderboard'));
+const Library = lazy(() => import('@/pages/Library'));
+const Admin = lazy(() => import('@/pages/Admin'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const NotFound = lazy(() => import('@/pages/NotFound'));
 
-// --- DEV TOOLING ---
-/**
- * Route guard: gameplay routes require an authenticated session.
- * Unauthenticated users are bounced home with the login modal opened.
- */
+function RouteFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Chargement" />
+    </div>
+  );
+}
+
+/** Gameplay and profile routes require an authenticated session. */
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   const { session, loading, setShowAuthModal } = useAuth();
 
@@ -39,27 +46,21 @@ const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
     }
   }, [loading, session, setShowAuthModal]);
 
-  if (loading) return null;
+  if (loading) return <RouteFallback />;
   if (!session) return <Navigate to="/" replace />;
   return children;
 };
 
-/**
- * Composant interne qui a accès au AuthContext via useAuth().
- * C'est ici qu'on gère l'affichage de la modale et les routes.
- */
 const AppContent = () => {
-  // On récupère l'état d'ouverture de la modale depuis le contexte
   const { showAuthModal, setShowAuthModal } = useAuth();
   const navigate = useNavigate();
 
   // Server-driven exits must bounce the user back home:
-  //  - `force_logout` (admin "disconnect"): clear the Supabase session.
-  //  - `io server disconnect` (admin ban): the handshake keeps them out.
+  //  - force_logout (admin disconnect): clear the Supabase session.
+  //  - io server disconnect (admin ban): the handshake keeps them out.
   useEffect(() => {
     let lastServerMessage: string | null = null;
-    // Set when this connection is replaced by a newer one for the same user
-    // (single-session enforcement): the following disconnect is benign.
+    // Benign when single-session enforcement replaces this connection.
     let sessionReplaced = false;
 
     const onError = (p: { message?: string }) => {
@@ -102,57 +103,66 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
-      <Routes>
-        {/* ACCUEIL */}
-        <Route path="/" element={<Home />} />
-        
-        {/* HUB DE JEU (Choix mode, Lobby...) - Connexion requise */}
-        <Route
-          path="/play"
-          element={
-            <ProtectedRoute>
-              <GameHub />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* LE JEU EN COURS - Connexion requise */}
-        <Route
-          path="/game"
-          element={
-            <ProtectedRoute>
-              <Game />
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* AUTRES ROUTES */}
-        <Route path="/daily" element={<Daily />} />
-        <Route path="/news" element={<News />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/library" element={<Library />} />
-        <Route path="/profile" element={<Profile />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route path="/" element={<Home />} />
 
-        {/* ADMIN - Connexion requise ; le rôle est vérifié côté serveur */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute>
-              <Admin />
-            </ProtectedRoute>
-          }
-        />
+          <Route
+            path="/play"
+            element={
+              <ProtectedRoute>
+                <GameHub />
+              </ProtectedRoute>
+            }
+          />
 
-        {/* 404 */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route
+            path="/game"
+            element={
+              <ProtectedRoute>
+                <Game />
+              </ProtectedRoute>
+            }
+          />
 
-      {/* MODALES GLOBALES */}
-      <AuthModal 
-        open={showAuthModal} 
-        onOpenChange={setShowAuthModal} 
-      />
-      
+          <Route path="/daily" element={<Navigate to="/play" replace />} />
+          <Route path="/news" element={<News />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/library" element={<Library />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/:userId"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+
+      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+
       <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
@@ -160,7 +170,7 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
       <TooltipProvider>
         <AuthProvider>
           <FriendsProvider>

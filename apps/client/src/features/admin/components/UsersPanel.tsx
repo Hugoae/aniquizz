@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { MicOff, Ban, Bot, Power, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { MicOff, Ban, Power, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,9 +57,9 @@ import {
 const ROLE_OPTIONS: Role[] = ["USER", "MODERATOR", "ADMIN"];
 
 const roleBadgeClass: Record<Role, string> = {
-  USER: "bg-white/10 text-foreground",
-  MODERATOR: "bg-blue-500/20 text-blue-300",
-  ADMIN: "bg-purple-500/20 text-purple-300",
+  USER: "bg-secondary text-foreground",
+  MODERATOR: "bg-info/20 text-info",
+  ADMIN: "bg-primary/20 text-primary",
 };
 
 type FilterKey = UserListFilter;
@@ -68,7 +68,6 @@ type SortKey = UserListSort;
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Tous" },
   { key: "players", label: "Joueurs" },
-  { key: "bots", label: "Bots" },
   { key: "online", label: "En ligne" },
   { key: "in_game", label: "En partie" },
   { key: "moderators", label: "Modérateurs" },
@@ -86,9 +85,9 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 
 const PRESENCE_META: Record<Presence, { label: string; dot: string; text: string }> = {
-  online: { label: "En ligne", dot: "bg-emerald-400", text: "text-emerald-300" },
-  in_game: { label: "In game", dot: "bg-violet-400", text: "text-violet-300" },
-  offline: { label: "Hors ligne", dot: "bg-white/30", text: "text-muted-foreground" },
+  online: { label: "En ligne", dot: "bg-success", text: "text-success" },
+  in_game: { label: "In game", dot: "bg-primary", text: "text-primary" },
+  offline: { label: "Hors ligne", dot: "bg-muted-foreground/30", text: "text-muted-foreground" },
 };
 
 const formatDate = (iso: string): string =>
@@ -197,7 +196,7 @@ function SanctionMenu({
           size="sm"
           variant="outline"
           disabled={disabled}
-          className={active ? (isMute ? "border-amber-500/40 text-amber-300" : "border-red-500/40 text-red-300") : ""}
+          className={active ? (isMute ? "border-warning/40 text-warning" : "border-destructive/40 text-destructive") : ""}
         >
           <Icon className="h-3.5 w-3.5 mr-1" />
           {isMute ? "Mute" : "Ban"}
@@ -213,7 +212,7 @@ function SanctionMenu({
         {active && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLift} className="text-emerald-400 focus:text-emerald-400">
+            <DropdownMenuItem onClick={onLift} className="text-success focus:text-success">
               {isMute ? "Lever le mute" : "Lever le ban"}
             </DropdownMenuItem>
           </>
@@ -303,12 +302,12 @@ function UserDetailDialog({
                 )}
                 <span className="text-muted-foreground">Inscrit le {formatDate(profile.createdAt)}</span>
                 {banned && (
-                  <Badge className="bg-red-500/20 text-red-300">
+                  <Badge className="bg-destructive/20 text-destructive">
                     Banni · {formatRemaining(user.bannedUntil)}
                   </Badge>
                 )}
                 {muted && (
-                  <Badge className="bg-amber-500/20 text-amber-300">
+                  <Badge className="bg-warning/20 text-warning">
                     Muet · {formatRemaining(user.mutedUntil)}
                   </Badge>
                 )}
@@ -444,13 +443,13 @@ export function UsersPanel({
       {/* Counters */}
       <div className="flex flex-wrap items-center gap-4 text-sm">
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" /> {counts.online} en ligne
+          <span className="h-2 w-2 rounded-full bg-success" /> {counts.online} en ligne
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-violet-400" /> {counts.inGame} en partie
+          <span className="h-2 w-2 rounded-full bg-primary" /> {counts.inGame} en partie
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-red-400" /> {counts.banned} banni(s)
+          <span className="h-2 w-2 rounded-full bg-destructive" /> {counts.banned} banni(s)
         </span>
       </div>
 
@@ -470,7 +469,7 @@ export function UsersPanel({
               setFilter(f.key);
               setPage(1);
             }}
-            className={cn("rounded-full", filter !== f.key && "border-white/10")}
+            className={cn("rounded-full", filter !== f.key && "border-border")}
           >
             {f.label}
           </Button>
@@ -498,7 +497,7 @@ export function UsersPanel({
 
       <div className="glass-card overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="text-left text-muted-foreground border-b border-white/10">
+          <thead className="text-left text-muted-foreground border-b border-border">
             <tr>
               <th className="p-3">Joueur</th>
               <th className="p-3">Rôle</th>
@@ -517,41 +516,24 @@ export function UsersPanel({
               return (
                 <tr
                   key={u.id}
-                  className={cn(
-                    "border-b border-white/5",
-                    u.isBot ? "opacity-60" : "hover:bg-white/5 cursor-pointer",
-                  )}
-                  onClick={u.isBot ? undefined : () => setDetail(u)}
-                  title={u.isBot ? undefined : "Voir le profil"}
+                  className="border-b border-border/50 hover:bg-secondary/50 cursor-pointer"
+                  onClick={() => setDetail(u)}
+                  title="Voir le profil"
                 >
                   <td className="p-3">
-                    <div
-                      className={cn(
-                        "font-semibold flex items-center gap-2 transition-colors",
-                        !u.isBot && "hover:text-primary",
-                      )}
-                    >
+                    <div className="font-semibold flex items-center gap-2 transition-colors hover:text-primary">
                       {u.username}
-                      {u.isBot && (
-                        <Badge className="bg-cyan-500/15 text-cyan-300 gap-1">
-                          <Bot className="h-3 w-3" /> Bot
-                        </Badge>
-                      )}
                     </div>
                     <div className="text-xs text-muted-foreground">{u.email}</div>
-                    {!u.isBot && (
-                      <div className="text-[11px] text-muted-foreground/70">
-                        Inscrit le {formatDate(u.createdAt)}
-                      </div>
-                    )}
+                    <div className="text-[11px] text-muted-foreground/70">
+                      Inscrit le {formatDate(u.createdAt)}
+                    </div>
                   </td>
 
                   <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    {u.isBot ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : canManage && !isSelf ? (
+                    {canManage && !isSelf ? (
                       <select
-                        className="bg-background border border-white/10 rounded px-2 py-1"
+                        className="bg-background border border-border rounded px-2 py-1"
                         value={u.role}
                         onChange={(e) =>
                           void run(
@@ -572,13 +554,7 @@ export function UsersPanel({
                   </td>
 
                   <td className="p-3">
-                    {u.isBot ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <>
-                        {u.gamesPlayed} parties · Niv {u.level}
-                      </>
-                    )}
+                    {u.gamesPlayed} parties · Niv {u.level}
                   </td>
 
                   <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -595,7 +571,7 @@ export function UsersPanel({
                   </td>
 
                   <td className="p-3">
-                    {u.isBot || u.presence !== "offline" ? (
+                    {u.presence !== "offline" ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
                       <span className="text-xs text-muted-foreground">
@@ -605,33 +581,26 @@ export function UsersPanel({
                   </td>
 
                   <td className="p-3">
-                    {u.isBot ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
+                    <div className="flex flex-col gap-1.5">
                         <span className={cn("flex items-center gap-2 text-xs font-medium", PRESENCE_META[u.presence].text)}>
                           <span className={cn("h-2 w-2 rounded-full", PRESENCE_META[u.presence].dot)} />
                           {PRESENCE_META[u.presence].label}
                         </span>
                         {banned && (
-                          <Badge className="bg-red-500/20 text-red-300 w-fit">
+                          <Badge className="bg-destructive/20 text-destructive w-fit">
                             Banni · {formatRemaining(u.bannedUntil)}
                           </Badge>
                         )}
                         {muted && (
-                          <Badge className="bg-amber-500/20 text-amber-300 w-fit">
+                          <Badge className="bg-warning/20 text-warning w-fit">
                             Muet · {formatRemaining(u.mutedUntil)}
                           </Badge>
                         )}
                       </div>
-                    )}
                   </td>
 
                   <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    {u.isBot ? (
-                      <div className="text-right text-xs text-muted-foreground">—</div>
-                    ) : (
-                      <div className="flex flex-wrap justify-end gap-1">
+                    <div className="flex flex-wrap justify-end gap-1">
                         <SanctionMenu
                           kind="mute"
                           active={muted}
@@ -718,7 +687,6 @@ export function UsersPanel({
                           </>
                         )}
                       </div>
-                    )}
                   </td>
                 </tr>
               );

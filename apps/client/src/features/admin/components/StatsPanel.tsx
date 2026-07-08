@@ -155,9 +155,9 @@ function SegmentBar({ segments }: { segments: Segment[] }) {
   const total = segments.reduce((s, seg) => s + seg.value, 0);
   return (
     <div className="glass-card p-4 space-y-3">
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-white/5">
+      <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary/50">
         {total === 0 ? (
-          <div className="h-full w-full bg-white/5" />
+          <div className="h-full w-full bg-secondary/50" />
         ) : (
           segments.map((seg) => (
             <div
@@ -213,7 +213,7 @@ function TopList({
                   <div className="truncate text-xs text-muted-foreground">{it.secondary}</div>
                 )}
               </div>
-              <span className="shrink-0 rounded-md bg-white/5 px-2 py-0.5 text-xs text-muted-foreground">
+              <span className="shrink-0 rounded-md bg-secondary/50 px-2 py-0.5 text-xs text-muted-foreground">
                 {it.count}
               </span>
             </li>
@@ -342,7 +342,7 @@ export function StatsPanel() {
               key={p.key}
               size="sm"
               variant={period === p.key ? "default" : "outline"}
-              className={cn("rounded-full", period !== p.key && "border-white/10")}
+              className={cn("rounded-full", period !== p.key && "border-border")}
               onClick={() => setPeriod(p.key)}
             >
               {p.label}
@@ -370,45 +370,45 @@ export function StatsPanel() {
       {/* --- Temps réel --- */}
       <SectionTitle icon={Activity} title="Temps réel" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={Clock} label="Uptime" value={formatUptime(live.uptimeSeconds)} accent="text-blue-400" />
+        <StatCard icon={Clock} label="Uptime" value={formatUptime(live.uptimeSeconds)} accent="text-info" />
         <StatCard
           icon={Users}
           label="Joueurs en ligne"
           value={live.uniqueOnline}
           secondary={`${live.connectedSockets} socket(s)`}
-          accent="text-emerald-400"
+          accent="text-success"
         />
         <StatCard
           icon={Radio}
           label="Salons actifs"
           value={live.activeRooms}
           secondary={`${live.activeMatches} partie(s) en cours`}
-          accent="text-violet-400"
+          accent="text-primary"
         />
         <StatCard
           icon={Gamepad2}
           label="Joueurs en salon"
           value={live.humansInRooms}
           secondary={live.botsInRooms ? `+ ${live.botsInRooms} bot(s)` : undefined}
-          accent="text-cyan-400"
+          accent="text-accent"
         />
-        <StatCard icon={MemoryStick} label="Mémoire (RSS)" value={`${live.memoryRssMb} Mo`} accent="text-amber-400" />
-        <StatCard icon={Cpu} label="Node" value={live.nodeVersion} accent="text-pink-400" />
-        <StatCard icon={Wifi} label="Sockets connectés" value={live.connectedSockets} accent="text-emerald-400" />
-        <StatCard icon={Server} label="Joueurs (total salons)" value={live.playersInRooms} accent="text-violet-400" />
+        <StatCard icon={MemoryStick} label="Mémoire (RSS)" value={`${live.memoryRssMb} Mo`} accent="text-warning" />
+        <StatCard icon={Cpu} label="Node" value={live.nodeVersion} accent="text-accent" />
+        <StatCard icon={Wifi} label="Sockets connectés" value={live.connectedSockets} accent="text-success" />
+        <StatCard icon={Server} label="Joueurs (total salons)" value={live.playersInRooms} accent="text-primary" />
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <SegmentBar
           segments={[
-            { label: "Publics", value: live.roomsPublic, className: "bg-emerald-500", dot: "bg-emerald-500" },
-            { label: "Privés", value: live.roomsPrivate, className: "bg-amber-500", dot: "bg-amber-500" },
+            { label: "Publics", value: live.roomsPublic, className: "bg-success", dot: "bg-success" },
+            { label: "Privés", value: live.roomsPrivate, className: "bg-warning", dot: "bg-warning" },
           ]}
         />
         <SegmentBar
           segments={[
-            { label: "En attente", value: live.roomsWaiting, className: "bg-white/40", dot: "bg-white/40" },
-            { label: "En partie", value: live.roomsPlaying, className: "bg-emerald-500", dot: "bg-emerald-500" },
-            { label: "En pause", value: live.roomsPaused, className: "bg-amber-500", dot: "bg-amber-500" },
+            { label: "En attente", value: live.roomsWaiting, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
+            { label: "En partie", value: live.roomsPlaying, className: "bg-success", dot: "bg-success" },
+            { label: "En pause", value: live.roomsPaused, className: "bg-warning", dot: "bg-warning" },
           ]}
         />
       </div>
@@ -428,32 +428,32 @@ export function StatsPanel() {
           label="Joueurs actifs"
           value={community.activePlayers24h}
           secondary={`${community.activePlayers7d} sur 7 j`}
-          accent="text-emerald-400"
+          accent="text-success"
         />
         <StatCard
           icon={UserPlus}
           label="Nouveaux (7 j)"
           value={community.newPlayers7d}
           secondary={`${community.newPlayers24h} sur 24 h`}
-          accent="text-cyan-400"
+          accent="text-accent"
         />
         <StatCard
           icon={Link2}
           label="Comptes AniList"
           value={community.anilistLinked}
           secondary={`${community.anilistLinkedPercent}% des joueurs`}
-          accent="text-blue-400"
+          accent="text-info"
         />
-        <StatCard icon={Ban} label="Bannis" value={community.banned} accent="text-red-400" />
-        <StatCard icon={MicOff} label="Mutés" value={community.muted} accent="text-amber-400" />
-        <StatCard icon={Shield} label="Modérateurs" value={community.roles.MODERATOR} accent="text-blue-400" />
-        <StatCard icon={Shield} label="Admins" value={community.roles.ADMIN} accent="text-purple-400" />
+        <StatCard icon={Ban} label="Bannis" value={community.banned} accent="text-destructive" />
+        <StatCard icon={MicOff} label="Mutés" value={community.muted} accent="text-warning" />
+        <StatCard icon={Shield} label="Modérateurs" value={community.roles.MODERATOR} accent="text-info" />
+        <StatCard icon={Shield} label="Admins" value={community.roles.ADMIN} accent="text-primary" />
       </div>
       <SegmentBar
         segments={[
-          { label: "Joueurs", value: community.roles.USER, className: "bg-white/40", dot: "bg-white/40" },
-          { label: "Modérateurs", value: community.roles.MODERATOR, className: "bg-blue-500", dot: "bg-blue-500" },
-          { label: "Admins", value: community.roles.ADMIN, className: "bg-purple-500", dot: "bg-purple-500" },
+          { label: "Joueurs", value: community.roles.USER, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
+          { label: "Modérateurs", value: community.roles.MODERATOR, className: "bg-info", dot: "bg-info" },
+          { label: "Admins", value: community.roles.ADMIN, className: "bg-primary", dot: "bg-primary" },
         ]}
       />
 
@@ -467,7 +467,7 @@ export function StatsPanel() {
           <Button
             size="sm"
             variant="outline"
-            className="border-red-500/40 text-red-300 hover:bg-red-500/10 hover:text-red-200"
+            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => setConfirmReset(true)}
           >
             <Trash2 className="h-3.5 w-3.5 mr-1.5" />
@@ -488,28 +488,28 @@ export function StatsPanel() {
           label="Durée moyenne"
           value={formatDuration(activity.avgMatchDurationSec)}
           secondary={`sur ${periodText}`}
-          accent="text-cyan-400"
+          accent="text-accent"
         />
         <StatCard
           icon={Target}
           label="Taux de bonne réponse"
           value={`${activity.correctRatePercent}%`}
           secondary={`sur ${periodText}`}
-          accent="text-emerald-400"
+          accent="text-success"
         />
         <StatCard
           icon={Disc}
           label="Sons découverts"
           value={activity.discoveredSongs}
           secondary={`${activity.coveragePercent}% du catalogue jouable`}
-          accent="text-pink-400"
+          accent="text-accent"
         />
         <StatCard
           icon={Music2}
           label="Catalogue jouable"
           value={activity.playableSongs}
           secondary={`${activity.catalogue.total} sons au total`}
-          accent="text-violet-400"
+          accent="text-primary"
         />
         <StatCard
           icon={Layers}
@@ -519,31 +519,31 @@ export function StatsPanel() {
               ? DIFFICULTY_LABELS[activity.topDifficulty.difficulty] ?? activity.topDifficulty.difficulty
               : "—"
           }
-          accent="text-amber-400"
+          accent="text-warning"
         />
         <StatCard
           icon={Gamepad2}
           label="Mode populaire"
           value={activity.modes[0] ? MODE_LABELS[activity.modes[0].mode] ?? activity.modes[0].mode : "—"}
           secondary={activity.modes[0] ? `${activity.modes[0].count} partie(s)` : undefined}
-          accent="text-blue-400"
+          accent="text-info"
         />
         <StatCard
           icon={BarChart3}
           label={`Parties (${periodShort})`}
           value={activity.matchesPeriod}
-          accent="text-emerald-400"
+          accent="text-success"
         />
       </div>
 
       {/* Catalogue health */}
       <SegmentBar
         segments={[
-          { label: "Prêts", value: activity.catalogue.completed, className: "bg-emerald-500", dot: "bg-emerald-500" },
-          { label: "En attente", value: activity.catalogue.pending, className: "bg-white/40", dot: "bg-white/40" },
-          { label: "En cours", value: activity.catalogue.processing, className: "bg-blue-500", dot: "bg-blue-500" },
-          { label: "Erreurs", value: activity.catalogue.error, className: "bg-red-500", dot: "bg-red-500" },
-          { label: "Ignorés", value: activity.catalogue.skipped, className: "bg-amber-500", dot: "bg-amber-500" },
+          { label: "Prêts", value: activity.catalogue.completed, className: "bg-success", dot: "bg-success" },
+          { label: "En attente", value: activity.catalogue.pending, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
+          { label: "En cours", value: activity.catalogue.processing, className: "bg-info", dot: "bg-info" },
+          { label: "Erreurs", value: activity.catalogue.error, className: "bg-destructive", dot: "bg-destructive" },
+          { label: "Ignorés", value: activity.catalogue.skipped, className: "bg-warning", dot: "bg-warning" },
         ]}
       />
 

@@ -1,12 +1,13 @@
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { StatColorToken } from '@/features/profile/statColors';
 
 interface StatCardProps {
   icon: LucideIcon;
   label: string;
   value: string | number;
   subtext?: string;
-  color?: string;
+  color?: StatColorToken;
   className?: string;
 }
 
@@ -19,22 +20,20 @@ export function StatCard({
   className 
 }: StatCardProps) {
   return (
-    // MODIFICATION: rounded-2xl -> rounded-xl (Standard Card)
     <div className={cn(
-      "bg-card/40 border border-white/5 rounded-xl p-5 flex flex-col justify-between hover:bg-card/60 transition-colors relative overflow-hidden group",
+      "bg-card/40 border border-border rounded-xl p-5 flex flex-col justify-between hover:bg-card/60 transition-colors relative overflow-hidden group",
       className
     )}>
-        {/* Icône en fond */}
+        {/* Background icon */}
         <div className={cn(
-            // MODIFICATION: rounded-full -> rounded-lg
-            "absolute top-3 right-3 p-2 rounded-lg bg-white/5 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all",
+            "absolute top-3 right-3 p-2 rounded-lg bg-secondary opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all",
             color
         )}>
             <Icon className="h-5 w-5" />
         </div>
         
         <div>
-            <div className={cn("text-3xl font-black mb-1", color)}>
+            <div className={cn("font-mono text-3xl font-bold mb-1", color)}>
                 {value}
             </div>
             <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">

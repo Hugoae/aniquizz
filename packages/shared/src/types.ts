@@ -1,6 +1,8 @@
 // packages/shared/src/types.ts
 // Shared domain types (Standard mode only).
 
+import type { UserRole } from './roles';
+
 // --- GAME & ROOM CONFIG ---
 export type GameMode = 'solo' | 'multiplayer' | 'competitive';
 export type SoundSelection = 'random' | 'mix' | 'watched' | 'playlist';
@@ -14,9 +16,7 @@ export interface GameConfig {
   difficulty: string[];
   guessDuration: number;
   soundSelection: SoundSelection;
-  playlist: string | null;
   precision: 'exact' | 'franchise';
-  decade?: string;
   watchedMode?: 'union' | 'intersection';
   hostAvatar?: string;
   hostName?: string;
@@ -47,6 +47,10 @@ export interface GamePlayer extends BasePlayer {
   isInGame?: boolean;
   /** DEV-only simulated player. */
   isBot?: boolean;
+  /** Account role, used to draw a staff badge next to the name. */
+  role?: UserRole;
+  /** Player level (from lifetime XP), shown in the lobby. */
+  level?: number;
 
   anilistUsername?: string | null;
 

@@ -67,15 +67,57 @@ export const computeMedal = (ratio: number, difficulties: string[]): MedalTier =
   return null;
 };
 
+export interface NextMedalGoal {
+  tier: Medal;
+  pointsNeeded: number;
+  label: string;
+}
+
+const MEDAL_ASCENDING: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
+
+/**
+ * Next medal tier the player has not yet reached, and how many points they still
+ * need on this match's score scale. Returns null when every tier is cleared.
+ */
+export const nextMedalGoal = (
+  score: number,
+  maxPossibleScore: number,
+  difficulties: string[],
+  currentMedal: MedalTier,
+): NextMedalGoal | null => {
+  if (maxPossibleScore <= 0) return null;
+
+  const thresholds = effectiveMedalThresholds(difficulties);
+  const startIdx = currentMedal ? MEDAL_ASCENDING.indexOf(currentMedal) + 1 : 0;
+
+  for (let i = startIdx; i < MEDAL_ASCENDING.length; i++) {
+    const tier = MEDAL_ASCENDING[i];
+    const requiredScore = Math.round(thresholds[tier] * maxPossibleScore);
+    const pointsNeeded = requiredScore - score;
+    if (pointsNeeded > 0) {
+      return { tier, pointsNeeded, label: GAME_CONFIG.MEDALS.META[tier].label };
+    }
+  }
+
+  return null;
+};
+
+/** Marker positions (0–1) for each medal tier on the mastery bar. */
+export const medalMarkerRatios = (difficulties: string[]): Record<Medal, number> => {
+  const t = effectiveMedalThresholds(difficulties);
+  return { bronze: t.bronze, silver: t.silver, gold: t.gold, platinum: t.platinum };
+};
+
 export interface MedalMeta {
   key: Medal;
   label: string;
-  color: string;
+  textClass: string;
+  borderClass: string;
 }
 
-/** Display metadata (label + color) for a medal, or null for no medal. */
+/** Display metadata (label + design-token classes) for a medal, or null for no medal. */
 export const getMedalMeta = (medal: MedalTier): MedalMeta | null => {
   if (!medal) return null;
   const meta = GAME_CONFIG.MEDALS.META[medal];
-  return { key: medal, label: meta.label, color: meta.color };
+  return { key: medal, label: meta.label, textClass: meta.textClass, borderClass: meta.borderClass };
 };

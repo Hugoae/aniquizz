@@ -50,14 +50,14 @@ const DIFFICULTIES: SongDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 const STATUSES: SongStatus[] = ["PENDING", "PROCESSING", "COMPLETED", "ERROR", "SKIPPED"];
 
 const statusBadge: Record<SongStatus, string> = {
-  PENDING: "bg-white/10 text-foreground",
-  PROCESSING: "bg-blue-500/20 text-blue-300",
-  COMPLETED: "bg-green-500/20 text-green-300",
-  ERROR: "bg-red-500/20 text-red-300",
-  SKIPPED: "bg-amber-500/20 text-amber-300",
+  PENDING: "bg-secondary text-foreground",
+  PROCESSING: "bg-info/20 text-info",
+  COMPLETED: "bg-success/20 text-success",
+  ERROR: "bg-destructive/20 text-destructive",
+  SKIPPED: "bg-warning/20 text-warning",
 };
 
-const selectCls = "rounded border border-white/10 bg-background px-2 py-1 text-xs";
+const selectCls = "rounded border border-border bg-background px-2 py-1 text-xs";
 
 type Confirm =
   | { kind: "song"; id: number; label: string }
@@ -297,7 +297,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <span>· {counts.animes} animes</span>
           <span>· {counts.songs} sons</span>
           <span>
-            · {counts.completedSongs} prêts (<span className="text-emerald-400">{coverage}%</span>)
+            · {counts.completedSongs} prêts (<span className="text-success">{coverage}%</span>)
           </span>
         </div>
       )}
@@ -358,10 +358,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                 {isFOpen(g) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
               <span className="font-semibold">{g.name}</span>
-              {g.isLocked && <Lock className="h-3.5 w-3.5 text-amber-400" />}
-              <Badge className="bg-white/10">{g.animes.length} animes</Badge>
+              {g.isLocked && <Lock className="h-3.5 w-3.5 text-warning" />}
+              <Badge className="bg-secondary">{g.animes.length} animes</Badge>
               {g.genres.slice(0, 3).map((gen) => (
-                <Badge key={gen} className="bg-white/5 text-muted-foreground">
+                <Badge key={gen} className="bg-secondary/50 text-muted-foreground">
                   {gen}
                 </Badge>
               ))}
@@ -376,7 +376,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-red-300"
+                    className="text-destructive"
                     onClick={() => setConfirm({ kind: "franchise", id: g.id!, label: g.name })}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
@@ -387,10 +387,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
 
             {/* Animes */}
             {isFOpen(g) && (
-              <div className="border-t border-white/5">
+              <div className="border-t border-border/50">
                 {g.animes.map((a) => (
-                  <div key={a.id} className="border-b border-white/5 last:border-0">
-                    <div className="flex items-center gap-2 bg-white/[0.02] px-3 py-2 pl-8">
+                  <div key={a.id} className="border-b border-border/50 last:border-0">
+                    <div className="flex items-center gap-2 bg-secondary/20 px-3 py-2 pl-8">
                       <button onClick={() => toggleA(a.id)} className="text-muted-foreground">
                         {isAOpen(a.id) ? (
                           <ChevronDown className="h-4 w-4" />
@@ -401,7 +401,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                       {a.coverImage ? (
                         <img src={a.coverImage} alt="" className="h-8 w-6 rounded object-cover" />
                       ) : (
-                        <div className="flex h-8 w-6 items-center justify-center rounded bg-white/5">
+                        <div className="flex h-8 w-6 items-center justify-center rounded bg-secondary/50">
                           <Film className="h-3 w-3 text-muted-foreground" />
                         </div>
                       )}
@@ -409,8 +409,8 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                       {a.seasonYear && (
                         <span className="text-xs text-muted-foreground">{a.seasonYear}</span>
                       )}
-                      {a.isLocked && <Lock className="h-3 w-3 text-amber-400" />}
-                      <Badge className="bg-white/10">{a.songs.length} sons</Badge>
+                      {a.isLocked && <Lock className="h-3 w-3 text-warning" />}
+                      <Badge className="bg-secondary">{a.songs.length} sons</Badge>
                       {canManage && (
                         <div className="ml-auto flex items-center gap-1">
                           <Button
@@ -430,7 +430,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-300"
+                            className="text-destructive"
                             onClick={() => setConfirm({ kind: "anime", id: a.id, label: a.name })}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -445,7 +445,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                         <table className="w-full text-sm">
                           <tbody>
                             {a.songs.map((s) => (
-                              <tr key={s.id} className="border-t border-white/5 hover:bg-white/5">
+                              <tr key={s.id} className="border-t border-border/50 hover:bg-secondary/50">
                                 <td className="p-2 align-middle">
                                   <Checkbox
                                     checked={selected.has(s.id)}
@@ -499,7 +499,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                                     title={s.isLocked ? "Verrouillé" : "Libre"}
                                   >
                                     {s.isLocked ? (
-                                      <Lock className="h-4 w-4 text-amber-400" />
+                                      <Lock className="h-4 w-4 text-warning" />
                                     ) : (
                                       <LockOpen className="h-4 w-4 text-muted-foreground" />
                                     )}
@@ -526,7 +526,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="text-red-300"
+                                        className="text-destructive"
                                         onClick={() =>
                                           setConfirm({ kind: "song", id: s.id, label: s.title })
                                         }
@@ -616,7 +616,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-destructive hover:bg-destructive/90"
               onClick={() => void doDelete()}
             >
               Supprimer

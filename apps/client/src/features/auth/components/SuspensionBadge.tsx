@@ -30,7 +30,7 @@ export function SuspensionBadge() {
   if (banned) {
     return (
       <div
-        className="flex items-center gap-2 rounded-lg border border-red-500/40 bg-red-500/15 px-3 py-1.5 text-red-300"
+        className="flex items-center gap-2 rounded-lg border border-destructive/40 bg-destructive/15 px-3 py-1.5 text-destructive"
         title="Vous êtes banni : vous ne pouvez pas rejoindre de partie."
       >
         <Ban className="h-4 w-4" />
@@ -43,7 +43,7 @@ export function SuspensionBadge() {
 
   return (
     <div
-      className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/15 px-3 py-1.5 text-amber-300"
+      className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-1.5 text-warning"
       title="Vous êtes réduit au silence : le chat est désactivé."
     >
       <MicOff className="h-4 w-4" />

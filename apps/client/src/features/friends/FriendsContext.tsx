@@ -1,3 +1,9 @@
+/**
+ * Shared friends state — single socket subscription for the whole app (FriendsProvider).
+ *
+ * Exposes relationOf() for contextual UI (AddFriendButton, recent players filter).
+ * Optimistic flags for add/accept are reconciled on friends:state or rolled back on friends:error.
+ */
 import {
   createContext,
   useCallback,
@@ -15,18 +21,17 @@ import type {
   FriendSummary,
   FriendPresencePayload,
   LobbyInvitePayload,
-  PublicProfile,
   RecentPlayer,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { PublicProfileDialog } from './PublicProfileDialog';
 
 const EMPTY: FriendsState = {
   friends: [],
   incoming: [],
   outgoing: [],
   blocked: [],
+  blockedByUserIds: [],
   allowFriendRequests: true,
 };
 
@@ -53,6 +58,8 @@ interface FriendsContextValue {
   refreshRecent: () => void;
   openProfile: (userId: string) => void;
   relationOf: (userId: string) => Relation;
+  /** Incoming request row id for a user, if any. */
+  incomingRequestFor: (userId: string) => string | undefined;
 }
 
 const FriendsContext = createContext<FriendsContextValue | null>(null);
@@ -63,11 +70,38 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<FriendsState>(EMPTY);
   const [recentPlayers, setRecentPlayers] = useState<RecentPlayer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [optimisticOutgoing, setOptimisticOutgoing] = useState<Set<string>>(() => new Set());
+  const [optimisticFriends, setOptimisticFriends] = useState<Set<string>>(() => new Set());
+  const pendingOptimisticRef = useRef<Map<string, 'outgoing' | 'friends'>>(new Map());
 
-  // Public-profile modal.
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [profile, setProfile] = useState<PublicProfile | null>(null);
-  const pendingProfileId = useRef<string | null>(null);
+  const clearOptimisticForUser = useCallback((userId: string) => {
+    pendingOptimisticRef.current.delete(userId);
+    setOptimisticOutgoing((prev) => {
+      if (!prev.has(userId)) return prev;
+      const next = new Set(prev);
+      next.delete(userId);
+      return next;
+    });
+    setOptimisticFriends((prev) => {
+      if (!prev.has(userId)) return prev;
+      const next = new Set(prev);
+      next.delete(userId);
+      return next;
+    });
+  }, []);
+
+  const reconcileOptimistic = useCallback(
+    (s: FriendsState) => {
+      for (const userId of [...pendingOptimisticRef.current.keys()]) {
+        const kind = pendingOptimisticRef.current.get(userId);
+        const isFriend = s.friends.some((f) => f.id === userId);
+        const isOutgoing = s.outgoing.some((r) => r.user.id === userId);
+        if (kind === 'outgoing' && (isOutgoing || isFriend)) clearOptimisticForUser(userId);
+        if (kind === 'friends' && isFriend) clearOptimisticForUser(userId);
+      }
+    },
+    [clearOptimisticForUser],
+  );
 
   useEffect(() => {
     if (!user) {
@@ -80,6 +114,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     const onState = (s: FriendsState) => {
       setState(s);
       setLoading(false);
+      reconcileOptimistic(s);
     };
     const onRequest = (payload: { from: FriendSummary }) => {
       toast.info(`${payload.from.username} vous a envoyé une demande d'ami.`);
@@ -112,11 +147,11 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       });
     };
     const onInfo = (p: { message: string }) => toast.success(p.message);
-    const onError = (e: { message: string }) => toast.error(e.message);
-    const onPublic = (p: PublicProfile) => {
-      // Ignore late responses for a profile we no longer care about.
-      if (pendingProfileId.current && p.id !== pendingProfileId.current) return;
-      setProfile(p);
+    const onError = (e: { message: string }) => {
+      for (const userId of [...pendingOptimisticRef.current.keys()]) {
+        clearOptimisticForUser(userId);
+      }
+      toast.error(e.message);
     };
     const requestSnapshot = () => {
       socket.emit('friends:list');
@@ -130,7 +165,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     socket.on('friends:invite_received', onInvite);
     socket.on('friends:info', onInfo);
     socket.on('friends:error', onError);
-    socket.on('profile:public', onPublic);
     socket.on('connect', requestSnapshot);
 
     if (socket.connected) requestSnapshot();
@@ -143,19 +177,31 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       socket.off('friends:invite_received', onInvite);
       socket.off('friends:info', onInfo);
       socket.off('friends:error', onError);
-      socket.off('profile:public', onPublic);
       socket.off('connect', requestSnapshot);
     };
-  }, [user, navigate]);
+  }, [user, navigate, reconcileOptimistic, clearOptimisticForUser]);
 
   const sendRequest = useCallback((username: string) => {
     const trimmed = username.trim();
     if (trimmed) socket.emit('friends:request', { username: trimmed });
   }, []);
   const addById = useCallback((userId: string) => {
-    if (userId) socket.emit('friends:request', { userId });
+    if (!userId) return;
+    pendingOptimisticRef.current.set(userId, 'outgoing');
+    setOptimisticOutgoing((prev) => new Set(prev).add(userId));
+    socket.emit('friends:request', { userId });
   }, []);
-  const accept = useCallback((requestId: string) => socket.emit('friends:accept', { requestId }), []);
+  const accept = useCallback(
+    (requestId: string) => {
+      const req = state.incoming.find((r) => r.id === requestId);
+      if (req) {
+        pendingOptimisticRef.current.set(req.user.id, 'friends');
+        setOptimisticFriends((prev) => new Set(prev).add(req.user.id));
+      }
+      socket.emit('friends:accept', { requestId });
+    },
+    [state.incoming],
+  );
   const reject = useCallback((requestId: string) => socket.emit('friends:reject', { requestId }), []);
   const remove = useCallback((userId: string) => socket.emit('friends:remove', { userId }), []);
   const block = useCallback((userId: string) => socket.emit('friends:block', { userId }), []);
@@ -165,22 +211,28 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const refreshRecent = useCallback(() => socket.emit('friends:recent'), []);
 
   const openProfile = useCallback((userId: string) => {
-    pendingProfileId.current = userId;
-    setProfile(null);
-    setProfileOpen(true);
-    socket.emit('profile:get_public', { userId });
-  }, []);
+    navigate(`/profile/${userId}`);
+  }, [navigate]);
 
   const relationOf = useCallback(
     (userId: string): Relation => {
       if (user && userId === user.id) return 'self';
-      if (state.friends.some((f) => f.id === userId)) return 'friends';
-      if (state.blocked.some((f) => f.id === userId)) return 'blocked';
-      if (state.outgoing.some((r) => r.user.id === userId)) return 'outgoing';
+      if (optimisticFriends.has(userId) || state.friends.some((f) => f.id === userId)) return 'friends';
+      if (state.blocked.some((f) => f.id === userId) || state.blockedByUserIds.includes(userId)) {
+        return 'blocked';
+      }
+      if (optimisticOutgoing.has(userId) || state.outgoing.some((r) => r.user.id === userId)) {
+        return 'outgoing';
+      }
       if (state.incoming.some((r) => r.user.id === userId)) return 'incoming';
       return 'none';
     },
-    [state, user],
+    [state, user, optimisticFriends, optimisticOutgoing],
+  );
+
+  const incomingRequestFor = useCallback(
+    (userId: string) => state.incoming.find((r) => r.user.id === userId)?.id,
+    [state.incoming],
   );
 
   const onlineCount = useMemo(
@@ -188,12 +240,19 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     [state.friends],
   );
 
+  // Hide recent players we already have any relationship with (reacts instantly
+  // to friend/request changes, unlike the server snapshot which filters at fetch).
+  const visibleRecent = useMemo(
+    () => recentPlayers.filter((p) => relationOf(p.id) === 'none'),
+    [recentPlayers, relationOf],
+  );
+
   const value: FriendsContextValue = {
     friends: state.friends,
     incoming: state.incoming,
     outgoing: state.outgoing,
     blocked: state.blocked,
-    recentPlayers,
+    recentPlayers: visibleRecent,
     allowFriendRequests: state.allowFriendRequests,
     onlineCount,
     loading,
@@ -209,23 +268,10 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     refreshRecent,
     openProfile,
     relationOf,
+    incomingRequestFor,
   };
 
-  return (
-    <FriendsContext.Provider value={value}>
-      {children}
-      <PublicProfileDialog
-        open={profileOpen}
-        profile={profile}
-        onOpenChange={setProfileOpen}
-        onAdd={addById}
-        onRemove={remove}
-        onBlock={block}
-        onUnblock={unblock}
-        onAccept={addById}
-      />
-    </FriendsContext.Provider>
-  );
+  return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
 }
 
 /** Access the shared friends state. Returns null-safe defaults outside a provider. */

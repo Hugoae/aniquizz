@@ -3,7 +3,7 @@ import { prisma } from '@aniquizz/database';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { supabaseAdmin } from '../lib/supabase';
-import type { SocketData, UserRole } from '@aniquizz/shared';
+import { levelFromXp, type SocketData, type UserRole } from '@aniquizz/shared';
 import type { TypedSocket } from './socketTypes';
 
 /**
@@ -83,19 +83,21 @@ interface ModerationState {
   role: UserRole;
   bannedUntil: Date | null;
   mutedUntil: Date | null;
+  level: number;
 }
 
 const loadModeration = async (userId: string): Promise<ModerationState | null> => {
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-      select: { role: true, bannedUntil: true, mutedUntil: true },
+      select: { role: true, bannedUntil: true, mutedUntil: true, xp: true },
     });
     if (!profile) return null;
     return {
       role: profile.role as UserRole,
       bannedUntil: profile.bannedUntil,
       mutedUntil: profile.mutedUntil,
+      level: levelFromXp(profile.xp),
     };
   } catch (e) {
     logger.error('Failed to load moderation state', 'Socket', e);
@@ -124,6 +126,7 @@ export const socketAuthMiddleware = async (
   data.isAuthenticated = false;
   data.role = null;
   data.mutedUntil = null;
+  data.level = null;
 
   if (!token) {
     return next();
@@ -148,6 +151,7 @@ export const socketAuthMiddleware = async (
   }
 
   data.role = moderation?.role ?? 'USER';
+  data.level = moderation?.level ?? 1;
   data.mutedUntil =
     moderation?.mutedUntil && moderation.mutedUntil.getTime() > now
       ? moderation.mutedUntil.toISOString()

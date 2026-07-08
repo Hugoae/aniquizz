@@ -258,25 +258,119 @@ After engine (Phase 5) and features (Phase 7). Mature visual identity; organic d
 
 Note: `Game.tsx` refactor is Phase 5; this phase covers the rest of the client.
 
+### Phase 8 (suite) — Lobby / Game / Game-over pass
+
+The pages/flows already reworked (Profile, Home, News, Admin, Play/GameHub + game-config forms) have set the **design foundations**: dark-only token system (`--primary` violet, `--accent` cyan reward, `--aqua` audio, `success`/`warning`/`info`/`destructive` semantics), canonical `glass-card`, Bricolage Grotesque display + Plus Jakarta body, the equalizer/`stage` motif, `hover-lift`/`hover-glow`, `focus-visible` rings, and reusable primitives (`SectionHeader`, `OptionButton`, `RoleBadge`, `UserAvatar`). The **in-match** surfaces have not had this treatment yet.
+
+Take the three remaining core surfaces one at a time — **(1) the multiplayer lobby (`MultiplayerLobby`), (2) the in-game screen (`Game` + its components: `StandardGameLayout`, `GameSidebar`, `StandardPlayerCard`, `CircularGameTimer`, `SongInfoCard`, answer input, dialogs), (3) the end-of-match screen (`StandardGameOver`)** — and run the **same 5-point audit** used on the other pages, then rework them:
+
+1. **Decomposition** — break up god-components into focused sub-components + a shared options/primitives module; kill duplication (e.g. lobby vs game player cards, repeated setting badges).
+2. **`no-explicit-any` debt** — remove `any`/`as any`/loose casts; type socket payloads and props precisely (this is where the last pre-existing `any` debt lives, per Phase 6/7 notes).
+3. **Accessibility** — `type="button"`, `aria-pressed`/`aria-live` (score/timer updates), focusable controls, labels on icon-only buttons, `focus-visible` rings, `prefers-reduced-motion` respected for the timer/points animations.
+4. **i18n** — group the hardcoded French UI strings (deferred to the i18n wiring, but isolate them consistently).
+5. **CSS consistency** — migrate **every** raw Tailwind color (`text-pink-400`, `bg-white/5`, `bg-white/10`, `text-emerald-*`, `border-white/10`, …) to the semantic **design tokens**, and align radius/spacing/typography with the foundations. No new palette — reuse the established system so the in-match UI is visually continuous with the rest of the site.
+
+After the audit of each surface: propose design/UX improvements (carte blanche within the existing identity), verify the **server side is correct** (sockets receive/emit the right data, no regressions), then `tsc` (client + server) + ESLint clean, and screenshot-check the result.
+
 ---
 
-## Phase 9 — Integration tests, e2e & CI
+## Phase 9 — Integration tests, e2e, CI & SEO / compliance
 
-Unit tests already colocated in Phases 5–7. This phase adds higher levels + automation.
+Unit tests already colocated in Phases 5–7. This phase adds higher levels + automation, then the SEO / accessibility / legal work needed to be launch-ready and compliant.
+
+### Tests, e2e & CI
 
 - Server integration: key socket handlers via test `socket.io-client` (Phase 6 bots help script scenarios).
 - Client component tests (Testing Library) on critical flows.
 - e2e (Playwright): create match → play one round → game over.
 - GitHub Actions: `lint` + `test` + `build` on PR (Turbo cache); README badges.
 - CI "English code" check: lint + grep excluding isolated French UI strings.
+- **Full RLS & policies audit:** review **every** table's Row-Level Security + policies across the whole database (not just `Profile`) — identify critical gaps, over-permissive rules (`USING (true)`, unrestricted `UPDATE`/`INSERT`/`DELETE`), missing policies, and column exposure; flag anything to fix, tighten, or add. Cross-check with `get_advisors` (security). Confirm every client-facing table is either locked to the owner or intentionally public, and that all privileged writes go through the server (Prisma bypass).
+
+### SEO & search referencing (Google)
+
+- **Per-route metadata:** unique `<title>` + meta description on every page (extend the existing `react-helmet-async` usage), canonical URLs, correct `<html lang>`.
+- **Social cards:** Open Graph + Twitter Card tags (title/description/image) for shareable links.
+- **Crawlability:** `robots.txt` + generated `sitemap.xml`; submit to **Google Search Console** (site verification, sitemap submission, index coverage checks).
+- **Structured data:** JSON-LD (`WebSite`, `Organization`, and relevant game/article types) for rich results.
+- **SPA indexing:** ensure crawlers see real content — evaluate prerendering / SSR / static meta injection for the key public routes (Home, News, legal pages) so the SPA is indexable.
+- **Semantic HTML:** correct heading hierarchy, landmark regions, descriptive link text, `alt` on all meaningful images.
+
+### Accessibility (a11y — WCAG 2.1 AA target)
+
+- Full keyboard navigation + visible focus states across the whole site (audit clickable `div`s / rows, menus, dialogs, carousels).
+- Screen-reader pass: aria labels/roles, dialog focus trapping + restore, live regions for toasts, form labels/errors.
+- Color-contrast audit of the dark theme (text, badges, tokens) against AA; respect `prefers-reduced-motion`.
+- Skip-to-content link; ensure all interactive components are reachable and operable.
+
+### Legal / compliance (RGPD / CNIL — FR audience)
+
+- **Privacy Policy** page (data collected, purpose, storage, third parties: Supabase / Vercel / Render / Cloudflare / AniList / Google, user rights, contact).
+- **Cookie consent + manage cookies:** consent banner with granular categories (necessary / analytics / etc.), a "gérer les cookies" control to revisit choices, and no non-essential cookie/script before consent.
+- **Terms of Service / mentions légales** page.
+- Wire everything into the footer + auth flows; keep user-facing copy in French, isolated for i18n.
+
+### Dev accounts
+
+- **Test account credentials:** rotate the seeded dev Test account email and password (Supabase Auth + matching `Profile.email` in `seed_test_accounts.ts`; document the new credentials in `.env.example` / dev docs).
+
+### Moderation (mute / ban)
+
+- **Verify & improve mute/ban:** end-to-end audit of admin sanction flows — temporary `Profile.mutedUntil` / `Profile.bannedUntil`, socket middleware rejection for banned users (`authMiddleware`), chat send blocked while muted (`chatHandlers`), live sanction push to connected sockets when an admin applies or lifts a sanction (`adminRoutes` → `socket.data.mutedUntil`). Close any gaps (e.g. banned user can still join a lobby or play, mute not enforced outside chat, stale client state after lift, expired sanctions not cleared). Admin UI pass: apply/lift, filters (mutés / bannis), remaining-time display. Document expected behaviour; add server integration tests for ban-at-connect and mute-at-chat.
+
+### Anti-cheat & security audit
+
+- **Gameplay anti-cheat:** verify every vector end-to-end — answer lock during guess (`hasAnswered`), no answer/correctness leak before `round_reveal`, `effectiveAnswerType` clamp (client cannot claim `typing` points in QCM-only rooms), `mix`-mode honor-system limits documented and acceptable for ranked/competitive or not; video/audio stream must not expose the anime title before reveal (`videoKey`/`nextVideo` preload timing, DOM/network inspection); score/timer tampering impossible (server-authoritative `RoundClock`, `PhaseTiming`); simultaneous-answer races; reconnection/sync (`game_state_sync`) cannot replay or skip phases.
+- **Identity & auth:** JWT-only identity (`socket.data.userId`), no trusted client `userId`; banned users blocked at handshake and on HTTP admin routes; guest read-only vs authed mutations; rate limits on sensitive events (`game:answer`, `chat`, `lobby:create`, `friends:*`) — verify thresholds and error surfacing.
+- **Data exposure:** RLS audit (all tables); no client writes to privileged `Profile` columns; public profile/leaderboard exclude bots and sanctioned users; socket payloads sanitized in logs (`sanitizePayload`); no secrets in client bundle or logs.
+- **Social & abuse:** friend-request spam, block/privacy bypass, lobby invite abuse, chat flood; bot accounts excluded from progression/social as designed.
+- **Admin & infra:** role checks server-side on every admin route; dev/bot endpoints env-guarded in production; CORS, env validation, Supabase advisor re-run; document findings + fix gaps; add integration tests for the highest-risk paths (answer before reveal, ban-at-connect, rate-limit breach).
 
 ---
 
-## Update 1 — Post-launch (after Phase 9)
+## Phase 10 — Full game testing & tuning
+
+Deep, hands-on validation of the whole game before launch — beyond the automated tests of Phase 9.
+
+- **End-to-end playtesting** of every flow: solo + multiplayer (2→N players), all response modes (typing / QCM / mix / duo), all lobby settings, reconnection, host transfer, mid-match quit, spectate/return-to-lobby.
+- **Edge cases & robustness:** disconnects/reconnects, network lag, empty/expired rooms, simultaneous answers, video load failures, guest vs authed, sanctioned users (ban/mute).
+- **Balance & feel tuning:** XP formula, medal thresholds, timers, scoring, difficulty cascade, bot accuracy/delay — adjust based on real play.
+- **Cross-device / cross-browser:** desktop + mobile layouts, Chrome/Firefox/Safari/Edge.
+- **Bug triage & fixes:** log findings as GitHub issues, fix, re-test; capture UX adjustments surfaced by testing.
+
+---
+
+## Phase 11 — Performance optimization
+
+Site-wide performance pass once behavior is stable.
+
+- **Client bundle:** route-based code-splitting / lazy loading (bundle ~842 kB today), tree-shaking, drop unused deps, analyze with `rollup-plugin-visualizer`.
+- **Rendering:** eliminate needless re-renders (memoization, stable callbacks, context splitting), virtualize long lists (admin tables, catalogue).
+- **Assets:** optimize images (responsive sizes, lazy `loading`), tune R2 video delivery (preload strategy, poster), font loading.
+- **Core Web Vitals:** measure + improve LCP / CLS / INP; Lighthouse pass; caching/CDN headers on Vercel.
+- **Server & DB:** profile Prisma queries (N+1, missing indexes), trim socket payload sizes, cache hot reads; review Render instance sizing.
+- **Realtime:** minimize socket chatter (batch/throttle presence + high-volume events).
+
+---
+
+## Update 1 — Post-launch (after Phase 11)
 
 Deferred features to ship after all phases are complete.
 
-- **Leaderboard:** server `leaderboard:get` querying `Profile` by XP/level and wins; replace mock data in `Leaderboard.tsx`; exclude `bot-*` ids.
+- **Franchise catalogue cleanup:** audit and fix franchise assignments for major series (Dragon Ball, Naruto, Fairy Tail, Attack on Titan spin-offs, etc.) — link seasons/OVAs/Gaiden to a canonical parent `Franchise` row, align alt names, and remove one-off franchise rows that duplicate the anime title. Improves Franchise-mode answers, autocomplete grouping, and playlist filtering.
+- **Leaderboard (global):** full leaderboard experience with multiple ranking dimensions, filters, and pagination — replace the coming-soon placeholder in `Leaderboard.tsx`.
+  - **Criteria (tabs):** level & lifetime XP; competitive wins & win rate; games played; current/best win streak; solo medals earned (Bronze→Platinum counts); precision / accuracy (% correct answers, all-time and recent window); optional seasonal / ranked ladder when the Compétitif mode ships.
+  - **Scope & filters:** global (all human players), friends-only toggle, period filters (all-time / month / week) where the metric supports it.
+  - **Server:** typed API (`GET /leaderboard` or `leaderboard:get`) accepting `{ criteria, period, limit, offset }`; aggregate from `Profile` + `MatchPlayer` / `RoundAnswer` as needed; return top N plus the requesting user's rank even when off-page; exclude `bot-*` ids and guests; cache hot leaderboard queries if needed.
+  - **Client:** tabbed UI, loading skeletons, empty states, highlight current-user row, deep-link from home CTA; a11y-friendly list semantics.
+  - **Future tie-in:** competitive/ranked seasons (Compétitif mode) reuse the same leaderboard infrastructure.
+- **Le saviez-vous ? (anime trivia):** rotating widget of short anime culture facts — carousel with autoplay (pause on hover/focus), manual "next" control, pagination dots, and `prefers-reduced-motion` support. Curated data source (`triviaData` module or CMS/admin entries); placement TBD (Play hub, News sidebar, or compact strip on Home). French UI copy, isolated for i18n.
+- **Statistical charts (profile / stats):** add visual graphs breaking down the player's history by **game mode** (solo vs. multi), **song type** (OP/ED/insert/etc.), **difficulty** (easy/medium/hard), **medals earned** (solo Bronze→Platinum), answer mode (Typing/Carré/Duo), precision mode, and other aggregates over time. Requires server-side aggregation from `MatchPlayer` / `RoundAnswer` (and medal outcomes on solo finishes), a typed stats API, and chart components on the profile or a dedicated stats view — filterable by period and mode where useful.
+- **Delete account:** a "Supprimer mon compte" button (Profile page) that permanently deletes the user's account and **all** linked data — Supabase `auth.users` row + `Profile` and every cascaded relation (`MatchPlayer`, `RoundAnswer`, `SongHistory`, `PlayerAnimeList`, `Friendship`), plus the avatar in Storage. Server-authoritative (Supabase admin delete + Prisma), with an explicit confirmation step; aligns with the RGPD "right to erasure" from Phase 9.
+- **Playlists source (rebuild):** the "Playlists" music source (genre/decade/top-50 presets) was removed from the game config to be redesigned cleanly. Re-implement it end-to-end — a curated, data-backed playlist model (not hardcoded genre strings), server-side filtering in `gameService`/`PlaylistBuilder`, shared `GameConfig` fields, and the client source picker (currently a disabled "coming soon" tab).
+- **Video display modes (difficulty modifiers):** a room option to change how the guessing-phase video is presented, for extra challenge. Modes: **hidden** (audio only, no video — current blind-test is a subset), **random clip** (play a short random segment rather than a continuous window), and **blurred** (video shown but heavily blurred, de-blurring on reveal). Shared `GameConfig`/`RoomSettings` field (e.g. `videoMode: 'shown' | 'hidden' | 'random-clip' | 'blurred'`), server enforcement in `PlaylistBuilder`/`MatchEngine` (never leak the un-obscured stream client-side), the config UI in the lobby, and client rendering in `VideoStage` (CSS blur / hidden layer). Consider scoring bonuses per mode.
+- **Game mode rules in the lobby:** a "Règles" tab / button in the lobby that explains how the selected game mode works — objective, scoring (per answer type, speed, streaks), win conditions (solo medals vs. multi podium/ranking), pause/skip voting, and any active modifiers (e.g. video display modes above). Presented as a readable panel or dialog so newcomers understand the mode before starting; content should be mode-aware (adapts to the room's config) and isolated for future i18n.
+- **Song start position (advanced room option):** in the lobby **advanced settings**, let the host choose where each round's clip begins — **from the start** (`videoStartTime = 0`) or **random offset** (current default via `PlaylistBuilder.pickStartTime`, reserving guess + reveal + margin within the song duration). Shared `RoomSettings` / `GameConfig` field (e.g. `songStartMode: 'beginning' | 'random'`), zod validation in `settings.ts`, server enforcement when building rounds (`PlaylistBuilder` / `MatchEngine`), wire `videoStartTime` on `round_start` as today; client toggle in the advanced options panel (alongside guess duration, filters, etc.) with a short French label explaining the trade-off (easier recognition vs. harder blind-test).
 
 ---
 

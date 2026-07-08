@@ -108,6 +108,43 @@ describe('computeVictory - multiplayer (no medals)', () => {
     expect(res.winnerIds).toHaveLength(3);
   });
 
+  it('includes every player tied on a winning podium tier', () => {
+    const res = computeVictory({
+      ...base,
+      players: [
+        player('a', 100, 10),
+        player('b', 100, 10),
+        player('c', 100, 10),
+        player('d', 100, 10),
+        player('e', 50, 5),
+      ],
+    });
+    expect(res.winnerIds.sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('includes both players tied for 3rd when the lobby uses a top-3 podium', () => {
+    const res = computeVictory({
+      ...base,
+      players: [
+        player('a', 100, 10),
+        player('b', 90, 9),
+        player('c', 80, 8),
+        player('d', 80, 8),
+        player('e', 70, 7),
+      ],
+    });
+    expect(res.winnerIds.sort()).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('crowns every player tied for 1st in a small lobby', () => {
+    const res = computeVictory({
+      ...base,
+      players: [player('a', 40, 8), player('b', 40, 8), player('c', 20, 4)],
+    });
+    expect(res.multiWinnerCount).toBe(1);
+    expect(res.winnerIds.sort()).toEqual(['a', 'b']);
+  });
+
   it('never crowns a player who scored zero', () => {
     const res = computeVictory({
       ...base,

@@ -8,6 +8,7 @@ import {
   type UserRole,
 } from '@aniquizz/database';
 import { getProfileStats } from '../profile/profileService';
+import { invalidateChoiceCandidates } from '../game/gameService';
 
 /**
  * Admin data operations. All role/authorization checks happen in the route
@@ -32,7 +33,6 @@ const BOT_PREFIX = 'bot-';
 export type UserListFilter =
   | 'all'
   | 'players'
-  | 'bots'
   | 'moderators'
   | 'admins'
   | 'muted'
@@ -77,8 +77,6 @@ const buildFilterWhere = (
   switch (filter) {
     case 'players':
       return { NOT: { id: { startsWith: BOT_PREFIX } } };
-    case 'bots':
-      return { id: { startsWith: BOT_PREFIX } };
     case 'moderators':
       return { role: 'MODERATOR' };
     case 'admins':
@@ -146,57 +144,12 @@ export const listUsers = async (opts: {
   const filterWhere = buildFilterWhere(filter, now, onlineIds, inGameIds);
   const orderBy = mapOrderBy(sort, sortDir);
 
-  // filter=all: paginate humans first, bots on the last page(s).
-  if (filter === 'all') {
-    const sharedWhere = mergeWhere(searchWhere);
-    const humanWhere = mergeWhere(sharedWhere, { NOT: { id: { startsWith: BOT_PREFIX } } });
-    const botWhere = mergeWhere(sharedWhere, { id: { startsWith: BOT_PREFIX } });
-
-    const [humanTotal, botTotal] = await Promise.all([
-      prisma.profile.count({ where: humanWhere }),
-      prisma.profile.count({ where: botWhere }),
-    ]);
-    const total = humanTotal + botTotal;
-
-    let rows;
-    if (skip < humanTotal) {
-      rows = await prisma.profile.findMany({
-        where: humanWhere,
-        skip,
-        take: PAGE_SIZE,
-        orderBy,
-        select: profileListSelect,
-      });
-      if (rows.length < PAGE_SIZE) {
-        const botRows = await prisma.profile.findMany({
-          where: botWhere,
-          skip: 0,
-          take: PAGE_SIZE - rows.length,
-          orderBy,
-          select: profileListSelect,
-        });
-        rows = [...rows, ...botRows];
-      }
-    } else {
-      rows = await prisma.profile.findMany({
-        where: botWhere,
-        skip: skip - humanTotal,
-        take: PAGE_SIZE,
-        orderBy,
-        select: profileListSelect,
-      });
-    }
-
-    return {
-      users: rows.map((u) => ({ ...u, isBot: isBotId(u.id) })),
-      total,
-      page,
-      pageSize: PAGE_SIZE,
-      totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    };
-  }
-
-  const where = mergeWhere(searchWhere, filterWhere);
+  // Bots are never surfaced in the admin user list; `all` = humans only.
+  const where = mergeWhere(
+    searchWhere,
+    filterWhere,
+    { NOT: { id: { startsWith: BOT_PREFIX } } },
+  );
   const [rows, total] = await Promise.all([
     prisma.profile.findMany({
       where,
@@ -872,11 +825,14 @@ export interface AnimeWriteInput {
   isLocked?: boolean;
 }
 
-export const updateAnime = (id: number, data: AnimeWriteInput) =>
-  prisma.anime.update({ where: { id }, data, select: animeSelect });
+export const updateAnime = async (id: number, data: AnimeWriteInput) => {
+  const res = await prisma.anime.update({ where: { id }, data, select: animeSelect });
+  invalidateChoiceCandidates();
+  return res;
+};
 
-export const createAnime = (data: AnimeWriteInput & { name: string }) =>
-  prisma.anime.create({
+export const createAnime = async (data: AnimeWriteInput & { name: string }) => {
+  const res = await prisma.anime.create({
     data: {
       name: data.name,
       altNames: data.altNames ?? [],
@@ -893,8 +849,15 @@ export const createAnime = (data: AnimeWriteInput & { name: string }) =>
     },
     select: animeSelect,
   });
+  invalidateChoiceCandidates();
+  return res;
+};
 
-export const deleteAnime = (id: number) => prisma.anime.delete({ where: { id } });
+export const deleteAnime = async (id: number) => {
+  const res = await prisma.anime.delete({ where: { id } });
+  invalidateChoiceCandidates();
+  return res;
+};
 
 export interface FranchiseWriteInput {
   name?: string;
@@ -902,17 +865,27 @@ export interface FranchiseWriteInput {
   isLocked?: boolean;
 }
 
-export const updateFranchise = (id: number, data: FranchiseWriteInput) =>
-  prisma.franchise.update({
+export const updateFranchise = async (id: number, data: FranchiseWriteInput) => {
+  const res = await prisma.franchise.update({
     where: { id },
     data,
     select: { id: true, name: true, genres: true, isLocked: true },
   });
+  invalidateChoiceCandidates();
+  return res;
+};
 
-export const createFranchise = (data: FranchiseWriteInput & { name: string }) =>
-  prisma.franchise.create({
+export const createFranchise = async (data: FranchiseWriteInput & { name: string }) => {
+  const res = await prisma.franchise.create({
     data: { name: data.name, genres: data.genres ?? [], isLocked: data.isLocked ?? false },
     select: { id: true, name: true, genres: true, isLocked: true },
   });
+  invalidateChoiceCandidates();
+  return res;
+};
 
-export const deleteFranchise = (id: number) => prisma.franchise.delete({ where: { id } });
+export const deleteFranchise = async (id: number) => {
+  const res = await prisma.franchise.delete({ where: { id } });
+  invalidateChoiceCandidates();
+  return res;
+};

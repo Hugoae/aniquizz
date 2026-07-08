@@ -1,4 +1,4 @@
-import type { GamePlayer, GameStatus, GameSyncState, RoomSettings } from '@aniquizz/shared';
+import type { GamePlayer, GameStatus, GameSyncState, RoomSettings, UserRole } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
 import type { TypedServer } from '../../../core/socketTypes';
@@ -20,6 +20,10 @@ export class Room {
   public status: GameStatus = 'waiting';
   /** When the room was created — surfaced in the admin panel ("open since"). */
   public readonly createdAt = new Date();
+  /** Last meaningful activity (lobby change, match progress, chat) — for idle cleanup. */
+  public lastActivityAt = Date.now();
+  /** When the running match entered pause, or null — for the max-pause guard. */
+  private pausedAt: number | null = null;
 
   public readonly players = new Map<string, RoomPlayer>();
   public readonly returnedPlayers = new Set<string>();
@@ -41,7 +45,7 @@ export class Room {
     username: string,
     avatar: string,
     socketId: string,
-    opts: { asHost?: boolean; anilistUsername?: string | null } = {},
+    opts: { asHost?: boolean; anilistUsername?: string | null; role?: UserRole | null; level?: number | null } = {},
   ): RoomPlayer {
     const safeUsername = username?.trim() || `Joueur ${userId.substring(0, 4).toUpperCase()}`;
     const existing = this.players.get(userId);
@@ -52,6 +56,8 @@ export class Room {
       existing.username = safeUsername;
       existing.avatar = avatar || existing.avatar;
       if (opts.anilistUsername !== undefined) existing.anilistUsername = opts.anilistUsername;
+      if (opts.role) existing.role = opts.role;
+      if (opts.level != null) existing.level = opts.level;
       logger.info(`[Room ${this.id}] Reconnected: ${safeUsername} (${userId})`, 'Lobby');
       this.emitLobbyUpdate();
       return existing;
@@ -65,6 +71,8 @@ export class Room {
       isConnected: true,
       isReady: opts.asHost === true || userId === this.hostId,
       anilistUsername: opts.anilistUsername ?? null,
+      role: opts.role ?? 'USER',
+      level: opts.level ?? 1,
       score: 0,
       streak: 0,
       maxStreak: 0,
@@ -297,11 +305,29 @@ export class Room {
   }
 
   emitLobbyUpdate(): void {
+    this.touch();
     this.io.to(this.id).emit('update_players', {
       players: this.toPublicPlayers(),
       hostId: this.hostId,
       status: this.status,
     });
+  }
+
+  /** Mark the room as active right now (resets the idle-cleanup countdown). */
+  touch(): void {
+    this.lastActivityAt = Date.now();
+  }
+
+  /** Called by the engine when the match enters/leaves pause. */
+  markPaused(): void {
+    this.pausedAt = Date.now();
+  }
+  markResumed(): void {
+    this.pausedAt = null;
+  }
+  /** How long the match has been paused, in ms, or null when not paused. */
+  get pausedForMs(): number | null {
+    return this.pausedAt === null ? null : Date.now() - this.pausedAt;
   }
 
   get isSolo(): boolean {
@@ -312,6 +338,9 @@ export class Room {
   canStartMatch(userId: string): { ok: boolean; reason?: string } {
     if (userId !== this.hostId) {
       return { ok: false, reason: "Seul l'hôte peut lancer la partie." };
+    }
+    if (this.status === 'starting') {
+      return { ok: false, reason: 'Préparation de la partie en cours.' };
     }
     if (this.status === 'playing' || this.status === 'paused') {
       return { ok: false, reason: 'Une partie est déjà en cours.' };
@@ -325,15 +354,35 @@ export class Room {
 
   // --- MATCH LIFECYCLE ------------------------------------------------------
 
-  async startMatch(): Promise<void> {
-    if (this.status === 'playing') return;
+  async startMatch(onRoomsChanged?: () => void): Promise<void> {
+    // Re-entrancy guard: `startMatch` is async (the playlist build awaits), so
+    // flip to `starting` synchronously and broadcast before any await so double
+    // clicks and late joiners see the room as busy.
+    if (this.status === 'starting' || this.status === 'playing' || this.status === 'paused') return;
+
+    // Tear down any previous (e.g. finished) engine before starting fresh.
+    this.engine?.cancel();
+    this.engine = null;
+    this.status = 'starting';
     this.returnedPlayers.clear();
-    this.engine = new MatchEngine(this, {
+    this.emitLobbyUpdate();
+    onRoomsChanged?.();
+
+    const engine = new MatchEngine(this, {
       builder: new PlaylistBuilder(),
       repo: new MatchRepository(),
       scoring: standardScoring,
     });
-    await this.engine.start();
+    this.engine = engine;
+    const started = await engine.start();
+
+    // If start bailed (empty playlist / build error), it reset status to
+    // "waiting" — drop the dead engine so a retry can start cleanly.
+    if (!started) {
+      this.engine = null;
+      this.emitLobbyUpdate();
+      onRoomsChanged?.();
+    }
   }
 
   handleAnswer(userId: string, answer: string, answerType: GamePlayer['answerType']): void {
@@ -376,6 +425,8 @@ export class Room {
 
   resetToWaiting(): void {
     this.status = 'waiting';
+    this.pausedAt = null;
+    this.touch();
     this.returnedPlayers.clear();
     for (const p of this.players.values()) {
       p.score = 0;

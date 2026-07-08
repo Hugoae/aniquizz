@@ -1,24 +1,26 @@
+import React from 'react';
+import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
-import React from 'react';
 
 export interface PlayerCardBaseProps {
   player: {
     id: string | number;
-    name?: string;      // Peut être undefined
-    username?: string;  // Alternative courante
+    name?: string;
+    username?: string;
     avatar: string;
     score: number;
     isEliminated?: boolean;
     isCorrect?: boolean | null;
+    isConnected?: boolean;
   };
   isCurrentUser?: boolean;
   onClick?: () => void;
   className?: string;
-  children?: React.ReactNode; 
-  topRightContent?: React.ReactNode; 
-  topLeftContent?: React.ReactNode; 
-  bubbleContent?: React.ReactNode; 
+  children?: React.ReactNode;
+  topRightContent?: React.ReactNode;
+  topLeftContent?: React.ReactNode;
+  bubbleContent?: React.ReactNode;
 }
 
 export function PlayerCardBase({
@@ -29,80 +31,60 @@ export function PlayerCardBase({
   children,
   topRightContent,
   topLeftContent,
-  bubbleContent
+  bubbleContent,
 }: PlayerCardBaseProps) {
-  
-  const isEliminated = player.isEliminated;
-  
-  // Récupération sécurisée du nom
-  const displayName = player.name || player.username || "Joueur";
-  
-  // Vérifie s'il y a du contenu en bas (ex: Vies)
+  const displayName = player.name || player.username || 'Joueur';
   const hasChildren = React.Children.count(children) > 0;
+  const isDisconnected = player.isConnected === false;
 
   return (
-    <div 
+    <div
       className={cn(
-        "relative flex items-center gap-3 p-3 rounded-xl border transition-all duration-300 w-full min-w-[200px] backdrop-blur-md shadow-lg group overflow-visible",
-        isEliminated ? "opacity-60 grayscale border-red-900/30 bg-red-950/10" : 
-        isCurrentUser ? "bg-primary/10 border-primary/40 shadow-primary/10" : "bg-card/40 border-white/5 hover:bg-card/60",
-        className
+        'group relative flex w-full min-w-[150px] items-center gap-2.5 overflow-visible rounded-xl border p-2.5 shadow-lg backdrop-blur-md transition-all duration-300',
+        player.isEliminated
+          ? 'border-destructive/30 bg-destructive/10 opacity-60 grayscale'
+          : isDisconnected
+            ? 'border-border/40 bg-card/40 opacity-50 grayscale'
+            : isCurrentUser
+              ? 'border-primary/40 bg-primary/10 shadow-primary/10'
+              : 'border-border/60 bg-card/60 hover:bg-card/80',
+        className,
       )}
       onClick={onClick}
     >
-      {/* Contenu Coin Supérieur Gauche (Médaille) */}
       {topLeftContent}
-
-      {/* Contenu Coin Supérieur Droit (Streak) */}
       {topRightContent}
-
-      {/* Bulle de Réponse (Flottante) */}
       {bubbleContent}
 
-      {/* AVATAR */}
       <div className="relative shrink-0">
-          <UserAvatar 
-            avatar={player.avatar} 
-            username={displayName} 
-            className={cn(
-                "h-12 w-12 border-2 shadow-sm transition-all",
-                isCurrentUser ? "border-primary" : "border-white/10"
-            )} 
-          />
+        <UserAvatar
+          avatar={player.avatar}
+          username={displayName}
+          className={cn('h-10 w-10 border-2 shadow-sm transition-all', isCurrentUser ? 'border-primary' : 'border-border')}
+        />
+        {isDisconnected && (
+          <span
+            className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-muted"
+            title="Déconnecté"
+            aria-label="Déconnecté"
+          >
+            <WifiOff className="h-2.5 w-2.5 text-muted-foreground" />
+          </span>
+        )}
       </div>
 
-      {/* INFO JOUEUR */}
-      <div className="flex-1 min-w-0 flex flex-col justify-center h-full">
-        
-        {/* LIGNE DU HAUT : Nom + Score */}
-        <div className={cn(
-            "flex items-center justify-between w-full gap-3", 
-            !hasChildren && "h-full" // Si pas d'enfants, on utilise toute la hauteur pour centrer
-        )}>
-            {/* NOM : Prend l'espace restant, coupe si trop long */}
-            <span 
-                className={cn(
-                    "font-bold truncate text-sm flex-1 min-w-0", 
-                    isCurrentUser ? "text-primary" : "text-foreground"
-                )} 
-                title={displayName}
-            >
-                {displayName}
-            </span>
-            
-            {/* SCORE : Ne rétrécit pas, ne passe pas à la ligne */}
-            <div className="text-2xl font-black font-mono leading-none tracking-tight shrink-0 flex items-baseline gap-1 whitespace-nowrap">
-                {player.score} 
-                <span className="text-[10px] text-muted-foreground font-normal">pts</span>
-            </div>
+      <div className="flex h-full min-w-0 flex-1 flex-col justify-center">
+        <div className={cn('flex w-full items-center justify-between gap-3', !hasChildren && 'h-full')}>
+          <span className={cn('min-w-0 flex-1 truncate text-sm font-bold', isCurrentUser ? 'text-primary' : 'text-foreground')} title={displayName}>
+            {displayName}
+          </span>
+          <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-xl font-black leading-none tracking-tight">
+            {player.score}
+            <span className="text-[10px] font-normal text-muted-foreground">pts</span>
+          </div>
         </div>
 
-        {/* LIGNE DU BAS : Zone extensible pour Vies / Statut */}
-        {hasChildren && (
-            <div className="flex items-center justify-between mt-1 h-4 animate-in fade-in w-full">
-                 {children}
-            </div>
-        )}
+        {hasChildren && <div className="mt-1 flex h-4 w-full animate-in items-center justify-between fade-in">{children}</div>}
       </div>
     </div>
   );

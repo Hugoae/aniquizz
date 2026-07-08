@@ -51,7 +51,6 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 export type UserListFilter =
   | "all"
   | "players"
-  | "bots"
   | "moderators"
   | "admins"
   | "muted"
@@ -100,8 +99,6 @@ export interface AdminProfileStats {
   totalSongs: number;
   discoveredSongs: number;
   progressPercent: number;
-  rankLabel: string;
-  rankColor: string;
   stats: {
     gamesPlayed: number;
     gamesWon: number;
@@ -145,7 +142,7 @@ export interface AdminRoomPlayer {
 export interface AdminRoomProgress {
   currentRound: number;
   totalRounds: number;
-  phase: "intro" | "guessing" | "reveal" | null;
+  phase: "intro" | "ready" | "guessing" | "reveal" | null;
   anime: string | null;
   title: string | null;
   endsAt: number | null;

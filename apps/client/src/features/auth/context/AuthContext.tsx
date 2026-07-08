@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
+import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { socket } from "@/lib/socket"; // ✅ Import du socket
+import { socket } from "@/lib/socket";
+import { captureClientError } from "@/lib/errorReporter";
 
 // ------------------------------------------------------------------
 // TYPES
@@ -34,8 +35,7 @@ type AuthContextType = {
   isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  
-  // --- AJOUT : Gestion de la Modale ---
+
   showAuthModal: boolean;
   setShowAuthModal: (open: boolean) => void;
 };
@@ -51,10 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // --- AJOUT : État de la Modale ---
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // --- FETCH PROFILE ---
   const fetchProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
@@ -65,12 +63,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) {
-        console.error("❌ Erreur chargement profil:", error.message);
+        captureClientError(error, { source: 'auth_fetch_profile' });
       } else {
         setProfile(data);
       }
     } catch (err) {
-      console.error("❌ Erreur inattendue fetchProfile:", err);
+      captureClientError(err, { source: 'auth_fetch_profile' });
     }
   }, []);
 
@@ -89,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         }
       } catch (err) {
-        console.error("❌ Erreur Init Auth:", err);
+        captureClientError(err, { source: 'auth_init' });
       } finally {
         if (mounted) setLoading(false);
       }
@@ -121,33 +119,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [fetchProfile]); 
 
-  // ✅ --- GESTION INTELLIGENTE DU SOCKET ---
-  // Synchronise l'état de connexion Socket.io avec l'utilisateur connecté
+  // --- SOCKET LIFECYCLE ---
+  // Connect as soon as the auth token is known, independent of the profile
+  // fetch, so presence (friends, online count) loads immediately instead of
+  // waiting on the (slower) profile query. Identity is token-based server-side;
+  // the display username is best-effort and refreshed on the next (re)connect
+  // without forcing one. We (re)connect ONLY when the trusted identity (userId)
+  // changes — login / logout / account switch — never on a mere token refresh
+  // or when the profile username arrives (which previously caused a needless
+  // disconnect/reconnect cycle).
+  const connectedUserId = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (loading) return; // On attend que l'auth soit chargée
+    const token = session?.access_token;
+    const userId = session?.user?.id ?? null;
+    const username = profile?.username || "Anonyme";
 
-    const newUsername = profile?.username || "Anonyme";
-    const currentAuth = socket.auth as any;
-    
-    // Si l'identité change (ex: Login, Logout, ou Chargement initial)
-    if (currentAuth?.username !== newUsername) {
-        // 1. On met à jour la carte d'identité du socket.
-        // Only the token is trusted server-side; userId is derived from it.
-        socket.auth = { 
-            username: newUsername,
-            token: session?.access_token,
-        };
+    // Keep the auth payload current for the next (re)connect.
+    socket.auth = { username, token };
 
-        // 2. On connecte ou reconnecte pour envoyer les nouvelles infos au serveur
-        if (socket.connected) {
-            console.log(`🔄 Reconnexion Socket pour : ${newUsername}`);
-            socket.disconnect().connect();
-        } else {
-            console.log(`🔌 Connexion Socket pour : ${newUsername}`);
-            socket.connect();
-        }
+    if (connectedUserId.current !== userId) {
+      connectedUserId.current = userId;
+      if (socket.connected) socket.disconnect();
+      socket.connect();
     }
-  }, [profile, session, loading]);
+  }, [session?.user?.id, session?.access_token, profile?.username]);
 
   // --- LEVEL-UP (Phase 7) ---
   // Pushed to the player's own socket when a finished match levels them up.
@@ -166,21 +161,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // --- ACTIONS ---
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
-        await supabase.auth.signOut();
-        setProfile(null);
-        setSession(null);
+      await supabase.auth.signOut();
+      setProfile(null);
+      setSession(null);
     } catch (err) {
-        console.error("Erreur Logout:", err);
+      captureClientError(err, { source: 'auth_sign_out' });
     }
-  };
+  }, []);
 
-  const refreshProfile = async () => {
-      if (session?.user) {
-          await fetchProfile(session.user.id);
-      }
-  };
+  const refreshProfile = useCallback(async () => {
+    if (session?.user) {
+      await fetchProfile(session.user.id);
+    }
+  }, [session?.user, fetchProfile]);
 
   const isAdmin = profile?.role === "ADMIN";
 
@@ -192,10 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     signOut,
     refreshProfile,
-    // --- AJOUT : Export des valeurs Modale ---
     showAuthModal,
-    setShowAuthModal
-  }), [session, profile, loading, isAdmin, fetchProfile, showAuthModal]); 
+    setShowAuthModal,
+  }), [session, profile, loading, isAdmin, signOut, refreshProfile, showAuthModal]);
 
   return (
     <AuthContext.Provider value={value}>

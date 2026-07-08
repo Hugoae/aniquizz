@@ -4,15 +4,23 @@
 
 import type { GamePlayer, RoomConfig } from './types';
 import type { MedalTier } from './grading';
+import type { UserRole } from './roles';
 
 // --- STATUS & PHASES ---
-export type GameStatus = 'waiting' | 'playing' | 'paused' | 'finished';
+export type GameStatus = 'waiting' | 'starting' | 'playing' | 'paused' | 'finished';
 
 /** Sub-phase while a match is `playing`. */
-export type RoundPhase = 'intro' | 'guessing' | 'reveal';
+export type RoundPhase = 'intro' | 'ready' | 'guessing' | 'reveal';
 
 /** How a player submitted their guess. Drives scoring. */
 export type AnswerType = 'typing' | 'qcm' | 'duo';
+
+/** User-facing labels for answer types (French, isolated for i18n). */
+export const ANSWER_TYPE_LABELS: Record<AnswerType, string> = {
+  typing: 'Typing',
+  qcm: 'Carré',
+  duo: 'Duo',
+};
 
 /** Response mode configured for the room. `mix` lets the player pick per round. */
 export type ResponseType = 'typing' | 'qcm' | 'mix';
@@ -98,6 +106,26 @@ export interface RoundRevealPayload extends PhaseTiming {
   /** Full player states, answers + correctness + points revealed here only. */
   players: GamePlayer[];
   nextVideo: string | null;
+  /** Start offset (s) of the next clip, so the client can warm it at the right
+   *  byte range during the reveal. Null when there is no next round. */
+  nextVideoStartTime: number | null;
+}
+
+/** Ask the client to warm a clip's buffer ahead of time (round 1 during the
+ *  intro, next rounds during the reveal). Emitted only in "safe" phases where
+ *  the answer is not being guessed, so exposing the key leaks nothing. */
+export interface PreloadVideoPayload {
+  videoKey: string;
+  videoStartTime: number;
+}
+
+/** Short beat after the intro loader, before round 1: game UI visible, no audio yet. */
+export interface GameReadyPayload {
+  serverNow: number;
+  /** Wall-clock instant when `round_start` will fire. */
+  startsAt: number;
+  /** Nominal guess duration for the frozen ring display. */
+  durationSeconds: number;
 }
 
 export interface PlayersUpdatePayload {
@@ -126,6 +154,43 @@ export interface VictoryData {
   multiWinnerCount: number;
 }
 
+/** Per-round recap for the game-over screen (authoritative when sent by the server). */
+export interface RoundHistoryEntry {
+  round: number;
+  song: RevealSong;
+  isCorrect: boolean;
+  points: number;
+  /** What the player submitted (null if no answer). */
+  myAnswer: string | null;
+  /** How the answer was submitted (null when the player did not answer). */
+  answerType: AnswerType | null;
+}
+
+/** Settings strip on the game-over screen — snapshot at match end. */
+export type MatchSettingsSnapshot = Pick<
+  RoomSettings,
+  'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection'
+>;
+
+export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
+  return {
+    soundCount: settings.soundCount,
+    guessDuration: settings.guessDuration,
+    difficulty: settings.difficulty,
+    precision: settings.precision,
+    responseType: settings.responseType,
+    soundSelection: settings.soundSelection,
+  };
+}
+
+/** Emitted when a match ends. Round history is keyed by userId. */
+export interface GameOverPayload {
+  victoryData: VictoryData;
+  roundHistoryByUserId: Record<string, RoundHistoryEntry[]>;
+  /** Authoritative lobby config for the finished match (avoids stale client nav state). */
+  matchSettings: MatchSettingsSnapshot;
+}
+
 /** Full snapshot used for (re)joining a match in progress. */
 export interface GameSyncState {
   status: GameStatus;
@@ -135,7 +200,15 @@ export interface GameSyncState {
   phase: RoundPhase | null;
   round: RoundStartPayload | null;
   reveal: RoundRevealPayload | null;
+  /** Populated while `phase === 'ready'` (between intro and round 1). */
+  ready?: GameReadyPayload | null;
   introFirstVideo?: string | null;
+  /** Populated when `status === 'finished'` (reconnect on the game-over screen). */
+  victoryData?: VictoryData | null;
+  /** Populated when `status === 'finished'`. Client picks its slice by userId. */
+  roundHistoryByUserId?: Record<string, RoundHistoryEntry[]>;
+  /** Populated when `status === 'finished'`. */
+  matchSettings?: MatchSettingsSnapshot;
 }
 
 // --- LOBBY PAYLOADS ---
@@ -191,6 +264,8 @@ export interface FriendSummary {
   username: string;
   avatar: string;
   level: number;
+  /** Account role, used to draw a staff ring on the avatar. */
+  role: UserRole;
   /** Rich presence status. */
   status: PresenceStatus;
   /** ISO timestamp of last presence, null if never seen. */
@@ -230,6 +305,8 @@ export interface FriendsState {
   outgoing: FriendRequest[];
   /** Users the current user has blocked. */
   blocked: FriendSummary[];
+  /** Profile ids of users who blocked the current user (UI hides add button only). */
+  blockedByUserIds: string[];
   /** Privacy: when false, the user refuses all incoming friend requests. */
   allowFriendRequests: boolean;
 }
@@ -253,22 +330,74 @@ export interface LobbyInvitePayload {
   isPrivate: boolean;
 }
 
+/** Aggregated stats block shared by the personal and public profile views. */
+export interface ProfileStats {
+  createdAt: string;
+  xp: number;
+  level: number;
+  bestScore: number;
+  scoreTotal: number;
+  avgXpPerGame: number;
+  /** Average answer time in ms (null when no timed answers). */
+  avgAnswerMs: number | null;
+  /** Fastest answer time in ms (null when no timed answers). */
+  fastestAnswerMs: number | null;
+  roundsPlayed: number;
+  multiCount: number;
+  soloCount: number;
+  playtimeMs: number;
+  /** Musical Pokédex: unique songs discovered by this user. */
+  discoveredSongs: number;
+  /** Total playable songs (collection denominator). */
+  totalSongs: number;
+  /** Collection completion, 0–100. */
+  progressPercent: number;
+  history: MatchHistoryEntry[];
+  stats: {
+    gamesPlayed: number;
+    gamesWon: number;
+    totalGuesses: number;
+    correctGuesses: number;
+    maxStreak: number;
+    winRate: number;
+    accuracy: number;
+  };
+}
+
 /** Public profile/stats returned by `profile:get_public`. */
-export interface PublicProfile {
+export interface PublicProfile extends ProfileStats {
   id: string;
   username: string;
   avatar: string;
-  level: number;
-  xp: number;
   role: string;
-  createdAt: string;
-  gamesPlayed: number;
-  gamesWon: number;
-  bestScore: number;
   status: PresenceStatus;
   lastSeenAt: string | null;
+  /** This user's confirmed friends (read-only, for the public profile). */
+  friends: FriendSummary[];
   /** Relationship of the viewer to this profile. */
   relation: 'self' | 'friends' | 'incoming' | 'outgoing' | 'blocked' | 'none';
+}
+
+/** A finished match as shown in the profile match-history list. */
+export interface MatchHistoryEntry {
+  /** Match id. */
+  id: string;
+  /** When the match ended (or started, as a fallback). */
+  playedAt: string;
+  mode: string;
+  /** Answer style used: 'Typing' | 'QCM' | 'Duo' | 'Mix' (null if unknown). */
+  answerMode: string | null;
+  totalRounds: number;
+  score: number;
+  /** Final placement (1-based); null for solo matches. */
+  rank: number | null;
+  isWinner: boolean;
+  correctCount: number;
+  xpEarned: number;
+  /** Number of players in the match (bots included). */
+  playerCount: number;
+  /** Match duration in ms, when both timestamps are known. */
+  durationMs: number | null;
 }
 
 // --- CHAT ---

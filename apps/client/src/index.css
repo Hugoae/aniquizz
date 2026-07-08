@@ -1,116 +1,89 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  AniQuizz design system — "Encore" direction.
+  Dark-only. A neon-lit blindtest stage: violet-ink base, electric-orchid brand,
+  amber-gold reward accent, aqua audio signature. Audio waveform as the motif.
+*/
+
 @layer base {
   :root {
-    --background: 240 10% 6%;
-    --foreground: 0 0% 95%;
+    color-scheme: dark;
 
-    --card: 240 8% 10%;
-    --card-foreground: 0 0% 95%;
-    --card-elevated: 240 8% 14%;
+    /* Surfaces — warm violet ink, not cold slate */
+    --background: 265 25% 7%;
+    --foreground: 276 22% 96%;
 
-    --popover: 240 8% 10%;
-    --popover-foreground: 0 0% 95%;
+    --card: 266 22% 10%;
+    --card-foreground: 276 22% 96%;
+    --card-elevated: 266 20% 14%;
 
-    --primary: 260 85% 60%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 260 85% 70%;
+    --popover: 266 26% 9%;
+    --popover-foreground: 276 22% 96%;
 
-    --secondary: 240 6% 18%;
-    --secondary-foreground: 0 0% 85%;
+    /* Brand — deep violet */
+    --primary: 265 68% 54%;
+    --primary-foreground: 265 40% 12%;
+    --primary-glow: 265 78% 66%;
 
-    --muted: 240 6% 20%;
-    --muted-foreground: 240 5% 55%;
+    --secondary: 266 16% 17%;
+    --secondary-foreground: 276 16% 90%;
 
-    --accent: 200 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    --muted: 266 14% 17%;
+    --muted-foreground: 268 11% 64%;
 
-    --destructive: 0 72% 55%;
+    /* Reward / energy — bright cyan (points, XP, level, trophies) */
+    --accent: 187 80% 52%;
+    --accent-foreground: 190 80% 8%;
+
+    /* Audio / live signature — aqua (use sparingly) */
+    --aqua: 175 78% 52%;
+    --aqua-foreground: 182 70% 8%;
+
+    --destructive: 355 82% 62%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 70% 45%;
-    --success-foreground: 0 0% 100%;
+    --success: 152 62% 48%;
+    --success-foreground: 152 65% 6%;
 
-    --border: 240 6% 20%;
-    --input: 240 6% 20%;
-    --ring: 260 85% 60%;
+    --warning: 38 95% 58%;
+    --warning-foreground: 38 70% 9%;
 
-    --radius: 1rem;
+    /* Podium silver — light metallic 2nd place, distinct from neutral greys */
+    --silver: 215 16% 72%;
+    --silver-foreground: 220 28% 14%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(260 85% 60%), hsl(200 95% 55%));
-    --gradient-glow: linear-gradient(135deg, hsl(260 85% 70% / 0.3), hsl(200 95% 65% / 0.3));
-    --gradient-card: linear-gradient(180deg, hsl(240 8% 12%), hsl(240 8% 8%));
+    /* Podium bronze — distinct from gold (warning) for 3rd place badges */
+    --bronze: 28 52% 38%;
+    --bronze-foreground: 30 25% 92%;
+    /* Brighter copper for medal icons on dark surfaces */
+    --medal-bronze: 28 68% 56%;
 
-    --shadow-glow: 0 0 30px hsl(260 85% 60% / 0.3);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.3);
-    --shadow-elevated: 0 8px 40px hsl(0 0% 0% / 0.4);
+    --info: 205 90% 60%;
+    --info-foreground: 205 70% 8%;
 
-    --font-sans: 'Outfit', system-ui, sans-serif;
+    --border: 266 14% 18%;
+    --input: 266 14% 18%;
+    --ring: 265 68% 54%;
 
-    --sidebar-background: 240 8% 8%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 260 85% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 6% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 240 6% 20%;
-    --sidebar-ring: 260 85% 60%;
-  }
+    --radius: 0.625rem; /* 10px — buttons/inputs baseline; cards/modals scale up */
 
-  .light {
-    --background: 0 0% 98%;
-    --foreground: 240 10% 10%;
+    --font-display: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', monospace;
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
-    --card-elevated: 0 0% 96%;
+    /* Brand gradient — violet → deep indigo (cohesive, used on text/CTA) */
+    --gradient-primary: linear-gradient(135deg, hsl(265 68% 54%), hsl(255 66% 46%));
+    /* Stage gradient — violet → aqua (the neon duotone, signature moments) */
+    --gradient-stage: linear-gradient(120deg, hsl(265 68% 56%), hsl(175 78% 52%));
+    --gradient-glow: linear-gradient(135deg, hsl(265 74% 64% / 0.28), hsl(175 78% 60% / 0.22));
+    --gradient-card: linear-gradient(180deg, hsl(266 22% 12%), hsl(266 24% 8%));
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
-
-    --primary: 260 85% 55%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 260 85% 65%;
-
-    --secondary: 240 5% 92%;
-    --secondary-foreground: 240 10% 20%;
-
-    --muted: 240 5% 90%;
-    --muted-foreground: 240 5% 45%;
-
-    --accent: 200 95% 50%;
-    --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 72% 50%;
-    --destructive-foreground: 0 0% 100%;
-
-    --success: 142 70% 40%;
-    --success-foreground: 0 0% 100%;
-
-    --border: 240 5% 85%;
-    --input: 240 5% 85%;
-    --ring: 260 85% 55%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(260 85% 55%), hsl(200 95% 50%));
-    --gradient-glow: linear-gradient(135deg, hsl(260 85% 65% / 0.2), hsl(200 95% 55% / 0.2));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(0 0% 98%));
-
-    --shadow-glow: 0 0 30px hsl(260 85% 55% / 0.2);
-    --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.08);
-    --shadow-elevated: 0 8px 40px hsl(0 0% 0% / 0.12);
-
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 10% 10%;
-    --sidebar-primary: 260 85% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 5% 92%;
-    --sidebar-accent-foreground: 240 10% 10%;
-    --sidebar-border: 240 5% 85%;
-    --sidebar-ring: 260 85% 55%;
+    --shadow-glow: 0 0 16px hsl(265 68% 54% / 0.2);
+    --shadow-card: 0 8px 30px -14px hsl(266 45% 3% / 0.75);
+    --shadow-elevated: 0 24px 60px -20px hsl(266 45% 2% / 0.85);
   }
 }
 
@@ -119,15 +92,80 @@
     @apply border-border;
   }
 
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv01';
+  }
+
+  /* Live-updating numbers should never reflow: mono = tabular by default */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.3);
+    color: hsl(var(--foreground));
+  }
+
+  /* Neutralize the browser autofill tint (Chrome blue/yellow, Firefox yellow)
+     so inputs keep the dark surface instead of a flashy background. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    -webkit-box-shadow: 0 0 0 1000px hsl(var(--background)) inset;
+    box-shadow: 0 0 0 1000px hsl(var(--background)) inset;
+    caret-color: hsl(var(--foreground));
+    transition: background-color 9999s ease-in-out 0s;
+  }
+  input:autofill {
+    -webkit-text-fill-color: hsl(var(--foreground));
+    box-shadow: 0 0 0 1000px hsl(var(--background)) inset;
+    caret-color: hsl(var(--foreground));
+  }
+  /* Firefox uses a non-overridable background for autofill; blank it out. */
+  input:-moz-autofill,
+  input:-moz-autofill-preview {
+    filter: none;
+    background-color: hsl(var(--background)) !important;
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Themed scrollbar so it doesn't break the dark surface */
+  * {
+    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.28);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.45);
+    background-clip: content-box;
   }
 }
 
 @layer components {
+  /* Canonical card. Do not override its radius per-usage. */
   .glass-card {
-    @apply bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl;
+    @apply bg-card/70 backdrop-blur-xl border border-border/60 rounded-xl;
     box-shadow: var(--shadow-card);
   }
 
@@ -137,6 +175,13 @@
 
   .gradient-text {
     background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stage-text {
+    background: var(--gradient-stage);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -158,79 +203,130 @@
     mask-composite: exclude;
     pointer-events: none;
   }
+
+  /* Signature: an audio equalizer. Used by the brand mark and loading states. */
+  .eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 1em;
+  }
+  .eq > i {
+    width: 3px;
+    height: 100%;
+    border-radius: 9999px;
+    background: currentColor;
+    transform-origin: bottom;
+    animation: eq-bounce 1.1s ease-in-out infinite;
+  }
+  .eq > i:nth-child(2) { animation-delay: 0.18s; }
+  .eq > i:nth-child(3) { animation-delay: 0.36s; }
+  .eq > i:nth-child(4) { animation-delay: 0.54s; }
 }
 
 @layer utilities {
   .animate-float {
-    animation: float 6s ease-in-out infinite;
+    animation: float 7s ease-in-out infinite;
   }
 
   .animate-pulse-glow {
-    animation: pulse-glow 2s ease-in-out infinite;
+    animation: pulse-glow 2.6s ease-in-out infinite;
+  }
+
+  .animate-breathe {
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+
+  .animate-medal-wiggle {
+    animation: medal-wiggle 2.2s ease-in-out infinite;
   }
 
   .animate-slide-up {
     animation: slide-up 0.5s ease-out;
   }
 
-  .animate-scale-in {
-    animation: scale-in 0.3s ease-out;
-  }
-
   .hover-lift {
-    @apply transition-all duration-300;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
   }
-
   .hover-lift:hover {
-    transform: translateY(-4px);
+    transform: translateY(-3px);
     box-shadow: var(--shadow-elevated);
   }
 
   .hover-glow {
-    @apply transition-all duration-300;
+    transition: box-shadow 0.25s ease;
   }
-
   .hover-glow:hover {
     box-shadow: var(--shadow-glow);
   }
 }
 
 @keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px hsl(260 85% 60% / 0.3);
-  }
-  50% {
-    box-shadow: 0 0 40px hsl(260 85% 60% / 0.5);
-  }
+  0%, 100% { box-shadow: 0 0 14px hsl(265 68% 54% / 0.16); }
+  50% { box-shadow: 0 0 26px hsl(265 68% 54% / 0.28); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: rotate(4deg) scale(1); }
+  50% { transform: rotate(4deg) scale(1.08); }
+}
+
+@keyframes medal-wiggle {
+  0%, 100% { transform: rotate(-7deg); }
+  50% { transform: rotate(7deg); }
 }
 
 @keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-@keyframes scale-in {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
+@keyframes eq-bounce {
+  0%, 100% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 6s linear infinite;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.animate-shake {
+  animation: shake 0.45s ease-in-out;
+}
+
+/* Brief green glow + lift when a player climbs the ranking. */
+@keyframes rank-flash {
+  0% { box-shadow: 0 0 0 0 hsl(var(--success) / 0); transform: translateY(0) scale(1); }
+  30% { box-shadow: 0 0 18px 2px hsl(var(--success) / 0.55); transform: translateY(-3px) scale(1.03); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--success) / 0); transform: translateY(0) scale(1); }
+}
+.animate-rank-flash {
+  animation: rank-flash 0.9s ease-out;
+}
+
+/* Respect user motion preferences globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

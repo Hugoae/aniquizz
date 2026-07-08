@@ -1,10 +1,11 @@
-import { Settings, Construction } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { SettingsComingSoonContent } from '@/features/settings/components/SettingsComingSoonContent';
 
 interface GlobalSettingsModalProps {
   open: boolean;
@@ -17,24 +18,11 @@ export function GlobalSettingsModal({ open, onOpenChange }: GlobalSettingsModalP
       <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
-            <Settings className="h-5 w-5" />
+            <Settings className="h-5 w-5" aria-hidden />
             Paramètres
           </DialogTitle>
         </DialogHeader>
-
-        <div className="flex flex-col items-center justify-center py-8 text-center space-y-4">
-            {/* MODIFICATION: rounded-full -> rounded-xl */}
-            <div className="p-4 rounded-xl bg-primary/10 text-primary animate-pulse">
-                <Construction className="h-10 w-10" />
-            </div>
-            
-            <div className="space-y-2">
-                <h3 className="text-lg font-bold">Bientôt disponible</h3>
-                <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                    Les paramètres globaux (langue, audio, intégrations) arriveront dans une prochaine mise à jour.
-                </p>
-            </div>
-        </div>
+        <SettingsComingSoonContent variant="modal" />
       </DialogContent>
     </Dialog>
   );

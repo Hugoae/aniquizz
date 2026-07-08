@@ -50,7 +50,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-const selectCls = "w-full rounded border border-white/10 bg-background px-2 py-2 text-sm";
+const selectCls = "w-full rounded border border-border bg-background px-2 py-2 text-sm";
 
 // --- Song -------------------------------------------------------------------
 

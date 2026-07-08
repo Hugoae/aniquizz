@@ -4,10 +4,8 @@ import { cn } from "@/lib/utils";
 import { StatCard } from "./StatCard";
 import type { AdminProfileStats, Role } from "@/lib/adminApi";
 
-const getAvatarSrc = (avatar: string): string =>
-  avatar.startsWith("http")
-    ? avatar
-    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${avatar}`;
+const getAvatarSrc = (avatar: string): string | undefined =>
+  avatar.startsWith("http") ? avatar : undefined;
 
 export interface ProfileViewProps {
   username: string;
@@ -45,10 +43,10 @@ export function ProfileView({
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
         <div className="relative z-10 flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
           <div className="relative shrink-0">
-            <div className="absolute -inset-1 bg-gradient-to-br from-primary to-purple-600 rounded-full blur opacity-50" />
+            <div className="absolute -inset-1 bg-gradient-to-br from-primary to-accent rounded-full blur opacity-50" />
             <Avatar className="h-28 w-28 border-4 border-background relative shadow-xl">
               <AvatarImage src={getAvatarSrc(avatar)} className="object-cover" />
-              <AvatarFallback className="text-3xl font-bold">
+              <AvatarFallback className="bg-secondary text-3xl font-bold text-secondary-foreground">
                 {username.substring(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -58,12 +56,12 @@ export function ProfileView({
             <div className="flex items-center justify-center sm:justify-start gap-3">
               <h1 className="text-3xl font-black tracking-tight">{username}</h1>
               {role === "ADMIN" && (
-                <span className="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-sm border border-red-500/50">
+                <span className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-sm border border-destructive/50">
                   ADMIN
                 </span>
               )}
               {role === "MODERATOR" && (
-                <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-sm border border-blue-500/50">
+                <span className="text-xs bg-info/20 text-info px-2 py-1 rounded-sm border border-info/50">
                   MODÉRATEUR
                 </span>
               )}
@@ -75,7 +73,7 @@ export function ProfileView({
             </div>
 
             {anilistUsername && (
-              <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-blue-400 mt-2 bg-blue-500/10 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-aqua mt-2 bg-aqua/10 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
                 <img
                   src="https://upload.wikimedia.org/wikipedia/commons/6/61/AniList_logo.svg"
                   alt="AniList"
@@ -95,21 +93,21 @@ export function ProfileView({
       {/* Stats */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Zap className="h-5 w-5 text-purple-500" />
+          <Zap className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-bold">Statistiques</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard icon={Trophy} label="Taux de victoire" value={`${s.winRate}%`} color="text-yellow-500" />
-          <StatCard icon={Check} label="Taux de bon guess" value={`${s.accuracy}%`} color="text-green-500" />
-          <StatCard icon={Target} label="Parties jouées" value={s.gamesPlayed} color="text-blue-400" />
-          <StatCard icon={Flame} label="Best Streak" value={s.maxStreak} color="text-orange-500" />
+          <StatCard icon={Trophy} label="Taux de victoire" value={`${s.winRate}%`} color="text-accent" />
+          <StatCard icon={Check} label="Taux de bon guess" value={`${s.accuracy}%`} color="text-success" />
+          <StatCard icon={Target} label="Parties jouées" value={s.gamesPlayed} color="text-info" />
+          <StatCard icon={Flame} label="Best Streak" value={s.maxStreak} color="text-warning" />
         </div>
       </div>
 
       {/* Pokédex */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Disc className="h-5 w-5 text-pink-500" />
+          <Disc className="h-5 w-5 text-accent" />
           <h2 className="text-lg font-bold">Pokédex Musical</h2>
         </div>
         <div className="bg-card border border-white/10 rounded-xl p-6 shadow-lg relative overflow-hidden">
@@ -118,16 +116,11 @@ export function ProfileView({
               <div className="text-4xl font-black gradient-text">{stats.discoveredSongs}</div>
               <div className="text-sm text-muted-foreground font-medium">Sons uniques découverts</div>
             </div>
-            <div className="text-right">
-              <span className={cn("px-3 py-1 bg-white/5 rounded-md text-xs font-bold border border-white/10", stats.rankColor)}>
-                {stats.rankLabel}
-              </span>
-            </div>
           </div>
           <div className="space-y-2 z-10 relative">
             <div className="h-4 bg-secondary/50 rounded-lg overflow-hidden border border-white/5 relative">
               <div
-                className="h-full bg-gradient-to-r from-purple-600 to-pink-500 transition-all duration-1000 ease-out"
+                className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000 ease-out"
                 style={{
                   width: `${Math.min(stats.progressPercent, 100)}%`,
                   boxShadow: "0 0 15px rgba(168, 85, 247, 0.5)",

@@ -57,19 +57,19 @@ const STATUS_META: Record<
   string,
   { label: string; className: string; dot: string; pulse?: boolean }
 > = {
-  waiting: { label: "En attente", className: "bg-white/10 text-foreground", dot: "bg-white/40" },
+  waiting: { label: "En attente", className: "bg-secondary text-foreground", dot: "bg-muted-foreground/40" },
   playing: {
     label: "En partie",
-    className: "bg-emerald-500/20 text-emerald-300",
-    dot: "bg-emerald-400",
+    className: "bg-success/20 text-success",
+    dot: "bg-success",
     pulse: true,
   },
-  paused: { label: "En pause", className: "bg-amber-500/20 text-amber-300", dot: "bg-amber-400" },
-  finished: { label: "Terminé", className: "bg-blue-500/20 text-blue-300", dot: "bg-blue-400" },
+  paused: { label: "En pause", className: "bg-warning/20 text-warning", dot: "bg-warning" },
+  finished: { label: "Terminé", className: "bg-info/20 text-info", dot: "bg-info" },
 };
 
 const statusMeta = (status: string) =>
-  STATUS_META[status] ?? { label: status, className: "bg-white/10 text-foreground", dot: "bg-white/40" };
+  STATUS_META[status] ?? { label: status, className: "bg-secondary text-foreground", dot: "bg-muted-foreground/40" };
 
 const MODE_LABELS: Record<string, string> = {
   solo: "Solo",
@@ -199,7 +199,7 @@ function PlayerProfileDialog({
             role={profile.role}
             anilistUsername={profile.anilistUsername}
             presenceLabel={player.connected ? "Dans le salon" : "Déconnecté"}
-            presenceColor={player.connected ? "bg-emerald-400" : "bg-white/30"}
+            presenceColor={player.connected ? "bg-success" : "bg-muted-foreground/30"}
             presenceOnline={player.connected}
             stats={profile.stats}
           />
@@ -213,7 +213,7 @@ function PlayerProfileDialog({
 
 function ConfigBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-white/5 px-2 py-0.5 text-[11px] text-muted-foreground">
+    <span className="inline-flex items-center gap-1 rounded-md bg-secondary/50 px-2 py-0.5 text-[11px] text-muted-foreground">
       {children}
     </span>
   );
@@ -388,10 +388,10 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
           <Users className="h-4 w-4 text-muted-foreground" /> {counts.total} salon(s)
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-emerald-400" /> {counts.playing} en partie
+          <span className="h-2 w-2 rounded-full bg-success" /> {counts.playing} en partie
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-white/40" /> {counts.waiting} en attente
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40" /> {counts.waiting} en attente
         </span>
         <span className="flex items-center gap-2 text-muted-foreground">
           {counts.players} joueur(s) au total
@@ -414,7 +414,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
             size="sm"
             variant={filter === f.key ? "default" : "outline"}
             onClick={() => setFilter(f.key)}
-            className={cn("rounded-full", filter !== f.key && "border-white/10")}
+            className={cn("rounded-full", filter !== f.key && "border-border")}
           >
             {f.label}
           </Button>
@@ -478,7 +478,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 font-semibold">
-                  {room.isPrivate && <Lock className="h-3.5 w-3.5 text-amber-300" />}
+                  {room.isPrivate && <Lock className="h-3.5 w-3.5 text-warning" />}
                   {room.name}
                   <button
                     className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
@@ -492,7 +492,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     {meta.label}
                   </Badge>
                   {ghost && (
-                    <Badge className="gap-1 bg-orange-500/15 text-orange-300">
+                    <Badge className="gap-1 bg-warning/15 text-warning">
                       <Ghost className="h-3 w-3" /> Fantôme
                     </Badge>
                   )}
@@ -587,7 +587,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
 
             {/* Live match progress */}
             {isPlaying(room) && room.progress && (
-              <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-2">
+              <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium text-foreground">
                     Round {room.progress.currentRound}/{room.progress.totalRounds}
@@ -625,13 +625,13 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
             )}
 
             {/* Players */}
-            <div className="flex flex-wrap gap-2 border-t border-white/10 pt-3">
+            <div className="flex flex-wrap gap-2 border-t border-border pt-3">
               {sortedPlayers.map((p) => (
                 <div
                   key={p.userId}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg bg-white/5 px-2 py-1 text-xs transition-colors",
-                    !p.isBot && "cursor-pointer hover:bg-white/10",
+                    "flex items-center gap-2 rounded-lg bg-secondary/50 px-2 py-1 text-xs transition-colors",
+                    !p.isBot && "cursor-pointer hover:bg-secondary",
                   )}
                   onClick={
                     p.isBot
@@ -645,20 +645,20 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     <span
                       className={cn(
                         "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background",
-                        p.isConnected ? "bg-emerald-400" : "bg-white/40",
+                        p.isConnected ? "bg-success" : "bg-muted-foreground/40",
                       )}
                     />
                   </span>
                   <span className={cn("font-medium", !p.isConnected && "opacity-60")}>{p.username}</span>
                   {p.isHost && <Badge className="bg-primary/20 text-primary">Hôte</Badge>}
                   {p.isBot && (
-                    <Badge className="gap-1 bg-cyan-500/15 text-cyan-300">
+                    <Badge className="gap-1 bg-accent/15 text-accent">
                       <Bot className="h-3 w-3" /> Bot
                     </Badge>
                   )}
                   <span className="text-muted-foreground">{p.score} pts</span>
                   <button
-                    className="text-red-400 hover:text-red-300"
+                    className="text-destructive hover:text-destructive/80"
                     title="Expulser"
                     onClick={(e) => {
                       e.stopPropagation();

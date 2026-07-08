@@ -58,7 +58,7 @@ const DEFAULT_CONFIG: ScenarioConfig = {
 const SCENARIO_PRESETS: { key: string; label: string; botCount: number }[] = [
   { key: "solo", label: "Solo test (1 bot)", botCount: 1 },
   { key: "duel", label: "Duel (2 bots)", botCount: 2 },
-  { key: "full", label: "Lobby plein (8 bots)", botCount: 8 },
+  { key: "full", label: "Lobby plein (16 bots)", botCount: 16 },
 ];
 
 const BOT_PRESETS: {
@@ -118,7 +118,7 @@ function Chip({
         "rounded-full border px-3 py-1 text-xs transition-colors",
         active
           ? "border-primary bg-primary text-primary-foreground"
-          : "border-white/10 bg-card text-muted-foreground hover:border-primary/50",
+          : "border-border bg-card text-muted-foreground hover:border-primary/50",
       )}
     >
       {children}
@@ -153,6 +153,9 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
     null,
   );
   const loopRunning = useRef(false);
+
+  // Upper bound for bot counts, driven by the server-side roster size.
+  const botMax = devInfo?.botRosterSize ?? 16;
 
   const botConfig = useCallback(
     (): BotConfig => ({ accuracy, minDelayMs: delay[0], maxDelayMs: delay[1] }),
@@ -319,16 +322,16 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
 
         {/* Numeric config */}
         <div className="flex flex-wrap items-end gap-4">
-          <Field label="Bots (1-8)">
+          <Field label={`Bots (1-${botMax})`}>
             <Input
               type="number"
               min={1}
-              max={8}
+              max={botMax}
               value={cfg.botCount}
               onChange={(e) =>
                 setCfg((prev) => ({
                   ...prev,
-                  botCount: Math.min(8, Math.max(1, Number(e.target.value) || 1)),
+                  botCount: Math.min(botMax, Math.max(1, Number(e.target.value) || 1)),
                 }))
               }
               className="w-24"
@@ -360,7 +363,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           </Field>
           <Field label="Mode réponse">
             <select
-              className="rounded border border-white/10 bg-background px-2 py-2"
+              className="rounded border border-border bg-background px-2 py-2"
               value={cfg.responseType}
               onChange={(e) =>
                 setCfg((prev) => ({ ...prev, responseType: e.target.value as ResponseType }))
@@ -375,7 +378,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           </Field>
           <Field label="Précision">
             <select
-              className="rounded border border-white/10 bg-background px-2 py-2"
+              className="rounded border border-border bg-background px-2 py-2"
               value={cfg.precision}
               onChange={(e) =>
                 setCfg((prev) => ({ ...prev, precision: e.target.value as Precision }))
@@ -387,7 +390,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           </Field>
           <Field label="Source">
             <select
-              className="rounded border border-white/10 bg-background px-2 py-2"
+              className="rounded border border-border bg-background px-2 py-2"
               value={cfg.soundSelection}
               onChange={(e) =>
                 setCfg((prev) => ({ ...prev, soundSelection: e.target.value as SoundSelection }))
@@ -435,7 +438,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
         </div>
 
         {/* Bot behavior */}
-        <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 space-y-3">
+        <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-3">
           <div className="flex items-center gap-2 text-sm font-medium">
             <Gauge className="h-4 w-4 text-primary" /> Comportement des bots
           </div>
@@ -503,7 +506,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
         </div>
 
         {lastRoomId && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm">
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3 text-sm">
             <span className="text-muted-foreground">
               Dernier scénario headless : <span className="font-mono">#{lastRoomId}</span>
             </span>
@@ -530,16 +533,16 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           return (
             <div
               key={room.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2"
             >
               <div className="text-sm">
                 <span className="font-medium">{room.name}</span>{" "}
                 <span className="text-muted-foreground">
                   #{room.id} · {room.playerCount}/{room.maxPlayers}
                 </span>{" "}
-                <Badge className="bg-white/10">{room.status}</Badge>{" "}
+                <Badge className="bg-secondary">{room.status}</Badge>{" "}
                 {botCount > 0 && (
-                  <Badge className="gap-1 bg-cyan-500/15 text-cyan-300">
+                  <Badge className="gap-1 bg-accent/15 text-accent">
                     <Bot className="h-3 w-3" /> {botCount}
                   </Badge>
                 )}
@@ -567,7 +570,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
                   size="sm"
                   variant="outline"
                   disabled={botCount === 0}
-                  className="gap-1 text-red-300"
+                  className="gap-1 text-destructive"
                   onClick={() => void removeBots(room.id)}
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Vider
@@ -591,7 +594,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           <span className="flex items-center gap-2">
             <Play className="h-3.5 w-3.5" />
             Dev tooling :{" "}
-            <span className={devInfo?.devEnabled ? "text-emerald-400" : "text-red-400"}>
+            <span className={devInfo?.devEnabled ? "text-success" : "text-destructive"}>
               {devInfo ? (devInfo.devEnabled ? "actif" : "désactivé") : "…"}
             </span>
           </span>

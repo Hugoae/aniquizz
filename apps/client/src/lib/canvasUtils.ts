@@ -20,7 +20,7 @@ export async function getCroppedImg(
     return null;
   }
 
-  // On fixe la taille du canvas à la taille voulue
+  // Match canvas size to the crop region.
   canvas.width = pixelCrop.width;
   canvas.height = pixelCrop.height;
 
@@ -37,6 +37,6 @@ export async function getCroppedImg(
   return new Promise((resolve) => {
     canvas.toBlob((file) => {
       resolve(file);
-    }, 'image/jpeg', 0.9); // Qualité JPEG 90%
+    }, 'image/jpeg', 0.9);
   });
 }

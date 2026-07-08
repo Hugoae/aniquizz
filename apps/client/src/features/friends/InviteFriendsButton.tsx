@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { RoleBadge } from '@/components/ui/RoleBadge';
 import { useFriends } from './FriendsContext';
 import { presenceLabel } from './presence';
 
@@ -13,16 +14,22 @@ import { presenceLabel } from './presence';
  * Lobby-side control to invite friends into the current room. Lists online
  * friends; the server validates the caller is in a room + injects the invite.
  */
-export function InviteFriendsButton() {
+interface InviteFriendsButtonProps {
+  /** Ids of players already in the room, hidden from the invite list. */
+  excludeIds?: Array<string | number>;
+}
+
+export function InviteFriendsButton({ excludeIds = [] }: InviteFriendsButtonProps) {
   const { friends, invite } = useFriends();
-  const online = friends.filter((f) => f.status !== 'offline');
+  const excluded = new Set(excludeIds.map(String));
+  const online = friends.filter((f) => f.status !== 'offline' && !excluded.has(String(f.id)));
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="secondary"
-          className="gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg"
+          className="gap-2 bg-secondary/50 hover:bg-secondary border border-border rounded-lg"
         >
           <UserPlus className="h-4 w-4" />
           Inviter
@@ -41,7 +48,10 @@ export function InviteFriendsButton() {
             <div key={f.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/5">
               <UserAvatar avatar={f.avatar} username={f.username} className="h-8 w-8" />
               <div className="flex-1 min-w-0">
-                <div className="truncate text-sm font-medium">{f.username}</div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="truncate text-sm font-medium">{f.username}</span>
+                  <RoleBadge role={f.role} size={14} />
+                </div>
                 <div className="truncate text-[11px] text-muted-foreground">{presenceLabel(f.status)}</div>
               </div>
               <Button

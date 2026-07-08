@@ -1,10 +1,10 @@
 import type { PresenceStatus } from '@aniquizz/shared';
 
-/** Presence dot colors keyed by status. */
+/** Presence dot colors keyed by status (design tokens). */
 export const PRESENCE_DOT: Record<PresenceStatus, string> = {
-  in_game: 'bg-amber-400',
-  in_lobby: 'bg-sky-400',
-  online: 'bg-green-500',
+  in_game: 'bg-warning',
+  in_lobby: 'bg-aqua',
+  online: 'bg-success',
   offline: 'bg-muted-foreground/40',
 };
 

@@ -10,18 +10,15 @@ interface UserAvatarProps {
 
 export function UserAvatar({ avatar, username, className, fallbackClassName }: UserAvatarProps) {
   const initials = username ? username.substring(0, 2).toUpperCase() : '??';
-  
-  // La logique unique pour gérer URL vs DiceBear
-  const getAvatarSrc = (src?: string) => {
-    if (!src) return undefined;
-    if (src.startsWith('http')) return src; // C'est une image uploadée (Supabase)
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${src}`; // C'est un avatar par défaut
-  };
+
+  // Only uploaded images (Supabase URLs) are shown; otherwise we fall back to
+  // the user's initials on a dark background (no generated character).
+  const uploadedSrc = avatar?.startsWith('http') ? avatar : undefined;
 
   return (
     <Avatar className={cn("border border-primary/20", className)}>
-      <AvatarImage src={getAvatarSrc(avatar)} className="object-cover" />
-      <AvatarFallback className={fallbackClassName}>{initials}</AvatarFallback>
+      <AvatarImage src={uploadedSrc} className="object-cover" />
+      <AvatarFallback className={cn('bg-secondary font-semibold text-secondary-foreground', fallbackClassName)}>{initials}</AvatarFallback>
     </Avatar>
   );
 }

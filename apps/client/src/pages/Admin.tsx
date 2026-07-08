@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 import { hasRole } from "@aniquizz/shared";
 import { Header } from "@/components/layout/Header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Shield } from "lucide-react";
+import { ArrowLeft, Shield } from "lucide-react";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { UsersPanel } from "@/features/admin/components/UsersPanel";
@@ -19,6 +19,7 @@ const IS_DEV = import.meta.env.DEV;
 
 export default function Admin() {
   const { session, loading, profile, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [claiming, setClaiming] = useState(false);
   const [tab, setTab] = useState("users");
   const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null);
@@ -78,6 +79,15 @@ export default function Admin() {
       <Header />
       <main className="container pt-24 pb-12">
         <div className="max-w-6xl mx-auto">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/')}
+            className="gap-2 mb-6 text-muted-foreground hover:text-foreground pl-0"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Retour à l'accueil
+          </Button>
+
           <div className="flex items-center gap-3 mb-8">
             <Shield className="h-7 w-7 text-primary" />
             <h1 className="text-3xl font-bold">

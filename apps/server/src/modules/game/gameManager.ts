@@ -11,7 +11,7 @@ import { normalizeRoomSettings } from './settings';
 export interface AdminRoomProgress {
   currentRound: number;
   totalRounds: number;
-  phase: 'intro' | 'guessing' | 'reveal' | null;
+  phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
   endsAt: number | null;
@@ -54,7 +54,17 @@ export interface AdminRoomDetail {
 }
 
 /** Grace period before an all-disconnected room is torn down. */
-const CLEANUP_GRACE_MS = 30_000;
+const CLEANUP_GRACE_MS = 15_000;
+
+// --- IDLE / STALE ROOM POLICY ---------------------------------------------
+/** How often the idle-room sweep runs. */
+const SWEEP_INTERVAL_MS = 60_000;
+/** A `waiting` lobby with no activity for this long is closed. */
+const LOBBY_IDLE_MS = 30 * 60_000;
+/** A match paused longer than this is auto-cancelled back to the lobby. */
+const PAUSE_MAX_MS = 15 * 60_000;
+/** A `playing` match with no round progress for this long is force-cancelled (frozen-match watchdog). */
+const MATCH_STALE_MS = 5 * 60_000;
 
 export class GameManager {
   private readonly rooms = new Map<string, Room>();
@@ -62,8 +72,47 @@ export class GameManager {
   private readonly io: TypedServer;
   private readonly generateId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
 
+  private readonly sweepTimer: NodeJS.Timeout;
+
   constructor(io: TypedServer) {
     this.io = io;
+    // Periodic housekeeping for rooms that stay alive with connected players
+    // (the disconnect grace-period only covers fully-empty rooms). unref() so
+    // the timer never keeps the process alive on shutdown.
+    this.sweepTimer = setInterval(() => this.sweepIdleRooms(), SWEEP_INTERVAL_MS);
+    this.sweepTimer.unref?.();
+  }
+
+  /**
+   * Reclaim resources from rooms that are idle or stuck:
+   *  - a `waiting` lobby untouched for LOBBY_IDLE_MS is closed;
+   *  - a match paused longer than PAUSE_MAX_MS is cancelled back to the lobby;
+   *  - a `playing` match with no progress for MATCH_STALE_MS is force-cancelled.
+   */
+  private sweepIdleRooms(): void {
+    const now = Date.now();
+    for (const room of [...this.rooms.values()]) {
+      if (room.status === 'paused') {
+        const pausedMs = room.pausedForMs;
+        if (pausedMs !== null && pausedMs > PAUSE_MAX_MS) {
+          logger.info(`[GameManager] Room ${room.id} cancelled: paused ${Math.round(pausedMs / 60_000)}min.`, 'GameManager');
+          room.forceCancel('Partie annulée : en pause depuis trop longtemps.');
+        }
+        continue;
+      }
+
+      if (room.status === 'playing' && now - room.lastActivityAt > MATCH_STALE_MS) {
+        logger.warn(`[GameManager] Room ${room.id} force-cancelled: match stalled (no progress).`, 'GameManager');
+        room.forceCancel('Partie interrompue : aucune activité détectée.');
+        continue;
+      }
+
+      if (room.status === 'waiting' && now - room.lastActivityAt > LOBBY_IDLE_MS) {
+        logger.info(`[GameManager] Room ${room.id} closed: idle lobby.`, 'GameManager');
+        this.io.to(room.id).emit('room_closed', { reason: 'Salon fermé pour cause d\'inactivité.' });
+        this.removeRoom(room.id);
+      }
+    }
   }
 
   createRoom(hostId: string, settings: RoomSettings): Room {
@@ -76,6 +125,22 @@ export class GameManager {
 
   getRoom(roomId: string): Room | undefined {
     return this.rooms.get(roomId);
+  }
+
+  /**
+   * Default room name for a lobby created without one: "Salon N", where N is the
+   * lowest positive integer not currently used by another "Salon N" room (so
+   * closed rooms free their number back up).
+   */
+  nextDefaultRoomName(): string {
+    const used = new Set<number>();
+    for (const room of this.rooms.values()) {
+      const match = /^Salon (\d+)$/.exec(room.settings.name ?? '');
+      if (match) used.add(parseInt(match[1], 10));
+    }
+    let n = 1;
+    while (used.has(n)) n += 1;
+    return `Salon ${n}`;
   }
 
   removeRoom(roomId: string): void {
@@ -115,8 +180,25 @@ export class GameManager {
     }
   }
 
+  /**
+   * Count connected human players currently in a multiplayer room (lobby or
+   * running match). Solo rooms (maxPlayers === 1) and bots are excluded.
+   */
+  countMultiplayerPlayers(): number {
+    let total = 0;
+    for (const room of this.rooms.values()) {
+      if (room.settings.maxPlayers <= 1) continue;
+      for (const p of room.players.values()) {
+        if (!p.isBot && p.isConnected) total += 1;
+      }
+    }
+    return total;
+  }
+
   getRoomList(): RoomListItem[] {
-    return [...this.rooms.values()].map((room) => ({
+    return [...this.rooms.values()]
+      .filter((room) => room.settings.maxPlayers > 1)
+      .map((room) => ({
       id: room.id,
       name: room.settings.name,
       host: room.settings.hostName ?? '',
@@ -128,6 +210,10 @@ export class GameManager {
       status: room.status,
       settings: room.settings,
     }));
+  }
+
+  broadcastRoomList(): void {
+    this.io.emit('rooms_update', this.getRoomList());
   }
 
   getStats() {
@@ -279,13 +365,17 @@ export class GameManager {
     return true;
   }
 
-  /** Kick a player from a room (admin). Bots are removed silently. */
-  kickPlayer(roomId: string, userId: string): boolean {
+  /** Kick a player from a room (admin or host). Bots are removed silently. */
+  kickPlayer(
+    roomId: string,
+    userId: string,
+    reason = 'Vous avez été expulsé du salon par un administrateur.',
+  ): boolean {
     const room = this.rooms.get(roomId);
     if (!room) return false;
     const socketId = room.kickPlayer(userId);
     if (socketId) {
-      this.io.to(socketId).emit('room_closed', { reason: 'Vous avez été expulsé du salon par un administrateur.' });
+      this.io.to(socketId).emit('room_closed', { reason });
       this.io.in(socketId).socketsLeave(roomId);
     }
     if (room.humanCount === 0) this.removeRoom(roomId);

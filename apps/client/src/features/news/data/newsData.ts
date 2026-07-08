@@ -9,12 +9,14 @@ export interface NewsItem {
   type: 'update' | 'feature' | 'fix' | 'event';
 }
 
-export const typeConfig: Record<string, { icon: LucideIcon; color: string; label: string }> = {
-  update: { icon: Zap, color: 'text-blue-400 bg-blue-400/20', label: 'Mise à jour' },
-  feature: { icon: Sparkles, color: 'text-primary bg-primary/20', label: 'Nouveauté' },
-  fix: { icon: Bug, color: 'text-orange-400 bg-orange-400/20', label: 'Correction' },
-  event: { icon: Calendar, color: 'text-success bg-success/20', label: 'Événement' },
-  default: { icon: Newspaper, color: 'text-gray-400 bg-gray-400/20', label: 'Info' }
+type TypeConfig = { icon: LucideIcon; text: string; bg: string; label: string };
+
+export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
+  update: { icon: Zap, text: 'text-accent', bg: 'bg-accent/15', label: 'Mise à jour' },
+  feature: { icon: Sparkles, text: 'text-primary', bg: 'bg-primary/15', label: 'Nouveauté' },
+  fix: { icon: Bug, text: 'text-warning', bg: 'bg-warning/15', label: 'Correction' },
+  event: { icon: Calendar, text: 'text-success', bg: 'bg-success/15', label: 'Événement' },
+  default: { icon: Newspaper, text: 'text-muted-foreground', bg: 'bg-muted', label: 'Info' }
 };
 
 export const allNews: NewsItem[] = [

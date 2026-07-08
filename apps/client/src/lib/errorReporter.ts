@@ -18,7 +18,6 @@ export function captureClientError(error: unknown, context: ClientErrorContext =
       ? error
       : new Error(typeof error === 'string' ? error : 'Unknown client error');
 
-  // eslint-disable-next-line no-console
   console.error('[client:error]', {
     message: normalized.message,
     stack: normalized.stack,

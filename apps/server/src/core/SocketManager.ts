@@ -97,7 +97,7 @@ export class SocketManager {
       registerLobbyHandlers(this.io, socket, this.gameManager);
       registerGameHandlers(this.io, socket, this.gameManager);
       registerProfileHandlers(this.io, socket);
-      registerGeneralHandlers(this.io, socket);
+      registerGeneralHandlers(this.io, socket, this.gameManager);
       registerFriendsHandlers(this.io, socket, this.gameManager);
 
       // Tell online friends this user just came online (best-effort).

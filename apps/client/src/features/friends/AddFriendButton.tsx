@@ -5,22 +5,36 @@ import { useFriends } from './FriendsContext';
 
 interface Props {
   userId: string;
+  /** When true, hide even if userId looks valid (e.g. GamePlayer.isBot). */
+  isBot?: boolean;
   /** Icon-only compact rendering (for dense player lists). */
   compact?: boolean;
   className?: string;
 }
 
+const isBotUserId = (id: string) => id.startsWith('bot-');
+
 /**
  * Contextual "add friend" control. Resolves its own relation from the shared
- * friends state and renders nothing for yourself, bots, or existing friends.
- * A request to a user who already invited you auto-accepts (mutual add).
+ * friends state and renders nothing for yourself, bots, existing friends, or
+ * blocked relationships (either direction).
  */
-export function AddFriendButton({ userId, compact, className }: Props) {
-  const { addById, relationOf } = useFriends();
+export function AddFriendButton({ userId, isBot, compact, className }: Props) {
+  const { addById, accept, relationOf, incomingRequestFor } = useFriends();
 
-  if (!userId || userId.startsWith('bot-')) return null;
+  if (!userId || isBot || isBotUserId(userId)) return null;
+
   const relation = relationOf(userId);
   if (relation === 'self' || relation === 'friends' || relation === 'blocked') return null;
+
+  const handleClick = () => {
+    if (relation === 'incoming') {
+      const requestId = incomingRequestFor(userId);
+      if (requestId) accept(requestId);
+      return;
+    }
+    addById(userId);
+  };
 
   if (relation === 'outgoing') {
     return compact ? (
@@ -44,7 +58,7 @@ export function AddFriendButton({ userId, compact, className }: Props) {
         size="icon"
         className={cn('h-8 w-8 text-primary hover:text-primary hover:bg-primary/10', className)}
         title={`${label} en ami`}
-        onClick={() => addById(userId)}
+        onClick={handleClick}
       >
         <Icon className="h-4 w-4" />
       </Button>
@@ -52,12 +66,7 @@ export function AddFriendButton({ userId, compact, className }: Props) {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className={cn('gap-1.5', className)}
-      onClick={() => addById(userId)}
-    >
+    <Button variant="outline" size="sm" className={cn('gap-1.5', className)} onClick={handleClick}>
       <Icon className="h-3.5 w-3.5" /> {label}
     </Button>
   );

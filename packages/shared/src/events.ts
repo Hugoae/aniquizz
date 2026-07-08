@@ -19,6 +19,7 @@ import type {
   LobbyJoinedPayload,
   AnsweredPayload,
   PlayersUpdatePayload,
+  PreloadVideoPayload,
   PublicProfile,
   RecentPlayer,
   RoomListItem,
@@ -26,6 +27,9 @@ import type {
   RoomUpdatedPayload,
   RoundRevealPayload,
   RoundStartPayload,
+  GameReadyPayload,
+  GameOverPayload,
+  RoundHistoryEntry,
   VictoryData,
   VoteUpdatePayload,
 } from './game';
@@ -40,6 +44,8 @@ export interface SocketData {
   role: UserRole | null;
   /** ISO timestamp until which the user is muted, if any (server-resolved). */
   mutedUntil: string | null;
+  /** Player level derived from lifetime XP (server-resolved). Null for guests. */
+  level: number | null;
 }
 
 // --- CLIENT → SERVER INPUT PAYLOADS ---
@@ -122,10 +128,14 @@ export interface ServerToClientEvents {
 
   // Match lifecycle
   game_started: (payload: GameStartedPayload) => void;
+  /** Round-1 only: intro done, UI up, 0.5s before audio + timer. */
+  'game:ready': (payload: GameReadyPayload) => void;
   round_start: (payload: RoundStartPayload) => void;
   'game:answered': (payload: AnsweredPayload) => void;
   round_reveal: (payload: RoundRevealPayload) => void;
-  game_over: (payload: { victoryData: VictoryData }) => void;
+  /** Warm a clip's buffer ahead of playback (round 1 in intro, next during reveal). */
+  'game:preload': (payload: PreloadVideoPayload) => void;
+  game_over: (payload: GameOverPayload) => void;
   /** Sent to a player's own socket when a finished match levels them up. */
   level_up: (payload: LevelUpPayload) => void;
   game_state_sync: (state: GameSyncState) => void;
@@ -144,7 +154,7 @@ export interface ServerToClientEvents {
   'profile:stats': (stats: unknown) => void;
   'profile:error': (payload: ErrorPayload) => void;
   user_profile: (payload: { success: boolean }) => void;
-  home_stats: (stats: { animes: number; users: number; songs: number }) => void;
+  home_stats: (stats: { animes: number; users: number; songs: number; online: number; inMultiplayer: number }) => void;
 
   // Friends (Phase 7)
   'friends:state': (state: FriendsState) => void;
@@ -173,6 +183,10 @@ export interface ClientToServerEvents {
   'lobby:join': (payload: JoinLobbyInput) => void;
   get_rooms: () => void;
   transfer_host: (payload: { roomId: string; targetId: string }) => void;
+  /** Host removes another player from the lobby. */
+  'lobby:kick': (payload: { roomId: string; targetId: string }) => void;
+  /** DEV-only: host adds simulated players to the lobby to test multiplayer. */
+  'dev:add_bots': (payload: { roomId: string; count: number }) => void;
   leave_room: (payload: RoomIdInput) => void;
   toggle_ready: (payload: RoomIdInput) => void;
   update_room_settings: (payload: { roomId: string; settings: Partial<RoomSettings> }) => void;
@@ -193,7 +207,7 @@ export interface ClientToServerEvents {
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
   'profile:get_stats': () => void;
-  update_profile_data: (payload: { username?: string; avatarUrl?: string }) => void;
+  update_profile_data: (payload: { username?: string; avatarUrl?: string; anilistUsername?: string | null }) => void;
   get_home_stats: () => void;
 
   // Friends (Phase 7)

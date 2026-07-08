@@ -3,13 +3,15 @@
 // Identity is always the JWT userId (never socket.id). Presence (online / in a
 // lobby / in a match) is injected via a resolver so this stays framework-free.
 
-import { prisma } from '@aniquizz/database';
+import { prisma, isBotId } from '@aniquizz/database';
+import type { Prisma } from '@prisma/client';
 import type {
   FriendsState,
   FriendSummary,
   FriendRequest,
   PresenceStatus,
   RecentPlayer,
+  UserRole,
 } from '@aniquizz/shared';
 
 const PROFILE_SELECT = {
@@ -17,6 +19,7 @@ const PROFILE_SELECT = {
   username: true,
   avatar: true,
   level: true,
+  role: true,
   lastSeenAt: true,
 } as const;
 
@@ -25,6 +28,7 @@ interface ProfileLite {
   username: string;
   avatar: string;
   level: number;
+  role: UserRole;
   lastSeenAt: Date | null;
 }
 
@@ -49,6 +53,7 @@ const toSummary = (p: ProfileLite, presence: ResolvePresence): FriendSummary => 
     username: p.username,
     avatar: p.avatar,
     level: p.level,
+    role: p.role,
     status: pr.status,
     lastSeenAt: p.lastSeenAt ? p.lastSeenAt.toISOString() : null,
     roomId: pr.roomId ?? null,
@@ -74,6 +79,7 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
   const incoming: FriendRequest[] = [];
   const outgoing: FriendRequest[] = [];
   const blocked: FriendSummary[] = [];
+  const blockedByUserIds: string[] = [];
 
   for (const r of rows) {
     const other = r.requesterId === userId ? r.addressee : r.requester;
@@ -87,9 +93,13 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
       };
       if (r.addresseeId === userId) incoming.push(req);
       else outgoing.push(req);
-    } else if (r.status === 'BLOCKED' && r.requesterId === userId) {
-      // Only surface blocks *I* created; blocks against me stay hidden.
-      blocked.push(toSummary(other, presence));
+    } else if (r.status === 'BLOCKED') {
+      if (r.requesterId === userId) {
+        // Only surface blocks *I* created; blocks against me stay hidden.
+        blocked.push(toSummary(other, presence));
+      } else if (r.addresseeId === userId) {
+        blockedByUserIds.push(r.requesterId);
+      }
     }
   }
 
@@ -98,7 +108,7 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
     (a, b) => statusRank(a.status) - statusRank(b.status) || a.username.localeCompare(b.username),
   );
 
-  return { friends, incoming, outgoing, blocked, allowFriendRequests: me?.allowFriendRequests ?? true };
+  return { friends, incoming, outgoing, blocked, blockedByUserIds, allowFriendRequests: me?.allowFriendRequests ?? true };
 };
 
 interface RequestOutcome {
@@ -113,6 +123,7 @@ interface RequestOutcome {
 /** Resolve a target profile from either an exact username or a userId. */
 const resolveTarget = async (input: { username?: string; userId?: string }): Promise<ProfileLite> => {
   if (input.userId) {
+    if (isBotId(input.userId)) throw new FriendServiceError('Utilisateur introuvable.');
     const byId = await prisma.profile.findUnique({ where: { id: input.userId }, select: PROFILE_SELECT });
     if (!byId) throw new FriendServiceError('Utilisateur introuvable.');
     return byId;
@@ -121,8 +132,22 @@ const resolveTarget = async (input: { username?: string; userId?: string }): Pro
   if (!username) throw new FriendServiceError('Pseudo requis.');
   const byName = await prisma.profile.findUnique({ where: { username }, select: PROFILE_SELECT });
   if (!byName) throw new FriendServiceError('Utilisateur introuvable.');
+  if (isBotId(byName.id)) throw new FriendServiceError('Utilisateur introuvable.');
   return byName;
 };
+
+/** Serialize friend-request mutations for a user pair (prevents dual PENDING rows). */
+const lockFriendPair = async (tx: Prisma.TransactionClient, a: string, b: string) => {
+  const [low, high] = [a, b].sort();
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${low}), hashtext(${high}))`;
+};
+
+const pairWhere = (a: string, b: string) => ({
+  OR: [
+    { requesterId: a, addresseeId: b },
+    { requesterId: b, addresseeId: a },
+  ],
+});
 
 const sendRequest = async (
   requesterId: string,
@@ -133,51 +158,63 @@ const sendRequest = async (
     throw new FriendServiceError('Vous ne pouvez pas vous ajouter vous-même.');
   }
 
-  const [requester, targetPrivacy] = await Promise.all([
-    prisma.profile.findUnique({ where: { id: requesterId }, select: PROFILE_SELECT }),
-    prisma.profile.findUnique({ where: { id: target.id }, select: { allowFriendRequests: true } }),
-  ]);
-  if (!requester) throw new FriendServiceError('Profil introuvable.');
+  return prisma.$transaction(async (tx) => {
+    await lockFriendPair(tx, requesterId, target.id);
 
-  const existing = await prisma.friendship.findFirst({
-    where: {
-      OR: [
-        { requesterId, addresseeId: target.id },
-        { requesterId: target.id, addresseeId: requesterId },
-      ],
-    },
-  });
+    const [requester, targetPrivacy] = await Promise.all([
+      tx.profile.findUnique({ where: { id: requesterId }, select: PROFILE_SELECT }),
+      tx.profile.findUnique({ where: { id: target.id }, select: { allowFriendRequests: true } }),
+    ]);
+    if (!requester) throw new FriendServiceError('Profil introuvable.');
 
-  if (existing) {
-    if (existing.status === 'ACCEPTED') throw new FriendServiceError('Vous êtes déjà amis.');
-    if (existing.status === 'BLOCKED') {
-      if (existing.requesterId === requesterId) {
-        throw new FriendServiceError("Vous avez bloqué cet utilisateur. Débloquez-le d'abord.");
-      }
-      throw new FriendServiceError('Action impossible.');
+    const rows = await tx.friendship.findMany({ where: pairWhere(requesterId, target.id) });
+
+    // Repair legacy dual-PENDING rows (both directions) by accepting the oldest request.
+    const pendings = rows.filter((r) => r.status === 'PENDING');
+    if (pendings.length > 1) {
+      pendings.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      const keep = pendings[0]!;
+      await tx.friendship.update({ where: { id: keep.id }, data: { status: 'ACCEPTED' } });
+      await tx.friendship.deleteMany({ where: { id: { in: pendings.slice(1).map((r) => r.id) } } });
+      return { type: 'accepted', other: target, requester };
     }
-    // PENDING:
-    if (existing.requesterId === requesterId) throw new FriendServiceError('Demande déjà envoyée.');
-    // The target already sent us a request → accept it (mutual add).
-    await prisma.friendship.update({ where: { id: existing.id }, data: { status: 'ACCEPTED' } });
-    return { type: 'accepted', other: target, requester };
-  }
 
-  if (targetPrivacy && targetPrivacy.allowFriendRequests === false) {
-    throw new FriendServiceError("Cet utilisateur n'accepte pas les demandes d'amis.");
-  }
+    const existing = rows[0] ?? null;
 
-  await prisma.friendship.create({ data: { requesterId, addresseeId: target.id } });
-  return { type: 'created', other: target, requester };
+    if (existing) {
+      if (existing.status === 'ACCEPTED') throw new FriendServiceError('Vous êtes déjà amis.');
+      if (existing.status === 'BLOCKED') {
+        if (existing.requesterId === requesterId) {
+          throw new FriendServiceError("Vous avez bloqué cet utilisateur. Débloquez-le d'abord.");
+        }
+        throw new FriendServiceError('Action impossible.');
+      }
+      // PENDING:
+      if (existing.requesterId === requesterId) throw new FriendServiceError('Demande déjà envoyée.');
+      // The target already sent us a request → accept it (mutual add).
+      await tx.friendship.update({ where: { id: existing.id }, data: { status: 'ACCEPTED' } });
+      return { type: 'accepted', other: target, requester };
+    }
+
+    if (targetPrivacy && targetPrivacy.allowFriendRequests === false) {
+      throw new FriendServiceError("Cet utilisateur n'accepte pas les demandes d'amis.");
+    }
+
+    await tx.friendship.create({ data: { requesterId, addresseeId: target.id } });
+    return { type: 'created', other: target, requester };
+  });
 };
 
 const acceptRequest = async (userId: string, requestId: string): Promise<{ otherId: string }> => {
-  const fr = await prisma.friendship.findUnique({ where: { id: requestId } });
-  if (!fr || fr.addresseeId !== userId || fr.status !== 'PENDING') {
-    throw new FriendServiceError('Demande introuvable.');
-  }
-  await prisma.friendship.update({ where: { id: requestId }, data: { status: 'ACCEPTED' } });
-  return { otherId: fr.requesterId };
+  return prisma.$transaction(async (tx) => {
+    const fr = await tx.friendship.findUnique({ where: { id: requestId } });
+    if (!fr || fr.addresseeId !== userId || fr.status !== 'PENDING') {
+      throw new FriendServiceError('Demande introuvable.');
+    }
+    await lockFriendPair(tx, userId, fr.requesterId);
+    await tx.friendship.update({ where: { id: requestId }, data: { status: 'ACCEPTED' } });
+    return { otherId: fr.requesterId };
+  });
 };
 
 /** Reject an incoming request or cancel an outgoing one (both delete the row). */
@@ -310,6 +347,24 @@ const isBlockedEitherWay = async (viewerId: string, targetId: string): Promise<b
 const getProfileLite = (userId: string) =>
   prisma.profile.findUnique({ where: { id: userId }, select: PROFILE_SELECT });
 
+/** A user's confirmed friends (read-only), for their public profile. */
+const getPublicFriends = async (
+  targetId: string,
+  presence: ResolvePresence,
+): Promise<FriendSummary[]> => {
+  const rows = await prisma.friendship.findMany({
+    where: { status: 'ACCEPTED', OR: [{ requesterId: targetId }, { addresseeId: targetId }] },
+    include: { requester: { select: PROFILE_SELECT }, addressee: { select: PROFILE_SELECT } },
+  });
+  const friends = rows.map((r) =>
+    toSummary(r.requesterId === targetId ? r.addressee : r.requester, presence),
+  );
+  friends.sort(
+    (a, b) => statusRank(a.status) - statusRank(b.status) || a.username.localeCompare(b.username),
+  );
+  return friends;
+};
+
 export const friendsService = {
   getState,
   getProfileLite,
@@ -321,6 +376,7 @@ export const friendsService = {
   unblockUser,
   setPrivacy,
   getRecentPlayers,
+  getPublicFriends,
   isBlockedEitherWay,
   toSummary,
 };

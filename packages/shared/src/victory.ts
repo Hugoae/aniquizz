@@ -9,6 +9,7 @@
 import { GAME_CONFIG } from './constants';
 import { maxPointsPerRound } from './scoring';
 import { computeMedal, effectiveMedalThresholds, type MedalTier } from './grading';
+import { computeCompetitionRanks } from './ranking';
 import type { ResponseType } from './game';
 
 export interface VictoryPlayerInput {
@@ -58,8 +59,9 @@ const soloDifficultyLabel = (difficulties: string[]): string => {
  * - Solo: win if the player earns at least a Bronze medal. The medal is graded
  *   on the mastery ratio `score / (bestPointsPerRound × roundsPlayed)`, so
  *   acing trivial Duo rounds can't earn a top medal.
- * - Multi: top 1 (or top 3 when the lobby has >= PODIUM_THRESHOLD players),
- *   excluding players who scored 0. No per-player medals (ranking is the story).
+ * - Multi: rank 1 when the lobby is below PODIUM_THRESHOLD, otherwise everyone
+ *   at or above the competition rank of the 3rd sorted player (ties on that
+ *   line included), excluding score 0. No per-player medals.
  */
 export const computeVictory = (input: VictoryInput): VictoryResult => {
   const bestPerRound = maxPointsPerRound(input.responseType);
@@ -85,9 +87,22 @@ export const computeVictory = (input: VictoryInput): VictoryResult => {
     if (input.players.length >= GAME_CONFIG.VICTORY_CONDITIONS.MULTI.PODIUM_THRESHOLD) {
       multiWinnerCount = 3;
     }
-    for (let i = 0; i < Math.min(multiWinnerCount, rankings.length); i++) {
-      if (rankings[i].score > 0) {
-        winnerIds.push(rankings[i].userId);
+
+    const rankInputs = rankings.map((p) => ({ id: p.userId, score: p.score }));
+    const ranks = computeCompetitionRanks(rankInputs);
+
+    if (rankings.length > 0) {
+      const cutoffIndex = Math.min(multiWinnerCount, rankings.length) - 1;
+      const cutoffRank = ranks.get(rankings[cutoffIndex].userId);
+
+      if (cutoffRank != null) {
+        for (const player of rankings) {
+          if (player.score <= 0) continue;
+          const rank = ranks.get(player.userId);
+          if (rank != null && rank <= cutoffRank) {
+            winnerIds.push(player.userId);
+          }
+        }
       }
     }
   }
