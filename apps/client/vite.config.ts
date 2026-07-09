@@ -89,8 +89,14 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("framer-motion")) return "vendor-motion";
           if (id.includes("@supabase")) return "vendor-supabase";
           if (id.includes("socket.io")) return "vendor-socket";
-          if (id.includes("@radix-ui")) return "vendor-radix";
-          if (id.includes("react-dom") || id.includes("react-router") || id.includes("/react/")) {
+          // Keep Radix in the React chunk — a separate vendor-radix chunk creates a
+          // circular import with vendor-react and crashes prod (forwardRef undefined).
+          if (
+            id.includes("@radix-ui") ||
+            id.includes("react-dom") ||
+            id.includes("react-router") ||
+            id.includes("/react/")
+          ) {
             return "vendor-react";
           }
         },
