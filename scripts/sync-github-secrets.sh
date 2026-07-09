@@ -11,7 +11,12 @@ read_env() {
   local line
   line="$(grep -E "^${key}=" "$file" | tail -1 || true)"
   [[ -n "$line" ]] || return 1
-  printf '%s' "${line#*=}" | tr -d '\r' | sed -e 's/^"//' -e 's/"$//'
+  # Strip CR, surrounding whitespace, then surrounding quotes.
+  printf '%s' "${line#*=}" \
+    | tr -d '\r' \
+    | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
+          -e 's/^"//' -e 's/"$//' \
+          -e "s/^'//" -e "s/'$//"
 }
 
 set_secret() {
