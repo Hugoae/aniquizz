@@ -51,6 +51,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
       - name: Build
         run: pnpm build
 
@@ -92,6 +95,9 @@ jobs:
         run: pnpm --filter aniquizz-server exec ts-node scripts/ensureTestAuthUsers.ts
         env:
           TEST_ACCOUNTS_PASSWORD: ${{ secrets.TEST_ACCOUNTS_PASSWORD }}
+
+      - name: Generate Prisma client
+        run: pnpm db:generate
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install chromium --with-deps
