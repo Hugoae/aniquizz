@@ -38,15 +38,15 @@ async function main() {
     progress.tick();
     progress.line(fData.franchiseName ?? fData.name ?? '');
 
-    // ✅ FIX 1: Sécurité anti-crash si le nom est manquant (supporte les deux formats:
-    // pipeline `franchiseName` et export BDD `name`).
+    // Guard: skip franchises with a missing name (supports pipeline `franchiseName`
+    // and DB export `name` field shapes).
     const franchiseName = fData.franchiseName ?? fData.name;
     if (!franchiseName) {
       console.warn("⚠️  Franchise ignorée (Nom manquant/undefined)");
       continue;
     }
 
-    // --- ÉTAPE A : GESTION FRANCHISE ---
+    // --- Step A: franchise ---
     let dbFranchise = await prisma.franchise.findUnique({
       where: { name: franchiseName }
     });
@@ -85,14 +85,14 @@ async function main() {
 
     if (!franchiseId) continue;
 
-    // --- ÉTAPE B : GESTION ANIMES ---
+    // --- Step B: animes ---
     if (!fData.animes) continue;
 
     for (const aData of fData.animes) {
       const existingAnime = await prisma.anime.findUnique({ where: { id: aData.id } });
 
       if (existingAnime && existingAnime.isLocked) {
-        // Anime locké : ne rien faire
+        // Locked anime: skip updates
       } else {
         const animeFields = {
           name: aData.name ?? String(aData.id),
@@ -121,7 +121,7 @@ async function main() {
         });
       }
 
-      // --- ÉTAPE C : GESTION SONGS (AVEC LOCK CHECK) ---
+      // --- Step C: songs (respect lock flag) ---
       if (!aData.songs) continue;
 
       for (const sData of aData.songs) {

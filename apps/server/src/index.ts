@@ -19,7 +19,7 @@ registerCrashHandlers();
 
 async function main() {
   try {
-    // 1. Connexion BDD
+    // 1. DB connection
     await prisma.$connect();
     logger.info('Connected to Database', 'Database');
 
@@ -34,12 +34,12 @@ async function main() {
     socketManager.initialize();
     logger.info('Socket Manager initialized', 'Server');
 
-    // 4. Démarrage Serveur HTTP
+    // 4. Start HTTP server
     httpServer.listen(PORT, () => {
       logger.info(`Server running on http://localhost:${PORT}`, 'Server');
     });
 
-    // 5. Arrêt gracieux (Ctrl+C local, restart Render)
+    // 5. Graceful shutdown (Ctrl+C locally, Render restart)
     registerShutdownHandlers({ httpServer, io });
 
     // 6. Warm catalogue caches so the first match / autocomplete skips the cold scan.

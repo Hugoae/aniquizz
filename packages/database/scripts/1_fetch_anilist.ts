@@ -25,10 +25,10 @@ const ANIME_LIMIT = Math.max(1, Number(process.env.ANILIST_LIMIT ?? 500));
 const ITEMS_PER_PAGE = Math.min(50, Math.max(1, Number(process.env.ANILIST_PER_PAGE ?? 50)));
 const DELAY_MS = Math.max(0, Number(process.env.ANILIST_DELAY_MS ?? 1000));
 
-// Chemins relatifs à database/scripts/
+// Paths relative to database/scripts/
 const OUTPUT_DIR = path.join(__dirname, '../data');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'data_step1.json');
-// Fichier de référence pour conserver les données verrouillées (anciennement editable_data.json)
+// Reference file for locked rows (formerly editable_data.json)
 const LOCKS_SOURCE_FILE = defaultManualEditsPath(__dirname);
 
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -82,7 +82,7 @@ query ($id: Int) {
 // --- UTILS ---
 
 /**
- * Détermine la difficulté en fonction de la popularité
+ * Map AniList popularity to difficulty tier.
  */
 function getDifficulty(popularity: number): string {
   if (popularity > 200000) return 'easy';
@@ -268,12 +268,11 @@ async function generateCompleteTree() {
     }
   }
 
-  // 1b. Nouvelles saisons des franchises verrouillées.
-  // Un lock gèle les saisons existantes (éditions manuelles conservées), mais on
-  // va tout de même chercher les SUITES parues depuis et les ajouter en tant que
-  // saisons NON verrouillées, pour qu'elles suivent le pipeline normal.
-  // Leurs ids sont ajoutés à lockedAnimeIds afin d'éviter qu'elles ressortent en
-  // franchise séparée lors du fetch du top.
+  // 1b. New seasons for locked franchises.
+  // A lock freezes existing seasons (manual edits preserved), but we still fetch
+  // SEQUEL entries released since and add them as UNLOCKED seasons so they follow
+  // the normal pipeline. Their ids are added to lockedAnimeIds so they are not
+  // fetched again as a separate franchise during the top pass.
   if (lockedFranchises.length > 0) {
     console.log("🔓 Recherche de nouvelles saisons pour les franchises verrouillées...");
     let newlyAdded = 0;
@@ -290,7 +289,7 @@ async function generateCompleteTree() {
     console.log(`✅ ${newlyAdded} nouvelle(s) saison(s) ajoutée(s) aux franchises verrouillées.`);
   }
 
-  // 2. Récupération du Top Popularité
+  // 2. Fetch popularity top
   let allAnimesRaw: any[] = [];
   let currentPage = 1;
 
@@ -336,9 +335,8 @@ async function generateCompleteTree() {
   const animeMap = new Map();
   allAnimesRaw.forEach(a => animeMap.set(a.id, a));
 
-  // 2b. Expansion des préquelles (remontée symétrique aux suites) : on va chercher
-  // via l'API les saisons antérieures absentes du top, pour ne pas casser une
-  // franchise dont seule la saison 2+ est populaire.
+  // 2b. Prequel expansion (symmetric to sequel walk): fetch earlier seasons missing
+  // from the top list so a franchise is not broken when only season 2+ is popular.
   console.log("🔙 Expansion des préquelles...");
   for (const seed of [...animeMap.values()]) {
     let current = seed;
@@ -372,7 +370,7 @@ async function generateCompleteTree() {
     }
   }
 
-  // 3. Identification des Franchises (sur l'ensemble étendu : top + préquelles)
+  // 3. Build franchise groupings (extended set: top + prequels)
   console.log("🧩 Identification des Franchises...");
   const franchises: Record<string, any[]> = {};
 
@@ -383,7 +381,7 @@ async function generateCompleteTree() {
     let root = anime;
     let depth = 0;
 
-    // Remontée vers la racine (Prequels) — toutes présentes dans animeMap désormais.
+    // Walk prequels to the root — all nodes are in animeMap now.
     while (depth < 15) {
       const prequel = current.relations.edges.find((e: any) =>
         e.relationType === 'PREQUEL' && e.node.type === 'ANIME'
@@ -450,7 +448,7 @@ async function generateCompleteTree() {
 
   console.log("\n💾 Traitement final et Fusion...");
 
-  // 5. Normalisation des données
+  // 5. Normalize output rows
   const processedNewFranchises = Object.keys(franchises).map(fName => {
     const seasons = franchises[fName];
     seasons.sort((a, b) => (a.seasonYear || 0) - (b.seasonYear || 0));

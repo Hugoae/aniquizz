@@ -95,7 +95,7 @@ function chooseBestVideo(
 }
 
 /**
- * Récupère un animé AnimeThemes via l'ID AniList
+ * Fetch an AnimeThemes anime row by AniList id.
  */
 async function fetchByAniListId(anilistId: number) {
   const url =
