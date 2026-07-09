@@ -1,6 +1,6 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 9 — Integration, CI & compliance ✅ (code complete → manual ops + Phase 10)
+## Current phase: Phase 9 — Integration, CI & compliance ✅ CLOSED (2026-07-09) → next: Phase 10 (perf + deferred items)
 
 Order: **(1) XP/Level ✅ → (2) Victory conditions revamp ✅ → (3) Friends ✅ → (4) Phase 8 UI/UX rework ✅.** Leaderboard deferred to **Update 1** (after Phase 9).
 
@@ -129,20 +129,33 @@ Moderation admin UX polish moved to **Phase 10** (server/socket flows covered in
 - **Meta description** unified: « Blindtest anime gratuit : devine l'opening ou l'ending… »
 - OG/Twitter home title uses tagline: `AniQuizz — Blindtest anime en ligne`
 
-### Next (Phase 9 closure)
-
-**Phase 9 code complete.** Remaining work before calling Phase 9 fully closed:
-
-#### Manual ops after deploy
+### Phase 9 closure — deploy, CI green & manual ops ✅ (2026-07-09)
 
 Checklist: [`docs/seo/google-search-console.md`](docs/seo/google-search-console.md)
 
-- [ ] Deploy Vercel (push → redirects active)
-- [ ] Supabase Auth → Site URL `https://aniquizz.com`, redirect URLs `https://aniquizz.com/**`, `https://aniquizz.com/reset-password`, + localhost dev
-- [ ] Render → `CLIENT_URL=https://aniquizz.com` (if dashboard not synced)
-- [ ] Google Search Console → property `https://aniquizz.com` → submit `https://aniquizz.com/sitemap.xml`
-- [ ] *(Optional)* Add `www.aniquizz.com` in Vercel Domains (redirect already in `vercel.json`)
-- [ ] `pnpm secrets:sync` after credential rotation (CI)
+**Deploy & ops (all verified live)**
+- [x] Vercel client deployed; `aniquizz.com` + `sitemap.xml` → HTTP 200
+- [x] Redirects to apex: `www.aniquizz.com` (307), `aniquizz.vercel.app` (308), **bare root fix** (`/:path*` doesn't match `/` → added explicit `source: "/"` per host in `vercel.json`)
+- [x] Render `CLIENT_URL=https://aniquizz.com` (CORS preflight 204, `access-control-allow-origin: https://aniquizz.com`)
+- [x] Supabase Auth → Site URL `https://aniquizz.com`; redirect URLs `https://aniquizz.com/**`, `/reset-password`, `http://localhost:8080/**`, `https://aniquizz.vercel.app/**`
+- [x] Google Search Console → property `https://aniquizz.com` verified (HTML file `public/googlecbd8da3a85d159c1.html`); `sitemap.xml` submitted
+- [x] `pnpm secrets:sync` (GitHub CI secrets refreshed)
+- [x] Supabase quota: Free plan, all usage <6% (grace period banner is informational; no restriction)
+
+**GitHub Actions CI — green after 5 chained fixes**
+1. Node 20 → **22** (`@supabase/supabase-js` 2.110 needs native WebSocket)
+2. `SUPABASE_URL` secret had a literal trailing `"` from a stray space in `.env`; hardened `sync-github-secrets.sh` (trim whitespace + quotes) + cleaned `.env` + re-synced
+3. Lint: removed TS `as const` from `generate-favicons.mjs` (plain-JS `.mjs`)
+4. Build: added `pnpm db:generate` (Prisma client) before build + e2e in both CI jobs
+5. Server tests: empty `SUPABASE_JWT_SECRET` (unset GH secret = `""`) failed `.optional().min(1)` → `env.ts` now coerces `''` → `undefined`
+
+**Commits:** `354852f` (phase 9) → `8c8a1b7`, `111dd70`, `3b2fc91`, `bd7546f`, `d488fbb` (CI fixes) → `fdd1e20` (root redirect) → `3f6a413` (GSC file)
+
+### Next → Phase 10 (Performance optimization) — see `PLAN.md` "Phase 10"
+
+Scope (high level): moderation admin UX polish (mute/ban), client bundle & route-transition perf, rendering/virtualization, asset & Core Web Vitals pass, server/DB query profiling, realtime chatter reduction. Plus catalogue/docs follow-ups (lock-protection safety net, `.gitignore` + full docs/architecture rewrite, richer in-game reveal info panel using the new AniList metadata).
+
+Carried over from Phase 9 as deferred (non-blocking): exhaustive a11y audit, SEO prerender/SSR beyond static injection, semantic HTML/alt full sweep, AniList minimum-intersection threshold (PLAN « Later »).
 
 ## Phase 9.6 — A11y, prerender & semantic polish ✅ (2026-07-09)
 
