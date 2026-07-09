@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
 import type { GamePlayer } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
