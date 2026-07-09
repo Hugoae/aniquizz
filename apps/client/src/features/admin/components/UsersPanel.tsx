@@ -122,7 +122,7 @@ function UsersPagination({
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
 
-interface PendingConfirm extends AdminUserRowPending {}
+type PendingConfirm = AdminUserRowPending;
 
 type FilterKey = UserListFilter;
 type SortKey = UserListSort;

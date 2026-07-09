@@ -17,14 +17,18 @@ import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
 export function FriendsBubble() {
   const { user } = useAuth();
   const friendsCtx = useFriendsOptional();
-  if (!user || !friendsCtx) return null;
-
-  const { friends, incoming, onlineCount, accept, reject, openProfile } = friendsCtx;
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);
   const [totalOnline, setTotalOnline] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+
+  const friends = friendsCtx?.friends ?? [];
+  const incoming = friendsCtx?.incoming ?? [];
+  const onlineCount = friendsCtx?.onlineCount ?? 0;
+  const accept = friendsCtx?.accept;
+  const reject = friendsCtx?.reject;
+  const openProfile = friendsCtx?.openProfile;
 
   // Online first, then offline; alphabetical within each group.
   const ordered = useMemo(() => {
@@ -68,7 +72,7 @@ export function FriendsBubble() {
     };
   }, [open]);
 
-  if (!user) return null;
+  if (!user || !friendsCtx) return null;
 
   return (
     <div ref={rootRef} className="fixed bottom-4 left-4 z-50 hidden md:block">
@@ -110,10 +114,10 @@ export function FriendsBubble() {
                         <span className="truncate text-sm font-medium">{r.user.username}</span>
                         <RoleBadge role={r.user.role} size={14} />
                       </span>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => accept(r.id)} aria-label="Accepter">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => accept?.(r.id)} aria-label="Accepter">
                         <Check className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => reject(r.id)} aria-label="Refuser">
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => reject?.(r.id)} aria-label="Refuser">
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -128,11 +132,11 @@ export function FriendsBubble() {
               ) : (
                 ordered.map((f) => (
                   <div key={f.id} className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-secondary">
-                    <button className="relative shrink-0" onClick={() => openProfile(f.id)} aria-label={`Profil de ${f.username}`}>
+                    <button className="relative shrink-0" onClick={() => openProfile?.(f.id)} aria-label={`Profil de ${f.username}`}>
                       <UserAvatar avatar={f.avatar} username={f.username} className="h-8 w-8" />
                       <span className={cn('absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-popover', PRESENCE_DOT[f.status])} />
                     </button>
-                    <button className="min-w-0 flex-1 text-left" onClick={() => openProfile(f.id)}>
+                    <button className="min-w-0 flex-1 text-left" onClick={() => openProfile?.(f.id)}>
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="truncate text-sm font-medium">{f.username}</span>
                         <RoleBadge role={f.role} size={14} />
