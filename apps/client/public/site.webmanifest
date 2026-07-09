@@ -1,1 +1,23 @@
-{"name":"","short_name":"","icons":[{"src":"/android-chrome-192x192.png","sizes":"192x192","type":"image/png"},{"src":"/android-chrome-512x512.png","sizes":"512x512","type":"image/png"}],"theme_color":"#ffffff","background_color":"#ffffff","display":"standalone"}
+{
+  "name": "AniQuizz — Le blindtest anime",
+  "short_name": "AniQuizz",
+  "description": "Blindtest anime multijoueur en temps réel.",
+  "start_url": "/",
+  "scope": "/",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#110D16",
+  "background_color": "#110D16",
+  "display": "standalone"
+}

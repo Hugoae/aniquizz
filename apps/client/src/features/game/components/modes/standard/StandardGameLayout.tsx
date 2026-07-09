@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { SkipLinkTarget } from '@/components/a11y/SkipLink';
 import type { GamePlayer } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
@@ -124,6 +124,7 @@ export function StandardGameLayout({
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <main
+          id={SkipLinkTarget}
           className={cn(
             'relative flex min-w-0 flex-1 flex-col items-center overflow-hidden p-4',
             // Reserve room for the always-present collapsed rail so opening the

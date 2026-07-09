@@ -138,16 +138,19 @@ export function NewsCard({ news, defaultExpanded = false, index = 0 }: NewsCardP
           <p className="text-sm leading-relaxed text-muted-foreground">{news.description}</p>
 
           {expanded && (
-            <div className="mt-4 border-t border-border/60 pt-4">{renderContent(news.content)}</div>
+            <div id={`news-content-${news.id}`} className="mt-4 border-t border-border/60 pt-4">{renderContent(news.content)}</div>
           )}
 
           <button
+            type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
+            aria-controls={`news-content-${news.id}`}
+            aria-label={expanded ? `Réduire : ${title}` : `Lire la suite : ${title}`}
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             {expanded ? 'Réduire' : 'Lire la suite'}
-            <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} />
+            <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} aria-hidden />
           </button>
         </div>
       </div>

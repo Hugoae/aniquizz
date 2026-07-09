@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -149,9 +150,22 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 />
               </div>
               {mode === 'signup' && (
-                <p className="text-xs text-muted-foreground">
-                  Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
-                </p>
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    En créant un compte, vous acceptez nos{' '}
+                    <Link to="/legal/cgu" className="text-primary underline-offset-2 hover:underline">
+                      conditions d&apos;utilisation
+                    </Link>{' '}
+                    et notre{' '}
+                    <Link to="/legal/confidentialite" className="text-primary underline-offset-2 hover:underline">
+                      politique de confidentialité
+                    </Link>
+                    .
+                  </p>
+                </>
               )}
             </div>
           )}

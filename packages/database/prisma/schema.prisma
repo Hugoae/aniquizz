@@ -208,7 +208,21 @@ model Anime {
   siteUrl     String?
   studio      String?
   coverImage  String?
+  // Dominant cover color (AniList coverImage.color) for UI theming.
+  coverColor  String?
+  // AniList banner image URL.
+  bannerImage String?
+  // AniList synopsis (raw HTML as returned by AniList).
+  description String?
   popularity  Int      @default(0)
+  // AniList average score (0-100).
+  averageScore Int?
+  // Total episode count (AniList).
+  episodes    Int?
+  // AniList release season: WINTER / SPRING / SUMMER / FALL.
+  season      String?
+  // MyAnimeList id, provided directly by AniList (no matching needed). Nullable.
+  idMal       Int?
   tags        String[]
   format      String?
   status      String?

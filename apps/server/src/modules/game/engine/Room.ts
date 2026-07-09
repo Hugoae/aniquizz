@@ -286,11 +286,6 @@ export class Room {
     return true;
   }
 
-  setWatchedIds(userId: string, ids: number[]): void {
-    const player = this.players.get(userId);
-    if (player) player.watchedIds = ids;
-  }
-
   // --- PUBLIC PROJECTION ----------------------------------------------------
 
   toPublicPlayers(revealAnswers = false): GamePlayer[] {

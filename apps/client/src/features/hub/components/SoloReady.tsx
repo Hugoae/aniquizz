@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { buildRoomSettingBadges, getDifficultyBadge, SETTING_TONE_CLASSES } from '@/features/hub/components/roomSettings';
+import type { User } from '@supabase/supabase-js';
+import type { Profile } from '@/features/auth/context/AuthContext';
+import { isWatchedSourceBlocked, WATCHED_SOURCE_BLOCK_MESSAGE } from '@/features/hub/components/config/watchedSource';
 
 /** One recap chip in the solo pre-game card. */
 function SettingChip({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value: string; className: string }) {
@@ -22,6 +25,8 @@ interface SoloReadyProps {
   gameSettings?: RoomConfig;
   playerName: string;
   playerAvatar: string;
+  user: User | null;
+  profile: Profile | null;
   isLaunchStarting?: boolean;
   onStart: () => void;
   onLeave: () => void;
@@ -33,8 +38,20 @@ interface SoloReadyProps {
  * host role, invites, seats) with a settings recap and a single "Play" action —
  * used both on first launch and when a player quits back from a solo match.
  */
-export function SoloReady({ gameSettings, playerName, playerAvatar, isLaunchStarting = false, onStart, onLeave, onOpenSettings }: SoloReadyProps) {
+export function SoloReady({
+  gameSettings,
+  playerName,
+  playerAvatar,
+  user,
+  profile,
+  isLaunchStarting = false,
+  onStart,
+  onLeave,
+  onOpenSettings,
+}: SoloReadyProps) {
   const difficultyBadge = getDifficultyBadge(gameSettings?.difficulty || []);
+  const watchedBlocked = isWatchedSourceBlocked(gameSettings?.soundSelection ?? 'random', user, profile);
+  const canPlay = !isLaunchStarting && !watchedBlocked;
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-140px)] w-full max-w-2xl flex-col items-center justify-center gap-6 animate-fade-in">
@@ -81,8 +98,8 @@ export function SoloReady({ gameSettings, playerName, playerAvatar, isLaunchStar
               onClick={onStart}
               variant="glow"
               size="xxl"
-              disabled={isLaunchStarting}
-              className={cn('w-full max-w-sm gap-3', !isLaunchStarting && 'animate-pulse-glow')}
+              disabled={!canPlay}
+              className={cn('w-full max-w-sm gap-3', canPlay && 'animate-pulse-glow')}
             >
               {isLaunchStarting ? (
                 <>
@@ -95,6 +112,11 @@ export function SoloReady({ gameSettings, playerName, playerAvatar, isLaunchStar
                 </>
               )}
             </Button>
+            {watchedBlocked && (
+              <p className="max-w-sm text-center text-sm font-medium text-destructive" role="alert">
+                {WATCHED_SOURCE_BLOCK_MESSAGE}
+              </p>
+            )}
             <Button variant="ghost" onClick={onOpenSettings} className="gap-2 text-muted-foreground hover:text-foreground">
               <Settings className="h-4 w-4" /> Modifier les paramètres
             </Button>

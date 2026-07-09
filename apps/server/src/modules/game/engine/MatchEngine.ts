@@ -109,8 +109,16 @@ export class MatchEngine {
     }
 
     if (!built.playlist.length) {
-      logger.error(`[MatchEngine ${this.room.id}] Empty playlist (0 songs).`, 'Game');
-      return this.abortStart('Aucun son trouvé pour ces paramètres.');
+      const settings = this.room.settings;
+      let message = 'Aucun son trouvé pour ces paramètres.';
+      if (built.abortReason === 'watched_empty') {
+        message =
+          settings.watchedMode === 'intersection'
+            ? 'Intersection impossible : au moins un joueur n\'a pas de liste AniList utilisable.'
+            : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
+      }
+      logger.error(`[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`, 'Game');
+      return this.abortStart(message);
     }
 
     this.playlist = built.playlist;

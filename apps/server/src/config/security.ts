@@ -9,8 +9,15 @@ const clientOrigins = (env.CLIENT_URL ?? "")
 
 const IS_DEV = env.NODE_ENV !== "production";
 
+// Always allowed in production (belt-and-suspenders alongside CLIENT_URL).
+const PRODUCTION_ORIGINS = [
+  "https://aniquizz.com",
+  "https://www.aniquizz.com",
+  "https://aniquizz.vercel.app",
+] as const;
+
 const ALLOWED_ORIGINS = [
-  ...new Set([...clientOrigins, "https://aniquizz.vercel.app"].filter(Boolean)),
+  ...new Set([...clientOrigins, ...PRODUCTION_ORIGINS].filter(Boolean)),
 ] as string[];
 
 /** Any localhost / 127.0.0.1 origin (any port) — used in dev only. */

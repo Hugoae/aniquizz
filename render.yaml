@@ -22,7 +22,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: CLIENT_URL
-        value: https://aniquizz.vercel.app
+        value: https://aniquizz.com
       - key: DATABASE_URL
         sync: false
       - key: SUPABASE_URL

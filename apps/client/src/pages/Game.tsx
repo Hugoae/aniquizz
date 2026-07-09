@@ -7,7 +7,8 @@
  */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_TITLES } from '@/lib/site';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -274,7 +275,7 @@ export default function Game() {
 
   return (
     <>
-      <Helmet><title>Partie en cours - AniQuizz</title></Helmet>
+      <SeoHead title={PAGE_TITLES.game} noindex path="/game" />
 
       {/* Hidden buffer-warmer: always mounted so it can prefetch the round-1 clip
           during the intro and each next clip during the reveal. Never played. */}
@@ -290,9 +291,14 @@ export default function Game() {
       />
 
       {phase === 'loading' ? (
-        <div className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center animate-fade-in gap-6">
+        <div
+          className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center animate-fade-in gap-6"
+          role="status"
+          aria-live="polite"
+          aria-label="Chargement de la partie"
+        >
           <div className="relative">
-            <Loader2 className="h-20 w-20 text-primary animate-spin" />
+            <Loader2 className="h-20 w-20 text-primary animate-spin" aria-hidden />
             <div className="absolute inset-0 flex items-center justify-center">
               {/* "GO!" only once the first clip is actually ready (build done). If the
                   build overruns the countdown, keep the spinner instead of a

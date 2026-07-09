@@ -95,7 +95,7 @@ flowchart LR
 - Pipeline improvements: `videoKey` (R2 object key) vs `sourceUrl` (AnimeThemes URL → R2 public URL after upload); zod validation on `data_step2.json`.
 - Dev seed: `seed_dev_catalogue.ts` — 10 openings on R2 for playable dev loop without full catalogue regen (~1450 songs left `PENDING`).
 - Client: `VITE_R2_PUBLIC_URL` via `apps/client/src/lib/video.ts` (no hardcoded Supabase Storage URL).
-- Server CORS: `CLIENT_URL` env + `https://aniquizz.vercel.app`.
+- Server CORS: `CLIENT_URL` env + production origins (`aniquizz.com`, legacy `aniquizz.vercel.app`).
 - **Deployments:** Vercel `VITE_R2_PUBLIC_URL` set; Render build fixed (monorepo root, `pnpm --filter aniquizz-server... build`, start `node apps/server/dist/index.js`) — see `render.yaml`.
 - Prisma baseline resolved on live Supabase (`20260705000000_init`).
 - Target schema designed in `SCHEMA-TARGET.md` (implementation in Phases 2/4/5).
@@ -308,15 +308,11 @@ Unit tests already colocated in Phases 5–7. This phase adds higher levels + au
 - **Privacy Policy** page (data collected, purpose, storage, third parties: Supabase / Vercel / Render / Cloudflare / AniList / Google, user rights, contact).
 - **Cookie consent + manage cookies:** consent banner with granular categories (necessary / analytics / etc.), a "gérer les cookies" control to revisit choices, and no non-essential cookie/script before consent.
 - **Terms of Service / mentions légales** page.
-- Wire everything into the footer + auth flows; keep user-facing copy in French, isolated for i18n.
+- Wire legal pages + cookie controls into **Settings** (discrete links — no site footer) and auth signup flow; keep user-facing copy in French, isolated for i18n.
 
 ### Dev accounts
 
-- **Test account credentials:** rotate the seeded dev Test account email and password (Supabase Auth + matching `Profile.email` in `seed_test_accounts.ts`; document the new credentials in `.env.example` / dev docs).
-
-### Moderation (mute / ban)
-
-- **Verify & improve mute/ban:** end-to-end audit of admin sanction flows — temporary `Profile.mutedUntil` / `Profile.bannedUntil`, socket middleware rejection for banned users (`authMiddleware`), chat send blocked while muted (`chatHandlers`), live sanction push to connected sockets when an admin applies or lifts a sanction (`adminRoutes` → `socket.data.mutedUntil`). Close any gaps (e.g. banned user can still join a lobby or play, mute not enforced outside chat, stale client state after lift, expired sanctions not cleared). Admin UI pass: apply/lift, filters (mutés / bannis), remaining-time display. Document expected behaviour; add server integration tests for ban-at-connect and mute-at-chat.
+- **Test account credentials:** rotate the seeded dev test account password (Supabase Auth + `@aniquizz.test` users; `TEST_ACCOUNTS_PASSWORD` env only — never commit secrets; run `pnpm rotate-test-credentials` + `pnpm secrets:sync` for CI).
 
 ### Anti-cheat & security audit
 
@@ -326,34 +322,43 @@ Unit tests already colocated in Phases 5–7. This phase adds higher levels + au
 - **Social & abuse:** friend-request spam, block/privacy bypass, lobby invite abuse, chat flood; bot accounts excluded from progression/social as designed.
 - **Admin & infra:** role checks server-side on every admin route; dev/bot endpoints env-guarded in production; CORS, env validation, Supabase advisor re-run; document findings + fix gaps; add integration tests for the highest-risk paths (answer before reveal, ban-at-connect, rate-limit breach).
 
----
+### AniList → song selection (audit & hardening)
 
-## Phase 10 — Full game testing & tuning
-
-Deep, hands-on validation of the whole game before launch — beyond the automated tests of Phase 9.
-
-- **End-to-end playtesting** of every flow: solo + multiplayer (2→N players), all response modes (typing / QCM / mix / duo), all lobby settings, reconnection, host transfer, mid-match quit, spectate/return-to-lobby.
-- **Edge cases & robustness:** disconnects/reconnects, network lag, empty/expired rooms, simultaneous answers, video load failures, guest vs authed, sanctioned users (ban/mute).
-- **Balance & feel tuning:** XP formula, medal thresholds, timers, scoring, difficulty cascade, bot accuracy/delay — adjust based on real play.
-- **Cross-device / cross-browser:** desktop + mobile layouts, Chrome/Firefox/Safari/Edge.
-- **Bug triage & fixes:** log findings as GitHub issues, fix, re-test; capture UX adjustments surfaced by testing.
+- **End-to-end audit** of the "Ma liste" / watched-based playlist path: `Profile.anilistUsername` → `verifyAnilistUser` on link → lobby `warmWatchedList` → `PlaylistBuilder.resolveWatchedIds` / `getUserAnimeIds` → `soundSelection: 'watched'` filtering (solo vs. multi **union** / **intersection**), cache invalidation, and fallback when AniList is down or the list is empty.
+- **Verify correctness:** songs drawn only from the intended watched set; no cross-player list spoofing; bots/guests handled; edge cases (unlink mid-lobby, stale cache, 403 from AniList API, empty list → clear UX + safe fallback or block start).
+- **Improve if needed:** tighten server enforcement, reduce cold-start latency, clearer lobby UX (why Watched is disabled, list size hint), logging/metrics for AniList failures, integration tests for watched filtering; revise `PlaylistBuilder` / lobby warm-up flow if the audit finds gaps.
+- **(Later) Real minimum threshold:** instead of a silent fallback, refuse `intersection` when the resolved set yields `< X` playable songs (or explicitly offer "compléter avec de l'aléatoire ?") so the host makes a conscious choice rather than being surprised by the global pool.
 
 ---
 
-## Phase 11 — Performance optimization
+## Phase 10 — Performance optimization
 
-Site-wide performance pass once behavior is stable.
+Site-wide performance pass once behavior is stable (Phase 9 tests + compliance done).
 
-- **Client bundle:** route-based code-splitting / lazy loading (bundle ~842 kB today), tree-shaking, drop unused deps, analyze with `rollup-plugin-visualizer`.
+### Moderation — admin UX polish (mute / ban)
+
+Socket/server flows verified in Phase 9.2 integration tests. Remaining work is **admin UI polish**:
+
+- Apply/lift sanctions UX, filters (mutés / bannis), remaining-time display, stale client state after lift.
+- Document expected behaviour in admin docs; extend integration tests if new gaps are found.
+
+- **Client bundle:** route-based code-splitting / lazy loading (in place since Phase 8 — measure impact, tune chunk boundaries), tree-shaking, drop unused deps, analyze with `rollup-plugin-visualizer`.
+- **Route transitions:** investigate and reduce **mini loadings / full-screen spinners** on page changes (e.g. `React.lazy` + `Suspense` fallback, duplicate data fetches on mount, heavy providers re-initializing). Profile with DevTools; prefer skeletons over blank flashes, prefetch hot routes, avoid waterfall socket/auth on navigation.
 - **Rendering:** eliminate needless re-renders (memoization, stable callbacks, context splitting), virtualize long lists (admin tables, catalogue).
 - **Assets:** optimize images (responsive sizes, lazy `loading`), tune R2 video delivery (preload strategy, poster), font loading.
 - **Core Web Vitals:** measure + improve LCP / CLS / INP; Lighthouse pass; caching/CDN headers on Vercel.
 - **Server & DB:** profile Prisma queries (N+1, missing indexes), trim socket payload sizes, cache hot reads; review Render instance sizing.
 - **Realtime:** minimize socket chatter (batch/throttle presence + high-volume events).
 
+### Docs, data hygiene & catalogue follow-ups
+
+- **Lock-protection safety net (`manual_edits.json`):** after a full wipe there is no `manual_edits.json`, so nothing is protected against overwrite on a re-fetch — this is expected for a clean rebuild, but the pipeline only re-protects locked rows once `export_db_to_json.ts` has been run. Consider a stronger guard (e.g. read locks straight from the DB in step 1, or a confirmation prompt) so manual edits/locks can't be silently overwritten if someone forgets the export step.
+- **Docs & architecture rewrite:** review `.gitignore` end-to-end and decide which folders/files should be added or removed from tracking (e.g. `packages/database/data/*` generated JSON, `dist/` outputs, `.env` variants, tmp dirs). Then rewrite all the docs to match the current state: root `README`, per-package `README`s, `CONTEXT-MAP.md` / per-package `CONTEXT.md`, and any architecture diagrams — so onboarding matches the post-Phase-9 codebase (R2 pipeline, enriched schema, configurable song types, lock workflow).
+- **Richer in-game anime info panel:** the catalogue now stores extra AniList metadata per anime (`idMal`, `coverColor`, `bannerImage`, `description`, `season`, `episodes`, `averageScore`, plus `Song.episodeRange`). Surface the useful bits in the in-game anime info div on the reveal screen (e.g. season + year, episode count, average score, banner/cover theming via `coverColor`, the theme's episode range) for a richer reveal — while making sure none of it leaks before `round_reveal`.
+
 ---
 
-## Update 1 — Post-launch (after Phase 11)
+## Update 1 — Post-launch (after Phase 10)
 
 Deferred features to ship after all phases are complete.
 

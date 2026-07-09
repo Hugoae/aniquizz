@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { ArrowLeft } from 'lucide-react';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 export interface ComingSoonPageProps {
   helmetTitle: string;
   helmetDescription: string;
+  /** Canonical path for SEO (e.g. `/leaderboard`). */
+  canonicalPath?: string;
   backLabel: string;
   backTo: string;
   icon: LucideIcon;
@@ -28,6 +30,7 @@ export interface ComingSoonPageProps {
 export function ComingSoonPage({
   helmetTitle,
   helmetDescription,
+  canonicalPath,
   backLabel,
   backTo,
   icon: Icon,
@@ -43,10 +46,11 @@ export function ComingSoonPage({
 
   return (
     <>
-      <Helmet>
-        <title>{helmetTitle}</title>
-        <meta name="description" content={helmetDescription} />
-      </Helmet>
+      <SeoHead
+        title={helmetTitle}
+        description={helmetDescription}
+        path={canonicalPath}
+      />
 
       <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
         {showHeader && <Header />}
@@ -63,6 +67,7 @@ export function ComingSoonPage({
         </div>
 
         <main
+          id="main-content"
           className={cn(
             'flex flex-1 flex-col items-center justify-center animate-fade-in space-y-8 px-6 pb-12',
             showHeader ? 'pt-24' : 'pt-16',

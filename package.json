@@ -15,6 +15,11 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:e2e": "playwright test",
+    "check:english": "node scripts/check-english-code.mjs",
+    "test:setup": "node scripts/sync-local-test-env.mjs && pnpm --filter aniquizz-server test:ensure-auth",
+    "rotate-test-credentials": "node scripts/rotate-test-credentials.mjs",
+    "secrets:sync": "bash scripts/sync-github-secrets.sh",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -24,6 +29,7 @@
     "db:studio": "pnpm --filter @aniquizz/database exec prisma studio"
   },
   "devDependencies": {
+    "@playwright/test": "^1.55.0",
     "prettier": "^3.3.3",
     "turbo": "^2.3.3",
     "typescript": "^5.6.3"

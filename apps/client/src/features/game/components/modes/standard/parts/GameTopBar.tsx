@@ -70,7 +70,14 @@ export function GameTopBar({
         <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">          <span className="font-mono font-bold tabular-nums" aria-live="polite">
             Round {currentRound}/{totalRounds}
           </span>
-          <div className="h-1.5 flex-1 overflow-hidden rounded-md bg-secondary">
+          <div
+            className="h-1.5 flex-1 overflow-hidden rounded-md bg-secondary"
+            role="progressbar"
+            aria-valuenow={currentRound}
+            aria-valuemin={0}
+            aria-valuemax={totalRounds}
+            aria-label="Progression de la partie"
+          >
             <div className="h-full bg-gradient-primary transition-all duration-1000" style={{ width: `${roundProgress}%` }} />
           </div>
         </div>

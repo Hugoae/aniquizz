@@ -1,10 +1,308 @@
 # Progress — AniQuizz Refonte
 
-## Current phase: Phase 9 — Integration, CI & security audit 🚧 next
+## Current phase: Phase 9 — Integration, CI & compliance ✅ (code complete → manual ops + Phase 10)
 
 Order: **(1) XP/Level ✅ → (2) Victory conditions revamp ✅ → (3) Friends ✅ → (4) Phase 8 UI/UX rework ✅.** Leaderboard deferred to **Update 1** (after Phase 9).
 
 **Phase 8 closed** (2026-07-08): dark-mode-only redesign across client + admin, profile/game/hub rework, friends UX hardening, client audit (ESLint/TS/tokens/dead code/lazy routes), and post-audit polish (news deep-link, header profile affordance, `framer-motion` kept for in-game player-floor layout animation).
+
+## Phase 9.2 — CI, integration tests, e2e & RLS doc ✅ (2026-07-09)
+
+### What shipped
+
+**CI & automation**
+- **GitHub Actions** (`.github/workflows/ci.yml`): `check:english` → `lint` → `build` → `test` on PR/push; separate Playwright job on PRs (ensure auth users → e2e).
+- **English-code guard** (`scripts/check-english-code.mjs` + `scripts/english-code-baseline.txt`): fails on *new* French accents in server/shared/database comments; 49 legacy lines baselined.
+- **README**: CI badge + script docs (`pnpm test:setup`, `pnpm secrets:sync`, `pnpm check:english`, `pnpm test:e2e`).
+
+**Server integration tests** (Vitest + `socket.io-client`, `apps/server/src/integration/`)
+- Auth: valid token, invalid token rejected, guest connect, unauthenticated `lobby:create` blocked.
+- Ban at connect (`Profile.bannedUntil`).
+- Mute at chat (`Profile.mutedUntil`, reconnect refreshes `socket.data`).
+- Anti-cheat: no answer leak in `game_state_sync` during guessing; early `game:answer` ignored before start (1 test skipped if &lt;5 `COMPLETED` songs in DB).
+- Rate limit on `lobby:create`.
+- Watched mode abort when AniList unlinked.
+- **Test bootstrap** (`apps/server/src/test/createServerBundle.ts`): isolated HTTP+Socket.io stack on random port.
+
+**Client component tests** (Vitest + Testing Library — **18 tests**)
+- `watchedSource.ts`, `AuthModal`, `GameConfigForm`, `SourceSection` (+ `renderWithProviders`, jsdom polyfills).
+
+**Playwright e2e** (`e2e/solo-match.spec.ts`)
+- Flow: login → solo config → 5 rounds → `Rejouer` visible.
+- `webServer` spins client + server; credentials via `E2E_EMAIL` / `E2E_PASSWORD`.
+
+**Docs**
+- `docs/security/rls-audit.md`: table-by-table RLS posture + deferred gaps (complement to 9.1 migration).
+
+**Test auth infrastructure** (post-implementation hardening)
+- **`getTestAccessToken`** (`apps/server/src/test/testJwt.ts`): prefers real Supabase sign-in (anon key + password); HS256 via `SUPABASE_JWT_SECRET` remains optional fallback.
+- **`ensureTestAuthUsers.ts`**: creates/updates `@aniquizz.test` Auth users with fixed UUIDs matching `seed_test_accounts.ts` (Admin API).
+- **`scripts/sync-local-test-env.mjs`**: adds `SUPABASE_ANON_KEY` + `TEST_ACCOUNTS_PASSWORD` to `apps/server/.env`.
+- **`scripts/sync-github-secrets.sh`**: pushes local env → GitHub repo secrets (no values echoed).
+
+### Verification
+
+- [x] `@aniquizz/shared`: **69/69** tests pass
+- [x] Client: **18/18** tests pass
+- [x] Server integration: **11/12** pass, **1 skipped** (anti-cheat full-round test when catalogue &lt;5 playable songs)
+- [x] `pnpm check:english` passes (baseline)
+- [x] Supabase Auth users created: `admin@`, `player1@`, `player2@`, `moderator@` **@aniquizz.test**
+- [x] Local `apps/server/.env`: `SUPABASE_ANON_KEY`, `TEST_ACCOUNTS_PASSWORD` configured
+- [x] GitHub secrets synced on `Hugoae/aniquizz` (see table below)
+- [x] Playwright Chromium installed locally; e2e runnable with `E2E_EMAIL=player1@aniquizz.test` + password
+
+### CI / dev secrets (GitHub + local)
+
+| Secret / var | Purpose | GitHub |
+|--------------|---------|--------|
+| `DATABASE_URL` | Prisma + integration tests | ✅ |
+| `SUPABASE_URL` | Auth verification | ✅ |
+| `SUPABASE_SERVICE_ROLE_KEY` | Admin API + `auth.getUser` | ✅ |
+| `TEST_ACCOUNTS_PASSWORD` | `@aniquizz.test` sign-in (integration + e2e) | ✅ |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_R2_PUBLIC_URL`, `VITE_SERVER_URL` | Client build | ✅ |
+| `E2E_EMAIL`, `E2E_PASSWORD` | Playwright login | ✅ |
+| `SUPABASE_JWT_SECRET` | Optional HS256 fallback only | ⚠️ not set (not required) |
+
+**Dev test login:** `player1@aniquizz.test` / password in `TEST_ACCOUNTS_PASSWORD` (set locally — run `pnpm rotate-test-credentials` after clone). Run `pnpm test:setup` after a fresh clone.
+
+### Next (Phase 9.3 — credentials, legal, a11y; SEO deferred)
+
+Order: **(1) rotate `@aniquizz.test` credentials** → **(2) Legal / RGPD** (Settings links, no footer) → **(3) Accessibility WCAG 2.1 AA** → **(4) SEO & Google** (paused — user Q&A first).
+
+Moderation admin UX polish moved to **Phase 10** (server/socket flows covered in 9.2).
+
+## Phase 9.3 — Credentials, legal & accessibility ✅ (2026-07-09)
+
+### What shipped
+
+**Test credentials**
+- Removed hardcoded dev password from scripts; `TEST_ACCOUNTS_PASSWORD` is env-only.
+- `pnpm rotate-test-credentials`: generates a strong password, updates `apps/server/.env`, refreshes Supabase Auth `@aniquizz.test` users.
+- `pnpm test:setup` fails fast if password is missing (points to rotate script).
+
+**Legal / RGPD (no footer)**
+- Public routes: `/legal/confidentialite`, `/legal/cgu`, `/legal/mentions` (French copy).
+- Cookie consent banner on first visit; preferences in **Paramètres** (floating widget + modal) with discrete legal links.
+- Signup flow links to CGU + privacy policy.
+
+**Accessibility (WCAG 2.1 AA — targeted pass)**
+- Skip-to-content link; `#main-content` landmark on key routes.
+- Global `:focus-visible` rings; `prefers-reduced-motion` already in place.
+- Header logo `aria-label`; loading spinner `role="status"`.
+
+### Verification
+
+- [x] Client production build OK
+- [x] Client tests **18/18**
+- [x] Local credential rotation + Supabase Auth users updated
+- [ ] Run `pnpm secrets:sync` to refresh GitHub `TEST_ACCOUNTS_PASSWORD` / `E2E_PASSWORD` for CI
+
+## Phase 9.4 — Domain migration & SEO ✅ (2026-07-09)
+
+### Domain (`aniquizz.com`)
+
+- Vercel redirects: `www.aniquizz.com` + `aniquizz.vercel.app` → apex (301)
+- Render `CLIENT_URL` → `https://aniquizz.com` (`render.yaml`)
+- Server CORS: `aniquizz.com`, `www`, legacy `vercel.app`
+- `public/og-image.jpg` (social preview), updated `site.webmanifest`
+
+### SEO & Google (code)
+
+- **`SeoHead`** component: per-route title, description, canonical, OG/Twitter
+- **`public/sitemap.xml`** + **`robots.txt`** (disallow gameplay/auth routes)
+- JSON-LD on Home: `WebSite`, `Organization`, `VideoGame`
+- `noindex` on `/play`, `/game`, `/profile`, `/admin`, `/reset-password`, 404
+- Manual checklist: `docs/seo/google-search-console.md` (GSC, Supabase redirects, Render env)
+
+### Verification
+
+- [x] Client build OK
+- [x] Client tests **18/18**
+- [ ] Deploy client (Vercel) + confirm redirects live
+- [ ] Supabase Auth URLs + Render `CLIENT_URL` (manual)
+- [ ] Google Search Console + sitemap submission (manual)
+
+## Phase 9.5 — Branding (favicon, tab titles, meta) ✅ (2026-07-09)
+
+- New **EQ gradient icon** → all favicon sizes + header logo (`public/brand-icon.png`, `pnpm generate:favicons`)
+- **Tab titles** shortened: Home = `AniQuizz` only; inner pages = `Jouer · AniQuizz` (via `PAGE_TITLES` + `formatPageTitle`)
+- **Meta description** unified: « Blindtest anime gratuit : devine l'opening ou l'ending… »
+- OG/Twitter home title uses tagline: `AniQuizz — Blindtest anime en ligne`
+
+### Next (Phase 9 closure)
+
+**Phase 9 code complete.** Remaining work before calling Phase 9 fully closed:
+
+#### Manual ops after deploy
+
+Checklist: [`docs/seo/google-search-console.md`](docs/seo/google-search-console.md)
+
+- [ ] Deploy Vercel (push → redirects active)
+- [ ] Supabase Auth → Site URL `https://aniquizz.com`, redirect URLs `https://aniquizz.com/**`, `https://aniquizz.com/reset-password`, + localhost dev
+- [ ] Render → `CLIENT_URL=https://aniquizz.com` (if dashboard not synced)
+- [ ] Google Search Console → property `https://aniquizz.com` → submit `https://aniquizz.com/sitemap.xml`
+- [ ] *(Optional)* Add `www.aniquizz.com` in Vercel Domains (redirect already in `vercel.json`)
+- [ ] `pnpm secrets:sync` after credential rotation (CI)
+
+## Phase 9.6 — A11y, prerender & semantic polish ✅ (2026-07-09)
+
+Targeted pass on partially covered Phase 9 items (not exhaustive audits). AniList minimum intersection threshold stays in PLAN « Later » — no code change.
+
+### Accessibility (WCAG 2.1 AA — targeted)
+
+- **Game:** `#main-content` on `StandardGameLayout`; loading overlay `role="status"`; `VideoStage` video `aria-label`, pause/resume live regions, timer `role="status"` (was incorrect `timer`); `GameTopBar` round progressbar ARIA; `GameSidebar` tablist/tabpanel, chat unread in label, aside label.
+- **Profile:** avatar upload → keyboard `<button>`; `UserAvatar` / profile avatar `alt`; username edit/save/cancel labels; `StatsCarousel` region label + decorative icons hidden.
+- **Admin:** `CataloguePanel` expand toggles, cover `alt`, icon-only action labels; `UsersPanel` table caption/`scope`, keyboard on profile rows.
+- **News:** `NewsCard` expand control `aria-controls` + label; `RoadmapWidget` progressbar ARIA.
+
+Not in scope (deferred): full game/admin/carousel audit, every dialog focus trap, contrast audit.
+
+### SEO SPA prerender
+
+- **`scripts/prerender-routes.mjs`**: post-`vite build`, injects crawlable HTML into `#root` for `/`, `/news`, `/leaderboard`, `/library`, `/legal/*` (news titles parsed from `newsData.ts`).
+- Wired in `package.json` `build` script. Each route gets its own `dist/.../index.html` from a pristine Vite template (fix: regex replace on `#root` inner HTML).
+
+### Semantic HTML / alt images (point fixes)
+
+- Meaningful `alt` on avatars and catalogue covers; decorative Lucide icons `aria-hidden` where labelled controls exist.
+
+### Verification
+
+- [x] Client production build + prerender (7 routes)
+- [x] Client tests **18/18**
+- [x] News prerender includes all patchnote articles
+
+**Proposed commits:**
+- `feat(seo): migrate to aniquizz.com, add metadata, sitemap and domain redirects`
+- `feat(a11y): targeted WCAG pass on game, profile, admin and news`
+- `feat(seo): prerender public routes for crawlable SPA content`
+
+### Key decisions (9.2)
+
+- Integration tests use **real Supabase Auth tokens** (sign-in) rather than requiring the dashboard JWT secret — simpler CI, same server validation path (`auth.getUser`).
+- `SUPABASE_JWT_SECRET` stays optional (legacy HS256 fallback in `authMiddleware`); add manually from Supabase Dashboard → API → JWT Secret only if needed.
+- English-code CI uses a **baseline file** so pre-existing French comments in pipeline/server legacy code do not block merges; new French in comments still fail.
+
+## Phase 9.1 — Security audit & hardening ✅ (2026-07-09)
+
+Formal audit of anti-cheat, RLS/data exposure, and AniList watched-mode path. Fixes applied for confirmed gaps; remaining items documented for 9.2 (integration tests) / deferred by choice.
+
+### Audit findings (summary)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| **Guess-phase answer leak** | ✅ OK | Only `game:answered { userId }`; `toPublicPlayer` strips answer/correctness/points until reveal; `game_state_sync` respects phase |
+| **Answer-type clamp** | ✅ OK | `effectiveAnswerType` enforces typing/qcm room modes; **`mix` = honor-system** (choices must reach client — documented, acceptable for casual play; revisit for Compétitif) |
+| **Video/preload leak** | ✅ OK | `videoKey` only on `round_start` / `game:preload` / reveal `nextVideo` — safe phases per contract |
+| **Server timing/score** | ✅ OK | `RoundClock` + `PhaseTiming`; client maps to local clock only |
+| **JWT identity** | ✅ OK | `socket.data.userId` canonical; rate limits on answer/chat/lobby/friends |
+| **Ban/mute (Phase 6 infra)** | ✅ OK (verify in 9.2) | Ban at handshake + live disconnect; mute on `socket.data.mutedUntil` + chat drop; admin UI/filters present — integration tests deferred to 9.2 |
+| **`player_watched_ids` spoofing** | 🔧 **Fixed** | Client could inject arbitrary anime ids → playlist skew. Event **removed**; build always resolves from server-owned `Profile.anilistUsername` |
+| **`get_my_watched` username param** | 🔧 **Fixed** | Could fetch any user's list by username. Now **auth-only**, username resolved from DB for `socket.data.userId` |
+| **Watched mode silent global fallback** | 🔧 **Fixed** | Empty/unresolved AniList pool previously fell through to global random with no error. Now **aborts start** with a French message (union vs intersection aware) |
+| **RLS — Profile** | ✅ OK | Own-row SELECT + INSERT only; no client UPDATE (Phase 8) |
+| **RLS — Match/Friendship** | 🔧 **Fixed** | Tables had RLS off (PostgREST grants were postgres-only). **RLS enabled** deny-by-default on `Friendship`, `Match`, `MatchPlayer`, `MatchRound`, `RoundAnswer` |
+| **RLS — Catalogue writes** | 🔧 **Fixed** | `anon`/`authenticated` had broad table grants on `Anime`/`Song`/`Franchise`; only SELECT policies existed. **Revoked INSERT/UPDATE/DELETE/TRUNCATE** on client roles |
+| **Profile direct UPDATE/DELETE grants** | 🔧 **Fixed** | **Revoked UPDATE/DELETE** on `Profile` for `anon`/`authenticated` (belt-and-suspenders with RLS) |
+| **Client Supabase table access** | ✅ OK | No `supabase.from(...)` calls in client — all privileged writes via server |
+| **Storage avatars listing** | ⚠️ Deferred | Advisor WARN: public bucket broad SELECT allows listing — acceptable for now; tighten policy in a later pass |
+| **Leaked-password (HIBP)** | ⚠️ Deferred | Supabase Pro — unchanged |
+
+### Code changes (9.1)
+
+- **Removed** `player_watched_ids` from shared socket contract, server handler, instrumentation/redact.
+- **`get_my_watched`**: no payload; server loads `anilistUsername` from `Profile` for the authenticated user.
+- **`PlaylistBuilder`**: always fetches watched ids via `getUserAnimeIds(username)`; `abortReason: 'watched_empty'` blocks silent fallback; `warmWatchedList` only warms the AniList cache.
+- **`MatchEngine`**: user-facing abort messages for empty watched pool.
+- **Migration `20260709120000_phase9_rls_hardening`** (applied live): RLS on server-only tables + revoke client writes on catalogue + revoke Profile UPDATE/DELETE grants.
+
+### Verification
+
+- [x] `@aniquizz/shared` build + **69/69** tests pass
+- [x] Server + client `tsc --noEmit` OK
+- [x] `get_advisors` (security) after migration: only intentional `_prisma_migrations` INFO, avatars listing WARN, HIBP WARN
+
+### Watched-mode UX & correctness follow-ups (2026-07-09)
+
+Post-9.1 hardening of the Watched source, from the audit's open UX/logic gaps.
+
+- **Watched source always selectable**: the button is no longer locked when AniList is unlinked; instead the **launch/create button greys out** with a French reason. `SourceSection` hides "Un compte AniList lié est requis…" once linked.
+- **Intersection + bots fix** (`PlaylistBuilder.resolveWatchedIds`): quorum now counts **non-bot players only** (`humanPlayers`), so a bot no longer forces every intersection room to abort.
+- **Parallel list resolution**: per-player `getUserAnimeIds` now runs via `Promise.all` (was sequential) — safer for last-second joiners in large lobbies.
+- **Playable-song feedback**: new `get_watched_count` → `watched_count { listSize, playableSongs }` socket event (`countPlayableWatchedSongs` counts `COMPLETED` songs ∩ watched ids). `SourceSection` shows "≈ N sons jouables dans votre liste (M animes)" or a warning when 0.
+- **Lobby-wide validation** (`checkWatchedLobby`): replaces the host-only client check. Union needs ≥1 linked human; intersection needs **all** humans linked. Unlinked players get an "AniList requis" badge (`LobbyPlayerCard.needsAniList`); host launch blocked with a mode-aware reason.
+- **Reliable AniList propagation**: `anilistUsername` now loaded in `socketAuthMiddleware` → `socket.data.anilistUsername` (like `role`/`level`), passed to `Room.addOrReconnect` at create/join, so `toPublicPlayer` exposes it to the lobby without relying on warm-up timing. Client maps `LobbyPlayer.hasAniList`.
+- **PLAN.md**: noted the "(Later) real minimum threshold" idea (refuse intersection under X playable songs, or offer explicit random top-up) in the Phase 9 AniList section.
+
+Verified: `@aniquizz/shared` build OK; server + client `tsc --noEmit` clean; lints clean.
+
+### `packages/database` audit & pipeline hardening (2026-07-09)
+
+Full audit of the ETL media pipeline (AniList → AnimeThemes → Postgres → R2) ahead of repopulating the catalogue for real testing.
+
+**DB state found:** 1460 songs but only **10 COMPLETED/playable** (on R2). 1450 PENDING, of which ~1229 still point at the **retired Supabase `videos` bucket** (verified deleted — only `avatars` remains). AnimeThemes verified live (GET 206). So the worker could not repopulate from the stale PENDING sources.
+
+**Bugs fixed:**
+- **Undeclared dependency**: scripts import `@aniquizz/shared` (`formatSongTypeLabel`) but it wasn't in `database` deps → unresolvable, pipeline scripts couldn't run. Added `"@aniquizz/shared": "workspace:*"` + `pnpm install`.
+- **`export_db_to_json`**: `orderBy: { type }` → Prisma crash (`type` renamed to `songType`). Now `[{ songType }, { sequence }]`.
+- **zod schema stripping**: `pipeline-schemas` dropped `genres`/`popularity`/`coverImage`/… (unknown keys) → `3_load_initial_data` would wipe metadata. Schemas now model all consumed fields (both pipeline `franchiseName`/`year` and DB-export `name`/`seasonYear`).
+- **Legacy format mismatch**: on-disk `data_step2.json` uses legacy `type` + `videoKey`(URL) with no `sourceUrl`, which the strict schema rejected. Added `getPipelineSongSource()` (resolves `sourceUrl` or legacy `videoKey` URL) + `looksLikeVideoKey()`; schema/loader/seed now accept both formats.
+- **dotenv inconsistency**: `1`, `2`, `3`, `seed_db` now load `../.env` like the others.
+
+**Pipeline improvements (controllable repopulation):**
+- `1_fetch_anilist`: `ANILIST_LIMIT` (default 500, popularity-desc) + `ANILIST_PER_PAGE`/`ANILIST_DELAY_MS` — run `=30` first, `=500` later. Idempotent upserts respect `isLocked`.
+- `4_sync_storage`: optional `WORKER_SOURCE_INCLUDE` (e.g. `animethemes.moe`) to only download fresh sources and skip the dead Supabase-sourced PENDING rows.
+- `3_load_initial_data`: never overwrites a COMPLETED song's live R2 URL when refreshing sources.
+- Added `tsconfig.scripts.json` + `typecheck:scripts` (scripts were never typechecked before). README rewritten (R2, real data files, controllable repopulation flow); `.env.example` documents the new vars.
+
+**Follow-up refinements:**
+- **Symmetric prequel expansion** (`1_fetch_anilist`): the tree now fetches *missing prequels* from the AniList API (mirroring sequel expansion) so a franchise whose only popular entry is S2+ still pulls in its earlier seasons. Stops at locked/invalid-status boundaries.
+- **Robust song identity** (`3_load_initial_data`): upsert now matches by `(animeId, songType, sequence)` with a canonical-`videoKey` fast path, instead of `videoKey` alone — an AniList romaji rename updates the existing row instead of creating a duplicate.
+- **`empty_r2.ts` / `r2:empty`**: new script to empty *only* the R2 bucket (catalogue metadata preserved) and re-queue COMPLETED songs → PENDING; refuses in production. (`reset_all` remains the full wipe.)
+
+**UX / timer / reliability pass:**
+- New `lib/progress.ts`: `formatDuration`, `Progress` (single-line counter with elapsed/ETA/throughput), `Tally` (summary tables), `parseRetryAfterMs` (429 backoff).
+- Steps 1/2/3/4 now show compact progress + a final summary table + elapsed (step 2 no longer prints one line per anime).
+- 429 handling honors the `Retry-After` header (AniList + AnimeThemes) instead of fixed sleeps.
+- Worker (step 4): reclaims stale `PROCESSING` → `PENDING` on startup; **graceful SIGINT** (re-queues in-flight songs, cleans temp, disconnects); explicit `WORKER_COMPRESS_TIMEOUT_MS`; ETA/throughput display.
+
+Verified: `database` src + scripts `tsc --noEmit` clean; `@aniquizz/shared` resolves from `database`; `progress` util runtime-smoke-tested. **No pipeline scripts were run** — repopulation left to the user (e.g. `ANILIST_LIMIT=30` then `500`). Run from `packages/database/` (where `ts-node` lives) or via `pnpm --filter @aniquizz/database <script>`.
+
+### Pipeline clean-slate + DB enrichment refonte (2026-07-09)
+
+Decision: wipe the stale catalogue (1460 songs, only 10 playable) and rebuild from scratch rather than carry forward lock/complexity debt. Manual difficulty edits preserved in a user-side copy of `manual_edits.json` (re-applied by hand after rebuild).
+
+**Clean slate:**
+- Full **`pipeline:reset`**: DB catalogue emptied (1460 songs / 1259 animes / 645 franchises), R2 bucket emptied, local `data_step1.json` / `data_step2.json` / `manual_edits.json` removed from `packages/database/data/`.
+- **`animethemes_cache.json` kept** — cache stores every theme (OP + ED); re-parsing it later avoids re-fetching AnimeThemes.
+- Removed the temporary `export_difficulties_table.ts` / `reapply_difficulties.ts` scripts (user chose manual side-by-side copy from the backed-up `manual_edits.json` instead).
+
+**Schema enrichment (`catalogue_enrichment`):**
+- Migration `20260709130000_catalogue_enrichment` (applied live via `prisma db execute` + `migrate resolve`): additive nullable columns on `Anime` — `idMal` (MyAnimeList id, provided directly by AniList, no cross-source matching), `coverColor`, `bannerImage`, `description`, `season`, `episodes`, `averageScore`.
+- `Song.episodeRange` already existed; now populated from AnimeThemes entry metadata.
+
+**Pipeline rework (steps 1–3 + schemas + docs):**
+- **Step 1** (`1_fetch_anilist.ts`): extended `MEDIA_FIELDS` + `normalizeSeason()` to emit all new anime fields; **locked-franchise sequel expansion** (step 1b) — fetches newly-released seasons for locked franchises as unlocked rows without touching locked seasons; **warning when `manual_edits.json` is absent** (nothing protected against overwrite — reminds to run `export_db_to_json.ts` before a re-fetch).
+- **Step 2** (`2_fetch_animethemes.ts`): **`SONG_TYPES` env** (default `OP`; extend to `OP,ED` later without re-fetch thanks to cache); dynamic `songType` per theme; **`chooseBestVideo`** now prefers creditless then highest resolution; **`episodeRange`** extracted from `animethemeentries[].episodes`; locked-franchise handling fixed (processes non-locked seasons even when franchise is locked).
+- **Step 3** (`3_load_initial_data.ts`): maps all new `Anime` fields + `episodeRange` on songs; upsert identity remains `(animeId, songType, sequence)`.
+- **Zod** (`pipeline-schemas.ts`): schemas extended so new fields aren't stripped.
+- **Docs**: `.env.example` (`SONG_TYPES`), `README.md` (song types, enriched metadata, lock/upgrade workflow, **Supabase-safe migration workflow** — `db execute` + `migrate resolve`, not `migrate dev`).
+
+**Prisma migration history reconciled:**
+- Divergence fixed: 5 stale pre-refonte records removed from `_prisma_migrations`; `phase9_rls_hardening` + `catalogue_enrichment` marked applied via `prisma migrate resolve`.
+- Verified: **`prisma migrate status` → "Database schema is up to date!"** (9 migrations, clean).
+
+**Dry-run validation (`ANILIST_LIMIT=5`):**
+- Steps 1→2→3 ran successfully (5 franchises, 20 animes, 25 songs created); enriched fields confirmed in DB (`idMal`, `coverColor`, `season`, `episodes`, `averageScore`, `episodeRange`). Test data wiped again via `pipeline:reset` — **DB + R2 empty, ready for the real run**.
+
+**PLAN.md — Phase 10 additions:**
+- Lock-protection safety net (`manual_edits.json` absent after wipe).
+- `.gitignore` audit + full docs/architecture rewrite (README, CONTEXT-MAP, per-package CONTEXT).
+- Richer in-game anime info panel on reveal (season, episodes, averageScore, coverColor, bannerImage, episodeRange — no leak before `round_reveal`).
+
+### Next (Phase 9.3)
+
+SEO, a11y, legal per `PLAN.md` (see Phase 9.2 section above). Pipeline step 4 retry remains optional parallel work for fuller catalogue/e2e coverage.
 
 ## Done (Phase 8 — UI/UX rework) ✅
 
@@ -651,10 +949,14 @@ Bots remain **DEV-only in-memory players** for multiplayer testing; their `Profi
 
 ## Next step
 
-**Phase 9** — integration tests, CI hardening, SEO/compliance, Test account rotation, **mute/ban verification**, and **anti-cheat / security audit** (see `PLAN.md`). Leaderboard UI/API lands in **Update 1** after Phase 9.
+**Phase 9.3** — credentials ✅, legal/RGPD ✅, a11y ✅. **SEO deferred** (user Q&A first). See `PLAN.md` § Phase 9.
+
+Parallel (infra, not blocking 9.3): finish pipeline step 4 worker retry to grow the `COMPLETED` song pool for fuller e2e/watched tests.
+
+**Proposed commit (9.2):** `test(ci): add integration tests, component tests, Playwright e2e and GitHub Actions pipeline`
 
 ### Phase 6 follow-ups / deferred
-- **Dev test accounts**: the in-app account-switcher was removed; sign in manually with the seeded `@aniquizz.test` accounts (or `seed:test-accounts`). Roles start at USER (elevate via the panel / `claim-admin`). **Phase 9:** rotate Test account email/password (see PLAN.md).
+- **Dev test accounts**: sign in with `@aniquizz.test` accounts (`pnpm test:setup` after `pnpm rotate-test-credentials`). Password only in `TEST_ACCOUNTS_PASSWORD` (never committed).
 - **Bots & leaderboard**: bots excluded from persistence, stats, XP, social, and leaderboard queries; `seed:bots` / `cleanup:bots` keep DB clean in dev.
 - **Soak loop** (Dev Tools) is a client-side relauncher of headless scenarios (self-limited to ~1 concurrent); a true server-side auto-restart is deferred.
 - **Spectating** a running match from the admin/dev "Rejoindre" is lobby-limited (no dedicated spectator mode) — deferred.

@@ -11,6 +11,9 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ensure-auth": "ts-node scripts/ensureTestAuthUsers.ts",
     "clean": "rimraf dist"
   },
   "dependencies": {
@@ -36,6 +39,8 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
+    "socket.io-client": "^4.8.2",
+    "vitest": "^4.1.10",
     "@types/express": "^5.0.6",
     "@types/fluent-ffmpeg": "^2.1.28",
     "@types/jsonwebtoken": "^9.0.10",

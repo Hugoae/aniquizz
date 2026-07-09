@@ -68,6 +68,7 @@ const mapServerPlayersToLobby = (
     isBot: typeof p.id === 'string' && p.id.startsWith('bot-'),
     role: p.role,
     level: p.level,
+    hasAniList: Boolean(p.anilistUsername),
   }));
 };
 

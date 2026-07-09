@@ -1,7 +1,17 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
-import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
+import dotenv from 'dotenv';
+import {
+  buildVideoKey,
+  getPipelineSongSource,
+  looksLikeVideoKey,
+  normalizePipelineSong,
+  parsePipelineDifficulty,
+} from './lib/song-helpers';
+
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
 const prisma = new PrismaClient();
 // Priorité au fichier manuel s'il existe, sinon le fichier brut
 const MANUAL_FILE = path.join(__dirname, '../data/manual_edits.json');
@@ -75,9 +85,15 @@ async function main() {
 
       for (const sData of aData.songs) {
         const { songType, sequence } = normalizePipelineSong(sData);
-        const videoKey = sData.videoKey ?? buildVideoKey(aData.name, aData.id, songType, sequence);
+        // Reuse a real R2 key from a DB export; otherwise rebuild it (legacy pipeline
+        // files stored the AnimeThemes URL in `videoKey`, which is not a valid key).
+        const videoKey = looksLikeVideoKey(sData.videoKey)
+          ? sData.videoKey
+          : buildVideoKey(aData.name, aData.id, songType, sequence);
         if (insertedVideoKeys.has(videoKey)) continue;
 
+        // Seeds metadata only; media must be (re)synced to R2 via `4_sync_storage`.
+        // Songs start PENDING with their downloadable source resolved across formats.
         await prisma.song.create({
           data: {
             title: sData.title,
@@ -88,7 +104,7 @@ async function main() {
             tags: sData.tags || [],
             difficulty: parsePipelineDifficulty(sData.difficulty),
             duration: sData.duration || 0,
-            sourceUrl: sData.sourceUrl || null,
+            sourceUrl: getPipelineSongSource(sData),
             animeId: anime.id,
           }
         });

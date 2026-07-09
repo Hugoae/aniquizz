@@ -9,6 +9,7 @@
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "clean": "rimraf dist",
     "generate": "prisma generate",
     "migrate": "prisma migrate dev",
@@ -20,12 +21,14 @@
     "seed:dev-catalogue": "ts-node scripts/seed_dev_catalogue.ts",
     "pipeline:build": "ts-node scripts/global_build.ts",
     "pipeline:reset": "ts-node scripts/reset_all.ts",
+    "r2:empty": "ts-node scripts/empty_r2.ts",
     "r2:cache-control": "ts-node scripts/set_video_cache_control.ts"
   },
   "prisma": {
     "seed": "ts-node scripts/seed_db.ts"
   },
   "dependencies": {
+    "@aniquizz/shared": "workspace:*",
     "@aws-sdk/client-s3": "^3.888.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",

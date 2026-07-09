@@ -102,13 +102,8 @@ export function summarizeSocketPayload(
     };
   }
 
-  if (direction === 'inbound' && event === 'player_watched_ids') {
-    const ids = (payload as { ids?: unknown[] } | undefined)?.ids;
-    return {
-      _summary: 'watched_ids_update',
-      count: Array.isArray(ids) ? ids.length : 0,
-      roomId: (payload as { roomId?: string } | undefined)?.roomId,
-    };
+  if (direction === 'inbound' && event === 'get_my_watched') {
+    return { _summary: 'get_my_watched' };
   }
 
   if (direction === 'inbound' && (event === 'get_rooms' || event === 'get_game_state')) {

@@ -12,7 +12,7 @@ export function RoadmapWidget() {
     <div className="sticky top-24 space-y-6">
         <div className="flex items-center gap-3 mb-2">
             <div className="p-3 rounded-lg bg-primary/10 text-primary">
-            <Map className="h-6 w-6" />
+            <Map className="h-6 w-6" aria-hidden />
             </div>
             <div>
             <h2 className="font-display text-2xl font-bold tracking-tight">Roadmap</h2>
@@ -21,7 +21,14 @@ export function RoadmapWidget() {
         </div>
 
         <div className="flex items-center gap-3">
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+            <div
+              className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary"
+              role="progressbar"
+              aria-valuenow={doneCount}
+              aria-valuemin={0}
+              aria-valuemax={total}
+              aria-label="Progression de la roadmap"
+            >
                 <div className="h-full rounded-full bg-success transition-all" style={{ width: `${donePercent}%` }} />
             </div>
             <span className="font-mono text-xs font-semibold text-muted-foreground">

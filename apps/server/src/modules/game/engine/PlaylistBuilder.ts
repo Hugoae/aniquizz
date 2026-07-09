@@ -13,9 +13,13 @@ import { getUserAnimeIds } from '../../anilist/anilistService';
 import { getChoiceCandidates, getRandomSongs, type SelectedSong, type SongFilters } from '../gameService';
 import type { PlaylistItem, RoomPlayer } from './types';
 
+export type PlaylistAbortReason = 'watched_empty' | 'no_songs';
+
 export interface BuiltPlaylist {
   playlist: PlaylistItem[];
   fallbackUsed: boolean;
+  /** Set when the build failed for a known reason (empty playlist). */
+  abortReason?: PlaylistAbortReason;
 }
 
 /**
@@ -26,7 +30,16 @@ export interface BuiltPlaylist {
 export class PlaylistBuilder {
   async build(settings: RoomSettings, players: RoomPlayer[]): Promise<BuiltPlaylist> {
     const isWatchedMode = settings.soundSelection === 'watched';
-    const watchedIds = isWatchedMode ? await this.resolveWatchedIds(settings, players) : undefined;
+    let watchedIds: number[] | undefined;
+
+    if (isWatchedMode) {
+      watchedIds = await this.resolveWatchedIds(settings, players);
+      // Never silently fall back to the global pool when Watched was requested but
+      // no AniList lists could be resolved (missing link, empty list, intersection fail).
+      if (!watchedIds.length) {
+        return { playlist: [], fallbackUsed: false, abortReason: 'watched_empty' };
+      }
+    }
 
     const filters: SongFilters = {
       difficulty: settings.difficulty,
@@ -36,7 +49,7 @@ export class PlaylistBuilder {
 
     const { songs, fallbackUsed } = await getRandomSongs(settings.soundCount || 10, filters);
     if (!songs.length) {
-      return { playlist: [], fallbackUsed };
+      return { playlist: [], fallbackUsed, abortReason: 'no_songs' };
     }
 
     const precision: Precision = settings.precision === 'exact' ? 'exact' : 'franchise';
@@ -110,7 +123,10 @@ export class PlaylistBuilder {
 
   /** Resolve the union/intersection of players' AniList watched ids. */
   private async resolveWatchedIds(settings: RoomSettings, players: RoomPlayer[]): Promise<number[]> {
-    const needProfileLookup = players.filter((p) => !p.anilistUsername).map((p) => p.userId);
+    // Bots have no AniList list and must not count toward the intersection quorum.
+    const humanPlayers = players.filter((p) => !p.isBot);
+
+    const needProfileLookup = humanPlayers.filter((p) => !p.anilistUsername).map((p) => p.userId);
     const profileMap = new Map<string, string | null>();
     if (needProfileLookup.length) {
       const profiles = await prisma.profile.findMany({
@@ -120,17 +136,18 @@ export class PlaylistBuilder {
       profiles.forEach((p) => profileMap.set(p.id, p.anilistUsername));
     }
 
-    const perPlayerIds: number[][] = [];
-    for (const player of players) {
-      if (player.watchedIds?.length) {
-        perPlayerIds.push(player.watchedIds);
-        continue;
-      }
-      const username = player.anilistUsername || profileMap.get(player.userId) || null;
-      if (!username) continue;
-      const ids = await getUserAnimeIds(username);
-      if (ids.length) perPlayerIds.push(ids);
-    }
+    // Resolve every human's list in parallel — a late joiner may not be warmed,
+    // and sequential fetches would add up over a large lobby.
+    const resolved = await Promise.all(
+      humanPlayers.map(async (player) => {
+        // Always resolve from the server-owned AniList username — never trust client-
+        // supplied id lists (removed `player_watched_ids` socket event in Phase 9).
+        const username = player.anilistUsername || profileMap.get(player.userId) || null;
+        if (!username) return [] as number[];
+        return getUserAnimeIds(username);
+      }),
+    );
+    const perPlayerIds = resolved.filter((ids) => ids.length > 0);
 
     if (!perPlayerIds.length) {
       logger.warn('[PlaylistBuilder] Watched mode: no AniList lists resolved.', 'Anilist');
@@ -138,7 +155,7 @@ export class PlaylistBuilder {
     }
 
     if (settings.watchedMode === 'intersection') {
-      if (perPlayerIds.length < players.length) {
+      if (perPlayerIds.length < humanPlayers.length) {
         logger.warn('[PlaylistBuilder] Intersection impossible (a player has no list).', 'Anilist');
         return [];
       }

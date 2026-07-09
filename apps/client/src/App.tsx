@@ -10,12 +10,15 @@ import { Toaster, toast } from 'sonner';
 import { ThemeProvider } from 'next-themes';
 import { Loader2 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { SkipLink } from '@/components/a11y/SkipLink';
 import { socket } from '@/lib/socket';
 import { supabase } from '@/lib/supabase';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { FriendsProvider } from '@/features/friends/FriendsContext';
 import { AuthModal } from '@/features/auth/components/AuthModal';
+import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
+import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 
 const Home = lazy(() => import('@/pages/Home'));
 const GameHub = lazy(() => import('@/pages/GameHub'));
@@ -27,11 +30,14 @@ const Library = lazy(() => import('@/pages/Library'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/legal/PrivacyPolicyPage'));
+const TermsOfServicePage = lazy(() => import('@/pages/legal/TermsOfServicePage'));
+const LegalNoticePage = lazy(() => import('@/pages/legal/LegalNoticePage'));
 
 function RouteFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" aria-label="Chargement" />
+      <Loader2 className="h-8 w-8 animate-spin text-primary" role="status" aria-label="Chargement" />
     </div>
   );
 }
@@ -103,9 +109,14 @@ const AppContent = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
+      <SkipLink />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
+
+          <Route path="/legal/confidentialite" element={<PrivacyPolicyPage />} />
+          <Route path="/legal/cgu" element={<TermsOfServicePage />} />
+          <Route path="/legal/mentions" element={<LegalNoticePage />} />
 
           <Route
             path="/play"
@@ -163,6 +174,7 @@ const AppContent = () => {
 
       <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
 
+      <CookieConsentBanner />
       <Toaster position="bottom-right" richColors closeButton />
     </div>
   );
@@ -172,11 +184,13 @@ function App() {
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
       <TooltipProvider>
-        <AuthProvider>
-          <FriendsProvider>
-            <AppContent />
-          </FriendsProvider>
-        </AuthProvider>
+        <CookieConsentProvider>
+          <AuthProvider>
+            <FriendsProvider>
+              <AppContent />
+            </FriendsProvider>
+          </AuthProvider>
+        </CookieConsentProvider>
       </TooltipProvider>
     </ThemeProvider>
   );

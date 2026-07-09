@@ -1,11 +1,13 @@
 import { Music } from 'lucide-react';
 import { ComingSoonPage } from '@/components/pages/ComingSoonPage';
+import { PAGE_TITLES } from '@/lib/site';
 
 export default function Library() {
   return (
     <ComingSoonPage
-      helmetTitle="Librairie - AniQuizz"
+      helmetTitle={PAGE_TITLES.library}
       helmetDescription="La librairie musicale arrive bientôt sur AniQuizz."
+      canonicalPath="/library"
       backLabel="Retour à l'accueil"
       backTo="/"
       icon={Music}

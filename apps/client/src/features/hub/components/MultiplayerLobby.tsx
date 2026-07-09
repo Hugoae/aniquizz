@@ -25,6 +25,7 @@ import { LobbyPlayerCard, type LobbyPlayer } from '@/features/hub/components/Lob
 import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
 import { buildRoomSettingBadges, getDifficultyBadge, SETTING_TONE_CLASSES } from '@/features/hub/components/roomSettings';
+import { checkWatchedLobby } from '@/features/hub/components/config/watchedSource';
 
 export type { LobbyPlayer };
 
@@ -97,7 +98,13 @@ export function MultiplayerLobby({
   const allGuestsReady = guests.every((p) => p.isReady);
 
   const hasEnoughPlayers = players.length >= 2;
-  const canStart = isHost && hasEnoughPlayers && allGuestsReady && !isGameRunning;
+  const watchedCheck = checkWatchedLobby(
+    gameSettings?.soundSelection ?? 'random',
+    gameSettings?.watchedMode ?? 'union',
+    players,
+  );
+  const watchedBlocked = isHost && watchedCheck.blocked;
+  const canStart = isHost && hasEnoughPlayers && allGuestsReady && !isGameRunning && !watchedBlocked;
 
   const freeSlots = Math.max(0, maxPlayers - players.length);
   const isFull = freeSlots === 0;
@@ -250,6 +257,7 @@ export function MultiplayerLobby({
                   isMe={String(player.id) === String(currentUserId)}
                   isSolo={false}
                   canManage={isHost}
+                  needsAniList={watchedCheck.badgeIds.has(player.id)}
                   onTransferHost={setHostTransferTarget}
                   onKick={() => setKickTarget(player)}
                 />
@@ -297,7 +305,12 @@ export function MultiplayerLobby({
                 La partie démarre…
               </p>
             )}
-            {!isStarting && guests.length > 0 && !isGameRunning && (
+            {watchedBlocked && !isStarting && watchedCheck.reason && (
+              <p className="max-w-md text-center text-sm font-medium text-destructive" role="alert">
+                {watchedCheck.reason}
+              </p>
+            )}
+            {!isStarting && !watchedBlocked && guests.length > 0 && !isGameRunning && (
               <span
                 aria-live="polite"
                 className={cn('text-xs font-medium', allGuestsReady ? 'text-success' : 'text-muted-foreground')}

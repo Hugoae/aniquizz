@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_TITLES } from '@/lib/site';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Newspaper } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -62,15 +63,16 @@ export default function News() {
 
   return (
     <>
-      <Helmet>
-        <title>Actualités & Roadmap - AniQuizz</title>
-        <meta name="description" content="Découvrez les dernières actualités et le futur d'AniQuizz." />
-      </Helmet>
+      <SeoHead
+        title={PAGE_TITLES.news}
+        description="Mises à jour, nouveautés et feuille de route d'AniQuizz."
+        path="/news"
+      />
 
       <div className="min-h-screen bg-background pb-12">
         <Header />
 
-        <main className="container max-w-6xl mx-auto px-4 pt-24">
+        <main id="main-content" className="container max-w-6xl mx-auto px-4 pt-24">
           <Button
             variant="ghost"
             onClick={() => navigate('/')}

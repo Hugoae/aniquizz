@@ -42,3 +42,28 @@ export const normalizePipelineSong = (song: {
 
 export const buildVideoKey = (animeName: string, animeId: number, songType: string, sequence: number): string =>
   `${animeName.replace(/[^a-zA-Z0-9]/g, '')}-${animeId}-${formatSongTypeLabel(songType, sequence)}.mp4`;
+
+/** True for an absolute http(s) URL. */
+export const isHttpUrl = (value?: string | null): value is string =>
+  typeof value === 'string' && /^https?:\/\//i.test(value);
+
+/** True when a value looks like an R2 object key (a filename) rather than a URL. */
+export const looksLikeVideoKey = (value?: string | null): value is string =>
+  typeof value === 'string' &&
+  !/^https?:\/\//i.test(value) &&
+  value.toLowerCase().endsWith('.mp4');
+
+/**
+ * Resolve the downloadable media source for a pipeline song across formats:
+ * - new format: `sourceUrl` (AnimeThemes URL at PENDING stage).
+ * - legacy format: `videoKey` held the AnimeThemes URL (pre-R2 pipeline).
+ * Returns null when no usable http(s) source is present.
+ */
+export const getPipelineSongSource = (song: {
+  sourceUrl?: string | null;
+  videoKey?: string | null;
+}): string | null => {
+  if (isHttpUrl(song.sourceUrl)) return song.sourceUrl;
+  if (isHttpUrl(song.videoKey)) return song.videoKey;
+  return null;
+};

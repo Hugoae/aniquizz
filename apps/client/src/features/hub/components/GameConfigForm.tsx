@@ -11,6 +11,7 @@ import { RoomSettingsSection } from './config/RoomSettingsSection';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { FiltersSection } from './config/FiltersSection';
+import { isWatchedSourceBlocked, WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
 
 interface GameConfigFormProps<T extends GameConfig> {
   config: T;
@@ -56,7 +57,8 @@ export function GameConfigForm<T extends GameConfig>({
   const showRoomSettings = isRoom && !hideRoomSettings;
   const noTypes = (cfg.soundTypes?.length ?? 0) === 0;
   const missingPassword = showRoomSettings && cfg.isPrivate && !cfg.password;
-  const submitDisabled = noTypes || missingPassword;
+  const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile);
+  const submitDisabled = noTypes || missingPassword || watchedBlocked;
 
   const submitLabel = isRoom ? (currentPlayersCount > 0 ? 'Mettre à jour' : 'Créer le salon') : 'Lancer la partie';
 
@@ -67,24 +69,36 @@ export function GameConfigForm<T extends GameConfig>({
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
           <RulesSection config={cfg} update={update} />
-          <SourceSection config={cfg} update={update} user={user} profile={profile} isRoom={isRoom} />
+          <SourceSection
+            config={cfg}
+            update={update}
+            isRoom={isRoom}
+            anilistLinked={Boolean(profile?.anilistUsername?.trim())}
+          />
         </div>
 
         <FiltersSection config={cfg} toggleSoundType={toggleSoundType} toggleDifficulty={toggleDifficulty} />
       </div>
 
-      <div className="mt-3 flex shrink-0 gap-3 border-t border-border/60 pt-3">
-        <Button variant="outline" onClick={onReset} className="gap-2 rounded-lg">
-          <RotateCcw className="h-4 w-4" /> Reset
-        </Button>
-        <Button
-          variant="glow"
-          onClick={onSubmit}
-          className="flex-1 rounded-lg text-lg font-bold"
-          disabled={submitDisabled}
-        >
-          {submitLabel}
-        </Button>
+      <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-border/60 pt-3">
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={onReset} className="gap-2 rounded-lg">
+            <RotateCcw className="h-4 w-4" /> Reset
+          </Button>
+          <Button
+            variant="glow"
+            onClick={onSubmit}
+            className="flex-1 rounded-lg text-lg font-bold"
+            disabled={submitDisabled}
+          >
+            {submitLabel}
+          </Button>
+        </div>
+        {watchedBlocked && (
+          <p className="text-center text-sm font-medium text-destructive" role="alert">
+            {WATCHED_SOURCE_BLOCK_MESSAGE}
+          </p>
+        )}
       </div>
     </div>
   );

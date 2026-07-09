@@ -1,30 +1,51 @@
-import { Eye, Link2, Shuffle, Lock, AlertTriangle } from 'lucide-react';
-import type { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
+import { Eye, Link2, Shuffle, Lock, Music2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { Profile } from '@/features/auth/context/AuthContext';
+import { socket } from '@/lib/socket';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
 
 type Source = RoomConfig['soundSelection'];
 
+interface WatchedCount {
+  listSize: number;
+  playableSongs: number;
+}
+
 interface SourceSectionProps {
   config: RoomConfig;
   update: (patch: Partial<RoomConfig>) => void;
-  user: User | null;
-  profile: Profile | null;
   isRoom: boolean;
+  anilistLinked?: boolean;
 }
 
-export function SourceSection({ config, update, user, profile, isRoom }: SourceSectionProps) {
+export function SourceSection({ config, update, isRoom, anilistLinked = false }: SourceSectionProps) {
   const source = config.soundSelection;
-  const watchedLocked = !user || !profile?.anilistUsername;
-  const watchedLockReason = !user ? 'Connectez-vous pour utiliser vos listes.' : 'Liez un compte AniList dans votre profil.';
 
-  const setSource = (next: Source) => {
-    if (next === 'watched' && watchedLocked) return;
-    update({ soundSelection: next });
-  };
+  const setSource = (next: Source) => update({ soundSelection: next });
+
+  // Ask the server how many playable songs the user's AniList list yields, so the
+  // player knows whether Watched will fall back to random before starting.
+  const [watchedCount, setWatchedCount] = useState<WatchedCount | null>(null);
+  const [countLoading, setCountLoading] = useState(false);
+
+  useEffect(() => {
+    if (source !== 'watched' || !anilistLinked) {
+      setWatchedCount(null);
+      return;
+    }
+    setCountLoading(true);
+    const onCount = (payload: WatchedCount) => {
+      setWatchedCount(payload);
+      setCountLoading(false);
+    };
+    socket.on('watched_count', onCount);
+    socket.emit('get_watched_count');
+    return () => {
+      socket.off('watched_count', onCount);
+    };
+  }, [source, anilistLinked]);
 
   const tabClass = (active: boolean) =>
     cn(
@@ -38,7 +59,7 @@ export function SourceSection({ config, update, user, profile, isRoom }: SourceS
       <SectionHeader
         icon={Eye}
         title="Source des musiques"
-        tooltip="D'où proviennent les animes piochés. « Watched » nécessite un compte AniList lié."
+        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList (Completed + Watching)."
       />
 
       <div role="tablist" aria-label="Source des musiques" className="flex gap-1 rounded-lg bg-secondary/30 p-1">
@@ -49,11 +70,10 @@ export function SourceSection({ config, update, user, profile, isRoom }: SourceS
           type="button"
           role="tab"
           aria-selected={source === 'watched'}
-          disabled={watchedLocked}
           onClick={() => setSource('watched')}
-          className={cn(tabClass(source === 'watched'), watchedLocked && 'cursor-not-allowed opacity-50 hover:text-muted-foreground', 'flex items-center justify-center gap-1.5')}
+          className={tabClass(source === 'watched')}
         >
-          Watched {watchedLocked && <Lock className="h-3 w-3" aria-hidden="true" />}
+          Watched
         </button>
         <button
           type="button"
@@ -81,15 +101,30 @@ export function SourceSection({ config, update, user, profile, isRoom }: SourceS
           <div className="animate-in fade-in zoom-in space-y-4 p-2 duration-300">
             <div className="rounded-xl border border-info/20 bg-info/10 p-3 text-xs text-muted-foreground">
               <p className="mb-1 flex items-center gap-2 font-bold text-info">
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Compte AniList requis
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste AniList
               </p>
-              Utilise vos listes <b className="text-foreground">Completed</b> et <b className="text-foreground">Watching</b>.
+              Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b> et{' '}
+              <b className="text-foreground">Watching</b>.
+              {!anilistLinked && ' Un compte AniList lié est requis pour lancer une partie.'}
             </div>
 
-            {watchedLocked && (
-              <div className="flex items-start gap-2 rounded-xl border border-warning/20 bg-warning/10 p-3 text-xs text-warning">
-                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                <span>{watchedLockReason}</span>
+            {anilistLinked && (
+              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
+                <Music2 className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+                {countLoading || !watchedCount ? (
+                  <span className="text-muted-foreground">Analyse de votre liste AniList…</span>
+                ) : watchedCount.playableSongs === 0 ? (
+                  <span className="text-warning">
+                    Aucun son jouable dans votre liste pour le moment (base en cours de remplissage).
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground">
+                    <b className="text-foreground">≈ {watchedCount.playableSongs}</b> son
+                    {watchedCount.playableSongs > 1 ? 's' : ''} jouable
+                    {watchedCount.playableSongs > 1 ? 's' : ''} dans votre liste
+                    <span className="text-muted-foreground/70"> ({watchedCount.listSize} animes)</span>
+                  </span>
+                )}
               </div>
             )}
 

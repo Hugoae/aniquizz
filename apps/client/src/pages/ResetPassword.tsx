@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_TITLES } from '@/lib/site';
 import { toast } from 'sonner';
 import { Loader2, ShieldCheck } from 'lucide-react';
 
@@ -78,7 +79,7 @@ export default function ResetPassword() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Helmet><title>Réinitialiser le mot de passe · AniQuizz</title></Helmet>
+      <SeoHead title={PAGE_TITLES.resetPassword} noindex path="/reset-password" />
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-lg">
         <div className="mb-6 flex flex-col items-center gap-2 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">

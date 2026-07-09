@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { SettingsComingSoonContent } from '@/features/settings/components/SettingsComingSoonContent';
+import { GlobalSettingsContent } from '@/features/settings/components/GlobalSettingsContent';
 
 interface GlobalSettingsModalProps {
   open: boolean;
@@ -22,7 +22,7 @@ export function GlobalSettingsModal({ open, onOpenChange }: GlobalSettingsModalP
             Paramètres
           </DialogTitle>
         </DialogHeader>
-        <SettingsComingSoonContent variant="modal" />
+        <GlobalSettingsContent variant="modal" />
       </DialogContent>
     </Dialog>
   );

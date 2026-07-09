@@ -110,37 +110,55 @@ export function ProfileHeader({
 
         {/* Avatar with XP ring + level XP under it */}
         <div className="flex flex-col items-center gap-2 shrink-0">
-          <div
-            className={cn('relative', isOwn && 'group cursor-pointer')}
-            onClick={isOwn ? () => fileInputRef.current?.click() : undefined}
-          >
-            <div
-              className="rounded-full p-[3px]"
-              style={{
-                background: `conic-gradient(hsl(var(--primary)), hsl(var(--accent)) ${lvl.percent}%, hsl(var(--secondary)) ${lvl.percent}%)`,
-              }}
+          {isOwn ? (
+            <button
+              type="button"
+              className="relative group cursor-pointer rounded-full border-0 bg-transparent p-0"
+              aria-label={`Modifier l'avatar de ${vm.username}`}
+              onClick={() => fileInputRef.current?.click()}
             >
-              <div className="rounded-full bg-background p-[3px]">
-                {isOwn ? (
+              <div
+                className="rounded-full p-[3px]"
+                style={{
+                  background: `conic-gradient(hsl(var(--primary)), hsl(var(--accent)) ${lvl.percent}%, hsl(var(--secondary)) ${lvl.percent}%)`,
+                }}
+              >
+                <div className="rounded-full bg-background p-[3px]">
                   <Avatar className="h-28 w-28 relative">
-                    <AvatarImage src={getAvatarSrc(vm.avatar)} className="object-cover" />
+                    <AvatarImage
+                      src={getAvatarSrc(vm.avatar)}
+                      alt={`Avatar de ${vm.username}`}
+                      className="object-cover"
+                    />
                     <AvatarFallback className="bg-secondary text-4xl font-bold text-secondary-foreground">{vm.username.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
-                ) : (
-                  <UserAvatar avatar={vm.avatar} username={vm.username} className="h-28 w-28" />
-                )}
+                </div>
               </div>
-            </div>
-            {isOwn && (
               <div className="absolute inset-[3px] rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="h-8 w-8 text-foreground" />
+                <Camera className="h-8 w-8 text-foreground" aria-hidden />
               </div>
-            )}
-            <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">
-              {lvl.level}
-            </span>
-            {isOwn && <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onPickAvatarFile} />}
-          </div>
+              <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">
+                {lvl.level}
+              </span>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onPickAvatarFile} aria-hidden tabIndex={-1} />
+            </button>
+          ) : (
+            <div className="relative">
+              <div
+                className="rounded-full p-[3px]"
+                style={{
+                  background: `conic-gradient(hsl(var(--primary)), hsl(var(--accent)) ${lvl.percent}%, hsl(var(--secondary)) ${lvl.percent}%)`,
+                }}
+              >
+                <div className="rounded-full bg-background p-[3px]">
+                  <UserAvatar avatar={vm.avatar} username={vm.username} className="h-28 w-28" />
+                </div>
+              </div>
+              <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">
+                {lvl.level}
+              </span>
+            </div>
+          )}
           <span className="font-mono text-xs text-muted-foreground">
             {lvl.xpForNextLevel > 0 ? `${lvl.xpIntoLevel} / ${lvl.xpForNextLevel} XP` : 'Niveau max'}
           </span>
@@ -152,10 +170,10 @@ export function ProfileHeader({
             {isOwn && isEditingUsername ? (
               <div className="flex items-center gap-2 animate-fade-in w-full md:w-auto">
                 <Input value={newUsername} onChange={(e) => onChangeNewUsername(e.target.value)} className="text-2xl font-bold h-10 w-full md:w-64" maxLength={15} autoFocus />
-                <Button size="icon" onClick={onSaveUsername} disabled={isSaving} className="h-10 w-10 shrink-0 bg-success text-success-foreground hover:bg-success/90">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-5 w-5" />}
+                <Button size="icon" onClick={onSaveUsername} disabled={isSaving} aria-label="Enregistrer le pseudo" className="h-10 w-10 shrink-0 bg-success text-success-foreground hover:bg-success/90">
+                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
                 </Button>
-                <Button size="icon" variant="ghost" onClick={onCancelEditUsername} className="h-10 w-10 shrink-0"><X className="h-5 w-5" /></Button>
+                <Button size="icon" variant="ghost" onClick={onCancelEditUsername} aria-label="Annuler la modification du pseudo" className="h-10 w-10 shrink-0"><X className="h-5 w-5" aria-hidden /></Button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
@@ -167,7 +185,7 @@ export function ProfileHeader({
                   </span>
                 )}
                 {isOwn && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground/50 hover:text-primary transition-colors" onClick={onStartEditUsername}><Edit2 className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" aria-label="Modifier le pseudo" className="h-8 w-8 text-muted-foreground/50 hover:text-primary transition-colors" onClick={onStartEditUsername}><Edit2 className="h-4 w-4" aria-hidden /></Button>
                 )}
               </div>
             )}

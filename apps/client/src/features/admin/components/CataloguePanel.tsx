@@ -354,7 +354,13 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <div key={groupKey(g)} className="glass-card overflow-hidden">
             {/* Franchise header */}
             <div className="flex items-center gap-2 px-3 py-2">
-              <button onClick={() => toggleF(g)} className="text-muted-foreground">
+              <button
+                type="button"
+                onClick={() => toggleF(g)}
+                aria-expanded={isFOpen(g)}
+                aria-label={`${isFOpen(g) ? 'Réduire' : 'Développer'} la franchise ${g.name}`}
+                className="text-muted-foreground"
+              >
                 {isFOpen(g) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
               </button>
               <span className="font-semibold">{g.name}</span>
@@ -370,16 +376,17 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                   <Button size="sm" variant="ghost" onClick={() => setAnimeDialog({ franchiseId: g.id })}>
                     <Plus className="h-3.5 w-3.5" /> Anime
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setFranchiseDialog({ franchise: g })}>
-                    <Pencil className="h-3.5 w-3.5" />
+                  <Button size="sm" variant="ghost" aria-label={`Modifier la franchise ${g.name}`} onClick={() => setFranchiseDialog({ franchise: g })}>
+                    <Pencil className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-destructive"
+                    aria-label={`Supprimer la franchise ${g.name}`}
                     onClick={() => setConfirm({ kind: "franchise", id: g.id!, label: g.name })}
                   >
-                    <Trash2 className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
                   </Button>
                 </div>
               )}
@@ -391,7 +398,13 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                 {g.animes.map((a) => (
                   <div key={a.id} className="border-b border-border/50 last:border-0">
                     <div className="flex items-center gap-2 bg-secondary/20 px-3 py-2 pl-8">
-                      <button onClick={() => toggleA(a.id)} className="text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() => toggleA(a.id)}
+                        aria-expanded={isAOpen(a.id)}
+                        aria-label={`${isAOpen(a.id) ? 'Réduire' : 'Développer'} ${a.name}`}
+                        className="text-muted-foreground"
+                      >
                         {isAOpen(a.id) ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
@@ -399,7 +412,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                         )}
                       </button>
                       {a.coverImage ? (
-                        <img src={a.coverImage} alt="" className="h-8 w-6 rounded object-cover" />
+                        <img src={a.coverImage} alt={`Couverture de ${a.name}`} className="h-8 w-6 rounded object-cover" />
                       ) : (
                         <div className="flex h-8 w-6 items-center justify-center rounded bg-secondary/50">
                           <Film className="h-3 w-3 text-muted-foreground" />
@@ -423,17 +436,19 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                           <Button
                             size="sm"
                             variant="ghost"
+                            aria-label={`Modifier ${a.name}`}
                             onClick={() => setAnimeDialog({ anime: a, franchiseId: a.franchiseId })}
                           >
-                            <Pencil className="h-3.5 w-3.5" />
+                            <Pencil className="h-3.5 w-3.5" aria-hidden />
                           </Button>
                           <Button
                             size="sm"
                             variant="ghost"
                             className="text-destructive"
+                            aria-label={`Supprimer ${a.name}`}
                             onClick={() => setConfirm({ kind: "anime", id: a.id, label: a.name })}
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3.5 w-3.5" aria-hidden />
                           </Button>
                         </div>
                       )}
@@ -495,8 +510,9 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                                 </td>
                                 <td className="p-2">
                                   <button
+                                    type="button"
                                     onClick={() => void quickPatch(s, { isLocked: !s.isLocked })}
-                                    title={s.isLocked ? "Verrouillé" : "Libre"}
+                                    aria-label={s.isLocked ? `Déverrouiller ${s.title}` : `Verrouiller ${s.title}`}
                                   >
                                     {s.isLocked ? (
                                       <Lock className="h-4 w-4 text-warning" />
@@ -511,27 +527,30 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                                       size="sm"
                                       variant="ghost"
                                       disabled={!s.videoKey}
+                                      aria-label={`Prévisualiser ${s.title}`}
                                       onClick={() => setPreview(s)}
                                     >
-                                      <Play className="h-3.5 w-3.5" />
+                                      <Play className="h-3.5 w-3.5" aria-hidden />
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="ghost"
+                                      aria-label={`Modifier ${s.title}`}
                                       onClick={() => setSongDialog({ song: s, animeId: a.id })}
                                     >
-                                      <Pencil className="h-3.5 w-3.5" />
+                                      <Pencil className="h-3.5 w-3.5" aria-hidden />
                                     </Button>
                                     {canManage && (
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         className="text-destructive"
+                                        aria-label={`Supprimer ${s.title}`}
                                         onClick={() =>
                                           setConfirm({ kind: "song", id: s.id, label: s.title })
                                         }
                                       >
-                                        <Trash2 className="h-3.5 w-3.5" />
+                                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
                                       </Button>
                                     )}
                                   </div>

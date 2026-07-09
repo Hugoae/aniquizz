@@ -1,11 +1,13 @@
 import { Trophy, Sparkles } from 'lucide-react';
 import { ComingSoonPage } from '@/components/pages/ComingSoonPage';
+import { PAGE_TITLES } from '@/lib/site';
 
 export default function Leaderboard() {
   return (
     <ComingSoonPage
-      helmetTitle="Classement - AniQuizz"
+      helmetTitle={PAGE_TITLES.leaderboard}
       helmetDescription="Le classement global arrive bientôt sur AniQuizz."
+      canonicalPath="/leaderboard"
       backLabel="Retour à l'accueil"
       backTo="/"
       icon={Trophy}

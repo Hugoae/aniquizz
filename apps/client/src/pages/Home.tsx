@@ -1,4 +1,7 @@
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { SkipLinkTarget } from '@/components/a11y/SkipLink';
+import { homeJsonLd } from '@/lib/jsonLd';
+import { PAGE_TITLES } from '@/lib/site';
 
 // Layout
 import { Header } from '@/components/layout/Header';
@@ -11,17 +14,14 @@ import { FriendsBubble } from '@/features/friends/FriendsBubble';
 const Home = () => {
   return (
     <>
-      <Helmet>
-        <title>AniQuizz - Le Blindtest Anime Nouvelle Génération</title>
-        <meta name="description" content="Testez votre culture anime avec AniQuizz" />
-      </Helmet>
+      <SeoHead homeOnly title={PAGE_TITLES.home} path="/" jsonLd={homeJsonLd()} />
 
       {/* Single-screen landing: fixed viewport height, no scroll. */}
       <div className="h-[100dvh] bg-background relative overflow-hidden flex flex-col font-sans">
 
         <Header />
 
-        <main className="flex-1 min-h-0 flex flex-col items-center justify-center relative w-full px-4 pt-16">
+        <main id={SkipLinkTarget} className="flex-1 min-h-0 flex flex-col items-center justify-center relative w-full px-4 pt-16">
           <HeroSection />
         </main>
 

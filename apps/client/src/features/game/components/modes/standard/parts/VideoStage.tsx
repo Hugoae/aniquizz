@@ -73,6 +73,11 @@ export function VideoStage({
           phase === 'revealed' && isVideoReady ? 'opacity-100 transition-opacity duration-500' : 'opacity-0',
         )}
         playsInline
+        aria-label={
+          phase === 'revealed'
+            ? "Extrait musical — réponse révélée"
+            : "Extrait musical en cours — devinez l'anime"
+        }
         // Disable Picture-in-Picture: Firefox's native PiP pops the video into a
         // floating window, bypassing our opacity-based hiding and revealing the
         // anime during the blind-test guessing phase.
@@ -93,15 +98,24 @@ export function VideoStage({
       )}
 
       {isGamePaused && (
-        <div className="absolute inset-0 z-50 flex animate-fade-in flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+        <div
+          className="absolute inset-0 z-50 flex animate-fade-in flex-col items-center justify-center bg-background/80 backdrop-blur-sm"
+          role="status"
+          aria-live="assertive"
+        >
           <Pause className="mb-4 h-16 w-16 text-foreground" />
           <h3 className="mb-2 text-2xl font-bold text-foreground">Pause</h3>
         </div>
       )}
 
       {resumeCountdown !== null && resumeCountdown > 0 && (
-        <div className="absolute inset-0 z-50 flex animate-fade-in items-center justify-center bg-background/80 backdrop-blur-sm">
-          <span className="animate-pulse text-9xl font-black text-foreground">{resumeCountdown}</span>
+        <div
+          className="absolute inset-0 z-50 flex animate-fade-in items-center justify-center bg-background/80 backdrop-blur-sm"
+          role="status"
+          aria-live="assertive"
+          aria-label={`Reprise dans ${resumeCountdown} secondes`}
+        >
+          <span className="animate-pulse text-9xl font-black text-foreground" aria-hidden="true">{resumeCountdown}</span>
         </div>
       )}
 
@@ -129,7 +143,7 @@ export function VideoStage({
       )}
 
       {phase === 'revealed' && (
-        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 px-3 py-1.5 backdrop-blur-md" role="timer">
+        <div className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-background/70 px-3 py-1.5 backdrop-blur-md" role="status" aria-live="polite">
           <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
           <span className="font-mono font-bold text-foreground">{timeLeft}s</span>
         </div>

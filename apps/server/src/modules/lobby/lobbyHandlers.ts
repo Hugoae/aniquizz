@@ -37,7 +37,8 @@ const warmWatchedList = async (room: Room, userId: string): Promise<void> => {
 
   try {
     const ids = await getUserAnimeIds(username);
-    if (ids.length) room.setWatchedIds(userId, ids);
+    // Warm the in-memory AniList cache only — playlist build re-fetches from username.
+    void ids;
   } catch {
     // Non-fatal: the build will retry the (now-warm) cache at start time.
   }
@@ -78,6 +79,7 @@ export const registerLobbyHandlers = (
         asHost: true,
         role: socket.data.role,
         level: socket.data.level,
+        anilistUsername: socket.data.anilistUsername,
       });
 
       logger.info(
@@ -136,6 +138,7 @@ export const registerLobbyHandlers = (
         asHost: uid() === room.hostId,
         role: socket.data.role,
         level: socket.data.level,
+        anilistUsername: socket.data.anilistUsername,
       });
       // Entering the lobby view means this player is no longer on the game-over
       // screen; clears their "in game" badge and can settle the room to waiting.

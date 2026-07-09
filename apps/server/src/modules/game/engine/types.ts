@@ -47,9 +47,6 @@ export interface RoomPlayer {
   roundPoints: number;
   answerType: AnswerType | null;
   answerTimeMs: number | null;
-
-  /** Optional watched-list ids pushed by the client (Watched mode). */
-  watchedIds?: number[];
 }
 
 /** A fully-prepared round: song info + pre-generated choices. */

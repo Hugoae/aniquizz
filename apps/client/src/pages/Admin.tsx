@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import { Helmet } from "react-helmet-async";
+import { SeoHead } from "@/components/seo/SeoHead";
+import { PAGE_TITLES } from "@/lib/site";
 import { toast } from "sonner";
 import { hasRole } from "@aniquizz/shared";
 import { Header } from "@/components/layout/Header";
@@ -52,8 +53,9 @@ export default function Admin() {
   if (!isStaff) {
     return (
       <div className="min-h-screen bg-background">
+        <SeoHead title={PAGE_TITLES.admin} noindex path="/admin" />
         <Header />
-        <main className="container pt-24 pb-12">
+        <main id="main-content" className="container pt-24 pb-12">
           <div className="max-w-md mx-auto glass-card p-8 text-center space-y-4">
             <Shield className="h-10 w-10 mx-auto text-muted-foreground" />
             <h1 className="text-xl font-bold">Accès réservé</h1>
@@ -73,11 +75,9 @@ export default function Admin() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Helmet>
-        <title>Admin - AniQuizz</title>
-      </Helmet>
+      <SeoHead title={PAGE_TITLES.admin} noindex path="/admin" />
       <Header />
-      <main className="container pt-24 pb-12">
+      <main id="main-content" className="container pt-24 pb-12">
         <div className="max-w-6xl mx-auto">
           <Button
             variant="ghost"

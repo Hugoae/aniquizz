@@ -19,7 +19,8 @@ async function main() {
         orderBy: { seasonYear: 'asc' },
         include: {
           songs: {
-            orderBy: { type: 'asc' }
+            // `type` was renamed to songType + sequence — order by both.
+            orderBy: [{ songType: 'asc' }, { sequence: 'asc' }]
           }
         }
       }

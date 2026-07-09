@@ -234,6 +234,18 @@ export const getRandomSongs = async (
 };
 
 /**
+ * Count the playable songs available for a set of watched anime ids, so the
+ * lobby can tell the user how many sounds their AniList list actually yields
+ * (COMPLETED songs only — the same pool the playlist builder draws from).
+ */
+export const countPlayableWatchedSongs = async (watchedIds: number[]): Promise<number> => {
+  if (!watchedIds.length) return 0;
+  return prisma.song.count({
+    where: { downloadStatus: 'COMPLETED', animeId: { in: watchedIds } },
+  });
+};
+
+/**
  * Random pool of candidate display names used to build QCM/duo choices.
  * The underlying set (every anime/franchise name) changes only when the catalogue
  * is edited, so we cache it in memory per precision. This removes a full

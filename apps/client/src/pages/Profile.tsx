@@ -8,7 +8,7 @@
  */
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
 import { toast } from 'sonner';
 import { type Area } from 'react-easy-crop';
 
@@ -329,7 +329,7 @@ export default function Profile() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="pt-24 container max-w-[1400px] mx-auto px-4">
+        <main id="main-content" className="pt-24 container max-w-[1400px] mx-auto px-4">
           <ProfileSkeleton />
         </main>
       </div>
@@ -338,12 +338,12 @@ export default function Profile() {
 
   return (
     <>
-      <Helmet><title>Profil de {vm.username} - AniQuizz</title></Helmet>
+      <SeoHead title={`Profil ${vm.username}`} noindex path="/profile" />
 
       <div className="min-h-screen bg-background pb-20">
         <Header />
 
-        <main className="pt-24 container max-w-[1400px] mx-auto px-4 space-y-8">
+        <main id="main-content" className="pt-24 container max-w-[1400px] mx-auto px-4 space-y-8">
 
           <Button
             variant="ghost"

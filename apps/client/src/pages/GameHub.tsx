@@ -1,5 +1,6 @@
 import { useState, type Dispatch, type SetStateAction } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_TITLES } from '@/lib/site';
 import type { RoomConfig } from '@aniquizz/shared';
 
 import { Lock } from 'lucide-react';
@@ -56,11 +57,14 @@ export default function GameHub() {
   if (view === 'lobby') {
     return (
       <>
+        <SeoHead title={PAGE_TITLES.play} noindex path="/play" />
         {isSoloLobby ? (
           <SoloReady
             gameSettings={roomConfig}
             playerName={profile?.username || 'Joueur'}
             playerAvatar={profile?.avatar || 'player1'}
+            user={user}
+            profile={profile}
             isLaunchStarting={isLaunchStarting}
             onStart={startLobbyGame}
             onLeave={goBack}
@@ -76,9 +80,9 @@ export default function GameHub() {
             gameSettings={roomConfig}
             roomCode={currentRoomId}
             gameStatus={gameStatus}
-            isLaunchStarting={isLaunchStarting}
-            canAddBots={import.meta.env.DEV}
-            onStartGame={startLobbyGame}
+              isLaunchStarting={isLaunchStarting}
+              canAddBots={import.meta.env.DEV}
+              onStartGame={startLobbyGame}
             onToggleReady={toggleReady}
             onLeave={goBack}
             onOpenSettings={openLobbySettings}
@@ -115,10 +119,15 @@ export default function GameHub() {
 
   return (
     <>
-      <Helmet><title>Jouer - AniQuizz</title></Helmet>
+      <SeoHead
+        title={PAGE_TITLES.play}
+        description="Configure ta partie solo ou multijoueur et lance un blindtest anime."
+        path="/play"
+        noindex
+      />
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container pt-24 pb-12 px-4 md:px-6">
+        <main id="main-content" className="container pt-24 pb-12 px-4 md:px-6">
           <div className="max-w-6xl mx-auto">
             {view === 'modes' && (
               <ModeSelectView

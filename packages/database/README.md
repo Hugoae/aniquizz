@@ -1,48 +1,164 @@
-##Architecture
+# @aniquizz/database
 
-database/
+Prisma schema, the shared Prisma client, and the ETL media pipeline that builds
+the song catalogue: **AniList → AnimeThemes → Postgres → Cloudflare R2**.
+
+## Layout
+
+```
+packages/database/
 ├── prisma/
-│   ├── migrations/             <-- Historique des changements de la BDD (géré par Prisma)
-│   └── schema.prisma           <-- Le plan de la base de données (Tables, Relations, Enums)
+│   ├── migrations/             <-- Prisma migration history
+│   └── schema.prisma           <-- DB schema (tables, relations, enums)
 │
-├── data/                       <-- Stockage des fichiers JSON (entrée/sortie des scripts)
-│   ├── .gitignore              <-- Ignore les gros fichiers générés, garde les fichiers manuels
-│   ├── manual_edits.json       <-- Les modifications manuelles (Titres, Tags, Locks) à préserver
-│   ├── data_step1.json         <-- Résultat temporaire du script 1
-│   └── data_step2.json         <-- Résultat temporaire du script 2
+├── src/                        <-- Package entry (shared Prisma client + bot helpers)
+│   ├── index.ts                <-- exports `prisma` + @prisma/client types
+│   ├── bots.ts / botCleanup.ts <-- DEV bot roster + history cleanup
 │
-└── scripts/                    <-- Toute la logique du pipeline
-    │
-    │   // --- LE PIPELINE (Ordre d'exécution) ---
-    ├── 1_fetch_anilist.ts      <-- Étape 1 : Récupère les métadonnées (Titres, Genres, Popularité) depuis AniList
-    ├── 2_fetch_animethemes.ts  <-- Étape 2 : Trouve les vidéos (Openings/Endings) correspondantes sur AnimeThemes
-    ├── 3_load_initial_data.ts  <-- Étape 3 : Lit les JSONs de l'étape 1 & 2 et crée les entrées dans la BDD Postgres (Statut: PENDING)
-    ├── 4_sync_storage.ts       <-- Étape 4 : Le "Worker". Télécharge les MP4, les compresse et les envoie sur Supabase
-    │
-    │   // --- OUTILS DE GESTION (Pour modifier les données) ---
-    ├── export_db_to_json.ts    <-- Sauvegarde l'état actuel de la BDD dans 'data/manual_edits.json' pour pouvoir les éditer
-    ├── import_edits_to_db.ts   <-- Lit 'data/manual_edits.json' et met à jour la BDD (applique les renommages, tags, changement de difficulté, etc.)
-    │
-    │   // --- ADMINISTRATION ---
-    ├── global_build.ts         <-- Le chef d'orchestre : Lance les scripts 1, 2, 3 et 4 à la suite
-    ├── reset_all.ts            <-- Zone de danger : Vide la BDD, vide le Bucket Supabase et supprime les fichiers JSON locaux
-    └── seed_db.ts              <-- Remplit la BDD avec un jeu de données propre (utile pour remettre à zéro sans tout retélécharger)
+├── data/                       <-- Pipeline I/O (JSON). Large files are gitignored.
+│   ├── manual_edits.json       <-- DB snapshot for manual edits (titles/tags/locks) — source of truth
+│   ├── data_step1.json         <-- Step 1 output (AniList metadata)
+│   ├── data_step2.json         <-- Step 2 output (+ AnimeThemes song URLs)
+│   └── animethemes_cache.json  <-- Step 2 cache (raw AnimeThemes responses, keyed by AniList id)
+│
+└── scripts/
+    ├── 1_fetch_anilist.ts      <-- Step 1: metadata (franchises, animes, popularity → difficulty)
+    ├── 2_fetch_animethemes.ts  <-- Step 2: match openings + video URLs on AnimeThemes
+    ├── 3_load_initial_data.ts  <-- Step 3: upsert Franchise/Anime/Song into Postgres (status PENDING)
+    ├── 4_sync_storage.ts       <-- Step 4: worker — download → compress (ffmpeg) → upload to R2 → COMPLETED
+    ├── global_build.ts         <-- Orchestrates steps 1 → 2 → 3 → 4
+    ├── export_db_to_json.ts    <-- Dump DB tree to data/manual_edits.json (edit titles/tags/locks)
+    ├── import_edits_to_db.ts   <-- Apply data/manual_edits.json back into the DB
+    ├── reset_all.ts            <-- DANGER: wipe DB catalogue + empty R2 bucket + delete local JSON
+    ├── seed_db.ts              <-- Reset + refill catalogue metadata from JSON (no downloads)
+    ├── seed_dev_catalogue.ts   <-- DEV: quickly put a few playable openings on R2 (COMPLETED)
+    ├── set_video_cache_control.ts <-- One-off: backfill immutable Cache-Control on all R2 objects
+    └── lib/                    <-- r2-client, media (ffmpeg), song-helpers, pipeline-schemas (zod)
+```
 
----
+Media are hosted on **Cloudflare R2** (S3-compatible). `Song.videoKey` is the R2
+object key; `Song.sourceUrl` holds the AnimeThemes download URL while PENDING and
+the public R2 URL once COMPLETED.
 
-##GUIDE D'UTILISATION
-**PRÉREQUIS IMPORTANT** : Toutes les commandes ci-dessous doivent être lancées depuis le dossier `database/`.
+## Setup
 
-npx ts-node scripts/global_build.ts <-- C'est la commande principale. Elle va chercher les animes, les sons, remplir la BDD et télécharger les vidéos. Appelle tout le Pipeline
-npx ts-node scripts/1_fetch_anilist.ts <-- Récupérer les Animes (AniList) Crée data/data_step1.json
-npx ts-node scripts/2_fetch_animethemes.ts <-- Récupérer les liens vidéos (AnimeThemes) Crée data/data_step2.json
-npx ts-node scripts/3_load_initial_data.ts <-- Remplir la Base de Données (Postgres) Lit les fichiers JSON et crée les lignes en BDD avec statut PENDING
-npx ts-node scripts/4_sync_storage.ts <-- Télécharger les vidéos (Worker) Télécharge, compresse et upload sur Supabase. À relancer quand on voit les sons en Error.
+Copy `.env.example` to `.env` and fill `DATABASE_URL` + the `R2_*` credentials.
+All commands run from `packages/database/` (or via `pnpm --filter @aniquizz/database <script>`).
 
-npx ts-node scripts/export_db_to_json.ts <-- Exporte l'état actuel de la BDD vers un fichier JSON pour changer les caractéristiques d'un anime (manual_edits.json)
-npx ts-node scripts/import_edits_to_db.ts <-- Réimporte tes modifications dans la BDD :
+## Repopulate the catalogue (controllable size)
 
-npx ts-node scripts/reset_all.ts <-- Tout effacer (BDD + Vidéos + Fichiers locaux) Utilise ça si tu veux repartir d'une feuille blanche.
-npx ts-node scripts/seed_db.ts <-- Remplir la BDD sans tout télécharger (Seed) Si tu as déjà les fichiers JSON et que tu veux juste repeupler ta table Postgres propre.
+The catalogue is fetched **most-popular-first**, so a small run gives you the
+best-known anime. Scale up later — steps are idempotent (upsert by AniList id /
+video key) and respect `isLocked` rows.
 
-npx prisma studio <-- Voir la BDD dans une interface graphique
+```bash
+# Small first run (top ~30 most popular):
+ANILIST_LIMIT=30 npx ts-node scripts/1_fetch_anilist.ts
+npx ts-node scripts/2_fetch_animethemes.ts        # uses the local cache, fast
+npx ts-node scripts/3_load_initial_data.ts        # loads songs as PENDING (AnimeThemes source)
+WORKER_SOURCE_INCLUDE=animethemes.moe npx ts-node scripts/4_sync_storage.ts
+
+# Later, a bigger run (top 500) — same commands with a larger limit:
+ANILIST_LIMIT=500 npx ts-node scripts/1_fetch_anilist.ts
+# ... then steps 2, 3, 4 again.
+```
+
+`WORKER_SOURCE_INCLUDE=animethemes.moe` makes the worker only download freshly
+resolved AnimeThemes sources and skip any stale ones (e.g. rows left over from
+the retired Supabase storage bucket).
+
+Or run the whole thing in one shot:
+
+```bash
+ANILIST_LIMIT=30 npx ts-node scripts/global_build.ts
+```
+
+### Song types (openings / endings)
+
+Step 2 imports **openings only** by default. Add endings (or inserts) with
+`SONG_TYPES`:
+
+```bash
+SONG_TYPES=OP,ED npx ts-node scripts/2_fetch_animethemes.ts
+```
+
+The AnimeThemes cache stores **every** theme (OP + ED) regardless of this
+setting, so switching from `OP` to `OP,ED` later only re-parses the cache — no
+re-fetch. Step 2 picks the best video per theme (creditless first, then highest
+resolution) and records the episode range into `Song.episodeRange`.
+
+### Enriched metadata
+
+Step 1 also stores, per anime: `idMal` (MyAnimeList id, provided directly by
+AniList — no matching needed), `coverColor`, `bannerImage`, `description`,
+`season`, `episodes`, and `averageScore`. All are nullable and additive.
+
+### Locks and upgrades (30 → 500)
+
+`isLocked` on a Franchise / Anime / Song freezes it against re-fetches
+(manual titles, difficulty, etc. are preserved). Locks live in the DB, but
+**step 1 reads them from `data/manual_edits.json`** — so always export before a
+bigger run:
+
+```bash
+# 1. Freeze current locks + manual edits into manual_edits.json
+npx ts-node scripts/export_db_to_json.ts
+# 2. Bigger run — locked rows are preserved, new seasons/animes are added
+ANILIST_LIMIT=500 npx ts-node scripts/1_fetch_anilist.ts
+npx ts-node scripts/2_fetch_animethemes.ts
+npx ts-node scripts/3_load_initial_data.ts
+WORKER_SOURCE_INCLUDE=animethemes.moe npx ts-node scripts/4_sync_storage.ts
+```
+
+Locked franchises also get their **newly-released sequels** auto-appended (as
+unlocked seasons) while keeping the existing locked seasons untouched.
+
+### Quick dev sample (no full pipeline)
+
+```bash
+DEV_SEED_LIMIT=50 npx ts-node scripts/seed_dev_catalogue.ts
+```
+
+Downloads a handful of openings straight from AnimeThemes to R2 and marks them
+COMPLETED — enough to exercise the game loop.
+
+## Manual edits
+
+```bash
+npx ts-node scripts/export_db_to_json.ts   # dump DB -> data/manual_edits.json
+# edit titles / tags / difficulty / isLocked in the JSON
+npx ts-node scripts/import_edits_to_db.ts  # apply edits back to the DB
+```
+
+## Danger zone
+
+```bash
+npx ts-node scripts/reset_all.ts   # wipes DB catalogue + empties the R2 bucket + deletes local JSON
+```
+
+## Other
+
+```bash
+npx prisma studio                  # visual DB browser
+```
+
+### Migrations (Supabase-safe workflow)
+
+`prisma migrate dev` needs a **shadow database** that the Supabase direct
+connection blocks (fails with P1001), so do **not** use it against the remote DB.
+Instead:
+
+```bash
+# 1. Edit prisma/schema.prisma, then create a migration folder + SQL by hand:
+#    prisma/migrations/<timestamp>_<name>/migration.sql   (additive/idempotent SQL)
+# 2. Apply the SQL to the remote DB:
+npx prisma db execute --file prisma/migrations/<timestamp>_<name>/migration.sql --schema prisma/schema.prisma
+# 3. Record it as applied (no re-run) and regenerate the client:
+npx prisma migrate resolve --applied <timestamp>_<name>
+npx prisma generate
+# 4. Confirm:
+npx prisma migrate status          # -> "Database schema is up to date!"
+```
+
+`prisma migrate deploy` also works for already-authored migrations. To use
+`migrate dev` you need a local shadow DB (set `shadowDatabaseUrl`).

@@ -497,15 +497,16 @@ export function UsersPanel({
 
       <div className="glass-card overflow-x-auto">
         <table className="w-full text-sm">
+          <caption className="sr-only">Liste des utilisateurs</caption>
           <thead className="text-left text-muted-foreground border-b border-border">
             <tr>
-              <th className="p-3">Joueur</th>
-              <th className="p-3">Rôle</th>
-              <th className="p-3">Parties</th>
-              <th className="p-3">Salon</th>
-              <th className="p-3">Vu</th>
-              <th className="p-3">État</th>
-              <th className="p-3 text-right">Actions</th>
+              <th scope="col" className="p-3">Joueur</th>
+              <th scope="col" className="p-3">Rôle</th>
+              <th scope="col" className="p-3">Parties</th>
+              <th scope="col" className="p-3">Salon</th>
+              <th scope="col" className="p-3">Vu</th>
+              <th scope="col" className="p-3">État</th>
+              <th scope="col" className="p-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -518,7 +519,14 @@ export function UsersPanel({
                   key={u.id}
                   className="border-b border-border/50 hover:bg-secondary/50 cursor-pointer"
                   onClick={() => setDetail(u)}
-                  title="Voir le profil"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setDetail(u);
+                    }
+                  }}
+                  tabIndex={0}
+                  aria-label={`Voir le profil de ${u.username}`}
                 >
                   <td className="p-3">
                     <div className="font-semibold flex items-center gap-2 transition-colors hover:text-primary">

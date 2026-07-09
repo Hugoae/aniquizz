@@ -1,7 +1,8 @@
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from './gameManager';
-import { getAllAnimeNames } from './gameService';
+import { getAllAnimeNames, countPlayableWatchedSongs } from './gameService';
 import { getUserAnimeIds } from '../anilist/anilistService';
+import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import { captureError } from '../../utils/errorReporter';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
@@ -57,23 +58,51 @@ export const registerGameHandlers = (
     gameManager.getRoom(roomId)?.cancelMatch(uid());
   };
 
-  const playerWatchedIds = ({ roomId, ids }: { roomId: string; ids: number[] }) => {
-    gameManager.getRoom(roomId)?.setWatchedIds(uid(), ids);
-  };
-
   const getGameState = ({ roomId }: { roomId: string }) => {
     const room = gameManager.getRoom(roomId);
     if (room) socket.emit('game_state_sync', room.getSyncState());
   };
 
-  const getMyWatched = async ({ username }: { username: string }) => {
-    if (!username) return;
+  const getMyWatched = async () => {
+    const userId = socket.data.userId;
+    if (!userId) return;
     try {
+      const profile = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: { anilistUsername: true },
+      });
+      const username = profile?.anilistUsername?.trim();
+      if (!username) {
+        socket.emit('my_watched_list', []);
+        return;
+      }
       const ids = await getUserAnimeIds(username);
       socket.emit('my_watched_list', ids);
     } catch (e) {
       logger.error('Failed to fetch watched list', 'Anilist', e);
       socket.emit('my_watched_list', []);
+    }
+  };
+
+  const getWatchedCount = async () => {
+    const userId = socket.data.userId;
+    if (!userId) return;
+    try {
+      const profile = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: { anilistUsername: true },
+      });
+      const username = profile?.anilistUsername?.trim();
+      if (!username) {
+        socket.emit('watched_count', { listSize: 0, playableSongs: 0 });
+        return;
+      }
+      const ids = await getUserAnimeIds(username);
+      const playableSongs = await countPlayableWatchedSongs(ids);
+      socket.emit('watched_count', { listSize: ids.length, playableSongs });
+    } catch (e) {
+      logger.error('Failed to count watched songs', 'Anilist', e);
+      socket.emit('watched_count', { listSize: 0, playableSongs: 0 });
     }
   };
 
@@ -92,8 +121,8 @@ export const registerGameHandlers = (
   socket.on('game:skip_round', requireAuth(socket, skipCurrentRound));
   socket.on('game:return_to_lobby', requireAuth(socket, returnToLobby));
   socket.on('game:cancel', requireAuth(socket, cancelGame));
-  socket.on('player_watched_ids', requireAuth(socket, playerWatchedIds));
   socket.on('get_game_state', getGameState);
-  socket.on('get_my_watched', getMyWatched);
+  socket.on('get_my_watched', requireAuth(socket, getMyWatched));
+  socket.on('get_watched_count', requireAuth(socket, getWatchedCount));
   socket.on('get_anime_list', getAnimeList);
 };

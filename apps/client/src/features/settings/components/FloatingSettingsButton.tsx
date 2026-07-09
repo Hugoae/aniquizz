@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Settings, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SettingsComingSoonContent } from '@/features/settings/components/SettingsComingSoonContent';
+import { GlobalSettingsContent } from '@/features/settings/components/GlobalSettingsContent';
 
 /**
  * Floating settings widget (bottom-right). Instead of opening a modal, the
@@ -43,9 +43,10 @@ export function FloatingSettingsButton() {
             open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none',
           )}
           aria-hidden={!open}
+          {...(open ? { role: 'region', 'aria-label': 'Panneau des paramètres' } : {})}
         >
           <div className="overflow-hidden">
-            <SettingsComingSoonContent variant="floating" />
+            <GlobalSettingsContent variant="floating" />
           </div>
         </div>
 

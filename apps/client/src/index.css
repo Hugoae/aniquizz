@@ -118,6 +118,15 @@
     color: hsl(var(--foreground));
   }
 
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
   /* Neutralize the browser autofill tint (Chrome blue/yellow, Firefox yellow)
      so inputs keep the dark surface instead of a flashy background. */
   input:-webkit-autofill,
@@ -317,6 +326,36 @@
 }
 .animate-rank-flash {
   animation: rank-flash 0.9s ease-out;
+}
+
+/* Legal / policy pages — readable long-form without @tailwindcss/typography plugin */
+.legal-prose {
+  @apply text-foreground;
+}
+.legal-prose h1 {
+  @apply font-display text-3xl font-extrabold tracking-tight mb-4;
+}
+.legal-prose h2 {
+  @apply font-display text-xl font-bold mt-8 mb-3;
+}
+.legal-prose p,
+.legal-prose li {
+  @apply text-sm leading-relaxed text-muted-foreground;
+}
+.legal-prose p {
+  @apply mb-4;
+}
+.legal-prose ul {
+  @apply mb-4 ml-5 list-disc space-y-2;
+}
+.legal-prose a {
+  @apply text-primary underline-offset-2 hover:underline;
+}
+.legal-prose .lead {
+  @apply text-base;
+}
+.legal-prose strong {
+  @apply font-semibold text-foreground;
 }
 
 /* Respect user motion preferences globally */

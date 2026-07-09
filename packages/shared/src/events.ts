@@ -46,6 +46,8 @@ export interface SocketData {
   mutedUntil: string | null;
   /** Player level derived from lifetime XP (server-resolved). Null for guests. */
   level: number | null;
+  /** Linked AniList username (server-resolved) or null. Used for Watched-mode gating. */
+  anilistUsername: string | null;
 }
 
 // --- CLIENT → SERVER INPUT PAYLOADS ---
@@ -148,6 +150,8 @@ export interface ServerToClientEvents {
   // Data
   anime_list: (list: AnimeListEntry[]) => void;
   my_watched_list: (ids: number[]) => void;
+  /** Size of the caller's AniList list + how many map to playable songs. */
+  watched_count: (payload: { listSize: number; playableSongs: number }) => void;
 
   // Chat / profile / general
   'chat:message': (message: ChatMessage) => void;
@@ -200,8 +204,10 @@ export interface ClientToServerEvents {
   'game:return_to_lobby': (payload: RoomIdInput) => void;
   'game:cancel': (payload: RoomIdInput) => void;
   get_game_state: (payload: RoomIdInput) => void;
-  player_watched_ids: (payload: { roomId: string; ids: number[] }) => void;
-  get_my_watched: (payload: { username: string }) => void;
+  /** Fetches the caller's AniList watched ids (server resolves username from profile). */
+  get_my_watched: () => void;
+  /** Asks how many playable songs the caller's AniList list yields (lobby hint). */
+  get_watched_count: () => void;
   get_anime_list: () => void;
 
   // Chat / profile / general

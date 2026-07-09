@@ -24,7 +24,7 @@ const INBOUND_DEBUG_ONLY_EVENTS = new Set([
   'get_rooms',
   'get_game_state',
   'get_my_watched',
-  'player_watched_ids',
+  'get_watched_count',
 ]);
 
 /** Inbound mutation events logged at info. */

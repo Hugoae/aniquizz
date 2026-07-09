@@ -4,36 +4,49 @@ import https from "https";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import ffprobeInstaller from "@ffprobe-installer/ffprobe";
+import { parseRetryAfterMs } from "./progress";
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
 const httpsAgent = new https.Agent({ keepAlive: false });
 
-export async function safeUnlink(filePath: string): Promise<void> {
-  try {
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-  } catch {
-    // ignore cleanup errors
+// AnimeThemes' video CDN rate-limits bursts with 503s; treat these (and other
+// transient statuses / network errors / timeouts) as retryable.
+const RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+export interface DownloadRetryInfo {
+  attempt: number;
+  status?: number;
+  waitMs: number;
+  error: string;
+}
+
+export interface DownloadOptions {
+  /** Max retries after the first attempt (default 4). */
+  retries?: number;
+  /** Base backoff in ms; grows exponentially with jitter (default 2000). */
+  baseDelayMs?: number;
+  /** Called before each retry wait (for logging). */
+  onRetry?: (info: DownloadRetryInfo) => void;
+}
+
+function classifyDownloadError(err: unknown): { retry: boolean; status?: number; headers?: unknown } {
+  if (axios.isAxiosError(err)) {
+    const status = err.response?.status;
+    if (status && RETRYABLE_STATUS.has(status)) {
+      return { retry: true, status, headers: err.response?.headers };
+    }
+    // No response = network-level failure (reset, DNS, socket hang up) -> retry.
+    if (!err.response) return { retry: true };
+    return { retry: false, status };
   }
+  // Our own timeout marker (see attemptDownload) is transient.
+  if (err instanceof Error && err.message.startsWith("TIMEOUT")) return { retry: true };
+  return { retry: false };
 }
 
-export async function getVideoDurationSeconds(filePath: string): Promise<number> {
-  return new Promise((resolve) => {
-    ffmpeg.ffprobe(filePath, (err: unknown, metadata: { format?: { duration?: number } }) => {
-      if (err) return resolve(0);
-      const duration = metadata?.format?.duration;
-      if (!duration || !Number.isFinite(duration)) return resolve(0);
-      resolve(Math.round(duration));
-    });
-  });
-}
-
-export async function downloadToFile(
-  url: string,
-  outPath: string,
-  timeoutMs = 60_000,
-): Promise<void> {
+async function attemptDownload(url: string, outPath: string, timeoutMs: number): Promise<void> {
   const controller = new AbortController();
   const writer = fs.createWriteStream(outPath);
 
@@ -66,6 +79,64 @@ export async function downloadToFile(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+export async function safeUnlink(filePath: string): Promise<void> {
+  try {
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {
+    // ignore cleanup errors
+  }
+}
+
+export async function getVideoDurationSeconds(filePath: string): Promise<number> {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(filePath, (err: unknown, metadata: { format?: { duration?: number } }) => {
+      if (err) return resolve(0);
+      const duration = metadata?.format?.duration;
+      if (!duration || !Number.isFinite(duration)) return resolve(0);
+      resolve(Math.round(duration));
+    });
+  });
+}
+
+export async function downloadToFile(
+  url: string,
+  outPath: string,
+  timeoutMs = 60_000,
+  opts: DownloadOptions = {},
+): Promise<void> {
+  const retries = opts.retries ?? 4;
+  const baseDelayMs = opts.baseDelayMs ?? 2000;
+
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await attemptDownload(url, outPath, timeoutMs);
+      return;
+    } catch (err: unknown) {
+      const { retry, status, headers } = classifyDownloadError(err);
+      // Always drop the partial file before retrying or giving up.
+      await safeUnlink(outPath);
+
+      if (!retry || attempt >= retries) throw err;
+
+      // Exponential backoff with jitter; honor Retry-After on 429/503.
+      const backoff = baseDelayMs * 2 ** attempt + Math.floor(Math.random() * 750);
+      const wait =
+        status === 429 || status === 503
+          ? Math.max(backoff, parseRetryAfterMs(headers, backoff))
+          : backoff;
+
+      opts.onRetry?.({
+        attempt: attempt + 1,
+        status,
+        waitMs: wait,
+        error: err instanceof Error ? err.message : "Unknown error",
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, wait));
+    }
   }
 }
 

@@ -14,10 +14,15 @@ export function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
-      <Link to="/" className="flex items-center gap-2.5 group">
-        <span className="eq h-4 text-primary transition-transform group-hover:scale-110" aria-hidden="true">
-          <i></i><i></i><i></i><i></i>
-        </span>
+      <Link to="/" className="flex items-center gap-2.5 group" aria-label="AniQuizz — accueil">
+        <img
+          src="/favicon-32x32.png"
+          alt=""
+          width={32}
+          height={32}
+          className="h-8 w-8 shrink-0 transition-transform group-hover:scale-110"
+          aria-hidden
+        />
         <span className="font-display text-2xl font-extrabold tracking-tight gradient-text">
           AniQuizz
         </span>

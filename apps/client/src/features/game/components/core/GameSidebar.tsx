@@ -98,6 +98,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
 
   return (
     <aside
+      aria-label="Panneau joueurs et chat"
       className={cn(
         'relative flex h-full shrink-0 flex-col border-l border-border bg-card/30 transition-all duration-300',
         isCollapsed ? 'w-12' : 'w-80 shadow-2xl',
@@ -124,13 +125,28 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
       {!isCollapsed && (
         <>
           <div className="border-b border-border p-2">
-            <div className="flex gap-1 rounded-lg bg-secondary/50 p-1">
-              <Button variant={activeTab === 'players' ? 'default' : 'ghost'} size="sm" onClick={() => setActiveTab('players')} className="flex-1 gap-2 rounded-md">
-                <Users className="h-4 w-4" />
+            <div className="flex gap-1 rounded-lg bg-secondary/50 p-1" role="tablist" aria-label="Joueurs et chat">
+              <Button
+                variant={activeTab === 'players' ? 'default' : 'ghost'}
+                size="sm"
+                role="tab"
+                aria-selected={activeTab === 'players'}
+                onClick={() => setActiveTab('players')}
+                className="flex-1 gap-2 rounded-md"
+              >
+                <Users className="h-4 w-4" aria-hidden />
                 Joueurs
               </Button>
-              <Button variant={activeTab === 'chat' ? 'default' : 'ghost'} size="sm" onClick={() => setActiveTab('chat')} className="relative flex-1 gap-2 rounded-md">
-                <MessageSquare className="h-4 w-4" />
+              <Button
+                variant={activeTab === 'chat' ? 'default' : 'ghost'}
+                size="sm"
+                role="tab"
+                aria-selected={activeTab === 'chat'}
+                aria-label={unreadCount > 0 && activeTab !== 'chat' ? `Chat, ${unreadCount} non lus` : 'Chat'}
+                onClick={() => setActiveTab('chat')}
+                className="relative flex-1 gap-2 rounded-md"
+              >
+                <MessageSquare className="h-4 w-4" aria-hidden />
                 Chat
                 {unreadCount > 0 && activeTab !== 'chat' && (
                   <span className="absolute right-1 top-1 flex h-4 w-4 animate-in zoom-in items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
@@ -142,7 +158,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
           </div>
 
           {activeTab === 'players' ? (
-            <div className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3">
+            <div role="tabpanel" aria-label="Joueurs" className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3">
               {sortedPlayers.map((player, index) => {
                 const isMe = String(player.id) === String(meId);
                 const rank = ranks?.get(String(player.id)) ?? index + 1;
@@ -214,7 +230,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
               })}
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
+            <div role="tabpanel" aria-label="Chat" className="flex min-h-0 flex-1 flex-col">
               <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-3">
                 {messages.length === 0 && (
                   <div className="mt-4 text-center text-xs italic text-muted-foreground opacity-50">Aucun message. Soyez le premier à parler !</div>

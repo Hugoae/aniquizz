@@ -17,7 +17,11 @@ export function UserAvatar({ avatar, username, className, fallbackClassName }: U
 
   return (
     <Avatar className={cn("border border-primary/20", className)}>
-      <AvatarImage src={uploadedSrc} className="object-cover" />
+      <AvatarImage
+        src={uploadedSrc}
+        alt={username ? `Avatar de ${username}` : 'Avatar'}
+        className="object-cover"
+      />
       <AvatarFallback className={cn('bg-secondary font-semibold text-secondary-foreground', fallbackClassName)}>{initials}</AvatarFallback>
     </Avatar>
   );

@@ -1,5 +1,7 @@
 # AniQuizz
 
+[![CI](https://github.com/Hugoae/aniquizz/actions/workflows/ci.yml/badge.svg)](https://github.com/Hugoae/aniquizz/actions/workflows/ci.yml)
+
 Real-time anime opening blind-test game. Guess the anime from its opening/ending
 in solo or multiplayer, climb the leaderboard, level up, and play with friends.
 
@@ -69,7 +71,9 @@ pnpm dev
 | `pnpm dev`          | Run client and server in watch mode            |
 | `pnpm build`        | Build every package                            |
 | `pnpm lint`         | Lint every package                             |
-| `pnpm test`         | Run tests (added from Phase 5 onward)          |
+| `pnpm test`         | Run unit, component & integration tests          |
+| `pnpm test:e2e`     | Playwright e2e (requires `E2E_EMAIL`/`E2E_PASSWORD`) |
+| `pnpm check:english`| Fail if server/shared comments contain French accents |
 | `pnpm format`       | Format the codebase with Prettier              |
 | `pnpm db:generate`  | Generate the Prisma client                     |
 | `pnpm db:migrate`   | Create/apply a Prisma migration (dev)          |

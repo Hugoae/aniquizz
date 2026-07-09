@@ -117,7 +117,7 @@ export function useGameSocket({
     socket.on('anime_list', onAnimeList);
     socket.on('my_watched_list', onMyWatched);
     socket.emit('get_anime_list');
-    if (anilistUsername) socket.emit('get_my_watched', { username: anilistUsername });
+    if (anilistUsername) socket.emit('get_my_watched');
     return () => {
       socket.off('anime_list', onAnimeList);
       socket.off('my_watched_list', onMyWatched);
