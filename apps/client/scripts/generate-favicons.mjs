@@ -23,7 +23,7 @@ const sizes = [
   [180, 'apple-touch-icon.png'],
   [192, 'android-chrome-192x192.png'],
   [512, 'android-chrome-512x512.png'],
-] as const;
+];
 
 for (const [size, name] of sizes) {
   await sharp(SRC).resize(size, size).png().toFile(path.join(PUBLIC, name));
