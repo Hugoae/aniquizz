@@ -28,7 +28,11 @@ const envSchema = z.object({
     .string()
     .min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   // Optional legacy fallback for HS256 tokens (not needed with JWT Signing Keys).
-  SUPABASE_JWT_SECRET: z.string().min(1).optional(),
+  // CI/hosting often inject unset secrets as empty strings, so coerce '' → undefined.
+  SUPABASE_JWT_SECRET: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.string().min(1).optional(),
+  ),
 });
 
 const parsed = envSchema.safeParse(process.env);
