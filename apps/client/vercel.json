@@ -1,9 +1,21 @@
 {
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.aniquizz.com" }],
+      "destination": "https://aniquizz.com/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "www.aniquizz.com" }],
       "destination": "https://aniquizz.com/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "aniquizz.vercel.app" }],
+      "destination": "https://aniquizz.com/",
       "permanent": true
     },
     {
