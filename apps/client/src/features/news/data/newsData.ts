@@ -21,35 +21,41 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
-    id: 4,
-    title: 'Patchnote 0.4 - Maintenance & Refonte Technique',
-    description: 'Une semaine dédiée aux fondations : refonte complète de l\'architecture technique, optimisation des scripts de données et rafraîchissement visuel des menus.',
-    content: "Cette semaine, pas de nouvelles fonctionnalités majeures, mais un travail de l'ombre colossal pour l'avenir du jeu.\n\nJ'ai consacré toute la semaine à reconstruire les fondations d'AniQuizz pour le rendre plus robuste et plus facile à maintenir (je commençais à avoir des fichiers incompréhensibles et ingérables).\n\nAu programme :\n\n**Architecture & BDD (Le gros morceau)**\n• Refonte Architecture : Le projet a été entièrement restructuré pour être plus propre et performant.\n• Scripts de Données : Réécriture complète des scripts qui récupèrent les animes et les musiques. Cela garantit une base de données beaucoup plus fiable et moins d'erreurs de liens à l'avenir.\n\n**Refonte Visuelle (UI/UX)**\nComme je n'ai pas pu avancer sur de nouvelles mécaniques de jeu, j'en ai profité pour donner un coup de pinceau à l'interface :\n• Menu de Configuration : Une refonte graphique pour rendre le paramétrage de vos parties plus clair et agréable.\n• Lobby Multijoueur : Une légère refonte visuelle pour rendre l'attente des autres joueurs plus sympathique.\n\nC'est une mise à jour de transition nécessaire pour préparer l'arrivée des prochaines grosses fonctionnalités. Merci de votre patience !",
-    date: '2026-02-08T18:00:00Z',
-    type: 'update'
-  },
-  {
-    id: 3,
-    title: 'Patchnote 0.3 - Profil, Intégration AniList & Système de Victoire',
-    description: 'Une refonte majeure du profil, une intégration poussée avec AniList, un équilibrage complet des conditions de victoire et de nombreuses améliorations visuelles.',
-    content: "La version 0.3 est arrivée. Cette mise à jour transforme votre identité de joueur et rend le jeu plus gratifiant, avec un accent particulier sur l'intégration de vos listes personnelles.\n\nAu programme :\n\n**Intégration AniList**\nC'est la grosse nouveauté : connectez votre compte AniList pour synchroniser vos animes vus et jouer directement avec votre Watchlist. Le système est pensé pour le multijoueur avec deux modes de fusion des listes :\n• Union : Mélange les listes de tous les joueurs (idéal pour la découverte).\n• Intersection : Sélectionne uniquement les animes vus par tout le monde (équité totale, personne ne sera désavantagé).\n\nProfil & Personnalisation\n• Avatar Personnalisé : Vous pouvez désormais uploader votre propre image, la recadrer et l'afficher en jeu.\n• Statistiques Détaillées : Un nouveau tableau de bord affiche votre taux de victoire, votre précision, votre nombre de parties et votre meilleur série (Streak).\n• Pokédex Musical : Suivez votre progression globale. Une barre d'expérience se remplit à mesure que vous découvrez des sons uniques dans la base de données, que vous ayez trouvé la réponse ou non.\n\n**Gameplay & Équilibrage**\n• Conditions de Victoire (Solo) : La victoire se mérite désormais via un score cible selon la difficulté (Facile 70%, Moyen 60%, Difficile 50%). Le mode Exact fixe le seuil à 50% pour compenser la difficulté accrue.\n• Victoire Multijoueur : Le nombre de gagnants s'adapte à la taille du lobby (Seul le 1er gagne si 4 joueurs ou moins, le Top 3 l'emporte au-delà).\n• Score Dynamique : Le calcul de la précision prend maintenant en compte le mode de jeu (Typing = 5pts, QCM = 2pts) pour un pourcentage plus juste.\n• Rangs de fin de partie : Obtenez un rang de D à S+ à la fin de chaque partie selon votre performance.\n\n**Améliorations Visuelles & Confort**\n• Écran de Fin : Refonte totale avec affichage clair du résultat (Victoire/Défaite), barre de progression vers l'objectif et mise en avant de votre avatar.\n• Streak Visuel : En jeu, un indicateur s'allume sur votre carte joueur si vous enchaînez au minimum 3 bonnes réponses.\n• Anecdotes : Une section 'Le saviez-vous ?' apparaît sur l'accueil pour enrichir votre culture anime entre deux parties.\n• Saisie Rapide : En mode Typing, la touche Entrée valide instantanément la première suggestion pour gagner de précieuses secondes.\n• Sécurité : Une fenêtre de confirmation apparaît désormais si vous tentez de quitter une partie en cours.\n• Audio : Le début des extraits vidéos est maintenant calculé sur la durée réelle du fichier pour éviter les coupures abruptes.\n\n**Corrections Techniques**\n• Solo : Correction du bouton Passer qui pouvait sauter deux étapes d'un coup.\n• Interface : Les options multijoueurs (Union/Intersection) sont correctement masquées en mode Solo.\n• Bug Fix : Correction de l'affichage +0 lors d'un skip rapide.\n\nMerci de jouer à AniQuizz !",
-    date: '2026-01-25T18:00:00Z',
-    type: 'update'
-  },
-  {
-    id: 2,
-    title: 'Patchnote 0.2 - Correction Bugs + Reset BDD + Playlist + QOL ',
-    description: 'Grosse mise à jour technique et visuelle ! Reset de la BDD pour une architecture plus solide, corrections d\'interface et amélioration du confort de jeu.',
-    content: "Cette mise à jour 0.2 marque une étape importante pour la stabilité d'AniQuizz. J'ai retravaillé les fondations du jeu pour vous offrir une expérience plus fluide et plus agréable.\n\nAu programme :\n\n**Améliorations Visuelles (UI/UX)**\n• Cartes Infos (Reveal) : Agrandissement de l'affichage pour éviter de couper les titres longs et les tags.\n• Réponses Joueurs : Les titres longs s'affichent désormais sur deux lignes au-dessus des avatars.\n• Playlists : Elles marchent dorénavant et retour des couleurs sur les icônes de playlist pour plus de lisibilité.\n• Interface : Nettoyage des boutons.\n\n**Corrections & Technique**\n• Synchronisation : Correction du décalage de temps (Timer) entre le serveur et les joueurs.\n• Saisie (Typing) : L'autocomplétion est maintenant plus intelligente (gestion des doublons et du mode Franchise).\n• Stabilité : Optimisation du téléchargement des vidéos pour éviter les chargements infinis.\n• Multijoueur : Les lobbys multijoueur sont devenus robustes, possibilité de changer d'Host, ajout d'un statut 'En Jeu' quand un joueur est encore en game.\n• Solo : Ajout d'un bouton 'Passer' lors de la phase de guess pour avoir la réponse instantanément.\n• Anime : Correction massive pour les noms des Animes et Franchise (noms harmonisés sur les versions anglaises) et perfectionnement des AltNames pour vous permettre une plus grande flexibilité.\n\nMerci de votre soutien et amusez-vous bien !",
-    date: '2026-01-24T12:00:00Z', 
-    type: 'update'
-  },
-  {
     id: 1,
-    title: 'Patchnote 0.1 - Sortie du jeu',
-    description: 'Lancement officiel d\'AniQuizz ! Découvrez les fonctionnalités de la V0.1.',
-    content: "Bienvenue sur la version 0.1 d'AniQuizz !\n\nJe suis ravi de vous présenter la première version à peu près stable du jeu.\n\nAu programme :\n• **Mode Solo :** Entraînez-vous sur des playlists (Shonen, Isekai, 90s...).\n• **Mode Multijoueur :** Créez des salons privés et défiez vos amis en temps réel.\n• **Système de jeu :** Choix entre QCM ou Typing (réponse clavier) pour plus de challenge.\n\nMerci de votre soutien et amusez-vous bien !",
-    date: '2026-01-23T12:00:00Z', 
-    type: 'update'
-  }
+    title: 'Mise à jour v26.0 - AniQuizz est en ligne',
+    description:
+      'Le blindtest anime nouvelle génération : solo ou multijoueur, AniList, amis, XP, médailles et des centaines d\'openings à deviner.',
+    content:
+      "AniQuizz est disponible ! Que vous soyez du genre à reconnaître un opening en deux notes ou à confondre encore deux shonen, il est temps de tester votre culture anime.\n\n" +
+      "Au programme :\n\n" +
+      "**Blindtest anime — Solo & Multijoueur**\n" +
+      "• Parties solo pour s'entraîner à votre rythme, ou salons privés pour défier vos amis en temps réel.\n" +
+      "• Des centaines d'openings et d'endings à deviner, avec filtres de difficulté (Facile, Moyen, Difficile).\n" +
+      "• Modes de réponse au choix : Typing (clavier), QCM Carré, Duo, ou Mix pour varier les plaisirs.\n" +
+      "• Précision Exact ou Franchise selon le niveau de challenge que vous voulez.\n" +
+      "• Médailles solo (Bronze → Platine) : votre score est jugé par rapport au maximum possible, pas juste un pourcentage arbitraire.\n" +
+      "• Autocomplétion intelligente en mode Typing pour aller vite sans sacrifier la précision.\n\n" +
+      "**Intégration AniList**\n" +
+      "• Liez votre compte AniList depuis votre profil pour synchroniser les animes que vous avez vus.\n" +
+      "• Jouez uniquement avec des sons de votre watchlist — idéal pour ne pas tomber sur un anime que vous n'avez jamais vu.\n" +
+      "• En multijoueur, deux modes de fusion : Union (toutes les listes mélangées) ou Intersection (seulement les animes vus par tout le monde).\n\n" +
+      "**Amis & Social**\n" +
+      "• Ajoutez des amis par pseudo, acceptez les demandes, voyez qui est en ligne ou en partie.\n" +
+      "• Invitez un ami dans votre lobby ou rejoignez le sien en un clic.\n" +
+      "• Ajoutez quelqu'un depuis l'écran de fin de partie ou la liste des joueurs — plus besoin de chercher son pseudo.\n" +
+      "• Liste des joueurs récents pour retrouver facilement vos adversaires d'hier.\n\n" +
+      "**Progression & Profil**\n" +
+      "• Gagnez de l'XP à chaque partie, montez de niveau et affichez votre badge dans le header.\n" +
+      "• Statistiques détaillées : victoires, précision, parties jouées, séries de victoires.\n" +
+      "• Pokédex musical : suivez combien de sons uniques vous avez déjà croisés dans le catalogue.\n" +
+      "• Avatar personnalisé : uploadez votre image, recadrez-la et portez-la en jeu.\n\n" +
+      "**Expérience de jeu**\n" +
+      "• Timer circulaire, révélation avec fiche anime (saison, note, cover…), chat en lobby.\n" +
+      "• Votes pause / skip en multijoueur, confirmation avant de quitter une partie en cours.\n" +
+      "• Interface sombre moderne, pensée pour le desktop et le mobile.\n\n" +
+      "Et ce n'est que le début — consultez la Roadmap sur la page Actualités pour voir ce qui arrive ensuite (Librairie, Classement, Daily, Compétitif…).\n\n" +
+      "Merci de jouer à AniQuizz — et bonne chance pour le Platine !",
+    date: '2026-07-09T20:00:00Z',
+    type: 'update',
+  },
 ];

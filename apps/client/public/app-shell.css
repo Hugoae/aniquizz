@@ -161,6 +161,10 @@ body {
   color: hsl(265 40% 12%);
 }
 
+.app-shell-cta::after {
+  content: 'Jouer';
+}
+
 .app-shell-secondary {
   display: flex;
   flex-wrap: wrap;
@@ -181,4 +185,12 @@ body {
   font-size: 0.875rem;
   font-weight: 600;
   color: hsl(276 16% 90%);
+}
+
+.app-shell-secondary span:first-child::after {
+  content: 'Librairie';
+}
+
+.app-shell-secondary span:last-child::after {
+  content: 'Classement';
 }

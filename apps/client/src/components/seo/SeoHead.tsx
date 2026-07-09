@@ -6,7 +6,7 @@ import {
   DEFAULT_OG_IMAGE,
   formatPageTitle,
   SITE_NAME,
-  SITE_TAGLINE,
+  HOME_PAGE_TITLE,
 } from '@/lib/site';
 
 interface SeoHeadProps {
@@ -36,7 +36,11 @@ export function SeoHead({
   const { pathname } = useLocation();
   const canonicalPath = path ?? pathname;
   const canonical = absoluteUrl(canonicalPath);
-  const fullTitle = homeOnly || title === SITE_NAME ? SITE_NAME : formatPageTitle(title);
+  const fullTitle = homeOnly
+    ? HOME_PAGE_TITLE
+    : title === SITE_NAME
+      ? SITE_NAME
+      : formatPageTitle(title);
   const metaDescription = description ?? DEFAULT_DESCRIPTION;
 
   const jsonLdBlocks = jsonLd
@@ -56,13 +60,13 @@ export function SeoHead({
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={SITE_NAME} />
       <meta property="og:locale" content="fr_FR" />
-      <meta property="og:title" content={homeOnly ? `${SITE_NAME} — ${SITE_TAGLINE}` : fullTitle} />
+      <meta property="og:title" content={homeOnly ? HOME_PAGE_TITLE : fullTitle} />
       <meta property="og:description" content={metaDescription} />
       <meta property="og:url" content={canonical} />
       <meta property="og:image" content={image} />
 
-      <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content={homeOnly ? `${SITE_NAME} — ${SITE_TAGLINE}` : fullTitle} />
+      <meta name="twitter:card" content="summary" />
+      <meta name="twitter:title" content={homeOnly ? HOME_PAGE_TITLE : fullTitle} />
       <meta name="twitter:description" content={metaDescription} />
       <meta name="twitter:image" content={image} />
 

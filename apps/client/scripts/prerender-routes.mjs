@@ -12,9 +12,9 @@ const DIST = path.join(ROOT, '../dist');
 const INDEX = path.join(DIST, 'index.html');
 
 const SITE = 'AniQuizz';
-const TAGLINE = 'Blindtest anime en ligne';
-const DEFAULT_DESC =
-  "Blindtest anime gratuit : devine l'opening ou l'ending, solo ou multijoueur, avec ta liste AniList.";
+const HOME_TITLE = "AniQuizz - Le Blindtest d'Anime";
+const HOME_DESC =
+  "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.";
 
 function escapeHtml(s) {
   return s
@@ -48,7 +48,8 @@ function shell(title, body) {
 }
 
 function homeBody() {
-  return `<p>${escapeHtml(DEFAULT_DESC)}</p><p>${escapeHtml(TAGLINE)}</p>`;
+  return `<p>${escapeHtml(HOME_DESC)}</p>
+<p>AniQuizz est un blindtest d'anime gratuit : devine l'opening ou l'ending, joue solo ou en multijoueur, filtre les sons selon ta liste AniList.</p>`;
 }
 
 function newsBody() {
@@ -71,7 +72,7 @@ function legalBody(intro) {
 }
 
 const ROUTES = {
-  '/': { title: SITE, body: homeBody() },
+  '/': { title: HOME_TITLE, body: homeBody() },
   '/news': { title: `Actus · ${SITE}`, body: newsBody() },
   '/leaderboard': {
     title: `Classement · ${SITE}`,

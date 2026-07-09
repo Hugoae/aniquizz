@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -143,4 +144,22 @@ export function RouteSkeletonFallback() {
   if (pathname.startsWith('/news')) return <NewsRouteSkeleton />;
 
   return <DefaultRouteSkeleton />;
+}
+
+/**
+ * Suspense fallback for lazy route chunks. Renders nothing for a short grace
+ * period so a prefetched/cached chunk (which resolves in a few ms) swaps in with
+ * no visible skeleton flash. The skeleton only appears if the chunk genuinely
+ * takes longer than the delay to load (slow network / cold cache).
+ */
+export function DelayedRouteFallback({ delay = 220 }: { delay?: number }) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => setVisible(true), delay);
+    return () => window.clearTimeout(id);
+  }, [delay]);
+
+  if (!visible) return null;
+  return <RouteSkeletonFallback />;
 }

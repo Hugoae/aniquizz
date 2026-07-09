@@ -3,7 +3,8 @@ import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
-import { RouteSkeletonFallback } from '@/components/layout/RouteSkeletonFallback';
+import { RouteSkeletonFallback, DelayedRouteFallback } from '@/components/layout/RouteSkeletonFallback';
+import { warmLikelyRoutes } from '@/lib/routePrefetch';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthModalContext';
@@ -61,7 +62,15 @@ function SessionFriendsProvider({ children }: { children: ReactNode }) {
 
 const AppContent = () => {
   const { showAuthModal, setShowAuthModal } = useAuthModal();
+  const { session, authReady } = useAuth();
   const navigate = useNavigate();
+
+  // Warm the most likely next route chunks once idle so navigation never flashes
+  // a Suspense skeleton. Signed-in users also get the profile chunk.
+  useEffect(() => {
+    if (!authReady) return;
+    warmLikelyRoutes(Boolean(session));
+  }, [authReady, session]);
 
   // Server-driven exits must bounce the user back home:
   //  - force_logout (admin disconnect): clear the Supabase session.
@@ -124,7 +133,7 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
       <SkipLink />
-      <Suspense fallback={<RouteSkeletonFallback />}>
+      <Suspense fallback={<DelayedRouteFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
 

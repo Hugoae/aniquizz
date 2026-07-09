@@ -8,17 +8,29 @@ interface ProfileButtonProps {
   avatar: string;
   xp?: number;
   onClick: () => void;
+  /** Warm the target route chunk on hover/focus so the click navigates instantly. */
+  onPrefetch?: () => void;
   className?: string;
 }
 
 /** Shared profile chip: XP ring, level badge, avatar, username. Used in the site header and in-game. */
-export function ProfileButton({ username, avatar, xp = 0, onClick, className }: ProfileButtonProps) {
+export function ProfileButton({
+  username,
+  avatar,
+  xp = 0,
+  onClick,
+  onPrefetch,
+  className,
+}: ProfileButtonProps) {
   const { level, percent } = levelProgress(xp);
 
   return (
     <button
       type="button"
       onClick={onClick}
+      onPointerEnter={onPrefetch}
+      onFocus={onPrefetch}
+      onPointerDown={onPrefetch}
       title="Mon profil"
       aria-label={`Profil de ${username}, niveau ${level}`}
       className={cn(

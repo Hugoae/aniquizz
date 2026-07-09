@@ -58,17 +58,29 @@ interface Candidate {
   anime: { name: string; franchiseId: number | null };
 }
 
-/** Pick candidates while maximising franchise diversity (unbiased shuffle). */
-const pickBestCandidates = (candidates: Candidate[], count: number): Candidate[] => {
+const candidateKey = (c: Candidate): string =>
+  c.anime?.franchiseId ? `f-${c.anime.franchiseId}` : `a-${c.anime.name}`;
+
+/**
+ * Pick candidates while maximising franchise diversity (unbiased shuffle).
+ * `usedKeys` is shared across cascade passes so a franchise already chosen in an
+ * earlier pass (e.g. the Watched pool) is only reused once every distinct
+ * franchise has been exhausted — i.e. the same anime never reappears unless we
+ * genuinely run out of variety.
+ */
+const pickBestCandidates = (
+  candidates: Candidate[],
+  count: number,
+  usedKeys: Set<string> = new Set<string>(),
+): Candidate[] => {
   const pool = shuffleArray(candidates);
 
   const selected: Candidate[] = [];
-  const usedKeys = new Set<string>();
   const leftovers: Candidate[] = [];
 
   // Pass 1: one song per franchise/anime for diversity.
   for (const c of pool) {
-    const key = c.anime?.franchiseId ? `f-${c.anime.franchiseId}` : `a-${c.anime.name}`;
+    const key = candidateKey(c);
     if (!usedKeys.has(key)) {
       selected.push(c);
       usedKeys.add(key);
@@ -78,7 +90,8 @@ const pickBestCandidates = (candidates: Candidate[], count: number): Candidate[]
     if (selected.length >= count) break;
   }
 
-  // Pass 2: fill remaining slots with duplicates.
+  // Pass 2: only when a distinct franchise per slot isn't available — fill the
+  // remaining slots with duplicates (we're out of variety).
   if (selected.length < count) {
     const needed = count - selected.length;
     selected.push(...shuffleArray(leftovers).slice(0, needed));
@@ -87,31 +100,39 @@ const pickBestCandidates = (candidates: Candidate[], count: number): Candidate[]
   return selected.slice(0, count);
 };
 
-/** Order the final playlist so same-franchise songs are spread out. */
+/**
+ * Order the final playlist so the same anime/franchise never plays twice in a
+ * row when it can be avoided. Greedy: at each step take the group with the most
+ * songs left whose key differs from the one just placed. Two songs from the same
+ * franchise become adjacent only if that franchise makes up more than half the
+ * playlist (unavoidable — the pool has too little variety).
+ */
 const smartShuffle = <T extends { anime: { name: string; franchise: { name: string } | null } }>(
   songs: T[],
 ): T[] => {
   if (!songs || songs.length === 0) return [];
 
-  const groups: Record<string, T[]> = {};
+  const groups = new Map<string, T[]>();
   for (const song of songs) {
     const key = song.anime.franchise?.name || song.anime.name || 'Unknown';
-    (groups[key] ??= []).push(song);
+    const bucket = groups.get(key);
+    if (bucket) bucket.push(song);
+    else groups.set(key, [song]);
   }
 
-  // Shuffle within each group, then order groups largest-first.
-  Object.keys(groups).forEach((key) => {
-    groups[key] = shuffleArray(groups[key]);
-  });
-  const sortedGroups = shuffleArray(Object.values(groups)).sort((a, b) => b.length - a.length);
+  const buckets = [...groups.entries()].map(([key, arr]) => ({ key, arr: shuffleArray(arr) }));
 
-  // Interleave.
   const result: T[] = [];
-  const maxLen = sortedGroups[0].length;
-  for (let i = 0; i < maxLen; i++) {
-    for (const group of sortedGroups) {
-      if (group[i]) result.push(group[i]);
-    }
+  let lastKey: string | null = null;
+  while (result.length < songs.length) {
+    // Largest remaining group first keeps a dominant franchise spread out.
+    buckets.sort((a, b) => b.arr.length - a.arr.length);
+    let chosen = buckets.find((b) => b.arr.length > 0 && b.key !== lastKey);
+    // Only the just-played group has songs left — adjacency is unavoidable.
+    if (!chosen) chosen = buckets.find((b) => b.arr.length > 0);
+    if (!chosen) break;
+    result.push(chosen.arr.pop() as T);
+    lastKey = chosen.key;
   }
   return result;
 };
@@ -128,6 +149,9 @@ const fetchWithFallback = async (
 ): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean }> => {
   const finalSongs: SelectedSong[] = [];
   const excludedIds: number[] = [];
+  // Shared across every pass/cascade step so the same franchise is only picked
+  // again once all others are exhausted (avoids the same anime twice per game).
+  const usedFranchiseKeys = new Set<string>();
   let fallbackUsed = false;
 
   const isWatchedMode = Array.isArray(watchedIds) && watchedIds.length > 0;
@@ -178,7 +202,9 @@ const fetchWithFallback = async (
       try {
         const candidates = await getCandidates(watchedWhere);
         if (candidates.length > 0) {
-          const picked = await loadFull(pickBestCandidates(candidates, remaining).map((s) => s.id));
+          const picked = await loadFull(
+            pickBestCandidates(candidates, remaining, usedFranchiseKeys).map((s) => s.id),
+          );
           finalSongs.push(...picked);
           excludedIds.push(...picked.map((s) => s.id));
         }
@@ -196,7 +222,9 @@ const fetchWithFallback = async (
       try {
         const candidates = await getCandidates(globalWhere);
         if (candidates.length > 0) {
-          const picked = await loadFull(pickBestCandidates(candidates, remaining).map((s) => s.id));
+          const picked = await loadFull(
+            pickBestCandidates(candidates, remaining, usedFranchiseKeys).map((s) => s.id),
+          );
           finalSongs.push(...picked);
           excludedIds.push(...picked.map((s) => s.id));
         }

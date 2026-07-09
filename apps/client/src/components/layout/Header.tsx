@@ -7,6 +7,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { ProfileButton } from '@/components/layout/ProfileButton';
+import { prefetchRoute } from '@/lib/routePrefetch';
 
 export function Header() {
   const navigate = useNavigate();
@@ -38,6 +39,9 @@ export function Header() {
           <Button
             variant="ghost"
             onClick={() => navigate('/admin')}
+            onPointerEnter={() => prefetchRoute('admin')}
+            onFocus={() => prefetchRoute('admin')}
+            onPointerDown={() => prefetchRoute('admin')}
             className="h-auto gap-2 rounded-lg px-3 py-1"
             aria-label="Administration"
             title="Administration"
@@ -55,6 +59,7 @@ export function Header() {
             avatar={profile.avatar}
             xp={profile.xp}
             onClick={() => navigate('/profile')}
+            onPrefetch={() => prefetchRoute('profile')}
           />
         ) : (
           <Button

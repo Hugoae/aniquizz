@@ -5,54 +5,78 @@ export interface RoadmapItem {
   date: string;
 }
 
-// Ordered chronologically: shipped first, then the current focus, then upcoming.
+// Flagship milestones only — ordered chronologically (shipped → next → later).
 export const roadmapData: RoadmapItem[] = [
   {
-    title: "Lancement V0.1",
-    description: "Sortie publique de la base du jeu (Solo, Multi standard, Profil).",
-    status: "done",
-    date: "Q1 2026"
+    title: 'Lancement v26.0',
+    description:
+      'Blindtest anime solo & multijoueur, AniList, amis, XP, médailles et catalogue de openings/endings.',
+    status: 'done',
+    date: 'Juillet 2026',
   },
   {
-    title: "Intégration AniList & Profil",
-    description: "Possibilité de lier son compte AniList pour jouer seulement avec les animés qu'on a vus. Mise en place d'un système de profil avec statistiques.",
-    status: "done",
-    date: "Q1 2026"
+    title: 'Playlists thématiques & modificateurs',
+    description:
+      'Sources de sons curated (genres, décennies…) et options avancées : vidéo masquée ou floutée, début du son au choix.',
+    status: 'planned',
+    date: 'Q3 2026',
   },
   {
-    title: "Système d'XP & Amis",
-    description: "Niveaux et expérience, liste d'amis, présence en ligne et invitations en partie.",
-    status: "done",
-    date: "Q1 2026"
+    title: 'Librairie musicale',
+    description:
+      'Parcourez tout le catalogue, filtrez par anime, type de son ou difficulté, et découvrez de nouvelles pépites.',
+    status: 'planned',
+    date: 'Q4 2026',
   },
   {
-    title: "Refonte visuelle (UI/UX)",
-    description: "Nouvelle identité graphique, typographie et interface plus soignée sur tout le site.",
-    status: "in-progress",
-    date: "Q3 2026"
+    title: 'Statistiques avancées',
+    description:
+      'Graphiques sur votre profil : répartition par mode, difficulté, médailles, précision et évolution dans le temps.',
+    status: 'planned',
+    date: 'Q4 2026',
   },
   {
-    title: "Nouveaux modes de jeu",
-    description: "Modes multijoueur inédits (dont un mode de rapidité façon AMQ).",
-    status: "planned",
-    date: "Q4 2026"
+    title: 'MyAnimeList',
+    description:
+      'Liez votre compte MAL pour jouer avec votre liste d\'animes regardés, en complément ou alternative à AniList.',
+    status: 'planned',
+    date: 'Q4 2026',
   },
   {
-    title: "Paramètres & Traduction anglaise",
-    description: "Ajout de paramètres pour le site et votre compte, et traduction anglaise.",
-    status: "planned",
-    date: "Q4 2026"
+    title: 'Mode Rapidité',
+    description: 'Répondez le plus vite possible : les points dépendent de votre vitesse de réaction.',
+    status: 'planned',
+    date: 'Q2 2027',
   },
   {
-    title: "Collection de sons & Coups de cœur",
-    description: "Collection de sons et possibilité d'aimer les sons pour les ajouter à vos favoris.",
-    status: "planned",
-    date: "Q1 2027"
+    title: 'Classement global',
+    description:
+      'Leaderboards par XP, victoires, séries et précision — comparez-vous à toute la communauté.',
+    status: 'planned',
+    date: 'Q1 2027',
   },
   {
-    title: "Ajout des Endings",
-    description: "Ajout des génériques de fin (Endings) en plus des Openings.",
-    status: "planned",
-    date: "Q1 2027"
-  }
+    title: 'Quiz du jour',
+    description: 'Un défi quotidien solo pour tester votre culture anime chaque jour.',
+    status: 'planned',
+    date: 'Q1 2027',
+  },
+  {
+    title: 'Succès & collection',
+    description: 'Badges de progression, objectifs à débloquer et suivi de vos exploits en jeu.',
+    status: 'planned',
+    date: 'Q1 2027',
+  },
+  {
+    title: 'Mode Compétitif',
+    description: 'Parties classées avec ladder et saisons — montez en grade et affrontez les meilleurs.',
+    status: 'planned',
+    date: 'Q2 2027',
+  },
+  {
+    title: 'Traduction anglaise',
+    description: 'Version anglaise complète du site pour jouer partout dans le monde.',
+    status: 'planned',
+    date: 'Q3 2027',
+  },
 ];

@@ -4,13 +4,24 @@ export const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined)?.r
 
 export const SITE_NAME = 'AniQuizz';
 
-export const SITE_TAGLINE = 'Blindtest anime en ligne';
+/** Home `<title>` — shown as the purple link in Google results. */
+export const HOME_PAGE_TITLE = "AniQuizz - Le Blindtest d'Anime";
 
-export const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.jpg`;
+/** Short tagline for OG / sharing when a longer title is not needed. */
+export const SITE_TAGLINE = "Le Blindtest d'Anime";
 
-/** Meta description (search snippets + OG). Keep under ~160 chars. */
-export const DEFAULT_DESCRIPTION =
-  'Blindtest anime gratuit : devine l\'opening ou l\'ending, solo ou multijoueur, avec ta liste AniList.';
+export const DEFAULT_OG_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
+
+/**
+ * Home meta description (search snippets + OG). Ends at « vous êtes le meilleur. » —
+ * no trailing nav labels (Jouer, Librairie…) which Google was picking from the
+ * static app-shell HTML.
+ */
+export const HOME_DESCRIPTION =
+  'Blindtest anime en ligne. Testez votre culture anime. Devinez l\'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.';
+
+/** Default meta description for inner pages. Keep under ~160 chars. */
+export const DEFAULT_DESCRIPTION = HOME_DESCRIPTION;
 
 /** Browser tab title separator (compact — tabs truncate long em dashes). */
 export const TITLE_SEPARATOR = ' · ';

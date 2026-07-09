@@ -1,7 +1,7 @@
 {
-  "name": "AniQuizz — Le blindtest anime",
+  "name": "AniQuizz",
   "short_name": "AniQuizz",
-  "description": "Blindtest anime multijoueur en temps réel.",
+  "description": "Blindtest anime en ligne. Devinez l'anime à partir de la musique, solo ou multijoueur.",
   "start_url": "/",
   "scope": "/",
   "lang": "fr",

@@ -6,40 +6,76 @@
     <meta name="theme-color" content="#110D16" />
     <meta name="color-scheme" content="dark" />
 
-    <title>AniQuizz</title>
-    <meta name="description" content="Blindtest anime gratuit : devine l'opening ou l'ending, solo ou multijoueur, avec ta liste AniList." />
+    <title>AniQuizz - Le Blindtest d'Anime</title>
+    <meta name="description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
     <meta name="author" content="AniQuizz" />
+    <meta name="application-name" content="AniQuizz" />
+    <meta name="apple-mobile-web-app-title" content="AniQuizz" />
     <link rel="canonical" href="https://aniquizz.com/" />
 
     <!-- Blocking first-paint shell — replaced seamlessly when React mounts. -->
     <link rel="stylesheet" href="/app-shell.css" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Google favicons: multiples of 48px (16/32 alone are often ignored). -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <link rel="icon" href="/favicon.ico" />
 
-    <meta property="og:title" content="AniQuizz — Blindtest anime en ligne" />
-    <meta property="og:description" content="Blindtest anime gratuit : devine l'opening ou l'ending, solo ou multijoueur, avec ta liste AniList." />
+    <meta property="og:title" content="AniQuizz - Le Blindtest d'Anime" />
+    <meta property="og:description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:site_name" content="AniQuizz" />
-    <meta property="og:image" content="https://aniquizz.com/og-image.jpg" />
+    <meta property="og:image" content="https://aniquizz.com/android-chrome-512x512.png" />
     <meta property="og:url" content="https://aniquizz.com/" />
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="AniQuizz — Blindtest anime en ligne" />
-    <meta name="twitter:description" content="Devine l'anime à partir de son opening ou ending. Joue solo ou multijoueur !" />
-    <meta name="twitter:image" content="https://aniquizz.com/og-image.jpg" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="AniQuizz - Le Blindtest d'Anime" />
+    <meta name="twitter:description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
+    <meta name="twitter:image" content="https://aniquizz.com/android-chrome-512x512.png" />
+
+    <!-- Static JSON-LD for crawlers (React Helmet duplicates at runtime). -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://aniquizz.com/#organization",
+            "name": "AniQuizz",
+            "url": "https://aniquizz.com/",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://aniquizz.com/android-chrome-512x512.png",
+              "width": 512,
+              "height": 512
+            }
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://aniquizz.com/#website",
+            "name": "AniQuizz",
+            "alternateName": ["Blindtest anime", "Blindtest d'anime"],
+            "url": "https://aniquizz.com/",
+            "description": "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.",
+            "publisher": { "@id": "https://aniquizz.com/#organization" },
+            "inLanguage": "fr-FR"
+          }
+        ]
+      }
+    </script>
   </head>
 
   <body>
     <div id="root">
       <div id="app-shell" aria-hidden="true">
         <header class="app-shell-header">
-          <a class="app-shell-brand" href="/">
-            <img src="/favicon-32x32.png" alt="" width="32" height="32" decoding="async" />
+          <a class="app-shell-brand" href="/" title="AniQuizz">
+            <img src="/favicon-32x32.png" alt="AniQuizz" width="32" height="32" decoding="async" />
             <span>AniQuizz</span>
           </a>
           <div class="app-shell-auth" aria-hidden="true"></div>
@@ -50,10 +86,11 @@
           <p class="app-shell-sub">
             Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
           </p>
-          <div class="app-shell-cta">Jouer</div>
-          <div class="app-shell-secondary">
-            <span>Librairie</span>
-            <span>Classement</span>
+          <!-- Decorative placeholders — labels via CSS so crawlers don't append "Jouer Librairie Classement" to snippets. -->
+          <div class="app-shell-cta" aria-hidden="true"></div>
+          <div class="app-shell-secondary" aria-hidden="true">
+            <span></span>
+            <span></span>
           </div>
         </main>
       </div>

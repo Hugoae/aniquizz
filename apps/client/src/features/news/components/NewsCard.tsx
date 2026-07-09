@@ -12,8 +12,8 @@ interface NewsCardProps {
   index?: number;
 }
 
-/** "Patchnote 0.4 - Title" → { version: "0.4", title: "Title" }. */
-const VERSION_RE = /^Patchnote\s+([\d.]+)\s*[-–—]\s*(.*)$/i;
+/** "Patchnote 0.4 - Title" / "Mise à jour v26.0 - Title" → version + title. */
+const VERSION_RE = /^(?:Patchnote|Mise à jour)\s+v?([\d.]+)\s*[-–—]\s*(.*)$/i;
 
 /** Render inline `**bold**` markers as <strong>, leaving the rest as plain text. */
 function renderRichText(text: string): ReactNode[] {
