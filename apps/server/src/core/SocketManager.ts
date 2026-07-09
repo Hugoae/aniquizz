@@ -12,7 +12,7 @@ import { registerGameHandlers } from '../modules/game/gameHandlers';
 import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
 import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
-import { broadcastPresence, isUserOnline, userRoom } from '../modules/friends/friendsPresence';
+import { schedulePresenceBroadcast, isUserOnline, userRoom } from '../modules/friends/friendsPresence';
 
 /**
  * Single entry point for Socket.io event wiring. Distributes each connection
@@ -102,12 +102,10 @@ export class SocketManager {
 
       // Tell online friends this user just came online (best-effort).
       if (userId) {
-        void broadcastPresence(this.io, this.gameManager, userId);
+        schedulePresenceBroadcast(this.io, this.gameManager, userId, { immediate: true });
 
-        // Re-broadcast rich presence when the user's room membership changes.
-        // Runs after the handler mutated room state (next tick).
         const reemitPresence = () => {
-          setTimeout(() => void broadcastPresence(this.io, this.gameManager, userId), 50);
+          schedulePresenceBroadcast(this.io, this.gameManager, userId);
         };
         for (const ev of [
           'lobby:join',
@@ -127,7 +125,7 @@ export class SocketManager {
         // Notify friends the user went offline, unless another socket of theirs
         // is still connected (e.g. a reconnect replaced this one).
         if (data.userId && !isUserOnline(this.io, data.userId)) {
-          void broadcastPresence(this.io, this.gameManager, data.userId);
+          schedulePresenceBroadcast(this.io, this.gameManager, data.userId, { immediate: true });
         }
         logger.child({
           context: 'Socket',

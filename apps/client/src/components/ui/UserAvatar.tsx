@@ -6,9 +6,11 @@ interface UserAvatarProps {
   username?: string;
   className?: string;
   fallbackClassName?: string;
+  /** Default lazy — use eager for above-the-fold identity (profile header). */
+  loading?: 'lazy' | 'eager';
 }
 
-export function UserAvatar({ avatar, username, className, fallbackClassName }: UserAvatarProps) {
+export function UserAvatar({ avatar, username, className, fallbackClassName, loading = 'lazy' }: UserAvatarProps) {
   const initials = username ? username.substring(0, 2).toUpperCase() : '??';
 
   // Only uploaded images (Supabase URLs) are shown; otherwise we fall back to
@@ -21,6 +23,8 @@ export function UserAvatar({ avatar, username, className, fallbackClassName }: U
         src={uploadedSrc}
         alt={username ? `Avatar de ${username}` : 'Avatar'}
         className="object-cover"
+        loading={loading}
+        decoding="async"
       />
       <AvatarFallback className={cn('bg-secondary font-semibold text-secondary-foreground', fallbackClassName)}>{initials}</AvatarFallback>
     </Avatar>

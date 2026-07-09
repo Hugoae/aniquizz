@@ -1,3 +1,4 @@
+import { getFuzzySuggestions, type AnimeSearchInput } from '@aniquizz/shared';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from './gameManager';
 import { getAllAnimeNames, countPlayableWatchedSongs } from './gameService';
@@ -5,7 +6,7 @@ import { getUserAnimeIds } from '../anilist/anilistService';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import { captureError } from '../../utils/errorReporter';
-import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
+import { guard, guardSilent, requireAuth, RATE_LIMITS } from '../../core/guards';
 
 export const registerGameHandlers = (
   io: TypedServer,
@@ -106,11 +107,16 @@ export const registerGameHandlers = (
     }
   };
 
-  const getAnimeList = async () => {
+  // Server-side autocomplete: run the fuzzy match over the cached catalogue and
+  // return only the ranked matches (tiny payload) instead of shipping the whole
+  // catalogue to every client. `requestId` lets the client discard stale answers.
+  const animeSearch = async ({ requestId, query, precision }: AnimeSearchInput) => {
     try {
-      socket.emit('anime_list', await getAllAnimeNames());
+      const list = await getAllAnimeNames();
+      const results = getFuzzySuggestions(list, query, precision === 'exact' ? 'exact' : 'franchise');
+      socket.emit('anime:search_results', { requestId, results });
     } catch (error) {
-      captureError(error, { context: 'Game', source: 'get_anime_list' });
+      captureError(error, { context: 'Game', source: 'anime:search' });
     }
   };
 
@@ -124,5 +130,5 @@ export const registerGameHandlers = (
   socket.on('get_game_state', getGameState);
   socket.on('get_my_watched', requireAuth(socket, getMyWatched));
   socket.on('get_watched_count', requireAuth(socket, getWatchedCount));
-  socket.on('get_anime_list', getAnimeList);
+  socket.on('anime:search', guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch));
 };

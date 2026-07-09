@@ -47,20 +47,34 @@ export class PlaylistBuilder {
       watchedIds,
     };
 
-    const { songs, fallbackUsed } = await getRandomSongs(settings.soundCount || 10, filters);
-    if (!songs.length) {
-      return { playlist: [], fallbackUsed, abortReason: 'no_songs' };
-    }
-
     const precision: Precision = settings.precision === 'exact' ? 'exact' : 'franchise';
     // Typing-only rooms never expose QCM/duo choices — don't even build them, so
     // the answer options never reach the client and can't be abused.
     const needsChoices = (settings.responseType ?? 'mix') !== 'typing';
-    const candidatePool = needsChoices ? await getChoiceCandidates(precision) : [];
+
+    // Song selection and the QCM candidate pool are independent — run them in
+    // parallel so a cold candidate cache (full anime scan) overlaps the song
+    // cascade instead of adding to it.
+    const startedAt = Date.now();
+    const [songsResult, candidatePool] = await Promise.all([
+      getRandomSongs(settings.soundCount || 10, filters),
+      needsChoices ? getChoiceCandidates(precision) : Promise.resolve<string[]>([]),
+    ]);
+    const { songs, fallbackUsed } = songsResult;
+
+    if (!songs.length) {
+      return { playlist: [], fallbackUsed, abortReason: 'no_songs' };
+    }
 
     const guessDuration = settings.guessDuration || 20;
     const playlist = songs.map((song) =>
       this.toPlaylistItem(song, precision, candidatePool, guessDuration, needsChoices),
+    );
+
+    logger.info(
+      `[PlaylistBuilder] Built ${playlist.length} rounds in ${Date.now() - startedAt}ms ` +
+        `(precision=${precision}, choices=${needsChoices}, watched=${isWatchedMode}, fallback=${fallbackUsed}).`,
+      'Playlist',
     );
 
     return { playlist, fallbackUsed };
@@ -100,6 +114,10 @@ export class PlaylistBuilder {
       cover: song.anime.coverImage,
       animeId: song.anime.id,
       year: song.anime.seasonYear,
+      season: song.anime.season,
+      format: song.anime.format,
+      episodeRange: song.episodeRange,
+      coverColor: song.anime.coverColor,
       siteUrl: song.anime.siteUrl || `https://anilist.co/anime/${song.anime.id}`,
       tags: song.anime.franchise?.genres || [],
       choices,

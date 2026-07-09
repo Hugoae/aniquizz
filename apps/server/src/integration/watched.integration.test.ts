@@ -16,20 +16,20 @@ describe.skipIf(!hasIntegrationEnv)('watched mode integration', () => {
     bundle = await createServerBundle();
 
     const profile = await prisma.profile.findUnique({
-      where: { id: TEST_USER_IDS.playerOne },
+      where: { id: TEST_USER_IDS.admin },
       select: { anilistUsername: true },
     });
     previousAnilist = profile?.anilistUsername ?? null;
     await prisma.profile.update({
-      where: { id: TEST_USER_IDS.playerOne },
+      where: { id: TEST_USER_IDS.admin },
       data: { anilistUsername: null },
     });
 
-    const token = await getTestAccessToken('playerOne');
-    socket = await connectSocket(bundle.url, token, 'player_one');
+    const token = await getTestAccessToken('admin');
+    socket = await connectSocket(bundle.url, token, 'admin_dev');
 
     socket.emit('lobby:create', {
-      username: 'player_one',
+      username: 'admin_dev',
       avatar: 'player1',
       settings: {
         mode: 'solo',
@@ -45,7 +45,7 @@ describe.skipIf(!hasIntegrationEnv)('watched mode integration', () => {
 
   afterAll(async () => {
     await prisma.profile.update({
-      where: { id: TEST_USER_IDS.playerOne },
+      where: { id: TEST_USER_IDS.admin },
       data: { anilistUsername: previousAnilist },
     });
     socket.disconnect();

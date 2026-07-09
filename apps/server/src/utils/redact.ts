@@ -64,15 +64,14 @@ export function summarizeSocketPayload(
   direction: 'inbound' | 'outbound',
   payload: unknown,
 ): unknown {
-  if (direction === 'inbound' && event === 'get_anime_list') {
-    return { _summary: 'catalogue_request' };
+  if (direction === 'inbound' && event === 'anime:search') {
+    const p = payload as { query?: string } | undefined;
+    return { _summary: 'anime_search', queryLength: p?.query?.length };
   }
 
-  if (direction === 'outbound' && event === 'anime_list') {
-    return {
-      _summary: 'catalogue_response',
-      count: Array.isArray(payload) ? payload.length : undefined,
-    };
+  if (direction === 'outbound' && event === 'anime:search_results') {
+    const p = payload as { results?: unknown[] } | undefined;
+    return { _summary: 'anime_search_results', count: Array.isArray(p?.results) ? p.results.length : undefined };
   }
 
   if (direction === 'outbound' && event === 'game_state_sync') {

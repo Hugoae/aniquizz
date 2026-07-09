@@ -73,6 +73,7 @@ export interface AdminUserListResponse {
     online: number;
     inGame: number;
     banned: number;
+    muted: number;
   };
 }
 

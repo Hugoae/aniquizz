@@ -151,7 +151,7 @@ export function ProfileHeader({
                 }}
               >
                 <div className="rounded-full bg-background p-[3px]">
-                  <UserAvatar avatar={vm.avatar} username={vm.username} className="h-28 w-28" />
+                  <UserAvatar avatar={vm.avatar} username={vm.username} className="h-28 w-28" loading="eager" />
                 </div>
               </div>
               <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">

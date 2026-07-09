@@ -76,8 +76,6 @@ export const GAME_CONFIG = {
     SUGGESTION_MIN_QUERY_FOR_FUZZY: 3,
     /** Max edit-distance ratio (of target length) for suggestion fuzzy. */
     SUGGESTION_DISTANCE_RATIO: 0.3,
-    /** Client-side catalogue size above which search runs in a Web Worker. */
-    SUGGESTION_WORKER_THRESHOLD: 2000,
   },
 
   // --- XP / LEVELING ---

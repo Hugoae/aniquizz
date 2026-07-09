@@ -10,11 +10,13 @@ import {
   parsePipelineDifficulty,
 } from './lib/song-helpers';
 import { formatDuration, Progress, Tally } from './lib/progress';
+import { isSongExcluded, loadAllPipelineExclusions } from './lib/load-pipeline-exclusions';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 const INPUT_FILE = path.join(__dirname, "../data/data_step2.json");
+const DATA_DIR = path.join(__dirname, "../data");
 
 async function main() {
   console.log(`🔥 IMPORTATION JSON -> DATABASE (Mode : Respect Locks)`);
@@ -26,6 +28,7 @@ async function main() {
 
   const rawJson = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf-8'));
   const franchisesData = parsePipelineJson(rawJson, 'data_step2.json');
+  const pipelineExclusions = loadAllPipelineExclusions(DATA_DIR);
   console.log(`📦 ${franchisesData.length} Franchises à traiter...`);
 
   const tally = new Tally();
@@ -134,6 +137,11 @@ async function main() {
 
         const { songType, sequence } = normalizePipelineSong(sData);
         const canonicalKey = buildVideoKey(animeName, aData.id, songType, sequence);
+
+        if (isSongExcluded(pipelineExclusions, { songId: sData.id, videoKey: canonicalKey })) {
+          tally.add('Sons exclus (skip)');
+          continue;
+        }
 
         // Identity is (anime, songType, sequence), NOT the videoKey: an AniList
         // romaji rename would change the key and create a duplicate row. Prefer the

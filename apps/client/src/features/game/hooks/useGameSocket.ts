@@ -6,7 +6,6 @@ import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { socket } from '@/lib/socket';
 import type {
-  AnimeListEntry,
   AnsweredPayload,
   AnswerType,
   GamePlayer,
@@ -51,7 +50,6 @@ export interface GameActions {
 
 export interface UseGameSocketResult {
   state: GameState;
-  animeList: AnimeListEntry[];
   myWatchedIds: number[];
   actions: GameActions;
 }
@@ -76,7 +74,6 @@ export function useGameSocket({
     },
   );
 
-  const [animeList, setAnimeList] = useState<AnimeListEntry[]>([]);
   const [myWatchedIds, setMyWatchedIds] = useState<number[]>([]);
 
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,16 +107,12 @@ export function useGameSocket({
     ),
   );
 
-  // --- Anime autocomplete list + personal watched list ---
+  // --- Personal watched list (autocomplete now runs server-side per keystroke) ---
   useEffect(() => {
-    const onAnimeList = (list: AnimeListEntry[]) => setAnimeList(list);
     const onMyWatched = (ids: number[]) => setMyWatchedIds(ids);
-    socket.on('anime_list', onAnimeList);
     socket.on('my_watched_list', onMyWatched);
-    socket.emit('get_anime_list');
     if (anilistUsername) socket.emit('get_my_watched');
     return () => {
-      socket.off('anime_list', onAnimeList);
       socket.off('my_watched_list', onMyWatched);
     };
   }, [anilistUsername]);
@@ -282,7 +275,6 @@ export function useGameSocket({
 
   return {
     state,
-    animeList,
     myWatchedIds,
     actions: { answer, votePause, voteSkip, skipRound, returnToLobby, cancel, requestSync },
   };

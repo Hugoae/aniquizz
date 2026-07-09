@@ -13,6 +13,7 @@ import { securityConfig } from '../config/security';
 import { GameManager } from '../modules/game/gameManager';
 import { SocketManager } from '../core/SocketManager';
 import { registerHealthRoute } from '../routes/health';
+import { registerAdminRoutes } from '../modules/admin/adminRoutes';
 
 export interface ServerBundle {
   app: express.Application;
@@ -44,6 +45,7 @@ export async function createServerBundle(): Promise<ServerBundle> {
 
   const gameManager = new GameManager(io);
   registerHealthRoute(app, io, () => gameManager);
+  registerAdminRoutes(app, io, gameManager);
 
   const socketManager = new SocketManager(io, gameManager);
   socketManager.initialize();

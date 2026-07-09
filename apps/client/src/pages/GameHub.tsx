@@ -1,6 +1,7 @@
-import { useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
+import { prefetchGame } from '@/lib/routePrefetch';
 import type { RoomConfig } from '@aniquizz/shared';
 
 import { Lock } from 'lucide-react';
@@ -21,6 +22,10 @@ import { useLobbyController, defaultConfig, defaultRoomConfig } from '@/features
 import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
 
 export default function GameHub() {
+  useEffect(() => {
+    prefetchGame();
+  }, []);
+
   const {
     user, profile,
     view, setView, navigate,

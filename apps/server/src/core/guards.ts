@@ -78,10 +78,29 @@ export const guard = <A extends unknown[]>(
   });
 };
 
+/**
+ * Like `guard`, but silently drops rate-limited calls instead of emitting an
+ * error toast. For high-frequency, low-cost read events (e.g. autocomplete)
+ * where a breach should throttle, not surface a scary message to the user.
+ */
+export const guardSilent = <A extends unknown[]>(
+  socket: TypedSocket,
+  key: string,
+  rule: RateLimitRule,
+  handler: Listener<A>,
+): Listener<A> => {
+  return requireAuth<A>(socket, (...args: A) => {
+    if (isRateLimited(socket, key, rule)) return;
+    handler(...args);
+  });
+};
+
 /** Rate-limit rules for sensitive events. */
 export const RATE_LIMITS = {
   answer: { points: 10, durationMs: 5_000 },
   chat: { points: 5, durationMs: 3_000 },
   createLobby: { points: 3, durationMs: 10_000 },
   friends: { points: 15, durationMs: 10_000 },
+  /** Autocomplete: client debounces (~10/s worst case); drop silently past this. */
+  animeSearch: { points: 30, durationMs: 5_000 },
 } as const;

@@ -3,6 +3,8 @@ import { getPipelineSongSource } from "./song-helpers";
 
 const songSchema = z
   .object({
+    /** Present in DB exports; absent in step-2 pipeline output. */
+    id: z.number().int().positive().optional(),
     title: z.string().optional(),
     artist: z.string().optional(),
     songType: z.enum(['OP', 'ED', 'INSERT']).optional(),

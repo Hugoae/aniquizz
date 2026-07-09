@@ -1,6 +1,8 @@
+import { startTransition } from 'react';
 import { Play, Music, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { prefetchGameHub } from '@/lib/routePrefetch';
 
 import { NewsSection } from './NewsSection';
 
@@ -43,7 +45,9 @@ export function HeroSection() {
             <Button
               variant="glow"
               size="xxl"
-              onClick={() => navigate('/play')}
+              onClick={() => startTransition(() => navigate('/play'))}
+              onMouseEnter={prefetchGameHub}
+              onFocus={prefetchGameHub}
               className="group font-display"
             >
               <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />

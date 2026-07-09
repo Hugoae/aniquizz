@@ -124,7 +124,21 @@ export function useLobbyController() {
     [user, profile],
   );
 
-  useEffect(() => { if (view === 'roomList' && socket.connected) { socket.emit('get_rooms'); } }, [view]);
+  useEffect(() => {
+    if (view !== 'roomList') return;
+
+    const subscribe = () => {
+      socket.emit('lobby:subscribe_list');
+    };
+
+    if (socket.connected) subscribe();
+    else socket.once('connect', subscribe);
+
+    return () => {
+      socket.off('connect', subscribe);
+      if (socket.connected) socket.emit('lobby:unsubscribe_list');
+    };
+  }, [view]);
 
   // Live "players in multiplayer rooms" count for the Multiplayer card teaser.
   useEffect(() => {
@@ -169,7 +183,10 @@ export function useLobbyController() {
     if (!socket.connected) socket.connect();
     if (socket.connected) setMySocketId(socket.id || '');
 
-    const onConnect = () => { setMySocketId(socket.id || ''); if (view === 'roomList') socket.emit('get_rooms'); };
+    const onConnect = () => {
+      setMySocketId(socket.id || '');
+      if (view === 'roomList') socket.emit('lobby:subscribe_list');
+    };
     const onRoomsUpdate = (rooms: RoomListItem[]) => setAvailableRooms(rooms);
 
     const myUserId = user?.id || '';

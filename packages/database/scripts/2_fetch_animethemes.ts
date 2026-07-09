@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
 import { formatDuration, parseRetryAfterMs, Progress, Tally } from "./lib/progress";
+import { buildVideoKey } from "./lib/song-helpers";
+import { isSongExcluded, loadAllPipelineExclusions } from "./lib/load-pipeline-exclusions";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -199,6 +201,13 @@ async function enrichData() {
 
   const franchises = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
   const cache = loadCache();
+  const pipelineExclusions = loadAllPipelineExclusions(DATA_DIR);
+
+  if (pipelineExclusions.songIds.size > 0 || pipelineExclusions.videoKeys.size > 0) {
+    console.log(
+      `🚫 ${pipelineExclusions.songIds.size} excluded song id(s), ${pipelineExclusions.videoKeys.size} excluded videoKey(s)`,
+    );
+  }
 
   let totalSongsAdded = 0;
   const tally = new Tally();
@@ -296,6 +305,12 @@ async function enrichData() {
 
         const artist = artistsArr.length ? artistsArr.join(", ") : "Unknown Artist";
         const sourceUrl = normalizeVideoLink(best.link);
+        const videoKey = buildVideoKey(anime.name, anime.id, themeType, seq);
+
+        if (isSongExcluded(pipelineExclusions, { videoKey })) {
+          tally.add("Sons exclus (skip)");
+          continue;
+        }
 
         songsForThisAnime.push({
           title: rawTitle,

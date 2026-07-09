@@ -85,7 +85,7 @@ export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, signOut, loading: authLoading, refreshProfile } = useAuth();
+  const { user, profile, signOut, authReady, refreshProfile } = useAuth();
   const {
     addById, remove, block, unblock, relationOf, openProfile, loading: friendsLoading,
   } = useFriends();
@@ -109,17 +109,17 @@ export default function Profile() {
 
   // Own profile lives on /profile — collapse /profile/:selfId into it.
   useEffect(() => {
-    if (!authLoading && user && userId && userId === user.id) navigate('/profile', { replace: true });
-  }, [authLoading, user, userId, navigate]);
+    if (authReady && user && userId && userId === user.id) navigate('/profile', { replace: true });
+  }, [authReady, user, userId, navigate]);
 
   // Deep-link to the friends section (own profile only).
   useEffect(() => {
-    if (!isOwn || authLoading || !user || location.hash !== '#amis') return;
+    if (!isOwn || !authReady || !user || location.hash !== '#amis') return;
     const t = setTimeout(() => {
       document.getElementById('amis')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 150);
     return () => clearTimeout(t);
-  }, [isOwn, authLoading, user, location.hash]);
+  }, [isOwn, authReady, user, location.hash]);
 
   useEffect(() => {
     if (profile) {
@@ -134,11 +134,22 @@ export default function Profile() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOwn]);
 
-  // Self stats stream.
+  // Keep the latest refreshProfile without re-subscribing the stats stream when
+  // its identity changes (e.g. token refresh) — that would re-emit get_stats and
+  // trigger a redundant server-side stats recompute.
+  const refreshProfileRef = useRef(refreshProfile);
+  refreshProfileRef.current = refreshProfile;
+
+  // Self stats: one fetch per time we land on our own profile.
   useEffect(() => {
     if (!isOwn) return;
     if (!socket.connected) socket.connect();
     socket.emit('profile:get_stats');
+  }, [isOwn]);
+
+  // Self profile socket subscriptions (stable across refreshProfile identity).
+  useEffect(() => {
+    if (!isOwn) return;
 
     const onStats = (data: unknown) => {
       if (isStatsData(data)) setStatsData(data);
@@ -149,7 +160,7 @@ export default function Profile() {
       if (action === 'link') toast.success('Compte AniList lié !');
       else if (action === 'unlink') toast.success('Compte AniList délié.');
       else toast.success('Profil mis à jour !');
-      setIsSaving(false); setIsEditingUsername(false); refreshProfile();
+      setIsSaving(false); setIsEditingUsername(false); refreshProfileRef.current();
     };
     const onError = (err: { message?: string }) => {
       pendingAnilistRef.current = null;
@@ -167,7 +178,7 @@ export default function Profile() {
       socket.off('profile:error', onError);
       socket.off('error', onError);
     };
-  }, [isOwn, refreshProfile]);
+  }, [isOwn]);
 
   // Public profile stream (guards against stale responses when userId changes).
   useEffect(() => {

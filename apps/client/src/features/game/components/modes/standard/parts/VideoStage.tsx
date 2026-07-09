@@ -73,6 +73,7 @@ export function VideoStage({
           phase === 'revealed' && isVideoReady ? 'opacity-100 transition-opacity duration-500' : 'opacity-0',
         )}
         playsInline
+        preload="auto"
         aria-label={
           phase === 'revealed'
             ? "Extrait musical — réponse révélée"

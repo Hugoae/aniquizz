@@ -7,7 +7,7 @@ import { RoleBadge } from '@/components/ui/RoleBadge';
 import { cn } from '@/lib/utils';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { useFriends } from './FriendsContext';
+import { useFriendsOptional } from './FriendsContext';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
 
 /**
@@ -16,7 +16,10 @@ import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
  */
 export function FriendsBubble() {
   const { user } = useAuth();
-  const { friends, incoming, onlineCount, accept, reject, openProfile } = useFriends();
+  const friendsCtx = useFriendsOptional();
+  if (!user || !friendsCtx) return null;
+
+  const { friends, incoming, onlineCount, accept, reject, openProfile } = friendsCtx;
   const navigate = useNavigate();
 
   const [open, setOpen] = useState(false);

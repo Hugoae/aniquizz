@@ -1,0 +1,42 @@
+{
+  "animeIds": [204356, 111790, 153658, 131573, 112151, 178788, 102976, 167404, 128740, 21220, 21579, 21875, 21386, 104157, 154967, 161474, 21039, 20811, 146984, 10863, 20021, 21403, 21326, 109190, 103047],
+  "songIds": [9457, 9615, 9655],
+  "videoKeys": [
+    "ONEPIECE-21-OP1.mp4",
+    "NoGameNoLife-19815-OP2.mp4",
+    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4"
+  ],
+  "_comments": {
+    "204356": "Boku no Hero Academia No. 170+1: More — no usable OP; permanently excluded from pipeline fetches.",
+    "111790": "Haikyuu!! Season 4: Riku VS Kuu (OVA) — no songs; excluded from pipeline fetches.",
+    "153658": "Haikyuu!!: Gomi Suteba no Kessen (movie) — no songs; excluded from pipeline fetches.",
+    "131573": "Jujutsu Kaisen 0 (movie) — excluded; side branch that blocked TV sequel chain expansion.",
+    "112151": "Kimetsu no Yaiba: Mugen Ressha-hen (movie) — no songs; excluded from pipeline fetches.",
+    "178788": "Kimetsu no Yaiba: Mugenjou-hen Movie 1 (Infinity Castle) — no songs; excluded from pipeline fetches.",
+    "102976": "KONOSUBA: Legend of Crimson (movie) — no songs; excluded from pipeline fetches.",
+    "167404": "MONSTERS: Ippaku Sanjou Hiryuu Jigoku (One Piece spin-off ONA) — no songs; excluded from pipeline fetches.",
+    "128740": "Nanatsu no Taizai: Hikari ni Norowareshi Mono-tachi (movie) — no songs; excluded from pipeline fetches.",
+    "21220": "BORUTO: NARUTO THE MOVIE — no songs; excluded from pipeline fetches.",
+    "21579": "BORUTO: NARUTO THE MOVIE - Naruto ga Hokage ni Natta Hi (special) — no songs; excluded from pipeline fetches.",
+    "21875": "No Game No Life Zero (movie) — no songs; excluded from pipeline fetches.",
+    "21386": "One Punch Man: Road to Hero (OVA) — no songs; excluded from pipeline fetches.",
+    "104157": "Seishun Buta Yarou wa Yumemiru Shoujo no Yume wo Minai (movie) — no songs; excluded from pipeline fetches.",
+    "154967": "Seishun Buta Yarou wa Odekake Sister no Yume wo Minai (movie) — no songs; excluded from pipeline fetches.",
+    "161474": "Seishun Buta Yarou wa Randoseru Girl no Yume wo Minai (movie) — no songs; excluded from pipeline fetches.",
+    "21039": "Shigatsu wa Kimi no Uso: MOMENTS (OVA) — no songs; excluded from pipeline fetches.",
+    "20811": "Shingeki no Kyojin Gaiden: Kuinaki Sentaku (OVA) — no songs; excluded from pipeline fetches.",
+    "146984": "Shingeki no Kyojin: The Final Season - Kanketsu-hen Zenpen (special) — no songs; excluded from pipeline fetches.",
+    "10863": "Steins;Gate: Oukoubakko no Poriomania (OVA) — no songs; excluded from pipeline fetches.",
+    "20021": "Sword Art Online: Extra Edition (special) — no songs; excluded from pipeline fetches.",
+    "21403": "Sword Art Online: Ordinal Scale (movie) — no songs; excluded from pipeline fetches.",
+    "21326": "Tokyo Ghoul: [PINTO] (OVA) — no songs; excluded from pipeline fetches.",
+    "109190": "Violet Evergarden Gaiden: Eien to Jidou Shuki Ningyou (movie) — no songs; excluded from pipeline fetches.",
+    "103047": "Violet Evergarden Movie — no songs; excluded from pipeline fetches.",
+    "9457": "One Piece generic theme (bad AnimeThemes match) — not a real OP.",
+    "9615": "No Game No Life ep.11 special OP (Onegai☆Snyaiper) — excluded from catalogue.",
+    "ONEPIECE-21-OP1.mp4": "Same as song id 9457 — block by videoKey for pipeline steps 2–3.",
+    "NoGameNoLife-19815-OP2.mp4": "Same as song id 9615 — block by videoKey for pipeline steps 2–3.",
+    "9655": "Anohana OP2 phantom row (title 'Circle Game') — no OP2 on AnimeThemes; corrupt R2 object quarantined.",
+    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4": "Same as song id 9655 — block by videoKey for pipeline steps 2–3."
+  }
+}

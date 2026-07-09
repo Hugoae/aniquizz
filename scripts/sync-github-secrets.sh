@@ -40,7 +40,7 @@ set_secret VITE_SUPABASE_ANON_KEY "$(read_env "$CLIENT_ENV" VITE_SUPABASE_ANON_K
 set_secret VITE_SERVER_URL "$(read_env "$CLIENT_ENV" VITE_SERVER_URL || true)"
 set_secret VITE_R2_PUBLIC_URL "$(read_env "$CLIENT_ENV" VITE_R2_PUBLIC_URL || true)"
 
-set_secret E2E_EMAIL "player1@aniquizz.test"
+set_secret E2E_EMAIL "admin@aniquizz.test"
 set_secret E2E_PASSWORD "$(read_env "$SERVER_ENV" TEST_ACCOUNTS_PASSWORD || true)"
 
 echo "Done. Run: gh secret list -R $REPO"

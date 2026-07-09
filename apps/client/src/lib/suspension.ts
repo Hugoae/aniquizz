@@ -3,6 +3,8 @@
  * Durations are expressed in minutes to match the admin API contract.
  */
 
+import { useEffect, useState } from "react";
+
 export interface DurationOption {
   label: string;
   minutes: number;
@@ -62,3 +64,13 @@ export const formatRemaining = (until: string | null | undefined): string => {
   if (hours > 0) return `${hours} h ${minutes} min`;
   return `${minutes} min`;
 };
+
+/** Re-render every second while a sanction countdown is visible. */
+export function useSanctionTicker(active: boolean): void {
+  const [, force] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => force((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+}

@@ -13,30 +13,30 @@ describe.skipIf(!hasIntegrationEnv)('ban at connect integration', () => {
   });
 
   afterAll(async () => {
-    await clearModeration(TEST_USER_IDS.playerTwo);
+    await clearModeration(TEST_USER_IDS.admin);
     await bundle.close();
   });
 
   afterEach(async () => {
-    await clearModeration(TEST_USER_IDS.playerTwo);
+    await clearModeration(TEST_USER_IDS.admin);
   });
 
   it('rejects a banned user during the socket handshake', async () => {
     const bannedUntil = new Date(Date.now() + 60 * 60_000);
-    await setModeration(TEST_USER_IDS.playerTwo, { bannedUntil });
+    await setModeration(TEST_USER_IDS.admin, { bannedUntil });
 
-    const token = await getTestAccessToken('playerTwo');
-    const err = await connectSocketExpectFail(bundle.url, token, 'player_two');
+    const token = await getTestAccessToken('admin');
+    const err = await connectSocketExpectFail(bundle.url, token, 'admin_dev');
     expect(err.message).toMatch(/BANNED|banned/i);
   });
 
   it('allows the user again after the ban expires in DB', async () => {
-    await setModeration(TEST_USER_IDS.playerTwo, {
+    await setModeration(TEST_USER_IDS.admin, {
       bannedUntil: new Date(Date.now() - 60_000),
     });
 
-    const token = await getTestAccessToken('playerTwo');
-    const socket = await connectSocket(bundle.url, token, 'player_two');
+    const token = await getTestAccessToken('admin');
+    const socket = await connectSocket(bundle.url, token, 'admin_dev');
     expect(socket.connected).toBe(true);
     socket.disconnect();
   });

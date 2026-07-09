@@ -4,12 +4,14 @@ import { Button } from '@/components/ui/button';
 import { LogIn, Shield } from 'lucide-react';
 
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, profile, setShowAuthModal } = useAuth();
+  const { user, profile } = useAuth();
+  const { setShowAuthModal } = useAuthModal();
   const isStaff = hasRole(profile?.role, 'MODERATOR');
 
   return (
@@ -20,6 +22,8 @@ export function Header() {
           alt=""
           width={32}
           height={32}
+          fetchPriority="high"
+          decoding="async"
           className="h-8 w-8 shrink-0 transition-transform group-hover:scale-110"
           aria-hidden
         />

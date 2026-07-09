@@ -1,7 +1,6 @@
 # Architecture
 
-High-level overview of how AniQuizz is structured. For the phased refactor
-roadmap, see [`PLAN.md`](./PLAN.md).
+High-level overview of AniQuizz as deployed at [aniquizz.com](https://aniquizz.com).
 
 ## System overview
 
@@ -12,6 +11,7 @@ flowchart LR
   end
   subgraph server [Server - Render]
     express[Express + Socket.io]
+    engine[MatchEngine + PlaylistBuilder]
     prisma[Prisma Client]
   end
   subgraph data [Data]
@@ -20,67 +20,91 @@ flowchart LR
     r2[(Cloudflare R2)]
   end
   react -->|WebSocket + JWT| express
-  react -->|Auth| auth
-  react -->|MP4 read r2.dev| r2
+  react -->|Sign-in| auth
+  react -->|MP4 CDN| r2
+  express --> engine
   express --> prisma --> pg
   express -->|verify JWT| auth
   pipeline[ETL pipeline] -->|upload MP4| r2
   pipeline --> pg
 ```
 
-## Packages
+## Monorepo packages
 
 ### `apps/client`
 
-React + Vite single-page app deployed to Vercel.
+React SPA deployed to Vercel (`apps/client` as project root).
 
-- `src/pages` — routed pages (Home, GameHub, Game, Profile, Leaderboard, ...).
-- `src/features` — feature modules (auth, game, hub, home, news, profile, settings).
-- `src/components/ui` — shadcn/ui primitives.
-- `src/lib` — cross-cutting clients (`supabase`, `socket`) and utilities.
-- `src/index.css` — design system tokens (dark theme, gradients, animations).
+| Area | Purpose |
+| ---- | ------- |
+| `src/pages/` | Routed views — Home, GameHub, Game, Profile, Admin, legal pages |
+| `src/features/` | Feature modules — auth, game, hub, friends, profile, admin, settings |
+| `src/components/ui/` | shadcn/ui primitives |
+| `src/lib/` | Supabase, socket, admin API, env, route prefetch |
+| `vercel.json` | SPA rewrite, apex redirects, immutable asset cache |
+
+Route-based code splitting (`React.lazy`) with skeleton fallbacks. Supabase and
+socket helpers load on demand after first paint where possible.
 
 ### `apps/server`
 
-Express + Socket.io back-end deployed to Render (Starter plan; no cold start).
+Express + Socket.io on Render (Starter, Frankfurt). Binds `0.0.0.0:$PORT`.
 
-- `src/core` — HTTP/Socket server bootstrap and the `SocketManager` dispatcher.
-- `src/modules` — feature handlers (game, lobby, chat, profile, anilist).
-- `src/modules/game/classes` — the game engine (`GameCore` + mode classes).
-- `src/config` — security/CORS configuration.
-- `src/utils` — logging and helpers.
+| Area | Purpose |
+| ---- | ------- |
+| `src/core/` | HTTP bootstrap, `SocketManager`, JWT auth middleware, rate guards |
+| `src/modules/game/` | `GameManager`, `gameHandlers`, `gameService`, **engine/** (`MatchEngine`, `PlaylistBuilder`, `RoundClock`, …) |
+| `src/modules/lobby/` | Room create/join, settings, room list fan-out |
+| `src/modules/chat/` | In-game chat (respects mute sanctions) |
+| `src/modules/profile/` | Stats, public profiles, leaderboard stub |
+| `src/modules/friends/` | Friend graph, presence, invites |
+| `src/modules/admin/` | REST `/admin/*` — users, rooms, catalogue, stats, dev tools |
+| `src/modules/anilist/` | Watched-list resolution for AniList mode |
+| `src/routes/` | `/health`, leaderboard HTTP stub |
+
+Catalogue caches (`getAllAnimeNames`, choice candidates) warm at boot to reduce
+cold-start latency on Render.
 
 ### `packages/shared`
 
-Framework-agnostic code shared by client and server: TypeScript types,
-game constants, and **pure logic** (fuzzy matching, scoring, Fisher-Yates
-shuffle, ranks). This package holds the business logic worth protecting with
-unit tests.
+Framework-agnostic types, socket event contracts (`events.ts`), game constants,
+and **pure logic** — fuzzy matching, scoring, grading/medals, ranking, leveling,
+Fisher–Yates selection. Unit-tested; imported by both client and server.
 
 ### `packages/database`
 
-- `prisma/schema.prisma` — the data model, under version control via migrations.
-- `src/index.ts` — the shared Prisma client instance and re-exported types.
-- `scripts/` — the ETL pipeline (AniList fetch, AnimeThemes fetch, load,
-  media sync) and admin tools (reset, export/import edits, seed).
+- `prisma/schema.prisma` + migrations — source of truth for Postgres
+- `src/index.ts` — shared Prisma client, bot helpers
+- `scripts/` — ETL pipeline (steps 1–4), export/import manual edits, R2 integrity scan, video repair
 
-## Identity model
+Media keys live in `Song.videoKey`; completed songs point at public R2 URLs.
 
-Players are identified by the `userId` carried in the Supabase JWT, not by
-`socket.id` (which changes on reconnect). This makes scores, XP, friends and
-stats reliably attachable and enables clean reconnection. JWT verification on
-the Socket.io handshake is introduced in Phase 2.
+## Identity & security
 
-## Data flow: a Standard match
+- **Socket handshake** verifies the Supabase JWT; `socket.data.userId` is the only trusted identity.
+- **Banned users** are rejected at handshake; **muted users** cannot send chat (live sanction push via `profile:sanction_updated`).
+- **Admin routes** require MODERATOR or ADMIN role from the database, not the client.
+- **RLS** on Supabase tables — see [`docs/security/rls-audit.md`](./docs/security/rls-audit.md).
 
-1. A player creates or joins a room (lobby) over Socket.io.
-2. The host starts the match; the server pre-builds the round playlist.
-3. For each round the server streams a media key (resolved to an R2 URL on the
-   client), collects answers, locks them, then reveals and scores.
-4. At the end, results are persisted (stats, XP) through the Prisma client.
+## Realtime flow: Standard match
 
-## Environment & configuration
+1. Host creates/joins a lobby; settings stored server-side (`RoomSettings` / `GameConfig`).
+2. Host starts — `PlaylistBuilder` selects songs (filters, difficulty, watched mode, QCM choices).
+3. Each round: server emits `round_start` (R2 key + start offset), collects `game:answer`, then `round_reveal`.
+4. `MatchEngine` scores answers; anti-cheat rejects answers before reveal.
+5. `game_over` persists stats/XP; solo medals computed from mastery ratio (`packages/shared` grading).
 
-Each runnable package reads its own `.env`. See [`.env.example`](./.env.example)
-for the full reference and the per-package `.env.example` files for the exact
-subset each one needs.
+## Environment
+
+Each runnable package has its own `.env`. See [`.env.example`](./.env.example) and
+per-package `.env.example` files for the required subset.
+
+## Related docs
+
+| Doc | Topic |
+| --- | ----- |
+| [`docs/admin/moderation.md`](./docs/admin/moderation.md) | Mute/ban behaviour |
+| [`docs/security/rls-audit.md`](./docs/security/rls-audit.md) | Postgres RLS |
+| [`docs/seo/google-search-console.md`](./docs/seo/google-search-console.md) | SEO checklist |
+| [`docs/perf/baseline.md`](./docs/perf/baseline.md) | Performance snapshots |
+| [`packages/database/README.md`](./packages/database/README.md) | Catalogue pipeline |

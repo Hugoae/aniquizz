@@ -8,6 +8,56 @@ import type { GameManager } from '../game/gameManager';
 import type { TypedServer } from '../../core/socketTypes';
 import type { PresenceInfo } from './friendsService';
 
+const PRESENCE_DEBOUNCE_MS = 400;
+
+const pendingPresenceTimers = new Map<string, NodeJS.Timeout>();
+const lastPresencePayloadKey = new Map<string, string>();
+
+const presencePayloadKey = (pr: PresenceInfo): string =>
+  `${pr.status}|${pr.roomId ?? ''}|${pr.roomName ?? ''}|${pr.joinable ?? false}`;
+
+/** Skip re-emitting identical presence to friends (connect storms, duplicate lifecycle hooks). */
+const shouldSkipPresenceBroadcast = (userId: string, pr: PresenceInfo): boolean => {
+  if (pr.status === 'offline') {
+    lastPresencePayloadKey.delete(userId);
+    return false;
+  }
+  const key = presencePayloadKey(pr);
+  if (lastPresencePayloadKey.get(userId) === key) return true;
+  lastPresencePayloadKey.set(userId, key);
+  return false;
+};
+
+/**
+ * Debounced presence broadcast for high-frequency lifecycle events (lobby join,
+ * game start, return to lobby). Connect/disconnect use `immediate: true`.
+ */
+export const schedulePresenceBroadcast = (
+  io: TypedServer,
+  gameManager: GameManager,
+  userId: string,
+  options: { immediate?: boolean } = {},
+): void => {
+  const run = () => {
+    pendingPresenceTimers.delete(userId);
+    void broadcastPresence(io, gameManager, userId);
+  };
+
+  if (options.immediate) {
+    const pending = pendingPresenceTimers.get(userId);
+    if (pending) {
+      clearTimeout(pending);
+      pendingPresenceTimers.delete(userId);
+    }
+    run();
+    return;
+  }
+
+  const pending = pendingPresenceTimers.get(userId);
+  if (pending) clearTimeout(pending);
+  pendingPresenceTimers.set(userId, setTimeout(run, PRESENCE_DEBOUNCE_MS));
+};
+
 export const userRoom = (userId: string): string => `user:${userId}`;
 
 /** Whether the user currently has a live socket. */
@@ -50,6 +100,7 @@ export const broadcastPresence = async (
 ): Promise<void> => {
   try {
     const pr = resolvePresence(io, gameManager, userId);
+    if (shouldSkipPresenceBroadcast(userId, pr)) return;
     const lastSeenAt = new Date().toISOString();
     const friendIds = await acceptedFriendIds(userId);
     for (const friendId of friendIds) {

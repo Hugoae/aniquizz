@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Shield } from "lucide-react";
 import { useAuth } from "@/features/auth/context/AuthContext";
+import { ProfileRouteSkeleton } from "@/components/layout/RouteSkeletonFallback";
 import { adminApi, AdminApiError } from "@/lib/adminApi";
 import { UsersPanel } from "@/features/admin/components/UsersPanel";
 import { RoomsPanel } from "@/features/admin/components/RoomsPanel";
@@ -19,7 +20,7 @@ import { StatsPanel } from "@/features/admin/components/StatsPanel";
 const IS_DEV = import.meta.env.DEV;
 
 export default function Admin() {
-  const { session, loading, profile, refreshProfile } = useAuth();
+  const { session, authReady, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const [claiming, setClaiming] = useState(false);
   const [tab, setTab] = useState("users");
@@ -30,8 +31,9 @@ export default function Admin() {
     setTab("rooms");
   };
 
-  if (loading) return null;
+  if (!authReady) return <ProfileRouteSkeleton />;
   if (!session) return <Navigate to="/" replace />;
+  if (!profile) return <ProfileRouteSkeleton />;
 
   const role = profile?.role;
   const isStaff = hasRole(role, "MODERATOR");

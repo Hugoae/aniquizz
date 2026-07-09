@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Crown, X, Bot } from 'lucide-react';
 import type { UserRole } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
@@ -35,7 +36,7 @@ interface LobbyPlayerCardProps {
 /** Whether a player id refers to a simulated bot (no friend action for those). */
 const isBotId = (id: string | number) => typeof id === 'string' && id.startsWith('bot-');
 
-export function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsAniList, onTransferHost, onKick }: LobbyPlayerCardProps) {
+export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsAniList, onTransferHost, onKick }: LobbyPlayerCardProps) {
   const { isInGame, isReady, isHost, isBot, level } = player;
 
   return (
@@ -148,4 +149,4 @@ export function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsAniList,
       </div>
     </div>
   );
-}
+});

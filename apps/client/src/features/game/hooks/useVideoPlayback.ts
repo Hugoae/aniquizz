@@ -80,9 +80,17 @@ export function useVideoPlayback({
     warmedVideoKeyRef.current = videoKey;
     el.preload = 'auto';
     el.muted = true;
-    el.src = `${getVideoUrl(videoKey)}#t=${startTime}`;
+    const url = `${getVideoUrl(videoKey)}#t=${startTime}`;
+    el.src = url;
     el.load();
   }, []);
+
+  /** Drop warm-cache when the active round changes so the next clip can prefetch. */
+  useEffect(() => {
+    if (!currentSong || !('videoKey' in currentSong)) return;
+    if (loadedVideoKeyRef.current === currentSong.videoKey) return;
+    warmedVideoKeyRef.current = null;
+  }, [currentSong]);
 
   // Keep the live element volume in sync with state.
   useEffect(() => {

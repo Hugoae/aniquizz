@@ -50,6 +50,14 @@ export interface RevealSong {
   cover?: string | null;
   franchise?: string | null;
   year?: number | null;
+  /** AniList release season: WINTER / SPRING / SUMMER / FALL. */
+  season?: string | null;
+  /** AniList format: TV, MOVIE, OVA, etc. */
+  format?: string | null;
+  /** Episode range covered by this theme entry (AnimeThemes), e.g. "1-13". */
+  episodeRange?: string | null;
+  /** Dominant cover color from AniList — UI accent at reveal only. */
+  coverColor?: string | null;
   siteUrl?: string;
   tags?: string[];
   animeId?: number;
@@ -221,6 +229,15 @@ export interface LobbyJoinedPayload {
   status: GameStatus;
 }
 
+export interface RoomListSettingsSummary {
+  soundCount: number;
+  difficulty: string[];
+  guessDuration: number;
+  precision: Precision;
+  responseType: ResponseType;
+  soundSelection: string;
+}
+
 export interface RoomListItem {
   id: string;
   name: string;
@@ -231,7 +248,8 @@ export interface RoomListItem {
   maxPlayers: number;
   isPrivate: boolean;
   status: GameStatus;
-  settings: RoomSettings;
+  /** Trimmed settings for the public lobby browser (no password / host duplicates). */
+  settings: RoomListSettingsSummary;
 }
 
 export interface RoomUpdatedPayload {

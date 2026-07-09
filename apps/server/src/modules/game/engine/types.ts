@@ -65,6 +65,10 @@ export interface PlaylistItem {
   cover: string | null;
   animeId: number;
   year: number | null;
+  season: string | null;
+  format: string | null;
+  episodeRange: string | null;
+  coverColor: string | null;
   siteUrl: string;
   tags: string[];
   choices: string[];

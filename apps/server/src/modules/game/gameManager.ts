@@ -1,8 +1,9 @@
 import { customAlphabet } from 'nanoid';
-import type { RoomListItem, RoomSettings } from '@aniquizz/shared';
+import type { RoomListItem, RoomListSettingsSummary, RoomSettings } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import type { TypedServer } from '../../core/socketTypes';
+import { LOBBY_LIST_ROOM } from '../lobby/lobbyRooms';
 import { Room } from './engine/Room';
 import type { BotConfig } from './engine/types';
 import { normalizeRoomSettings } from './settings';
@@ -55,6 +56,17 @@ export interface AdminRoomDetail {
 
 /** Grace period before an all-disconnected room is torn down. */
 const CLEANUP_GRACE_MS = 15_000;
+/** Trailing debounce for public room-list broadcasts. */
+const ROOM_LIST_BROADCAST_MS = 150;
+
+const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => ({
+  soundCount: settings.soundCount,
+  difficulty: settings.difficulty,
+  guessDuration: settings.guessDuration,
+  precision: settings.precision,
+  responseType: settings.responseType,
+  soundSelection: settings.soundSelection,
+});
 
 // --- IDLE / STALE ROOM POLICY ---------------------------------------------
 /** How often the idle-room sweep runs. */
@@ -71,6 +83,7 @@ export class GameManager {
   private readonly cleanupTimers = new Map<string, NodeJS.Timeout>();
   private readonly io: TypedServer;
   private readonly generateId = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 6);
+  private roomListBroadcastTimer: NodeJS.Timeout | null = null;
 
   private readonly sweepTimer: NodeJS.Timeout;
 
@@ -150,6 +163,7 @@ export class GameManager {
     this.rooms.delete(roomId);
     this.cancelCleanup(roomId);
     logger.info(`[GameManager] Room ${roomId} removed.`, 'GameManager');
+    this.broadcastRoomList();
   }
 
   findRoomBySocket(socketId: string): Room | undefined {
@@ -208,12 +222,25 @@ export class GameManager {
       maxPlayers: room.settings.maxPlayers,
       isPrivate: room.settings.isPrivate,
       status: room.status,
-      settings: room.settings,
+      settings: toRoomListSettings(room.settings),
     }));
   }
 
+  /** Push the public room list to lobby browsers (debounced, targeted fan-out). */
   broadcastRoomList(): void {
-    this.io.emit('rooms_update', this.getRoomList());
+    if (this.roomListBroadcastTimer) {
+      clearTimeout(this.roomListBroadcastTimer);
+    }
+    this.roomListBroadcastTimer = setTimeout(() => {
+      this.roomListBroadcastTimer = null;
+      this.io.to(LOBBY_LIST_ROOM).emit('rooms_update', this.getRoomList());
+    }, ROOM_LIST_BROADCAST_MS);
+    this.roomListBroadcastTimer.unref?.();
+  }
+
+  /** Immediate snapshot for a socket that just subscribed or called get_rooms. */
+  sendRoomListTo(socketId: string): void {
+    this.io.to(socketId).emit('rooms_update', this.getRoomList());
   }
 
   getStats() {
@@ -451,7 +478,7 @@ export class GameManager {
         break;
       }
     }
-    this.io.emit('rooms_update', this.getRoomList());
+    this.broadcastRoomList();
     return removed;
   }
 }

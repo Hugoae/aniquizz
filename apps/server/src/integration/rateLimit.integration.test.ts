@@ -10,8 +10,8 @@ describe.skipIf(!hasIntegrationEnv)('rate limit integration', () => {
 
   beforeAll(async () => {
     bundle = await createServerBundle();
-    const token = await getTestAccessToken('playerOne');
-    socket = await connectSocket(bundle.url, token, 'player_one');
+    const token = await getTestAccessToken('admin');
+    socket = await connectSocket(bundle.url, token, 'admin_dev');
   });
 
   afterAll(async () => {
@@ -25,7 +25,7 @@ describe.skipIf(!hasIntegrationEnv)('rate limit integration', () => {
 
     for (let i = 0; i < 6; i++) {
       socket.emit('lobby:create', {
-        username: 'player_one',
+        username: 'admin_dev',
         avatar: 'player1',
         settings: { mode: 'solo', maxPlayers: 1, roomName: `Rate ${i}` },
       });

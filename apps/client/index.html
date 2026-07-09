@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="dark" style="color-scheme: dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -11,12 +11,8 @@
     <meta name="author" content="AniQuizz" />
     <link rel="canonical" href="https://aniquizz.com/" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=JetBrains+Mono:wght@400..700&family=Plus+Jakarta+Sans:wght@400..800&display=swap"
-    />
+    <!-- Blocking first-paint shell — replaced seamlessly when React mounts. -->
+    <link rel="stylesheet" href="/app-shell.css" />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -39,7 +35,31 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-shell" aria-hidden="true">
+        <header class="app-shell-header">
+          <a class="app-shell-brand" href="/">
+            <img src="/favicon-32x32.png" alt="" width="32" height="32" decoding="async" />
+            <span>AniQuizz</span>
+          </a>
+          <div class="app-shell-auth" aria-hidden="true"></div>
+        </header>
+        <main class="app-shell-main">
+          <div class="app-shell-eyebrow">Devine l'anime rien qu'à sa musique</div>
+          <h1 class="app-shell-title">Testez votre <span>culture anime</span></h1>
+          <p class="app-shell-sub">
+            Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
+          </p>
+          <div class="app-shell-cta">Jouer</div>
+          <div class="app-shell-secondary">
+            <span>Librairie</span>
+            <span>Classement</span>
+          </div>
+        </main>
+      </div>
+    </div>
+    <!-- Crawlable route copy for bots; kept out of #root to avoid a pre-hydrate flash. -->
+    <div id="seo-content" hidden></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

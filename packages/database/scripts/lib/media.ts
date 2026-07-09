@@ -101,6 +101,21 @@ export async function getVideoDurationSeconds(filePath: string): Promise<number>
   });
 }
 
+/** True when ffprobe can read a positive duration and ffmpeg can decode at least one frame. */
+export async function isPlayableMp4(filePath: string): Promise<boolean> {
+  const duration = await getVideoDurationSeconds(filePath);
+  if (duration <= 0) return false;
+
+  return new Promise((resolve) => {
+    ffmpeg(filePath)
+      .outputOptions(['-frames:v', '1', '-f', 'null'])
+      .output(process.platform === 'win32' ? 'NUL' : '/dev/null')
+      .on('end', () => resolve(true))
+      .on('error', () => resolve(false))
+      .run();
+  });
+}
+
 export async function downloadToFile(
   url: string,
   outPath: string,

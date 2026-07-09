@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { captureClientError } from '@/lib/errorReporter';
+import './fonts.css';
 import './index.css';
 
 window.addEventListener('error', (event) => {

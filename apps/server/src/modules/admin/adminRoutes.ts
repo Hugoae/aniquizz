@@ -83,6 +83,20 @@ export function registerAdminRoutes(
     }
   };
 
+  const pushSanctionToSockets = (
+    userId: string,
+    sanction: { bannedUntil: Date | null; mutedUntil: Date | null },
+  ) => {
+    const payload = {
+      bannedUntil: sanction.bannedUntil?.toISOString() ?? null,
+      mutedUntil: sanction.mutedUntil?.toISOString() ?? null,
+    };
+    forEachUserSocket(userId, (s) => {
+      s.data.mutedUntil = payload.mutedUntil;
+      s.emit('profile:sanction_updated', payload);
+    });
+  };
+
   // Identity/role probe used by the client to gate the /admin UI.
   router.get(
     '/me',
@@ -150,6 +164,7 @@ export function registerAdminRoutes(
           online: onlineCount,
           inGame: inGame.size,
           banned: await adminService.getBannedUserCount(),
+          muted: await adminService.getMutedUserCount(),
         },
       });
     }),
@@ -203,6 +218,7 @@ export function registerAdminRoutes(
         return;
       }
       const result = await adminService.setUserBan(pid(req), parsed.data.minutes);
+      pushSanctionToSockets(pid(req), result);
       // A live ban takes effect now: drop the target's sockets (the handshake
       // rejects any reconnection while the ban is active).
       if (parsed.data.minutes !== null) {
@@ -226,12 +242,7 @@ export function registerAdminRoutes(
         return;
       }
       const result = await adminService.setUserMute(pid(req), parsed.data.minutes);
-      // Reflect the new mute state on live sockets so chat is blocked/unblocked
-      // without waiting for a reconnect.
-      const mutedUntilIso = result.mutedUntil ? result.mutedUntil.toISOString() : null;
-      forEachUserSocket(pid(req), (s) => {
-        s.data.mutedUntil = mutedUntilIso;
-      });
+      pushSanctionToSockets(pid(req), result);
       logger.info(`Admin ${req.actor!.username} mute(${parsed.data.minutes}) on ${pid(req)}`, 'Admin');
       res.json(result);
     }),

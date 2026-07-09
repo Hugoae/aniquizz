@@ -2,77 +2,106 @@ import { prisma, isBotId } from '@aniquizz/database';
 import type { PublicProfile, PresenceStatus, FriendSummary } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 
+const PLAYABLE_SONGS_TTL_MS = 10 * 60 * 1000;
+let playableSongsCache: { count: number; at: number } | null = null;
+
+/** Global catalogue denominator — cached to avoid a full count on every profile load. */
+const countPlayableSongs = async (): Promise<number> => {
+    const now = Date.now();
+    if (playableSongsCache && now - playableSongsCache.at < PLAYABLE_SONGS_TTL_MS) {
+        return playableSongsCache.count;
+    }
+    const count = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+    playableSongsCache = { count, at: now };
+    return count;
+};
+
 /** Full stats + identity for a user; shared by the personal and public profile. */
 const computeRichStats = async (userId: string) => {
     if (isBotId(userId)) throw new Error('Profil introuvable.');
     try {
-        // 1. Récupérer le nombre total de sons jouables (dénominateur)
-        const totalSongs = await prisma.song.count({
-            where: { downloadStatus: 'COMPLETED' } // On ne compte que les sons prêts
-        });
-
-        // 2. Récupérer le nombre de sons découverts par le joueur (numérateur)
-        // distinct: ['songId'] est important si jamais il y a des doublons historiques
-        const discoveredSongs = await prisma.songHistory.count({
-            where: { profileId: userId }
-        });
-
-        // 3. Calcul du pourcentage
-        const progressPercent = totalSongs > 0 
-            ? Math.round((discoveredSongs / totalSongs) * 100) 
-            : 0;
-
-        // 4. Récupération des autres stats (si besoin de calculs complexes)
-        const profile = await prisma.profile.findUnique({
-            where: { id: userId },
-            select: {
-                username: true,
-                avatar: true,
-                role: true,
-                lastSeenAt: true,
-                createdAt: true,
-                xp: true,
-                level: true,
-                gamesPlayed: true,
-                gamesWon: true,
-                totalGuesses: true,
-                correctGuesses: true,
-                maxStreak: true
-            }
-        });
-
-        if (!profile) throw new Error("Profil introuvable");
-
-        // Best single-match score (used to highlight a personal record).
-        const best = await prisma.matchPlayer.aggregate({
-            where: { profileId: userId },
-            _max: { score: true },
-        });
-
-        // Last 5 finished matches for the history section.
-        const historyRows = await prisma.matchPlayer.findMany({
-            where: { profileId: userId, match: { status: 'FINISHED' } },
-            select: {
-                score: true,
-                rank: true,
-                isWinner: true,
-                correctCount: true,
-                xpEarned: true,
-                answers: { select: { answerType: true } },
-                match: {
-                    select: {
-                        id: true,
-                        mode: true,
-                        totalRounds: true,
-                        startedAt: true,
-                        endedAt: true,
-                        _count: { select: { players: true } },
+        // Single DB round-trip wave: none of these depend on each other, so we
+        // issue every profile query at once instead of two sequential batches.
+        const [
+            totalSongs,
+            discoveredSongs,
+            profile,
+            best,
+            historyRows,
+            scoreAgg,
+            timeAgg,
+            roundsPlayed,
+            finishedMatches,
+        ] = await Promise.all([
+            countPlayableSongs(),
+            prisma.songHistory.count({
+                where: { profileId: userId },
+            }),
+            prisma.profile.findUnique({
+                where: { id: userId },
+                select: {
+                    username: true,
+                    avatar: true,
+                    role: true,
+                    lastSeenAt: true,
+                    createdAt: true,
+                    xp: true,
+                    level: true,
+                    gamesPlayed: true,
+                    gamesWon: true,
+                    totalGuesses: true,
+                    correctGuesses: true,
+                    maxStreak: true,
+                },
+            }),
+            prisma.matchPlayer.aggregate({
+                where: { profileId: userId },
+                _max: { score: true },
+            }),
+            prisma.matchPlayer.findMany({
+                where: { profileId: userId, match: { status: 'FINISHED' } },
+                select: {
+                    score: true,
+                    rank: true,
+                    isWinner: true,
+                    correctCount: true,
+                    xpEarned: true,
+                    answers: { select: { answerType: true } },
+                    match: {
+                        select: {
+                            id: true,
+                            mode: true,
+                            totalRounds: true,
+                            startedAt: true,
+                            endedAt: true,
+                            _count: { select: { players: true } },
+                        },
                     },
                 },
-            },
-            orderBy: { match: { startedAt: 'desc' } },
-            take: 5,
-        });
+                orderBy: { match: { startedAt: 'desc' } },
+                take: 5,
+            }),
+            // Cumulative score/XP + answer time (avg & min) + rounds + multi/solo split + playtime.
+            prisma.matchPlayer.aggregate({ where: { profileId: userId }, _sum: { score: true, xpEarned: true } }),
+            prisma.roundAnswer.aggregate({
+                where: { matchPlayer: { profileId: userId }, timeMs: { not: null } },
+                _avg: { timeMs: true },
+                _min: { timeMs: true },
+            }),
+            prisma.roundAnswer.count({ where: { matchPlayer: { profileId: userId } } }),
+            prisma.matchPlayer.findMany({
+                where: { profileId: userId, match: { status: 'FINISHED' } },
+                select: {
+                    match: { select: { startedAt: true, endedAt: true, _count: { select: { players: true } } } },
+                },
+            }),
+        ]);
+
+        const progressPercent = totalSongs > 0
+            ? Math.round((discoveredSongs / totalSongs) * 100)
+            : 0;
+
+        if (!profile) throw new Error("Profil introuvable");
 
         // Pre-game answer style, inferred from the answers actually recorded.
         // Only a pure TYPING/QCM match maps to that mode; anything else — including
@@ -104,23 +133,6 @@ const computeRichStats = async (userId: string) => {
                 durationMs: end ? end.getTime() - start.getTime() : null,
             };
         });
-
-        // Cumulative score/XP + answer time (avg & min) + rounds + multi/solo split + playtime.
-        const [scoreAgg, timeAgg, roundsPlayed, finishedMatches] = await Promise.all([
-            prisma.matchPlayer.aggregate({ where: { profileId: userId }, _sum: { score: true, xpEarned: true } }),
-            prisma.roundAnswer.aggregate({
-                where: { matchPlayer: { profileId: userId }, timeMs: { not: null } },
-                _avg: { timeMs: true },
-                _min: { timeMs: true },
-            }),
-            prisma.roundAnswer.count({ where: { matchPlayer: { profileId: userId } } }),
-            prisma.matchPlayer.findMany({
-                where: { profileId: userId, match: { status: 'FINISHED' } },
-                select: {
-                    match: { select: { startedAt: true, endedAt: true, _count: { select: { players: true } } } },
-                },
-            }),
-        ]);
 
         let multiCount = 0;
         let soloCount = 0;

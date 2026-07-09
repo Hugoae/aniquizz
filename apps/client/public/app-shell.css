@@ -1,0 +1,184 @@
+/* First-paint shell — mirrors Home hero + header before React/Tailwind load. */
+html {
+  color-scheme: dark;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background-color: hsl(265 25% 7%);
+}
+
+#app-shell {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: hsl(276 22% 96%);
+  background-color: hsl(265 25% 7%);
+}
+
+#app-shell::before,
+#app-shell::after {
+  content: '';
+  position: fixed;
+  pointer-events: none;
+  border-radius: 9999px;
+  filter: blur(120px);
+}
+
+#app-shell::before {
+  top: -12%;
+  left: 50%;
+  width: min(820px, 120vw);
+  height: 520px;
+  transform: translateX(-50%);
+  background: hsl(265 68% 54% / 0.12);
+}
+
+#app-shell::after {
+  right: 18%;
+  bottom: 0;
+  width: 420px;
+  height: 420px;
+  background: hsl(175 78% 52% / 0.08);
+}
+
+.app-shell-header {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid hsl(266 14% 18% / 0.6);
+  background: hsl(265 25% 7% / 0.8);
+  padding: 0 1rem;
+  backdrop-filter: blur(12px);
+}
+
+.app-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.app-shell-brand img {
+  width: 2rem;
+  height: 2rem;
+}
+
+.app-shell-brand span {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, hsl(265 68% 54%), hsl(255 66% 46%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-shell-auth {
+  width: 5.5rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(266 14% 18% / 0.5);
+  background: hsl(266 16% 17% / 0.5);
+}
+
+.app-shell-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem 1rem 1.5rem;
+  text-align: center;
+}
+
+.app-shell-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid hsl(266 14% 18%);
+  border-radius: 9999px;
+  background: hsl(266 16% 17% / 0.6);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: hsl(268 11% 64%);
+}
+
+.app-shell-title {
+  margin: 0 0 1rem;
+  max-width: 36rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.app-shell-title span {
+  background: linear-gradient(135deg, hsl(265 68% 54%), hsl(175 78% 52%));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-shell-sub {
+  margin: 0 0 1.5rem;
+  max-width: 32rem;
+  font-size: clamp(1rem, 2.5vw, 1.125rem);
+  line-height: 1.5;
+  color: hsl(268 11% 64%);
+}
+
+.app-shell-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 11rem;
+  height: 3.5rem;
+  margin-bottom: 1rem;
+  padding: 0 1.5rem;
+  border-radius: 0.75rem;
+  background: linear-gradient(135deg, hsl(265 68% 54%), hsl(255 66% 46%));
+  box-shadow: 0 0 32px hsl(265 78% 66% / 0.35);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: hsl(265 40% 12%);
+}
+
+.app-shell-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.app-shell-secondary span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 7.5rem;
+  height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid hsl(266 14% 18% / 0.5);
+  border-radius: 0.5rem;
+  background: hsl(266 22% 10% / 0.6);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: hsl(276 16% 90%);
+}

@@ -138,6 +138,63 @@ describe('getFuzzySuggestions', () => {
     expect(labels(getFuzzySuggestions(snkCatalogue, 'attack', 'franchise'))).toEqual(['Attack on Titan']);
   });
 
+  it('franchise mode keeps single-anime franchises with non-latin alt names', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      { name: 'Popular Parent', franchise: 'Popular Parent', altNames: [] },
+      { name: 'Popular Parent S2', franchise: 'Popular Parent', altNames: [] },
+      {
+        name: 'Black Clover',
+        franchise: 'Black Clover',
+        altNames: ['Black Clover', 'ブラッククローバー', 'Чёрный клевер'],
+      },
+    ];
+    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual(['Black Clover']);
+    expect(labels(getFuzzySuggestions(catalogue, 'black', 'franchise'))).toContain('Black Clover');
+  });
+
+  it('franchise mode keeps single-anime franchises whose title contains a colon', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      { name: 'Popular Parent', franchise: 'Popular Parent', altNames: [] },
+      { name: 'Popular Parent S2', franchise: 'Popular Parent', altNames: [] },
+      {
+        name: 'Cyberpunk: Edgerunners',
+        franchise: 'Cyberpunk: Edgerunners',
+        altNames: ['Cyberpunk: Edgerunners', 'サイバーパンク エッジランナーズ', 'Киберпанк: Бегущие по краю'],
+      },
+      {
+        name: 'Fullmetal Alchemist: Brotherhood',
+        franchise: 'Fullmetal Alchemist: Brotherhood',
+        altNames: ['Fullmetal Alchemist: Brotherhood', 'Hagane no Renkinjutsushi: Fullmetal Alchemist'],
+      },
+    ];
+
+    expect(labels(getFuzzySuggestions(catalogue, 'cyberpunk', 'franchise'))).toEqual(['Cyberpunk: Edgerunners']);
+    expect(labels(getFuzzySuggestions(catalogue, 'cyberpunk edgerunners', 'franchise'))).toEqual([
+      'Cyberpunk: Edgerunners',
+    ]);
+    expect(labels(getFuzzySuggestions(catalogue, 'edgerunner', 'franchise'))).toEqual(['Cyberpunk: Edgerunners']);
+    expect(labels(getFuzzySuggestions(catalogue, 'brotherhood', 'franchise'))).toEqual([
+      'Fullmetal Alchemist: Brotherhood',
+    ]);
+  });
+
+  it('franchise mode does not bubble to a parent via empty normalized alt names', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      { name: 'Kizumonogatari I: Tekketsu-hen', franchise: 'Kizumonogatari I: Tekketsu-hen', altNames: [] },
+      { name: 'Kizumonogatari II', franchise: 'Kizumonogatari I: Tekketsu-hen', altNames: [] },
+      {
+        name: 'Black Clover',
+        franchise: 'Black Clover',
+        altNames: ['Black Clover', 'ブラッククローバー'],
+      },
+    ];
+
+    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual(['Black Clover']);
+    expect(labels(getFuzzySuggestions(catalogue, 'black', 'franchise'))).not.toEqual([
+      'Kizumonogatari I: Tekketsu-hen',
+    ]);
+  });
+
   it('exact mode lists individual anime names in exact mode', () => {
     const res = labels(getFuzzySuggestions(list, 'naru', 'exact'));
     expect(res).toContain('Naruto');

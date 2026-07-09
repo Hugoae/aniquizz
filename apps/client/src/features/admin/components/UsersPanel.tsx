@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { MicOff, Ban, Power, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +11,6 @@ import {
   PaginationItem,
 } from "@/components/ui/pagination";
 import { ProfileView } from "@/features/profile/components/ProfileView";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -40,7 +32,6 @@ import {
   AdminApiError,
   type AdminUser,
   type AdminUserProfile,
-  type Presence,
   type Role,
   type UserListFilter,
   type UserListSort,
@@ -48,50 +39,17 @@ import {
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  DURATION_OPTIONS,
   formatRelativeFromNow,
   formatRemaining,
   isSanctionActive,
+  useSanctionTicker,
 } from "@/lib/suspension";
-
-const ROLE_OPTIONS: Role[] = ["USER", "MODERATOR", "ADMIN"];
-
-const roleBadgeClass: Record<Role, string> = {
-  USER: "bg-secondary text-foreground",
-  MODERATOR: "bg-info/20 text-info",
-  ADMIN: "bg-primary/20 text-primary",
-};
-
-type FilterKey = UserListFilter;
-type SortKey = UserListSort;
-
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "players", label: "Joueurs" },
-  { key: "online", label: "En ligne" },
-  { key: "in_game", label: "En partie" },
-  { key: "moderators", label: "Modérateurs" },
-  { key: "admins", label: "Admins" },
-  { key: "muted", label: "Mutés" },
-  { key: "banned", label: "Bannis" },
-];
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: "username", label: "Pseudo" },
-  { key: "xp", label: "XP" },
-  { key: "games", label: "Parties" },
-  { key: "created", label: "Inscription" },
-  { key: "seen", label: "Activité" },
-];
-
-const PRESENCE_META: Record<Presence, { label: string; dot: string; text: string }> = {
-  online: { label: "En ligne", dot: "bg-success", text: "text-success" },
-  in_game: { label: "In game", dot: "bg-primary", text: "text-primary" },
-  offline: { label: "Hors ligne", dot: "bg-muted-foreground/30", text: "text-muted-foreground" },
-};
-
-const formatDate = (iso: string): string =>
-  new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+import {
+  AdminUserRow,
+  PRESENCE_META,
+  formatDate,
+  type AdminUserRowPending,
+} from "@/features/admin/components/AdminUserRow";
 
 /** Build a compact page-number list with ellipses (e.g. 1 … 4 5 6 … 12). */
 const buildPageNumbers = (current: number, total: number): (number | "…")[] => {
@@ -164,72 +122,49 @@ function UsersPagination({
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
 
-interface PendingConfirm {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  destructive?: boolean;
-  action: () => Promise<unknown>;
-  successMsg: string;
-}
+interface PendingConfirm extends AdminUserRowPending {}
 
-/** Dropdown offering each duration plus a "lift" action when already active. */
-function SanctionMenu({
-  kind,
-  active,
-  onApply,
-  onLift,
-  disabled,
-}: {
-  kind: "mute" | "ban";
-  active: boolean;
-  onApply: (minutes: number, label: string) => void;
-  onLift: () => void;
-  disabled?: boolean;
-}) {
-  const isMute = kind === "mute";
-  const Icon = isMute ? MicOff : Ban;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={disabled}
-          className={active ? (isMute ? "border-warning/40 text-warning" : "border-destructive/40 text-destructive") : ""}
-        >
-          <Icon className="h-3.5 w-3.5 mr-1" />
-          {isMute ? "Mute" : "Ban"}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{isMute ? "Réduire au silence" : "Bannir"} pour…</DropdownMenuLabel>
-        {DURATION_OPTIONS.map((opt) => (
-          <DropdownMenuItem key={opt.minutes} onClick={() => onApply(opt.minutes, opt.label)}>
-            {opt.label}
-          </DropdownMenuItem>
-        ))}
-        {active && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLift} className="text-success focus:text-success">
-              {isMute ? "Lever le mute" : "Lever le ban"}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
+type FilterKey = UserListFilter;
+type SortKey = UserListSort;
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "Tous" },
+  { key: "players", label: "Joueurs" },
+  { key: "online", label: "En ligne" },
+  { key: "in_game", label: "En partie" },
+  { key: "moderators", label: "Modérateurs" },
+  { key: "admins", label: "Admins" },
+  { key: "muted", label: "Mutés" },
+  { key: "banned", label: "Bannis" },
+];
+
+const EMPTY_FILTER_MESSAGES: Partial<Record<FilterKey, string>> = {
+  muted: "Aucun joueur muté actuellement.",
+  banned: "Aucun joueur banni actuellement.",
+  online: "Aucun joueur en ligne.",
+  in_game: "Aucun joueur en partie.",
+  moderators: "Aucun modérateur.",
+  admins: "Aucun administrateur.",
+};
+
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "username", label: "Pseudo" },
+  { key: "xp", label: "XP" },
+  { key: "games", label: "Parties" },
+  { key: "created", label: "Inscription" },
+  { key: "seen", label: "Activité" },
+];
 
 /** Profile modal shown when clicking a player row: fetches the real profile
  * (same layout as the profile page) and overlays live presence / sanctions. */
 function UserDetailDialog({
   user,
+  refreshKey,
   onClose,
   onGoToRoom,
 }: {
   user: AdminUser | null;
+  refreshKey: number;
   onClose: () => void;
   onGoToRoom?: (roomId: string) => void;
 }) {
@@ -255,11 +190,12 @@ function UserDetailDialog({
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, refreshKey]);
 
-  const banned = isSanctionActive(user?.bannedUntil);
-  const muted = isSanctionActive(user?.mutedUntil);
+  const banned = isSanctionActive(profile?.bannedUntil ?? user?.bannedUntil);
+  const muted = isSanctionActive(profile?.mutedUntil ?? user?.mutedUntil);
   const meta = user ? PRESENCE_META[user.presence] : PRESENCE_META.offline;
+  useSanctionTicker(!!user && (banned || muted));
 
   return (
     <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
@@ -303,12 +239,12 @@ function UserDetailDialog({
                 <span className="text-muted-foreground">Inscrit le {formatDate(profile.createdAt)}</span>
                 {banned && (
                   <Badge className="bg-destructive/20 text-destructive">
-                    Banni · {formatRemaining(user.bannedUntil)}
+                    Banni · {formatRemaining(profile?.bannedUntil ?? user.bannedUntil)}
                   </Badge>
                 )}
                 {muted && (
                   <Badge className="bg-warning/20 text-warning">
-                    Muet · {formatRemaining(user.mutedUntil)}
+                    Muet · {formatRemaining(profile?.mutedUntil ?? user.mutedUntil)}
                   </Badge>
                 )}
               </div>
@@ -336,10 +272,11 @@ export function UsersPanel({
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [counts, setCounts] = useState({ online: 0, inGame: 0, banned: 0 });
+  const [counts, setCounts] = useState({ online: 0, inGame: 0, banned: 0, muted: 0 });
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [detail, setDetail] = useState<AdminUser | null>(null);
+  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
@@ -371,6 +308,10 @@ export function UsersPanel({
       setTotalPages(res.totalPages);
       setTotal(res.total);
       setCounts(res.counts);
+      setDetail((prev) => {
+        if (!prev) return prev;
+        return res.users.find((u) => u.id === prev.id) ?? prev;
+      });
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -405,7 +346,7 @@ export function UsersPanel({
     return () => clearInterval(id);
   }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
-  const run = async (fn: () => Promise<unknown>, successMsg: string) => {
+  const run = useCallback(async (fn: () => Promise<unknown>, successMsg: string, targetUserId?: string) => {
     try {
       await fn();
       toast.success(successMsg);
@@ -416,16 +357,28 @@ export function UsersPanel({
         sort: sortKey,
         sortDir,
       });
+      if (targetUserId && detail?.id === targetUserId) {
+        setDetailRefreshKey((k) => k + 1);
+      }
     } catch (e) {
       toast.error(errorMessage(e));
     }
-  };
+  }, [debouncedQuery, page, filter, sortKey, sortDir, load, detail?.id]);
+
+  const handleSetPending = useCallback((p: PendingConfirm) => setPending(p), []);
+  const handleOpenDetail = useCallback((u: AdminUser) => setDetail(u), []);
+  const handleRoleChange = useCallback(
+    (userId: string, role: Role) => {
+      void run(() => adminApi.setRole(userId, role), "Rôle mis à jour.");
+    },
+    [run],
+  );
 
   const confirmPending = async () => {
     if (!pending) return;
-    const { action, successMsg } = pending;
+    const { action, successMsg, targetUserId } = pending;
     setPending(null);
-    await run(action, successMsg);
+    await run(action, successMsg, targetUserId);
   };
 
   const toggleSort = (key: SortKey) => {
@@ -450,6 +403,9 @@ export function UsersPanel({
         </span>
         <span className="flex items-center gap-2">
           <span className="h-2 w-2 rounded-full bg-destructive" /> {counts.banned} banni(s)
+        </span>
+        <span className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-warning" /> {counts.muted} muté(s)
         </span>
       </div>
 
@@ -510,199 +466,31 @@ export function UsersPanel({
             </tr>
           </thead>
           <tbody>
-            {users.map((u) => {
-              const banned = isSanctionActive(u.bannedUntil);
-              const muted = isSanctionActive(u.mutedUntil);
-              const isSelf = u.id === profile?.id;
-              return (
-                <tr
-                  key={u.id}
-                  className="border-b border-border/50 hover:bg-secondary/50 cursor-pointer"
-                  onClick={() => setDetail(u)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setDetail(u);
-                    }
-                  }}
-                  tabIndex={0}
-                  aria-label={`Voir le profil de ${u.username}`}
-                >
-                  <td className="p-3">
-                    <div className="font-semibold flex items-center gap-2 transition-colors hover:text-primary">
-                      {u.username}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{u.email}</div>
-                    <div className="text-[11px] text-muted-foreground/70">
-                      Inscrit le {formatDate(u.createdAt)}
-                    </div>
-                  </td>
-
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    {canManage && !isSelf ? (
-                      <select
-                        className="bg-background border border-border rounded px-2 py-1"
-                        value={u.role}
-                        onChange={(e) =>
-                          void run(
-                            () => adminApi.setRole(u.id, e.target.value as Role),
-                            "Rôle mis à jour.",
-                          )
-                        }
-                      >
-                        {ROLE_OPTIONS.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <Badge className={roleBadgeClass[u.role]}>{u.role}</Badge>
-                    )}
-                  </td>
-
-                  <td className="p-3">
-                    {u.gamesPlayed} parties · Niv {u.level}
-                  </td>
-
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    {u.currentRoom ? (
-                      <button
-                        className="text-primary hover:underline"
-                        onClick={() => onGoToRoom?.(u.currentRoom!.id)}
-                      >
-                        {u.currentRoom.name}
-                      </button>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </td>
-
-                  <td className="p-3">
-                    {u.presence !== "offline" ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        {formatRelativeFromNow(u.lastSeenAt)}
-                      </span>
-                    )}
-                  </td>
-
-                  <td className="p-3">
-                    <div className="flex flex-col gap-1.5">
-                        <span className={cn("flex items-center gap-2 text-xs font-medium", PRESENCE_META[u.presence].text)}>
-                          <span className={cn("h-2 w-2 rounded-full", PRESENCE_META[u.presence].dot)} />
-                          {PRESENCE_META[u.presence].label}
-                        </span>
-                        {banned && (
-                          <Badge className="bg-destructive/20 text-destructive w-fit">
-                            Banni · {formatRemaining(u.bannedUntil)}
-                          </Badge>
-                        )}
-                        {muted && (
-                          <Badge className="bg-warning/20 text-warning w-fit">
-                            Muet · {formatRemaining(u.mutedUntil)}
-                          </Badge>
-                        )}
-                      </div>
-                  </td>
-
-                  <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex flex-wrap justify-end gap-1">
-                        <SanctionMenu
-                          kind="mute"
-                          active={muted}
-                          onApply={(minutes, label) =>
-                            setPending({
-                              title: `Réduire ${u.username} au silence ?`,
-                              description: `Le joueur ne pourra plus écrire dans le chat pendant : ${label}.`,
-                              confirmLabel: "Mute",
-                              action: () => adminApi.mute(u.id, minutes),
-                              successMsg: `Joueur réduit au silence (${label}).`,
-                            })
-                          }
-                          onLift={() =>
-                            setPending({
-                              title: `Lever le mute de ${u.username} ?`,
-                              description: "Le joueur pourra de nouveau écrire dans le chat.",
-                              confirmLabel: "Lever le mute",
-                              action: () => adminApi.mute(u.id, null),
-                              successMsg: "Mute levé.",
-                            })
-                          }
-                        />
-                        <SanctionMenu
-                          kind="ban"
-                          active={banned}
-                          disabled={isSelf}
-                          onApply={(minutes, label) =>
-                            setPending({
-                              title: `Bannir ${u.username} ?`,
-                              description: `Le joueur sera déconnecté et ne pourra plus se connecter pendant : ${label}.`,
-                              confirmLabel: "Bannir",
-                              destructive: true,
-                              action: () => adminApi.ban(u.id, minutes),
-                              successMsg: `Joueur banni (${label}).`,
-                            })
-                          }
-                          onLift={() =>
-                            setPending({
-                              title: `Lever le ban de ${u.username} ?`,
-                              description: "Le joueur pourra de nouveau se connecter.",
-                              confirmLabel: "Lever le ban",
-                              action: () => adminApi.ban(u.id, null),
-                              successMsg: "Ban levé.",
-                            })
-                          }
-                        />
-                        {canManage && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={u.presence === "offline"}
-                              title="Déconnecter le compte (sans bannir)"
-                              onClick={() =>
-                                setPending({
-                                  title: `Déconnecter ${u.username} ?`,
-                                  description:
-                                    "Le joueur sera déconnecté de son compte et devra se reconnecter. Aucune sanction n'est appliquée.",
-                                  confirmLabel: "Déconnecter",
-                                  action: () => adminApi.disconnectUser(u.id),
-                                  successMsg: "Joueur déconnecté.",
-                                })
-                              }
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                setPending({
-                                  title: `Réinitialiser les statistiques de ${u.username} ?`,
-                                  description:
-                                    "Parties, victoires, XP et niveau seront remis à zéro. Cette action est irréversible.",
-                                  confirmLabel: "Réinitialiser",
-                                  destructive: true,
-                                  action: () => adminApi.resetStats(u.id),
-                                  successMsg: "Statistiques réinitialisées.",
-                                })
-                              }
-                            >
-                              Reset statistiques
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {users.map((u) => (
+              <AdminUserRow
+                key={u.id}
+                user={u}
+                canManage={canManage}
+                isSelf={u.id === profile?.id}
+                onOpenDetail={handleOpenDetail}
+                onGoToRoom={onGoToRoom}
+                onSetPending={handleSetPending}
+                onRoleChange={handleRoleChange}
+              />
+            ))}
             {!users.length && !loading && (
               <tr>
                 <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                  Aucun utilisateur.
+                  {debouncedQuery
+                    ? "Aucun utilisateur ne correspond à cette recherche."
+                    : EMPTY_FILTER_MESSAGES[filter] ?? "Aucun utilisateur."}
+                </td>
+              </tr>
+            )}
+            {loading && !users.length && (
+              <tr>
+                <td colSpan={7} className="p-6 text-center text-muted-foreground">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-primary" />
                 </td>
               </tr>
             )}
@@ -717,7 +505,12 @@ export function UsersPanel({
         <UsersPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
 
-      <UserDetailDialog user={detail} onClose={() => setDetail(null)} onGoToRoom={onGoToRoom} />
+      <UserDetailDialog
+        user={detail}
+        refreshKey={detailRefreshKey}
+        onClose={() => setDetail(null)}
+        onGoToRoom={onGoToRoom}
+      />
 
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent>

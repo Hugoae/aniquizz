@@ -62,7 +62,13 @@ interface FriendsContextValue {
   incomingRequestFor: (userId: string) => string | undefined;
 }
 
-const FriendsContext = createContext<FriendsContextValue | null>(null);
+const FriendsStateContext = createContext<Omit<FriendsContextValue,
+  'sendRequest' | 'addById' | 'accept' | 'reject' | 'remove' | 'block' | 'unblock' | 'invite' | 'setPrivacy' | 'refreshRecent' | 'openProfile'
+> | null>(null);
+
+const FriendsActionsContext = createContext<Pick<FriendsContextValue,
+  'sendRequest' | 'addById' | 'accept' | 'reject' | 'remove' | 'block' | 'unblock' | 'invite' | 'setPrivacy' | 'refreshRecent' | 'openProfile'
+> | null>(null);
 
 export function FriendsProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -247,36 +253,92 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     [recentPlayers, relationOf],
   );
 
-  const value: FriendsContextValue = {
-    friends: state.friends,
-    incoming: state.incoming,
-    outgoing: state.outgoing,
-    blocked: state.blocked,
-    recentPlayers: visibleRecent,
-    allowFriendRequests: state.allowFriendRequests,
-    onlineCount,
-    loading,
-    sendRequest,
-    addById,
-    accept,
-    reject,
-    remove,
-    block,
-    unblock,
-    invite,
-    setPrivacy,
-    refreshRecent,
-    openProfile,
-    relationOf,
-    incomingRequestFor,
-  };
+  const stateValue = useMemo(
+    () => ({
+      friends: state.friends,
+      incoming: state.incoming,
+      outgoing: state.outgoing,
+      blocked: state.blocked,
+      recentPlayers: visibleRecent,
+      allowFriendRequests: state.allowFriendRequests,
+      onlineCount,
+      loading,
+      relationOf,
+      incomingRequestFor,
+    }),
+    [
+      state.friends,
+      state.incoming,
+      state.outgoing,
+      state.blocked,
+      state.allowFriendRequests,
+      visibleRecent,
+      onlineCount,
+      loading,
+      relationOf,
+      incomingRequestFor,
+    ],
+  );
 
-  return <FriendsContext.Provider value={value}>{children}</FriendsContext.Provider>;
+  const actionsValue = useMemo(
+    () => ({
+      sendRequest,
+      addById,
+      accept,
+      reject,
+      remove,
+      block,
+      unblock,
+      invite,
+      setPrivacy,
+      refreshRecent,
+      openProfile,
+    }),
+    [
+      sendRequest,
+      addById,
+      accept,
+      reject,
+      remove,
+      block,
+      unblock,
+      invite,
+      setPrivacy,
+      refreshRecent,
+      openProfile,
+    ],
+  );
+
+  return (
+    <FriendsActionsContext.Provider value={actionsValue}>
+      <FriendsStateContext.Provider value={stateValue}>{children}</FriendsStateContext.Provider>
+    </FriendsActionsContext.Provider>
+  );
 }
 
-/** Access the shared friends state. Returns null-safe defaults outside a provider. */
-export function useFriends(): FriendsContextValue {
-  const ctx = useContext(FriendsContext);
-  if (!ctx) throw new Error('useFriends must be used within a FriendsProvider');
+/** Live friends data — re-renders on presence / list changes. */
+export function useFriendsState() {
+  const ctx = useContext(FriendsStateContext);
+  if (!ctx) throw new Error('useFriendsState must be used within a FriendsProvider');
   return ctx;
+}
+
+/** Stable socket actions — does not re-render on presence ticks alone. */
+export function useFriendsActions() {
+  const ctx = useContext(FriendsActionsContext);
+  if (!ctx) throw new Error('useFriendsActions must be used within a FriendsProvider');
+  return ctx;
+}
+
+/** Access the shared friends state. */
+export function useFriends(): FriendsContextValue {
+  return { ...useFriendsState(), ...useFriendsActions() };
+}
+
+/** Optional friends hook for UI that may render before the lazy provider chunk loads. */
+export function useFriendsOptional(): FriendsContextValue | null {
+  const state = useContext(FriendsStateContext);
+  const actions = useContext(FriendsActionsContext);
+  if (!state || !actions) return null;
+  return { ...state, ...actions };
 }

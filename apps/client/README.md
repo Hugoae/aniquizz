@@ -1,73 +1,77 @@
-# Welcome to your Lovable project
+# AniQuizz Client
 
-## Project info
+React + Vite front-end for [aniquizz.com](https://aniquizz.com). Deployed on **Vercel**
+(project root: `apps/client`).
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Stack
 
-## How can I edit this code?
+- React 18, TypeScript, Vite
+- shadcn/ui + Tailwind CSS (dark theme)
+- Framer Motion for transitions
+- Supabase Auth (JWT → Socket.io auth)
+- Self-hosted fonts (`@fontsource/*`) — no Google Fonts round-trip
 
-There are several ways of editing your application.
+## Structure
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+src/
+├── pages/           Route entry points (lazy-loaded)
+├── features/        Domain modules
+│   ├── auth/        Session, login modal, suspension badge
+│   ├── hub/         Lobby, room list, game config
+│   ├── game/        Standard mode UI, socket hook, video playback
+│   ├── friends/     Friends panel, presence, invites
+│   ├── profile/     Stats, history, AniList link
+│   ├── admin/       Moderation, catalogue, rooms, stats
+│   ├── home/        Landing hero, news teaser
+│   ├── settings/    Global settings + legal links
+│   └── legal/       Cookie consent
+├── components/      Shared layout (Header, skeletons) + ui/
+└── lib/             supabase, socket, adminApi, env, routePrefetch
 ```
 
-**Edit a file directly in GitHub**
+## Routes
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+| Path | Page | Auth |
+| ---- | ---- | ---- |
+| `/` | Home | — |
+| `/play` | Game hub (lobby) | ✓ |
+| `/game` | Active match | ✓ |
+| `/profile`, `/profile/:userId` | Profile | ✓ |
+| `/admin` | Admin panel | ✓ (MODERATOR+) |
+| `/news`, `/library`, `/leaderboard` | Content / coming soon | — |
+| `/legal/*` | CGU, privacy, mentions | — |
 
-**Use GitHub Codespaces**
+## Scripts
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+pnpm dev          # Vite dev server :5173
+pnpm build        # Production build → dist/
+pnpm test         # Vitest component/unit tests
+pnpm typecheck    # tsc --noEmit
+```
 
-## What technologies are used for this project?
+## Environment
 
-This project is built with:
+Copy `.env.example` → `.env`:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+| Variable | Purpose |
+| -------- | ------- |
+| `VITE_SUPABASE_URL` | Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
+| `VITE_SERVER_URL` | Socket.io / API origin (prod: Render URL) |
+| `VITE_R2_PUBLIC_URL` | Public R2 bucket base URL for video MP4s |
 
-## How can I deploy this project?
+## Deploy (Vercel)
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+- **Root directory:** `apps/client`
+- **Build:** `pnpm build` (via Turborepo from monorepo root or Vercel monorepo settings)
+- **Output:** `dist`
+- Redirects and cache headers: `vercel.json` (apex domain, immutable `/assets/*`)
 
-## Can I connect a custom domain to my Lovable project?
+## Performance notes
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Route-based code splitting with skeleton fallbacks
+- Supabase chunk deferred until auth init
+- `modulepreload` for Home chunk + critical font (build plugin in `vite.config.ts`)
+- See [`docs/perf/baseline.md`](../../docs/perf/baseline.md)

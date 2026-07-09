@@ -10,7 +10,7 @@ import {
   r2ObjectExists,
   r2UploadFile,
 } from "./lib/r2-client";
-import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from "./lib/media";
+import { compressMp4, downloadToFile, getVideoDurationSeconds, isPlayableMp4, safeUnlink } from "./lib/media";
 import { formatDuration, Progress, Tally } from "./lib/progress";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -77,12 +77,21 @@ async function processNextSong(): Promise<boolean> {
     if (!song.sourceUrl) throw new Error("Missing sourceUrl (AnimeThemes download URL)");
 
     if (await r2ObjectExists(r2Client, r2Bucket, fileName)) {
-      await prisma.song.update({
+      const existing = await prisma.song.findUnique({
         where: { id: song.id },
-        data: { downloadStatus: "COMPLETED", sourceUrl: getR2PublicUrl(fileName) },
+        select: { duration: true },
       });
-      tally.add("Déjà sur R2");
-      return true;
+      if ((existing?.duration ?? 0) > 0) {
+        await prisma.song.update({
+          where: { id: song.id },
+          data: { downloadStatus: "COMPLETED", sourceUrl: getR2PublicUrl(fileName) },
+        });
+        tally.add("Déjà sur R2");
+        return true;
+      }
+      if (progress) {
+        progress.line(`♻️ R2 exists but duration missing — reprocessing | ${fileName}`);
+      }
     }
 
     await downloadToFile(song.sourceUrl, rawPath, HARD_TIMEOUT, {
@@ -98,9 +107,13 @@ async function processNextSong(): Promise<boolean> {
       },
     });
     await compressMp4(rawPath, outPath, COMPRESS_TIMEOUT);
+    const playable = await isPlayableMp4(outPath);
+    if (!playable) throw new Error("Compressed output is not a playable MP4");
+    const duration = await getVideoDurationSeconds(outPath);
+    if (duration <= 0) throw new Error("Could not probe duration after compression");
+
     const buffer = fs.readFileSync(outPath);
     await r2UploadFile(r2Client, r2Bucket, fileName, buffer);
-    const duration = await getVideoDurationSeconds(outPath);
 
     await prisma.song.update({
       where: { id: song.id },

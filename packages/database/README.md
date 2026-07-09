@@ -17,6 +17,7 @@ packages/database/
 │
 ├── data/                       <-- Pipeline I/O (JSON). Large files are gitignored.
 │   ├── manual_edits.json       <-- DB snapshot for manual edits (titles/tags/locks) — source of truth
+│   ├── pipeline_exclusions.json <-- Permanent blocklist (anime ids + song ids / videoKeys)
 │   ├── data_step1.json         <-- Step 1 output (AniList metadata)
 │   ├── data_step2.json         <-- Step 2 output (+ AnimeThemes song URLs)
 │   └── animethemes_cache.json  <-- Step 2 cache (raw AnimeThemes responses, keyed by AniList id)
@@ -96,11 +97,18 @@ AniList — no matching needed), `coverColor`, `bannerImage`, `description`,
 ### Locks and upgrades (30 → 500)
 
 `isLocked` on a Franchise / Anime / Song freezes it against re-fetches
-(manual titles, difficulty, etc. are preserved). Locks live in the DB, but
-**step 1 reads them from `data/manual_edits.json`** — so always export before a
-bigger run:
+(manual titles, difficulty, etc. are preserved). Locks live in the DB.
+
+**Step 1 lock sources (priority):**
+
+1. `data/manual_edits.json` — export before a bigger run (recommended).
+2. **Database fallback** — if the JSON file is missing or has no locked franchises,
+   step 1 loads `Franchise.isLocked` rows directly from Postgres.
 
 ```bash
+# Check what step 1 will protect (no AniList fetch)
+pnpm --filter @aniquizz/database pipeline:check-locks
+
 # 1. Freeze current locks + manual edits into manual_edits.json
 npx ts-node scripts/export_db_to_json.ts
 # 2. Bigger run — locked rows are preserved, new seasons/animes are added
@@ -112,6 +120,10 @@ WORKER_SOURCE_INCLUDE=animethemes.moe npx ts-node scripts/4_sync_storage.ts
 
 Locked franchises also get their **newly-released sequels** auto-appended (as
 unlocked seasons) while keeping the existing locked seasons untouched.
+
+If the database still has locked franchises but step 1 cannot load them, the
+script aborts (or prompts on a TTY). Set `PIPELINE_ALLOW_UNPROTECTED=1` only for
+intentional clean rebuilds.
 
 ### Quick dev sample (no full pipeline)
 
@@ -130,6 +142,39 @@ npx ts-node scripts/export_db_to_json.ts   # dump DB -> data/manual_edits.json
 npx ts-node scripts/import_edits_to_db.ts  # apply edits back to the DB
 ```
 
+### Permanent exclusions (anime + songs)
+
+Some seasons (OVAs, specials without OP) or bad song matches should never come back
+after a re-fetch. Add them to `data/pipeline_exclusions.json`:
+
+```json
+{
+  "animeIds": [204356],
+  "songIds": [9457],
+  "videoKeys": ["ONEPIECE-21-OP1.mp4"],
+  "_comments": {
+    "204356": "Boku no Hero Academia No. 170+1: More — no OP",
+    "9457": "One Piece generic theme — not a real OP"
+  }
+}
+```
+
+- **animeIds** — Step 1 skips these AniList ids everywhere (top fetch, prequel/sequel
+  expansion, locked-franchise sequel walk).
+- **songIds** / **videoKeys** — Steps 2–3 skip these songs (match by DB id or
+  canonical `videoKey`). Use `videoKey` when the song is not in the DB yet.
+
+`_comments` is optional documentation for humans.
+
+**One-time cleanup:** exclusions do not delete rows already in Postgres. Remove the
+anime or song from the DB once (Prisma Studio or admin), then rely on the blocklist for
+future pipeline runs. Also remove unwanted songs from `manual_edits.json` before
+`import_edits_to_db.ts` — import never deletes missing rows.
+
+```bash
+pnpm pipeline:check-locks   # lists locked + excluded ids
+```
+
 ## Danger zone
 
 ```bash
@@ -140,6 +185,30 @@ npx ts-node scripts/reset_all.ts   # wipes DB catalogue + empties the R2 bucket 
 
 ```bash
 npx prisma studio                  # visual DB browser
+pnpm r2:scan                       # verify all COMPLETED MP4s on R2 (ffmpeg decode check)
+pnpm r2:cache-control              # backfill immutable Cache-Control on R2 objects
+```
+
+### R2 integrity & repair
+
+After a full catalogue sync, scan every `COMPLETED` song against the R2 bucket:
+
+```bash
+pnpm r2:scan
+# Report: data/r2-integrity-report.json (gitignored)
+# Exit code 1 if corrupt/missing/orphan keys exist
+```
+
+Repair a corrupt song by re-downloading from AnimeThemes:
+
+```bash
+pnpm exec ts-node scripts/repair_video.ts <songId> [songId...]
+```
+
+Delete orphan R2 keys:
+
+```bash
+pnpm exec ts-node scripts/delete_r2_keys.ts <videoKey.mp4> [...]
 ```
 
 ### Migrations (Supabase-safe workflow)

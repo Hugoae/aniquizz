@@ -5,6 +5,8 @@
 
 import type { GamePlayer } from './types';
 import type { UserRole } from './roles';
+import type { AnimeSuggestion } from './utils';
+import type { Precision } from './game';
 import type {
   AnswerType,
   ChatMessage,
@@ -113,6 +115,12 @@ export interface FriendPrivacyInput {
   allow: boolean;
 }
 
+/** Live moderation state pushed to a user's sockets (mute/ban apply or lift). */
+export interface SanctionUpdatePayload {
+  bannedUntil: string | null;
+  mutedUntil: string | null;
+}
+
 // --- SERVER → CLIENT ---
 export interface ServerToClientEvents {
   // Lobby
@@ -148,7 +156,8 @@ export interface ServerToClientEvents {
   'game:fallback_notification': (payload: { message: string }) => void;
 
   // Data
-  anime_list: (list: AnimeListEntry[]) => void;
+  /** Ranked autocomplete matches for one `anime:search` request (echoes `requestId`). */
+  'anime:search_results': (payload: AnimeSearchResults) => void;
   my_watched_list: (ids: number[]) => void;
   /** Size of the caller's AniList list + how many map to playable songs. */
   watched_count: (payload: { listSize: number; playableSongs: number }) => void;
@@ -157,6 +166,8 @@ export interface ServerToClientEvents {
   'chat:message': (message: ChatMessage) => void;
   'profile:stats': (stats: unknown) => void;
   'profile:error': (payload: ErrorPayload) => void;
+  /** Sanction applied or lifted — keeps client profile/badge in sync without a reload. */
+  'profile:sanction_updated': (payload: SanctionUpdatePayload) => void;
   user_profile: (payload: { success: boolean }) => void;
   home_stats: (stats: { animes: number; users: number; songs: number; online: number; inMultiplayer: number }) => void;
 
@@ -186,6 +197,10 @@ export interface ClientToServerEvents {
   'lobby:create': (payload: CreateLobbyInput) => void;
   'lobby:join': (payload: JoinLobbyInput) => void;
   get_rooms: () => void;
+  /** Join the lobby list fan-out room (multiplayer room browser). */
+  'lobby:subscribe_list': () => void;
+  /** Leave the lobby list fan-out room. */
+  'lobby:unsubscribe_list': () => void;
   transfer_host: (payload: { roomId: string; targetId: string }) => void;
   /** Host removes another player from the lobby. */
   'lobby:kick': (payload: { roomId: string; targetId: string }) => void;
@@ -208,7 +223,8 @@ export interface ClientToServerEvents {
   get_my_watched: () => void;
   /** Asks how many playable songs the caller's AniList list yields (lobby hint). */
   get_watched_count: () => void;
-  get_anime_list: () => void;
+  /** Server-side anime autocomplete search (replaces the full catalogue transport). */
+  'anime:search': (payload: AnimeSearchInput) => void;
 
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
@@ -232,11 +248,17 @@ export interface ClientToServerEvents {
   'profile:get_public': (payload: FriendUserIdInput) => void;
 }
 
-/** Anime autocomplete entry served to the client for typing suggestions. */
-export interface AnimeListEntry {
-  name: string;
-  franchise: string | null;
-  altNames: string[];
+/** One server-side autocomplete request. `requestId` lets the client drop stale answers. */
+export interface AnimeSearchInput {
+  requestId: number;
+  query: string;
+  precision: Precision;
+}
+
+/** Ranked matches for a single `anime:search` request (small payload, ≤ SUGGESTION_LIMIT). */
+export interface AnimeSearchResults {
+  requestId: number;
+  results: AnimeSuggestion[];
 }
 
 export type { GamePlayer };

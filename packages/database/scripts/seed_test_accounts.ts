@@ -2,8 +2,7 @@
  * Seeds a small set of deterministic test accounts for local development.
  *
  * These are Profile rows with fixed UUIDs so tests and manual QA can rely on
- * stable ids. Full Supabase Auth wiring (matching auth users) lands in Phase 2;
- * until then these profiles are useful for stats/leaderboard/UI development.
+ * stable ids. Supabase Auth users are ensured via apps/server/scripts/ensureTestAuthUsers.ts.
  *
  * DEV ONLY: refuses to run when NODE_ENV=production.
  */
@@ -28,24 +27,6 @@ const TEST_ACCOUNTS: TestAccount[] = [
     username: 'admin_dev',
     email: 'admin@aniquizz.test',
     role: UserRole.ADMIN,
-  },
-  {
-    id: '00000000-0000-4000-8000-000000000002',
-    username: 'player_one',
-    email: 'player1@aniquizz.test',
-    role: UserRole.USER,
-  },
-  {
-    id: '00000000-0000-4000-8000-000000000003',
-    username: 'player_two',
-    email: 'player2@aniquizz.test',
-    role: UserRole.USER,
-  },
-  {
-    id: '00000000-0000-4000-8000-000000000004',
-    username: 'moderator_dev',
-    email: 'moderator@aniquizz.test',
-    role: UserRole.MODERATOR,
   },
 ];
 

@@ -20,8 +20,8 @@ describe.skipIf(!hasIntegrationEnv)('socket auth integration', () => {
   });
 
   it('accepts a valid authenticated test token', async () => {
-    const token = await getTestAccessToken('playerOne');
-    const socket = await connectSocket(bundle.url, token, 'player_one');
+    const token = await getTestAccessToken('admin');
+    const socket = await connectSocket(bundle.url, token, 'admin_dev');
     expect(socket.connected).toBe(true);
     socket.disconnect();
   });

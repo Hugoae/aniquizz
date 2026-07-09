@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
-import { Session, User } from "@supabase/supabase-js";
-import { toast } from "sonner";
-import { supabase } from "@/lib/supabase";
-import { socket } from "@/lib/socket";
+import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
 import { captureClientError } from "@/lib/errorReporter";
+
+const loadSupabase = () => import("@/lib/supabase").then((m) => m.supabase);
 
 // ------------------------------------------------------------------
 // TYPES
@@ -31,13 +30,14 @@ type AuthContextType = {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  /** Session resolved from Supabase (no longer blocked on profile fetch). */
+  authReady: boolean;
+  /** @deprecated Use `authReady` — kept for callers that still gate on `!loading`. */
   loading: boolean;
+  profileLoading: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-
-  showAuthModal: boolean;
-  setShowAuthModal: (open: boolean) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -49,15 +49,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authReady, setAuthReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const supabaseRef = useRef<SupabaseClient | null>(null);
 
-  const [showAuthModal, setShowAuthModal] = useState(false);
-
-  const fetchProfile = useCallback(async (userId: string) => {
+  const fetchProfile = useCallback(async (userId: string, client: SupabaseClient) => {
+    setProfileLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from("Profile")
-        .select("*")
         .select("*, history:SongHistory(count)")
         .eq("id", userId)
         .single();
@@ -69,100 +69,102 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       captureClientError(err, { source: 'auth_fetch_profile' });
+    } finally {
+      setProfileLoading(false);
     }
   }, []);
 
-  // --- INIT AUTH ---
+  // --- INIT AUTH (Supabase chunk deferred — not on the critical path for `/`) ---
   useEffect(() => {
     let mounted = true;
+    let subscription: { unsubscribe: () => void } | undefined;
 
     const initAuth = async () => {
       try {
+        const supabase = await loadSupabase();
+        supabaseRef.current = supabase;
         const { data: { session: initialSession } } = await supabase.auth.getSession();
-        
+
         if (mounted) {
-            setSession(initialSession);
-            if (initialSession?.user) {
-                await fetchProfile(initialSession.user.id);
-            }
+          setSession(initialSession);
+          if (initialSession?.user) {
+            void fetchProfile(initialSession.user.id, supabase);
+          }
         }
+
+        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+          if (!mounted) return;
+
+          setSession(newSession);
+
+          if (newSession?.user) {
+            setProfile((prev) => {
+              if (prev && prev.id === newSession.user.id) return prev;
+              void fetchProfile(newSession.user.id, supabase);
+              return prev;
+            });
+          } else {
+            setProfile(null);
+            setProfileLoading(false);
+          }
+
+          setAuthReady(true);
+        });
+        subscription = sub;
       } catch (err) {
         captureClientError(err, { source: 'auth_init' });
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setAuthReady(true);
       }
     };
 
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-      if (!mounted) return;
-      
-      setSession(newSession);
-
-      if (newSession?.user) {
-        setProfile(prev => {
-            if (prev && prev.id === newSession.user.id) return prev;
-            fetchProfile(newSession.user.id);
-            return prev;
-        });
-      } else {
-        setProfile(null);
-      }
-      
-      setLoading(false);
-    });
+    void initAuth();
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      subscription?.unsubscribe();
     };
-  }, [fetchProfile]); 
+  }, [fetchProfile]);
 
-  // --- SOCKET LIFECYCLE ---
-  // Connect as soon as the auth token is known, independent of the profile
-  // fetch, so presence (friends, online count) loads immediately instead of
-  // waiting on the (slower) profile query. Identity is token-based server-side;
-  // the display username is best-effort and refreshed on the next (re)connect
-  // without forcing one. We (re)connect ONLY when the trusted identity (userId)
-  // changes — login / logout / account switch — never on a mere token refresh
-  // or when the profile username arrives (which previously caused a needless
-  // disconnect/reconnect cycle).
-  const connectedUserId = useRef<string | null | undefined>(undefined);
+  // --- SOCKET LIFECYCLE (lazy chunk — only when a session exists) ---
   useEffect(() => {
-    const token = session?.access_token;
-    const userId = session?.user?.id ?? null;
-    const username = profile?.username || "Anonyme";
+    let cleanupLevelUp: (() => void) | undefined;
+    let cleanupSanction: (() => void) | undefined;
+    let disposed = false;
 
-    // Keep the auth payload current for the next (re)connect.
-    socket.auth = { username, token };
-
-    if (connectedUserId.current !== userId) {
-      connectedUserId.current = userId;
-      if (socket.connected) socket.disconnect();
-      socket.connect();
-    }
-  }, [session?.user?.id, session?.access_token, profile?.username]);
-
-  // --- LEVEL-UP (Phase 7) ---
-  // Pushed to the player's own socket when a finished match levels them up.
-  useEffect(() => {
-    const onLevelUp = (payload: { oldLevel: number; newLevel: number; xp: number }) => {
-      toast.success(`Niveau ${payload.newLevel} atteint !`, {
-        description: "Continue comme ça pour grimper les niveaux.",
+    void import('@/lib/socketLifecycle').then(({ syncSocketSession, registerLevelUpHandler, registerSanctionHandler }) => {
+      if (disposed) return;
+      syncSocketSession(session, profile?.username || 'Anonyme');
+      if (!session?.user) return;
+      cleanupLevelUp = registerLevelUpHandler(session, () => {
+        if (session.user && supabaseRef.current) void fetchProfile(session.user.id, supabaseRef.current);
       });
-      if (session?.user) fetchProfile(session.user.id);
-    };
-    socket.on("level_up", onLevelUp);
+      cleanupSanction = registerSanctionHandler((payload) => {
+        setProfile((prev) =>
+          prev
+            ? {
+                ...prev,
+                bannedUntil: payload.bannedUntil,
+                mutedUntil: payload.mutedUntil,
+              }
+            : prev,
+        );
+      });
+    });
+
     return () => {
-      socket.off("level_up", onLevelUp);
+      disposed = true;
+      cleanupLevelUp?.();
+      cleanupSanction?.();
     };
-  }, [session, fetchProfile]);
+  }, [session, session?.user?.id, session?.access_token, profile?.username, fetchProfile]);
 
   // --- ACTIONS ---
 
   const signOut = useCallback(async () => {
     try {
+      const supabase = supabaseRef.current ?? (await loadSupabase());
+      supabaseRef.current = supabase;
       await supabase.auth.signOut();
       setProfile(null);
       setSession(null);
@@ -173,7 +175,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (session?.user) {
-      await fetchProfile(session.user.id);
+      const supabase = supabaseRef.current ?? (await loadSupabase());
+      supabaseRef.current = supabase;
+      await fetchProfile(session.user.id, supabase);
     }
   }, [session?.user, fetchProfile]);
 
@@ -183,13 +187,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session,
     user: session?.user ?? null,
     profile,
-    loading,
+    authReady,
+    loading: !authReady,
+    profileLoading,
     isAdmin,
     signOut,
     refreshProfile,
-    showAuthModal,
-    setShowAuthModal,
-  }), [session, profile, loading, isAdmin, signOut, refreshProfile, showAuthModal]);
+  }), [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile]);
 
   return (
     <AuthContext.Provider value={value}>

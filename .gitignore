@@ -21,6 +21,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+.cursor/
 
 # Logs
 logs/
@@ -38,8 +39,24 @@ packages/database/prisma/*.db
 packages/database/data/data_step1.json
 packages/database/data/data_step2.json
 packages/database/data/animethemes_cache.json
+packages/database/data/r2-integrity-report.json
 packages/database/data/tmp/
 
 # Stray package manager locks (this repo uses pnpm)
 package-lock.json
 yarn.lock
+
+# Test artefacts
+test-results/
+playwright-report/
+blob-report/
+
+# Local planning / agent docs (kept on disk, not published)
+PLAN.md
+PROGRESS.md
+AGENTS.md
+SCHEMA-TARGET.md
+docs/agents/
+
+# Lighthouse raw JSON dumps (summaries live in docs/perf/baseline.md)
+docs/perf/baseline-*.json

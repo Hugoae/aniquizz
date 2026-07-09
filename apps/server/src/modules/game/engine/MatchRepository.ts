@@ -169,29 +169,37 @@ export class MatchRepository {
     songIds: number[],
     profileById: Map<string, { maxStreak: number }>,
   ): Promise<void> {
-    for (const player of players) {
-      try {
-        const prevMaxStreak = profileById.get(player.userId)?.maxStreak ?? 0;
-        await prisma.profile.update({
-          where: { id: player.userId },
-          data: {
-            gamesPlayed: { increment: 1 },
-            gamesWon: player.isWinner ? { increment: 1 } : undefined,
-            totalGuesses: { increment: player.totalCount },
-            correctGuesses: { increment: player.correctCount },
-            maxStreak: Math.max(prevMaxStreak, player.maxStreak),
-            // XP / leveling (Phase 7). Level + win-streak are precomputed by the
-            // engine from the prior state; xp is incremented for consistency.
-            xp: player.xpEarned > 0 ? { increment: player.xpEarned } : undefined,
-            level: player.newLevel,
-            currentWinStreak: player.newWinStreak,
-          },
-        });
+    await Promise.all(
+      players.map((player) => this.updatePlayerAggregates(player, songIds, profileById)),
+    );
+  }
 
-        const correctSet = new Set(player.correctSongIds);
-        for (const songId of songIds) {
+  private async updatePlayerAggregates(
+    player: PersistPlayerInput,
+    songIds: number[],
+    profileById: Map<string, { maxStreak: number }>,
+  ): Promise<void> {
+    try {
+      const prevMaxStreak = profileById.get(player.userId)?.maxStreak ?? 0;
+      await prisma.profile.update({
+        where: { id: player.userId },
+        data: {
+          gamesPlayed: { increment: 1 },
+          gamesWon: player.isWinner ? { increment: 1 } : undefined,
+          totalGuesses: { increment: player.totalCount },
+          correctGuesses: { increment: player.correctCount },
+          maxStreak: Math.max(prevMaxStreak, player.maxStreak),
+          xp: player.xpEarned > 0 ? { increment: player.xpEarned } : undefined,
+          level: player.newLevel,
+          currentWinStreak: player.newWinStreak,
+        },
+      });
+
+      const correctSet = new Set(player.correctSongIds);
+      await Promise.all(
+        songIds.map((songId) => {
           const wasCorrect = correctSet.has(songId);
-          await prisma.songHistory
+          return prisma.songHistory
             .upsert({
               where: { profileId_songId: { profileId: player.userId, songId } },
               create: {
@@ -211,10 +219,10 @@ export class MatchRepository {
               const message = err instanceof Error ? err.message : String(err);
               logger.warn(`[MatchRepository] SongHistory upsert failed (${songId}): ${message}`, 'Scoring');
             });
-        }
-      } catch (error) {
-        logger.error(`[MatchRepository] Aggregate stats failed for ${player.userId}`, 'Scoring', error);
-      }
+        }),
+      );
+    } catch (error) {
+      logger.error(`[MatchRepository] Aggregate stats failed for ${player.userId}`, 'Scoring', error);
     }
   }
 }

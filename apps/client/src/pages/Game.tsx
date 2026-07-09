@@ -24,7 +24,7 @@ import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
-import { useAnimeSuggestions } from '@/features/game/hooks/useAnimeSuggestions';
+import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { parseGameNavState } from '@/features/game/gameNavState';
 
@@ -50,7 +50,7 @@ export default function Game() {
 
   const currentUserId = profile?.id ?? '';
 
-  const { state, animeList, myWatchedIds, actions } = useGameSocket({
+  const { state, myWatchedIds, actions } = useGameSocket({
     roomId,
     currentUserId,
     initialPlayers,
@@ -74,8 +74,7 @@ export default function Game() {
   );
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
 
-  const suggestions = useAnimeSuggestions({
-    animeList,
+  const suggestions = useAnimeSearch({
     query: answer,
     precision: settings.precision === 'exact' ? 'exact' : 'franchise',
     enabled: inputMode === 'typing' && phase === 'guessing',
@@ -283,7 +282,7 @@ export default function Game() {
         ref={preloadRef}
         muted
         playsInline
-        preload="auto"
+        preload="none"
         aria-hidden="true"
         tabIndex={-1}
         className="pointer-events-none absolute h-px w-px opacity-0"

@@ -122,6 +122,9 @@ const mergeWhere = (...parts: Prisma.ProfileWhereInput[]): Prisma.ProfileWhereIn
 export const getBannedUserCount = (): Promise<number> =>
   prisma.profile.count({ where: { bannedUntil: { gt: new Date() } } });
 
+export const getMutedUserCount = (): Promise<number> =>
+  prisma.profile.count({ where: { mutedUntil: { gt: new Date() } } });
+
 export const listUsers = async (opts: {
   query?: string;
   page?: number;
@@ -203,14 +206,14 @@ export const setUserBan = (id: string, minutes: number | null) =>
   prisma.profile.update({
     where: { id },
     data: { bannedUntil: untilFromMinutes(minutes) },
-    select: { id: true, bannedUntil: true },
+    select: { id: true, bannedUntil: true, mutedUntil: true },
   });
 
 export const setUserMute = (id: string, minutes: number | null) =>
   prisma.profile.update({
     where: { id },
     data: { mutedUntil: untilFromMinutes(minutes) },
-    select: { id: true, mutedUntil: true },
+    select: { id: true, bannedUntil: true, mutedUntil: true },
   });
 
 export const resetUserStats = (id: string) =>

@@ -21,11 +21,11 @@ describe.skipIf(!hasIntegrationEnv)('anti-cheat integration', () => {
     hasSongs = (await countPlayableSongs()) >= 5;
     bundle = await createServerBundle();
 
-    const token = await getTestAccessToken('playerOne');
-    socket = await connectSocket(bundle.url, token, 'player_one');
+    const token = await getTestAccessToken('admin');
+    socket = await connectSocket(bundle.url, token, 'admin_dev');
 
     socket.emit('lobby:create', {
-      username: 'player_one',
+      username: 'admin_dev',
       avatar: 'player1',
       settings: {
         mode: 'solo',
@@ -79,7 +79,7 @@ describe.skipIf(!hasIntegrationEnv)('anti-cheat integration', () => {
     socket.emit('get_game_state', { roomId });
     const sync = await syncPromise;
 
-    const me = sync.players.find((p) => p.id === TEST_USER_IDS.playerOne);
+    const me = sync.players.find((p) => p.id === TEST_USER_IDS.admin);
     expect(me?.hasAnswered).toBe(true);
     expect(me?.currentAnswer).toBeNull();
     expect(me?.isCorrect).toBeNull();

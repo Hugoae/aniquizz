@@ -34,12 +34,16 @@ export interface SelectedSong {
   videoKey: string;
   duration: number | null;
   difficulty: Difficulty;
+  episodeRange: string | null;
   anime: {
     id: number;
     name: string;
     altNames: string[];
     coverImage: string | null;
+    coverColor: string | null;
     seasonYear: number | null;
+    season: string | null;
+    format: string | null;
     siteUrl: string | null;
     franchise: { name: string; genres: string[] } | null;
   };
@@ -245,15 +249,59 @@ export const countPlayableWatchedSongs = async (watchedIds: number[]): Promise<n
   });
 };
 
-/**
- * Random pool of candidate display names used to build QCM/duo choices.
- * The underlying set (every anime/franchise name) changes only when the catalogue
- * is edited, so we cache it in memory per precision. This removes a full
- * `anime` table scan from every match start (the heaviest constant cost of the
- * playlist build). Promises are cached to collapse concurrent match starts.
- */
+// ---------------------------------------------------------------------------
+// CATALOGUE NAME CACHE (shared by autocomplete + QCM choices)
+// ---------------------------------------------------------------------------
+// The set of anime/franchise names changes only on catalogue edits, so we cache
+// it in memory. A SINGLE `anime` scan feeds both the autocomplete search and the
+// QCM/duo choice pool — the heaviest constant DB cost of every match start.
+// Promises are cached to collapse concurrent reads (parallel match starts).
+
 const CHOICE_CANDIDATES_TTL_MS = 10 * 60 * 1000;
 
+export interface AnimeNameRow {
+  name: string;
+  franchise: string | null;
+  altNames: string[];
+}
+
+const loadAllAnimeNames = async (): Promise<AnimeNameRow[]> => {
+  const animes = await prisma.anime.findMany({
+    select: { name: true, altNames: true, franchise: { select: { name: true } } },
+  });
+  return animes.map((a) => ({
+    name: a.name,
+    franchise: a.franchise?.name || null,
+    altNames: a.altNames,
+  }));
+};
+
+interface AnimeNamesCacheEntry {
+  timestamp: number;
+  promise: Promise<AnimeNameRow[]>;
+}
+
+let animeNamesCache: AnimeNamesCacheEntry | null = null;
+
+export const getAllAnimeNames = async (): Promise<AnimeNameRow[]> => {
+  const now = Date.now();
+  if (animeNamesCache && now - animeNamesCache.timestamp < CHOICE_CANDIDATES_TTL_MS) {
+    return animeNamesCache.promise;
+  }
+
+  const promise = loadAllAnimeNames().catch((error) => {
+    animeNamesCache = null;
+    throw error;
+  });
+  animeNamesCache = { timestamp: now, promise };
+  return promise;
+};
+
+/**
+ * Deduped display-name pool for building QCM/duo choices. Derived from the shared
+ * anime-name cache (no extra DB scan), then cached per precision so the dedup work
+ * is done once per catalogue version.
+ */
 interface ChoiceCandidatesEntry {
   timestamp: number;
   promise: Promise<string[]>;
@@ -262,9 +310,8 @@ interface ChoiceCandidatesEntry {
 const choiceCandidatesCache = new Map<Precision, ChoiceCandidatesEntry>();
 
 const loadChoiceCandidates = async (precision: Precision): Promise<string[]> => {
-  const select = { name: true, franchise: { select: { name: true } } };
-  const animes = await prisma.anime.findMany({ select });
-  const names = animes.map((a) => (precision === 'franchise' ? a.franchise?.name || a.name : a.name));
+  const rows = await getAllAnimeNames();
+  const names = rows.map((a) => (precision === 'franchise' ? a.franchise || a.name : a.name));
   return [...new Set(names)];
 };
 
@@ -290,34 +337,11 @@ export const invalidateChoiceCandidates = (): void => {
   animeNamesCache = null;
 };
 
-const loadAllAnimeNames = async () => {
-  const animes = await prisma.anime.findMany({
-    select: { name: true, altNames: true, franchise: { select: { name: true } } },
-  });
-  return animes.map((a) => ({
-    name: a.name,
-    franchise: a.franchise?.name || null,
-    altNames: a.altNames,
-  }));
-};
-
-interface AnimeNamesCacheEntry {
-  timestamp: number;
-  promise: Promise<Awaited<ReturnType<typeof loadAllAnimeNames>>>;
-}
-
-let animeNamesCache: AnimeNamesCacheEntry | null = null;
-
-export const getAllAnimeNames = async () => {
-  const now = Date.now();
-  if (animeNamesCache && now - animeNamesCache.timestamp < CHOICE_CANDIDATES_TTL_MS) {
-    return animeNamesCache.promise;
-  }
-
-  const promise = loadAllAnimeNames().catch((error) => {
-    animeNamesCache = null;
-    throw error;
-  });
-  animeNamesCache = { timestamp: now, promise };
-  return promise;
+/**
+ * Pre-warm the catalogue caches at boot so the first match start / first
+ * autocomplete keystroke doesn't pay the full `anime` scan (Render cold start).
+ * Best-effort and non-blocking.
+ */
+export const warmCatalogueCaches = async (): Promise<void> => {
+  await Promise.all([getChoiceCandidates('franchise'), getChoiceCandidates('exact')]);
 };

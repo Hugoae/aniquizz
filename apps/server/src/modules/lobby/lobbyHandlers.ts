@@ -8,6 +8,7 @@ import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
 import { getUserAnimeIds } from '../anilist/anilistService';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { BotConfig } from '../game/engine/types';
+import { LOBBY_LIST_ROOM } from './lobbyRooms';
 
 /** Balanced default behaviour for lobby-spawned dev bots. */
 const DEV_BOT_CONFIG: BotConfig = { accuracy: 0.7, minDelayMs: 2_000, maxDelayMs: 8_000 };
@@ -58,7 +59,7 @@ export const registerLobbyHandlers = (
   gameManager: GameManager,
 ) => {
   const uid = (): string => socket.data.userId as string;
-  const broadcastRooms = () => io.emit('rooms_update', gameManager.getRoomList());
+  const broadcastRooms = () => gameManager.broadcastRoomList();
 
   const createLobby = (payload: CreateLobbyInput) => {
     try {
@@ -239,7 +240,19 @@ export const registerLobbyHandlers = (
     broadcastRooms();
   };
 
-  const getRooms = () => socket.emit('rooms_update', gameManager.getRoomList());
+  const getRooms = () => {
+    socket.join(LOBBY_LIST_ROOM);
+    gameManager.sendRoomListTo(socket.id);
+  };
+
+  const subscribeRoomList = () => {
+    socket.join(LOBBY_LIST_ROOM);
+    gameManager.sendRoomListTo(socket.id);
+  };
+
+  const unsubscribeRoomList = () => {
+    socket.leave(LOBBY_LIST_ROOM);
+  };
 
   const toggleReady = (payload: { roomId: string }) => {
     gameManager.getRoom(payload.roomId)?.toggleReady(uid());
@@ -248,6 +261,8 @@ export const registerLobbyHandlers = (
   socket.on('lobby:create', guard(socket, 'lobby:create', RATE_LIMITS.createLobby, createLobby));
   socket.on('lobby:join', requireAuth(socket, joinLobby));
   socket.on('get_rooms', getRooms);
+  socket.on('lobby:subscribe_list', subscribeRoomList);
+  socket.on('lobby:unsubscribe_list', unsubscribeRoomList);
   socket.on('transfer_host', requireAuth(socket, transferHost));
   socket.on('lobby:kick', requireAuth(socket, kickFromLobby));
   socket.on('dev:add_bots', requireAuth(socket, addBotsFromLobby));

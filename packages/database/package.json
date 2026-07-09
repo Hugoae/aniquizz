@@ -20,9 +20,11 @@
     "cleanup:bots": "ts-node scripts/cleanup_bot_history.ts",
     "seed:dev-catalogue": "ts-node scripts/seed_dev_catalogue.ts",
     "pipeline:build": "ts-node scripts/global_build.ts",
+    "pipeline:check-locks": "ts-node scripts/check-pipeline-locks.ts",
     "pipeline:reset": "ts-node scripts/reset_all.ts",
     "r2:empty": "ts-node scripts/empty_r2.ts",
-    "r2:cache-control": "ts-node scripts/set_video_cache_control.ts"
+    "r2:cache-control": "ts-node scripts/set_video_cache_control.ts",
+    "r2:scan": "ts-node scripts/scan_r2_integrity.ts"
   },
   "prisma": {
     "seed": "ts-node scripts/seed_db.ts"

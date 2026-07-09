@@ -1,7 +1,7 @@
 import { UserPlus, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useFriends } from './FriendsContext';
+import { useFriendsActions, useFriendsState } from './FriendsContext';
 
 interface Props {
   userId: string;
@@ -20,7 +20,8 @@ const isBotUserId = (id: string) => id.startsWith('bot-');
  * blocked relationships (either direction).
  */
 export function AddFriendButton({ userId, isBot, compact, className }: Props) {
-  const { addById, accept, relationOf, incomingRequestFor } = useFriends();
+  const { addById, accept } = useFriendsActions();
+  const { relationOf, incomingRequestFor } = useFriendsState();
 
   if (!userId || isBot || isBotUserId(userId)) return null;
 

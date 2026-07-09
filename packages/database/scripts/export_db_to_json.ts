@@ -33,7 +33,9 @@ async function main() {
   console.log(`\n✅ EXPORT RÉUSSI !`);
   console.log(`   📄 Fichier : ${EXPORT_FILE}`);
   console.log(`   📊 Contenu : ${data.length} Franchises.`);
+  console.log(`   🔐 Locked  : ${data.filter((f) => f.isLocked).length} franchise(s).`);
   console.log(`\n👉 Modifie ce fichier (renommage, locks) puis relance 'import_edits_to_db.ts'.`);
+  console.log(`   Step 1 also reads locks from this file, with a database fallback if it is missing.`);
 }
 
 main()

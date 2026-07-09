@@ -11,6 +11,7 @@ import { registerAdminRoutes } from './modules/admin/adminRoutes';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
+import { warmCatalogueCaches } from './modules/game/gameService';
 
 const PORT = env.PORT;
 
@@ -40,6 +41,11 @@ async function main() {
 
     // 5. Arrêt gracieux (Ctrl+C local, restart Render)
     registerShutdownHandlers({ httpServer, io });
+
+    // 6. Warm catalogue caches so the first match / autocomplete skips the cold scan.
+    void warmCatalogueCaches().catch((error) => {
+      logger.warn('Catalogue cache warm-up failed (non-fatal)', 'Server', error);
+    });
 
   } catch (error) {
     captureError(error, { context: 'Server', source: 'bootstrap' });

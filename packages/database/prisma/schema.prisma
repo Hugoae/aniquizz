@@ -265,6 +265,9 @@ model Song {
   @@index([animeId])
   @@index([downloadStatus])
   @@index([difficulty])
+  // Composite for the playlist candidate scan (always filters COMPLETED, often by
+  // type + difficulty). Speeds match-start selection as the catalogue grows.
+  @@index([downloadStatus, songType, difficulty])
 }
 
 model SongHistory {

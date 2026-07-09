@@ -20,8 +20,10 @@ const CRITICAL_OUTBOUND_EVENTS = new Set([
 
 /** Read-only / high-volume events — always debug, summarized payload. */
 const INBOUND_DEBUG_ONLY_EVENTS = new Set([
-  'get_anime_list',
+  'anime:search',
   'get_rooms',
+  'lobby:subscribe_list',
+  'lobby:unsubscribe_list',
   'get_game_state',
   'get_my_watched',
   'get_watched_count',

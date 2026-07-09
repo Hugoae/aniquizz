@@ -2,28 +2,19 @@ import jwt from 'jsonwebtoken';
 import { createClient } from '@supabase/supabase-js';
 import { env } from '../config/env';
 
-/** Fixed UUIDs from packages/database/scripts/seed_test_accounts.ts */
+/** Fixed UUID from packages/database/scripts/seed_test_accounts.ts */
 export const TEST_USER_IDS = {
   admin: '00000000-0000-4000-8000-000000000001',
-  playerOne: '00000000-0000-4000-8000-000000000002',
-  playerTwo: '00000000-0000-4000-8000-000000000003',
-  moderator: '00000000-0000-4000-8000-000000000004',
 } as const;
 
 export type TestUserKey = keyof typeof TEST_USER_IDS;
 
 export const TEST_USERNAMES = {
   [TEST_USER_IDS.admin]: 'admin_dev',
-  [TEST_USER_IDS.playerOne]: 'player_one',
-  [TEST_USER_IDS.playerTwo]: 'player_two',
-  [TEST_USER_IDS.moderator]: 'moderator_dev',
 } as const;
 
 export const TEST_EMAILS: Record<TestUserKey, string> = {
   admin: 'admin@aniquizz.test',
-  playerOne: 'player1@aniquizz.test',
-  playerTwo: 'player2@aniquizz.test',
-  moderator: 'moderator@aniquizz.test',
 };
 
 /** Sign an HS256 Supabase-compatible access token (when SUPABASE_JWT_SECRET is set). */
@@ -44,7 +35,7 @@ const anonKey = (): string =>
   '';
 
 /** Real Supabase access token via sign-in (preferred — no JWT secret needed). */
-export async function getTestAccessToken(userKey: TestUserKey): Promise<string> {
+export async function getTestAccessToken(userKey: TestUserKey = 'admin'): Promise<string> {
   const userId = TEST_USER_IDS[userKey];
   const username = TEST_USERNAMES[userId];
 

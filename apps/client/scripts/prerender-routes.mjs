@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Injects crawlable HTML into #root for public routes (post-`vite build`).
- * React replaces this content on hydrate; crawlers without JS still see real text.
+ * Injects crawlable HTML into #seo-content for public routes (post-`vite build`).
+ * #root stays empty until React mounts so users never see raw prerender copy.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -95,18 +95,25 @@ const ROUTES = {
   },
 };
 
-function injectRoot(html, inner) {
-  return html.replace(/<div id="root">[\s\S]*?<\/div>/, `<div id="root">${inner}</div>`);
+function injectSeoContent(html, inner) {
+  if (!html.includes('id="seo-content"')) {
+    console.error('dist/index.html missing #seo-content — update index.html template.');
+    process.exit(1);
+  }
+  return html.replace(
+    /<div id="seo-content"[^>]*>[\s\S]*?<\/div>/,
+    `<div id="seo-content" hidden>${inner}</div>`,
+  );
 }
 
 const templateHtml = readFileSync(INDEX, 'utf8');
-if (!templateHtml.includes('id="root"')) {
-  console.error('dist/index.html missing #root — run vite build first.');
+if (!templateHtml.includes('id="root"') || !templateHtml.includes('id="seo-content"')) {
+  console.error('dist/index.html missing #root or #seo-content — run vite build first.');
   process.exit(1);
 }
 
 function writeRoute(routePath, content) {
-  const html = injectRoot(templateHtml, content);
+  const html = injectSeoContent(templateHtml, content);
   if (routePath === '/') {
     writeFileSync(INDEX, html, 'utf8');
     console.log('prerender / → dist/index.html');

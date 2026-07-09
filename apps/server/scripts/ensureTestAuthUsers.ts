@@ -16,21 +16,6 @@ const TEST_ACCOUNTS = [
     email: 'admin@aniquizz.test',
     username: 'admin_dev',
   },
-  {
-    id: '00000000-0000-4000-8000-000000000002',
-    email: 'player1@aniquizz.test',
-    username: 'player_one',
-  },
-  {
-    id: '00000000-0000-4000-8000-000000000003',
-    email: 'player2@aniquizz.test',
-    username: 'player_two',
-  },
-  {
-    id: '00000000-0000-4000-8000-000000000004',
-    email: 'moderator@aniquizz.test',
-    username: 'moderator_dev',
-  },
 ] as const;
 
 async function main() {

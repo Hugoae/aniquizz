@@ -7,7 +7,6 @@ import {
   Lock,
   LockOpen,
   Pencil,
-  Play,
   Plus,
   Trash2,
   X,
@@ -15,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +24,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { cn } from "@/lib/utils";
 import {
   adminApi,
   AdminApiError,
@@ -43,19 +40,13 @@ import {
   SongEditDialog,
   VideoPreviewDialog,
 } from "./catalogue/EditDialogs";
+import { CatalogueSongRow } from "./catalogue/CatalogueSongRow";
+import { VirtualScroll } from "@/components/ui/VirtualScroll";
 
 const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : "Erreur.");
 
 const DIFFICULTIES: SongDifficulty[] = ["EASY", "MEDIUM", "HARD"];
 const STATUSES: SongStatus[] = ["PENDING", "PROCESSING", "COMPLETED", "ERROR", "SKIPPED"];
-
-const statusBadge: Record<SongStatus, string> = {
-  PENDING: "bg-secondary text-foreground",
-  PROCESSING: "bg-info/20 text-info",
-  COMPLETED: "bg-success/20 text-success",
-  ERROR: "bg-destructive/20 text-destructive",
-  SKIPPED: "bg-warning/20 text-warning",
-};
 
 const selectCls = "rounded border border-border bg-background px-2 py-1 text-xs";
 
@@ -169,7 +160,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
         : prev,
     );
 
-  const quickPatch = async (song: CatalogueSong, partial: Partial<CatalogueSong>) => {
+  const quickPatch = useCallback(async (song: CatalogueSong, partial: Partial<CatalogueSong>) => {
     patchSongLocal(song.id, partial);
     try {
       await adminApi.updateSong(song.id, partial);
@@ -177,15 +168,26 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
       toast.error(errMsg(e));
       void load();
     }
-  };
+  }, [load]);
 
-  const toggleSelect = (id: number) =>
+  const handleToggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }, []);
+
+  const handlePreview = useCallback((song: CatalogueSong) => setPreview(song), []);
+  const handleEditSong = useCallback(
+    (song: CatalogueSong, animeId: number) => setSongDialog({ song, animeId }),
+    [],
+  );
+  const handleDeleteSong = useCallback(
+    (song: CatalogueSong) => setConfirm({ kind: "song", id: song.id, label: song.title }),
+    [],
+  );
 
   const bulkApply = async (data: {
     difficulty?: SongDifficulty;
@@ -412,7 +414,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                         )}
                       </button>
                       {a.coverImage ? (
-                        <img src={a.coverImage} alt={`Couverture de ${a.name}`} className="h-8 w-6 rounded object-cover" />
+                        <img src={a.coverImage} alt={`Couverture de ${a.name}`} className="h-8 w-6 rounded object-cover" loading="lazy" decoding="async" width={24} height={32} />
                       ) : (
                         <div className="flex h-8 w-6 items-center justify-center rounded bg-secondary/50">
                           <Film className="h-3 w-3 text-muted-foreground" />
@@ -457,108 +459,34 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                     {/* Songs */}
                     {isAOpen(a.id) && a.songs.length > 0 && (
                       <div className="overflow-x-auto pl-12">
-                        <table className="w-full text-sm">
-                          <tbody>
-                            {a.songs.map((s) => (
-                              <tr key={s.id} className="border-t border-border/50 hover:bg-secondary/50">
-                                <td className="p-2 align-middle">
-                                  <Checkbox
-                                    checked={selected.has(s.id)}
-                                    onCheckedChange={() => toggleSelect(s.id)}
-                                  />
-                                </td>
-                                <td className="p-2">
-                                  <div className="font-medium">
-                                    {s.songType}
-                                    {s.sequence} · {s.title}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">{s.artist}</div>
-                                </td>
-                                <td className="p-2">
-                                  <select
-                                    className={selectCls}
-                                    value={s.difficulty}
-                                    onChange={(e) =>
-                                      void quickPatch(s, {
-                                        difficulty: e.target.value as SongDifficulty,
-                                      })
-                                    }
-                                  >
-                                    {DIFFICULTIES.map((d) => (
-                                      <option key={d} value={d}>
-                                        {d}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td className="p-2">
-                                  <select
-                                    className={cn(selectCls, statusBadge[s.downloadStatus])}
-                                    value={s.downloadStatus}
-                                    onChange={(e) =>
-                                      void quickPatch(s, {
-                                        downloadStatus: e.target.value as SongStatus,
-                                      })
-                                    }
-                                  >
-                                    {STATUSES.map((st) => (
-                                      <option key={st} value={st}>
-                                        {st}
-                                      </option>
-                                    ))}
-                                  </select>
-                                </td>
-                                <td className="p-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => void quickPatch(s, { isLocked: !s.isLocked })}
-                                    aria-label={s.isLocked ? `Déverrouiller ${s.title}` : `Verrouiller ${s.title}`}
-                                  >
-                                    {s.isLocked ? (
-                                      <Lock className="h-4 w-4 text-warning" />
-                                    ) : (
-                                      <LockOpen className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                  </button>
-                                </td>
-                                <td className="p-2">
-                                  <div className="flex items-center justify-end gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      disabled={!s.videoKey}
-                                      aria-label={`Prévisualiser ${s.title}`}
-                                      onClick={() => setPreview(s)}
-                                    >
-                                      <Play className="h-3.5 w-3.5" aria-hidden />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      aria-label={`Modifier ${s.title}`}
-                                      onClick={() => setSongDialog({ song: s, animeId: a.id })}
-                                    >
-                                      <Pencil className="h-3.5 w-3.5" aria-hidden />
-                                    </Button>
-                                    {canManage && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="text-destructive"
-                                        aria-label={`Supprimer ${s.title}`}
-                                        onClick={() =>
-                                          setConfirm({ kind: "song", id: s.id, label: s.title })
-                                        }
-                                      >
-                                        <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                        <div className="flex items-center border-t border-border/50 px-2 py-1 text-xs font-medium text-muted-foreground">
+                          <div className="w-10 shrink-0" />
+                          <div className="min-w-0 flex-1">Son</div>
+                          <div className="w-28 shrink-0">Diff.</div>
+                          <div className="w-36 shrink-0">Statut</div>
+                          <div className="w-12 shrink-0">Lock</div>
+                          <div className="w-32 shrink-0 text-right">Actions</div>
+                        </div>
+                        <VirtualScroll
+                          items={a.songs}
+                          estimateSize={56}
+                          maxHeight={420}
+                          threshold={24}
+                          getKey={(s) => s.id}
+                          renderItem={(s) => (
+                            <CatalogueSongRow
+                              song={s}
+                              animeId={a.id}
+                              canManage={canManage}
+                              selected={selected.has(s.id)}
+                              onToggleSelect={handleToggleSelect}
+                              onQuickPatch={quickPatch}
+                              onPreview={handlePreview}
+                              onEdit={handleEditSong}
+                              onDelete={handleDeleteSong}
+                            />
+                          )}
+                        />
                       </div>
                     )}
                   </div>

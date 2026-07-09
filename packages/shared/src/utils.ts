@@ -256,13 +256,6 @@ function scoreAltField(term: string, raw: string, allowFuzzy: boolean): FieldSco
   return best;
 }
 
-const DERIVATIVE_FRANCHISE_RE =
-  /(:\s|\bOVA\b|\bGaiden\b|\bSpecial\b|\bTHE FINAL\b|\bPart \d|\bSeason \d|\bFinal Season)/i;
-
-function isDerivativeFranchise(name: string): boolean {
-  return DERIVATIVE_FRANCHISE_RE.test(name);
-}
-
 function buildFranchiseCounts(list: FuzzyAnimeCandidate[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const anime of list) {
@@ -294,11 +287,15 @@ function findParentFranchise(
   const haystacks = [...(anime.altNames ?? []), anime.name];
   for (const [parentName] of popular) {
     const normParent = normalizeString(parentName);
+    if (!normParent) continue;
+
     for (const h of haystacks) {
       const normH = normalizeString(h);
-      if (normH.startsWith(normParent) || normParent.startsWith(normalizeString(franchiseStem(h)))) {
-        return parentName;
-      }
+      const normStem = normalizeString(franchiseStem(h));
+      if (!normH && !normStem) continue;
+
+      if (normH.startsWith(normParent)) return parentName;
+      if (normStem.length >= 3 && normParent.startsWith(normStem)) return parentName;
     }
   }
   return null;
@@ -344,8 +341,6 @@ function suggestionLabel(
 
     const parent = findParentFranchise(anime, franchiseCounts);
     if (parent) return parent;
-
-    if (isDerivativeFranchise(anime.franchise)) return null;
 
     return anime.franchise;
   }

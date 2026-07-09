@@ -1,22 +1,12 @@
-/**
- * App shell: providers, global socket moderation handlers, and route table.
- *
- * Auth-gated routes use ProtectedRoute (redirect home + open login modal).
- * Both /profile and /profile/:userId require a session.
- */
-import { lazy, Suspense, useEffect } from 'react';
+import { lazy, Suspense, useEffect, type ReactElement, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
-import { ThemeProvider } from 'next-themes';
-import { Loader2 } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
-import { socket } from '@/lib/socket';
-import { supabase } from '@/lib/supabase';
+import { RouteSkeletonFallback } from '@/components/layout/RouteSkeletonFallback';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
-import { FriendsProvider } from '@/features/friends/FriendsContext';
-import { AuthModal } from '@/features/auth/components/AuthModal';
+import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 
@@ -34,83 +24,107 @@ const PrivacyPolicyPage = lazy(() => import('@/pages/legal/PrivacyPolicyPage'));
 const TermsOfServicePage = lazy(() => import('@/pages/legal/TermsOfServicePage'));
 const LegalNoticePage = lazy(() => import('@/pages/legal/LegalNoticePage'));
 
-function RouteFallback() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-primary" role="status" aria-label="Chargement" />
-    </div>
-  );
-}
+const AuthModal = lazy(() =>
+  import('@/features/auth/components/AuthModal').then((m) => ({ default: m.AuthModal })),
+);
+
+const FriendsProvider = lazy(() =>
+  import('@/features/friends/FriendsContext').then((m) => ({ default: m.FriendsProvider })),
+);
 
 /** Gameplay and profile routes require an authenticated session. */
-const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const { session, loading, setShowAuthModal } = useAuth();
+const ProtectedRoute = ({ children }: { children: ReactElement }) => {
+  const { session, authReady } = useAuth();
+  const { setShowAuthModal } = useAuthModal();
 
   useEffect(() => {
-    if (!loading && !session) {
+    if (authReady && !session) {
       setShowAuthModal(true);
     }
-  }, [loading, session, setShowAuthModal]);
+  }, [authReady, session, setShowAuthModal]);
 
-  if (loading) return <RouteFallback />;
+  if (!authReady) return <RouteSkeletonFallback />;
   if (!session) return <Navigate to="/" replace />;
   return children;
 };
 
+/** Friends socket state is only needed for signed-in users — defer the chunk until then. */
+function SessionFriendsProvider({ children }: { children: ReactNode }) {
+  const { session, authReady } = useAuth();
+  if (!authReady || !session) return <>{children}</>;
+  return (
+    <Suspense fallback={null}>
+      <FriendsProvider>{children}</FriendsProvider>
+    </Suspense>
+  );
+}
+
 const AppContent = () => {
-  const { showAuthModal, setShowAuthModal } = useAuth();
+  const { showAuthModal, setShowAuthModal } = useAuthModal();
   const navigate = useNavigate();
 
   // Server-driven exits must bounce the user back home:
   //  - force_logout (admin disconnect): clear the Supabase session.
   //  - io server disconnect (admin ban): the handshake keeps them out.
   useEffect(() => {
-    let lastServerMessage: string | null = null;
-    // Benign when single-session enforcement replaces this connection.
-    let sessionReplaced = false;
+    let disposed = false;
+    let cleanupSocket: (() => void) | undefined;
 
-    const onError = (p: { message?: string }) => {
-      lastServerMessage = p?.message ?? null;
-    };
+    void import('@/lib/socket').then(({ socket }) => {
+      if (disposed) return;
 
-    const onForceLogout = (p?: { reason?: string }) => {
-      toast.error(p?.reason || 'Vous avez été déconnecté par la modération.');
-      void supabase.auth.signOut();
-      navigate('/', { replace: true });
-    };
+      let lastServerMessage: string | null = null;
+      let sessionReplaced = false;
 
-    const onSessionReplaced = () => {
-      sessionReplaced = true;
-    };
+      const onError = (p: { message?: string }) => {
+        lastServerMessage = p?.message ?? null;
+      };
 
-    const onDisconnect = (reason: string) => {
-      if (reason !== 'io server disconnect') return;
-      if (sessionReplaced) {
-        sessionReplaced = false;
-        return;
-      }
-      const message = lastServerMessage;
-      lastServerMessage = null;
-      toast.error(message || 'Vous avez été déconnecté.');
-      navigate('/', { replace: true });
-    };
+      const onForceLogout = (p?: { reason?: string }) => {
+        toast.error(p?.reason || 'Vous avez été déconnecté par la modération.');
+        void import('@/lib/supabase').then(({ supabase }) => supabase.auth.signOut());
+        navigate('/', { replace: true });
+      };
 
-    socket.on('error', onError);
-    socket.on('force_logout', onForceLogout);
-    socket.on('session_replaced', onSessionReplaced);
-    socket.on('disconnect', onDisconnect);
+      const onSessionReplaced = () => {
+        sessionReplaced = true;
+      };
+
+      const onDisconnect = (reason: string) => {
+        if (reason !== 'io server disconnect') return;
+        if (sessionReplaced) {
+          sessionReplaced = false;
+          return;
+        }
+        const message = lastServerMessage;
+        lastServerMessage = null;
+        toast.error(message || 'Vous avez été déconnecté.');
+        navigate('/', { replace: true });
+      };
+
+      socket.on('error', onError);
+      socket.on('force_logout', onForceLogout);
+      socket.on('session_replaced', onSessionReplaced);
+      socket.on('disconnect', onDisconnect);
+
+      cleanupSocket = () => {
+        socket.off('error', onError);
+        socket.off('force_logout', onForceLogout);
+        socket.off('session_replaced', onSessionReplaced);
+        socket.off('disconnect', onDisconnect);
+      };
+    });
+
     return () => {
-      socket.off('error', onError);
-      socket.off('force_logout', onForceLogout);
-      socket.off('session_replaced', onSessionReplaced);
-      socket.off('disconnect', onDisconnect);
+      disposed = true;
+      cleanupSocket?.();
     };
   }, [navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
       <SkipLink />
-      <Suspense fallback={<RouteFallback />}>
+      <Suspense fallback={<RouteSkeletonFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
 
@@ -172,7 +186,11 @@ const AppContent = () => {
         </Routes>
       </Suspense>
 
-      <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+      {showAuthModal && (
+        <Suspense fallback={null}>
+          <AuthModal open={showAuthModal} onOpenChange={setShowAuthModal} />
+        </Suspense>
+      )}
 
       <CookieConsentBanner />
       <Toaster position="bottom-right" richColors closeButton />
@@ -182,17 +200,17 @@ const AppContent = () => {
 
 function App() {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
-      <TooltipProvider>
-        <CookieConsentProvider>
+    <TooltipProvider>
+      <CookieConsentProvider>
+        <AuthModalProvider>
           <AuthProvider>
-            <FriendsProvider>
+            <SessionFriendsProvider>
               <AppContent />
-            </FriendsProvider>
+            </SessionFriendsProvider>
           </AuthProvider>
-        </CookieConsentProvider>
-      </TooltipProvider>
-    </ThemeProvider>
+        </AuthModalProvider>
+      </CookieConsentProvider>
+    </TooltipProvider>
   );
 }
 
