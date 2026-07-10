@@ -1,6 +1,32 @@
 import { describe, it, expect } from 'vitest';
-import { buildChoices, buildDuo } from './selection';
+import { buildChoices, buildDuo, buildChoiceCandidatePool } from './selection';
 import { normalizeString } from './utils';
+
+describe('buildChoiceCandidatePool', () => {
+  const rows = [
+    { id: 1, name: 'Naruto', franchise: 'Naruto' },
+    { id: 2, name: 'Bleach', franchise: 'Bleach' },
+    { id: 3, name: 'One Piece', franchise: 'One Piece' },
+    { id: 4, name: 'Death Note', franchise: 'Death Note' },
+    { id: 99, name: 'Obscure Anime', franchise: 'Obscure' },
+  ];
+
+  it('returns the full catalogue when watchedIds is omitted', () => {
+    const pool = buildChoiceCandidatePool(rows, 'anime');
+    expect(pool).toEqual(['Naruto', 'Bleach', 'One Piece', 'Death Note', 'Obscure Anime']);
+  });
+
+  it('restricts the pool to watched anime ids in AniList mode', () => {
+    const pool = buildChoiceCandidatePool(rows, 'anime', [1, 2, 3]);
+    expect(pool).toEqual(['Naruto', 'Bleach', 'One Piece']);
+    expect(pool).not.toContain('Obscure Anime');
+  });
+
+  it('uses franchise names when precision is franchise', () => {
+    const pool = buildChoiceCandidatePool(rows, 'franchise', [1, 4]);
+    expect(pool).toEqual(['Naruto', 'Death Note']);
+  });
+});
 
 describe('buildChoices', () => {
   const pool = ['Naruto', 'Bleach', 'One Piece', 'Death Note', 'Fairy Tail'];
@@ -28,6 +54,25 @@ describe('buildChoices', () => {
     expect(choices).toHaveLength(4);
     expect(choices).toContain('Naruto');
     expect(choices.filter((c) => c === '???').length).toBeGreaterThan(0);
+  });
+
+  it('only draws wrong answers from a watched-filtered pool', () => {
+    const watchedPool = buildChoiceCandidatePool(
+      [
+        { id: 1, name: 'Naruto', franchise: 'Naruto' },
+        { id: 2, name: 'Bleach', franchise: 'Bleach' },
+        { id: 3, name: 'One Piece', franchise: 'One Piece' },
+        { id: 4, name: 'Death Note', franchise: 'Death Note' },
+      ],
+      'anime',
+      [1, 2, 3, 4],
+    );
+    const choices = buildChoices('Naruto', watchedPool, 4);
+    expect(choices).toHaveLength(4);
+    expect(choices).toContain('Naruto');
+    for (const choice of choices) {
+      expect(['Naruto', 'Bleach', 'One Piece', 'Death Note', '???']).toContain(choice);
+    }
   });
 });
 

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Users, Search, Lock, ListMusic, AlertTriangle, Clock, Target, Mic2, Shuffle, Play, Trophy, RefreshCw } from 'lucide-react';
 import type { RoomListItem } from '@aniquizz/shared';
+import { getPrecisionChipLabel } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -144,7 +145,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
 
                     <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-accent/20 bg-accent/10 text-xs font-bold text-accent">
                       <Target className="w-3.5 h-3.5" />
-                      <span className="capitalize">{s.precision === 'exact' ? 'Exact' : 'Franchise'}</span>
+                      <span className="capitalize">{getPrecisionChipLabel(s.precision)}</span>
                     </div>
 
                     <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs font-bold text-primary">

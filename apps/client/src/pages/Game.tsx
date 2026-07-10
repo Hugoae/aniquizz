@@ -22,7 +22,7 @@ import {
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings } from '@aniquizz/shared';
+import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
@@ -56,16 +56,23 @@ export default function Game() {
     initialPlayers,
     initialTotalRounds: settings.soundCount ?? 20,
     initialFirstVideo: initialState.gameData?.firstVideo ?? null,
+    initialVideoMode: normalizeVideoMode(settings.videoMode),
     anilistUsername: profile?.anilistUsername,
     onCancelled: () => navigate('/play', { state: { returnToLobby: true, roomId }, replace: true }),
-    onClosed: () => navigate('/play', { replace: true }),
+    onClosed: (reason) => {
+      if (isBanSanctionReason(reason)) {
+        navigate('/', { replace: true });
+        return;
+      }
+      navigate('/play', { replace: true });
+    },
   });
 
   const { phase, players, currentSong } = state;
 
   // Video element lifecycle (load per round, volume, pause, autoplay recovery).
   const { videoRef, preloadRef, warmVideo, volume, setVolume, isMuted, toggleMute, autoplayBlocked, resumeCurrent } =
-    useVideoPlayback({ currentSong, isGamePaused: state.isGamePaused });
+    useVideoPlayback({ currentSong, phase, isGamePaused: state.isGamePaused });
 
   // --- Local UI state ---
   const [answer, setAnswer] = useState('');
@@ -76,7 +83,7 @@ export default function Game() {
 
   const suggestions = useAnimeSearch({
     query: answer,
-    precision: settings.precision === 'exact' ? 'exact' : 'franchise',
+    precision: normalizePrecision(settings.precision),
     enabled: inputMode === 'typing' && phase === 'guessing',
   });
 
@@ -225,7 +232,7 @@ export default function Game() {
     difficultyLabel: Array.isArray(settings.difficulty) && settings.difficulty.length === 1
       ? settings.difficulty[0]
       : 'Varié',
-    precisionLabel: settings.precision === 'franchise' ? 'Franchise' : 'Exact',
+    precisionLabel: getPrecisionChipLabel(settings.precision),
     modeLabel: 'Standard',
   }), [settings.soundSelection, settings.difficulty, settings.precision]);
 
@@ -270,6 +277,7 @@ export default function Game() {
     onShowLeave: () => setShowLeaveChoice(true),
     onShowProfile: () => setHardLeavePrompt('profile'),
     currentUserId, gameMode, roomId, configBadges,
+    videoMode: state.videoMode ?? normalizeVideoMode(settings.videoMode),
   };
 
   return (

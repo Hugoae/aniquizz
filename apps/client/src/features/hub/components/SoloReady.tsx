@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Trophy, ArrowLeft, Play, Settings, AlertTriangle, Music, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -8,7 +9,9 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { buildRoomSettingBadges, getDifficultyBadge, SETTING_TONE_CLASSES } from '@/features/hub/components/roomSettings';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/features/auth/context/AuthContext';
-import { isWatchedSourceBlocked, WATCHED_SOURCE_BLOCK_MESSAGE } from '@/features/hub/components/config/watchedSource';
+import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE } from '@/features/hub/components/config/watchedSource';
+import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
 
 /** One recap chip in the solo pre-game card. */
 function SettingChip({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value: string; className: string }) {
@@ -27,6 +30,7 @@ interface SoloReadyProps {
   playerAvatar: string;
   user: User | null;
   profile: Profile | null;
+  roomId?: string;
   isLaunchStarting?: boolean;
   onStart: () => void;
   onLeave: () => void;
@@ -44,6 +48,7 @@ export function SoloReady({
   playerAvatar,
   user,
   profile,
+  roomId,
   isLaunchStarting = false,
   onStart,
   onLeave,
@@ -51,7 +56,21 @@ export function SoloReady({
 }: SoloReadyProps) {
   const difficultyBadge = getDifficultyBadge(gameSettings?.difficulty || []);
   const watchedBlocked = isWatchedSourceBlocked(gameSettings?.soundSelection ?? 'random', user, profile);
-  const canPlay = !isLaunchStarting && !watchedBlocked;
+  const { stats: watchedStatsRaw } = useWatchedPoolStats({
+    roomId,
+    soundCount: gameSettings?.soundCount,
+    difficulty: gameSettings?.difficulty,
+    types: gameSettings?.soundTypes,
+    watchedMode: gameSettings?.watchedMode,
+    enabled: gameSettings?.soundSelection === 'watched' && Boolean(profile?.anilistUsername?.trim()),
+  });
+  const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, gameSettings?.soundCount);
+  const poolCheck = checkWatchedPoolLaunch(
+    gameSettings?.soundSelection ?? 'random',
+    watchedStats,
+    gameSettings?.watchedAllowFallback,
+  );
+  const canPlay = !isLaunchStarting && !watchedBlocked && !poolCheck.blocked;
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-140px)] w-full max-w-2xl flex-col items-center justify-center gap-6 animate-fade-in">
@@ -71,7 +90,7 @@ export function SoloReady({
         <div className="relative flex flex-col items-center gap-5 text-center">
           <div className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 font-black uppercase tracking-wider text-primary-foreground shadow-glow">
             <Trophy className="h-5 w-5 fill-current" aria-hidden="true" />
-            Standard · Solo
+            Standard, Solo
           </div>
 
           <UserAvatar avatar={playerAvatar} username={playerName} className="h-24 w-24 border-4 border-primary/50 shadow-elevated" />
@@ -82,14 +101,21 @@ export function SoloReady({
           </div>
 
           {gameSettings && (
-            <div className="flex flex-wrap items-center justify-center gap-2 border-t border-border/50 pt-5">
-              <SettingChip icon={AlertTriangle} label="Diff" value={difficultyBadge.label} className={difficultyBadge.className} />
-              <SettingChip icon={Music} label="Sons" value={String(gameSettings.soundCount)} className={SETTING_TONE_CLASSES.accent} />
-              {buildRoomSettingBadges(gameSettings)
-                .filter((spec) => spec.key !== 'sounds')
-                .map((spec) => (
-                  <SettingChip key={spec.key} icon={spec.icon} label={spec.label} value={spec.value} className={SETTING_TONE_CLASSES[spec.tone]} />
-                ))}
+            <div className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-5">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                <SettingChip icon={AlertTriangle} label="Diff" value={difficultyBadge.label} className={difficultyBadge.className} />
+                <SettingChip icon={Music} label="Sons" value={String(gameSettings.soundCount)} className={SETTING_TONE_CLASSES.accent} />
+                {buildRoomSettingBadges(gameSettings)
+                  .filter((spec) => spec.key !== 'sounds')
+                  .map((spec) => (
+                    <SettingChip key={spec.key} icon={spec.icon} label={spec.label} value={spec.value} className={SETTING_TONE_CLASSES[spec.tone]} />
+                  ))}
+              </div>
+              <LobbyRulesTrigger
+                config={gameSettings}
+                context={{ lobbyMode: 'solo' }}
+                className="ml-auto"
+              />
             </div>
           )}
 
@@ -115,6 +141,11 @@ export function SoloReady({
             {watchedBlocked && (
               <p className="max-w-sm text-center text-sm font-medium text-destructive" role="alert">
                 {WATCHED_SOURCE_BLOCK_MESSAGE}
+              </p>
+            )}
+            {!watchedBlocked && poolCheck.blocked && poolCheck.reason && (
+              <p className="max-w-sm text-center text-sm font-medium text-destructive" role="alert">
+                {poolCheck.reason}
               </p>
             )}
             <Button variant="ghost" onClick={onOpenSettings} className="gap-2 text-muted-foreground hover:text-foreground">

@@ -8,6 +8,7 @@ import { warmLikelyRoutes } from '@/lib/routePrefetch';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthModalContext';
+import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 
@@ -107,7 +108,9 @@ const AppContent = () => {
         }
         const message = lastServerMessage;
         lastServerMessage = null;
-        toast.error(message || 'Vous avez été déconnecté.');
+        if (!notifyModerationBan(message)) {
+          toast.error(message || 'Vous avez été déconnecté.');
+        }
         navigate('/', { replace: true });
       };
 

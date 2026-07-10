@@ -199,7 +199,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 truncate text-sm font-medium transition-colors hover:text-primary">
                           <span className="truncate">
-                            {player.username} {isMe && '(Moi)'}
+                            {player.username}
                           </span>
                           <RoleBadge role={player.role} />
                         </div>

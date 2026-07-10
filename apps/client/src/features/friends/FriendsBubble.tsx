@@ -145,7 +145,7 @@ export function FriendsBubble() {
                         {f.status === 'offline'
                           ? formatLastSeen(f.lastSeenAt)
                           : f.roomName
-                            ? `${presenceLabel(f.status)} · ${f.roomName}`
+                            ? `${presenceLabel(f.status)} — ${f.roomName}`
                             : presenceLabel(f.status)}
                       </div>
                     </button>

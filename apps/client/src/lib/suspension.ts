@@ -4,6 +4,8 @@
  */
 
 import { useEffect, useState } from "react";
+import { toast } from 'sonner';
+import { MODERATION_BAN_MESSAGE, isBanSanctionReason } from '@aniquizz/shared';
 
 export interface DurationOption {
   label: string;
@@ -64,6 +66,32 @@ export const formatRemaining = (until: string | null | undefined): string => {
   if (hours > 0) return `${hours} h ${minutes} min`;
   return `${minutes} min`;
 };
+
+/** French toast when a banned player tries to start Solo or Multiplayer. */
+export function getPlayBannedMessage(bannedUntil?: string | null): string {
+  const remaining = formatRemaining(bannedUntil);
+  if (!remaining) return MODERATION_BAN_MESSAGE;
+  if (remaining === 'Définitif') return `${MODERATION_BAN_MESSAGE} (sanction définitive)`;
+  return `${MODERATION_BAN_MESSAGE} Reprise dans ${remaining}.`;
+}
+
+const BAN_TOAST_DEBOUNCE_MS = 3_000;
+let lastBanToastAt = 0;
+
+/**
+ * Show the ban ejection toast at most once per short window.
+ * Returns true when the message is a ban reason (whether or not the toast was shown).
+ */
+export function notifyModerationBan(message?: string | null): boolean {
+  const text = message?.trim() || MODERATION_BAN_MESSAGE;
+  if (!isBanSanctionReason(text)) return false;
+  const now = Date.now();
+  if (now - lastBanToastAt >= BAN_TOAST_DEBOUNCE_MS) {
+    lastBanToastAt = now;
+    toast.error(text);
+  }
+  return true;
+}
 
 /** Re-render every second while a sanction countdown is visible. */
 export function useSanctionTicker(active: boolean): void {

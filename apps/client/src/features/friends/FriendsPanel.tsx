@@ -49,7 +49,7 @@ function FriendRow({
     friend.status === 'offline'
       ? formatLastSeen(friend.lastSeenAt)
       : friend.roomName
-        ? `${presenceLabel(friend.status)} · ${friend.roomName}`
+        ? `${presenceLabel(friend.status)} — ${friend.roomName}`
         : presenceLabel(friend.status);
   const joinRoomId = friend.joinable && friend.roomId ? friend.roomId : null;
 
@@ -65,7 +65,7 @@ function FriendRow({
           <RoleBadge role={friend.role} size={14} />
         </div>
         <div className="text-[11px] text-muted-foreground truncate">
-          {subtitle} · Niv. {friend.level}
+          {subtitle} — Niv. {friend.level}
         </div>
       </button>
       {joinRoomId ? (

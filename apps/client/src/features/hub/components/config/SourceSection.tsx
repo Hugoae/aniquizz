@@ -1,51 +1,51 @@
-import { useEffect, useState } from 'react';
-import { Eye, Link2, Shuffle, Lock, Music2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { Eye, Link2, Shuffle, Lock, Music2, AlertTriangle } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { socket } from '@/lib/socket';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
+import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { watchedPoolModeLabel } from './watchedSource';
 
 type Source = RoomConfig['soundSelection'];
-
-interface WatchedCount {
-  listSize: number;
-  playableSongs: number;
-}
 
 interface SourceSectionProps {
   config: RoomConfig;
   update: (patch: Partial<RoomConfig>) => void;
   isRoom: boolean;
   anilistLinked?: boolean;
+  /** When set, pool stats resolve the lobby union/intersection instead of solo list. */
+  roomId?: string;
+  /** Lobby roster key — refetches pool stats on join/leave/kick. */
+  watchedPlayersKey?: string;
 }
 
-export function SourceSection({ config, update, isRoom, anilistLinked = false }: SourceSectionProps) {
+export function SourceSection({ config, update, isRoom, anilistLinked = false, roomId, watchedPlayersKey }: SourceSectionProps) {
   const source = config.soundSelection;
 
-  const setSource = (next: Source) => update({ soundSelection: next });
+  const setSource = (next: Source) => {
+    const patch: Partial<RoomConfig> = { soundSelection: next };
+    if (next !== 'watched') patch.watchedAllowFallback = false;
+    update(patch);
+  };
 
-  // Ask the server how many playable songs the user's AniList list yields, so the
-  // player knows whether Watched will fall back to random before starting.
-  const [watchedCount, setWatchedCount] = useState<WatchedCount | null>(null);
-  const [countLoading, setCountLoading] = useState(false);
+  const watchedEnabled = source === 'watched' && (isRoom || anilistLinked);
+  const { stats: statsRaw, loading } = useWatchedPoolStats({
+    roomId: isRoom ? roomId : undefined,
+    soundCount: config.soundCount,
+    difficulty: config.difficulty,
+    types: config.soundTypes,
+    watchedMode: config.watchedMode,
+    enabled: watchedEnabled,
+    refreshKey: isRoom ? watchedPlayersKey : undefined,
+  });
+  const stats = withWatchedPoolSoundCount(statsRaw, config.soundCount);
 
   useEffect(() => {
-    if (source !== 'watched' || !anilistLinked) {
-      setWatchedCount(null);
-      return;
-    }
-    setCountLoading(true);
-    const onCount = (payload: WatchedCount) => {
-      setWatchedCount(payload);
-      setCountLoading(false);
-    };
-    socket.on('watched_count', onCount);
-    socket.emit('get_watched_count');
-    return () => {
-      socket.off('watched_count', onCount);
-    };
-  }, [source, anilistLinked]);
+    if (!stats || stats.insufficient || !config.watchedAllowFallback) return;
+    update({ watchedAllowFallback: false });
+  }, [stats?.insufficient, config.watchedAllowFallback]);
 
   const tabClass = (active: boolean) =>
     cn(
@@ -53,6 +53,10 @@ export function SourceSection({ config, update, isRoom, anilistLinked = false }:
       active ? 'bg-background text-primary shadow' : 'text-muted-foreground hover:text-foreground',
       FOCUS_RING,
     );
+
+  const modeLabel = isRoom
+    ? watchedPoolModeLabel(stats?.watchedMode ?? config.watchedMode)
+    : 'votre liste';
 
   return (
     <div className="space-y-3">
@@ -105,26 +109,51 @@ export function SourceSection({ config, update, isRoom, anilistLinked = false }:
               </p>
               Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b> et{' '}
               <b className="text-foreground">Watching</b>.
-              {!anilistLinked && ' Un compte AniList lié est requis pour lancer une partie.'}
+              {!anilistLinked && !isRoom && ' Un compte AniList lié est requis pour lancer une partie.'}
             </div>
 
-            {anilistLinked && (
-              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
-                <Music2 className="h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
-                {countLoading || !watchedCount ? (
-                  <span className="text-muted-foreground">Analyse de votre liste AniList…</span>
-                ) : watchedCount.playableSongs === 0 ? (
+            {watchedEnabled && (
+              <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
+                <Music2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
+                {loading || !stats ? (
+                  <span className="text-muted-foreground">Analyse du pool AniList…</span>
+                ) : stats.playableSongs === 0 ? (
                   <span className="text-warning">
-                    Aucun son jouable dans votre liste pour le moment (base en cours de remplissage).
+                    Aucun son jouable dans la {modeLabel} pour ces filtres.
                   </span>
                 ) : (
                   <span className="text-muted-foreground">
-                    <b className="text-foreground">≈ {watchedCount.playableSongs}</b> son
-                    {watchedCount.playableSongs > 1 ? 's' : ''} jouable
-                    {watchedCount.playableSongs > 1 ? 's' : ''} dans votre liste
-                    <span className="text-muted-foreground/70"> ({watchedCount.listSize} animes)</span>
+                    <b className="text-foreground">{stats.playableSongs}</b> son
+                    {stats.playableSongs > 1 ? 's' : ''} jouable{stats.playableSongs > 1 ? 's' : ''}
+                    {isRoom ? ` (${modeLabel})` : ''}
+                    <span className="text-muted-foreground/70"> — {stats.animeCount} anime{stats.animeCount > 1 ? 's' : ''}</span>
+                    {stats.insufficient && !config.watchedAllowFallback && (
+                      <span className="text-warning"> — insuffisant pour {stats.soundCount} sons</span>
+                    )}
+                    {stats.insufficient && config.watchedAllowFallback && (
+                      <span className="text-info"> — complétion aléatoire activée</span>
+                    )}
                   </span>
                 )}
+              </div>
+            )}
+
+            {watchedEnabled && stats?.insufficient && stats.playableSongs > 0 && !config.watchedAllowFallback && (
+              <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
+                  Pas assez de sons dans la {modeLabel} pour {stats.soundCount} manches. Sans action, le lancement sera bloqué.
+                </p>
+                <OptionButton
+                  active={Boolean(config.watchedAllowFallback)}
+                  onClick={() => update({ watchedAllowFallback: !config.watchedAllowFallback })}
+                  className="w-full p-2 text-left"
+                >
+                  <div className="text-xs font-bold">Compléter avec l&apos;aléatoire</div>
+                  <div className="text-[9px] text-muted-foreground">
+                    Les manches manquantes seront tirées dans le catalogue global (choix explicite).
+                  </div>
+                </OptionButton>
               </div>
             )}
 

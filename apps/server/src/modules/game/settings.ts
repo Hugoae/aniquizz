@@ -1,6 +1,5 @@
 import { z } from 'zod';
-import { GAME_CONFIG, type RoomSettings } from '@aniquizz/shared';
-
+import { GAME_CONFIG, normalizePrecision, type RoomSettings } from '@aniquizz/shared';
 /**
  * Server-side validation/normalization of client-provided room settings.
  * Unknown extra keys are stripped; every field gets a safe default so the
@@ -16,8 +15,13 @@ const settingsSchema = z
     difficulty: z.array(z.string()).default(['medium']),
     guessDuration: z.coerce.number().int().min(5).max(120).default(20),
     soundSelection: z.enum(['random', 'mix', 'watched', 'playlist']).default('random'),
-    precision: z.enum(['exact', 'franchise']).default('franchise'),
-    watchedMode: z.enum(['union', 'intersection']).optional(),
+    precision: z.preprocess(
+      (val) => normalizePrecision(val),
+      z.enum(['anime', 'franchise']).default('franchise'),
+    ),    watchedMode: z.enum(['union', 'intersection']).optional(),
+    watchedAllowFallback: z.boolean().default(false),
+    videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
+    songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
     password: z.string().default(''),
     maxPlayers: z.coerce
@@ -55,9 +59,13 @@ export const mergeRoomSettings = (
   patch: unknown,
 ): RoomSettings => {
   const merged = { ...current, ...(patch as Record<string, unknown>) };
-  return normalizeRoomSettings(merged, {
+  const next = normalizeRoomSettings(merged, {
     roomName: (merged as RoomSettings).roomName,
     hostName: current.hostName ?? 'Hôte',
     hostAvatar: current.hostAvatar ?? 'player1',
   });
+  if (next.soundSelection !== 'watched') {
+    next.watchedAllowFallback = false;
+  }
+  return next;
 };

@@ -5,6 +5,8 @@ import {
   isAnswerCorrect,
   levelFromXp,
   xpForMatch,
+  generatePeekWindow,
+  normalizeVideoMode,
   type AnswerType,
   type CorrectByDifficulty,
   type GamePlayer,
@@ -20,6 +22,7 @@ import {
   type GameOverPayload,
   type MatchSettingsSnapshot,
   pickMatchSettings,
+  type PeekWindow,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { RoundClock } from './RoundClock';
@@ -71,6 +74,8 @@ export class MatchEngine {
   private finishedVictoryData: VictoryData | null = null;
   private finishedRoundHistoryByUserId: Record<string, RoundHistoryEntry[]> | null = null;
   private finishedMatchSettings: MatchSettingsSnapshot | null = null;
+  /** Peek geometry for the active guessing round (reconnect sync). */
+  private currentPeekWindow: PeekWindow | null = null;
 
   constructor(room: Room, deps: EngineDeps) {
     this.room = room;
@@ -102,7 +107,11 @@ export class MatchEngine {
 
     let built;
     try {
-      built = await this.deps.builder.build(this.room.settings, [...this.room.players.values()]);
+      built = await this.deps.builder.build(
+        this.room.settings,
+        [...this.room.players.values()],
+        { excludePriorMatchSongIds: this.room.getPriorMatchSongIds() },
+      );
     } catch (e) {
       logger.error(`[MatchEngine ${this.room.id}] Playlist build crashed`, 'Game', e);
       return this.abortStart('Erreur technique lors de la préparation.');
@@ -114,7 +123,7 @@ export class MatchEngine {
       if (built.abortReason === 'watched_empty') {
         message =
           settings.watchedMode === 'intersection'
-            ? 'Intersection impossible : au moins un joueur n\'a pas de liste AniList utilisable.'
+            ? 'Mode Commun impossible : au moins un joueur n\'a pas de liste AniList utilisable.'
             : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
       }
       logger.error(`[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`, 'Game');
@@ -122,6 +131,7 @@ export class MatchEngine {
     }
 
     this.playlist = built.playlist;
+    this.room.registerMatchPlaylistSongIds(this.playlist.map((item) => item.id));
 
     logger.info(
       `[MatchEngine ${this.room.id}] Match start — ${this.playlist.length} songs, ${this.room.players.size} players.`,
@@ -142,9 +152,7 @@ export class MatchEngine {
     if (built.fallbackUsed) {
       setTimeout(() => {
         const message =
-          this.room.settings.watchedMode === 'intersection'
-            ? 'Pas assez de sons communs. Ajout de sons aléatoires.'
-            : 'Pas assez de sons dans votre liste. Ajout de sons aléatoires.';
+          'Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l\'avez autorisé).';
         this.channel.emit('game:fallback_notification', { message });
       }, 1000);
     }
@@ -263,7 +271,15 @@ export class MatchEngine {
       'GameLoop',
     );
 
-    const payload: RoundStartPayload = {
+    const payload: RoundStartPayload = this.buildRoundStartPayload(item);
+    this.channel.emit('round_start', payload);
+  }
+
+  private buildRoundStartPayload(item: PlaylistItem): RoundStartPayload {
+    const videoMode = normalizeVideoMode(this.room.settings.videoMode);
+    this.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
+
+    return {
       round: this.currentRoundIndex + 1,
       totalRounds: this.playlist.length,
       videoKey: item.videoKey,
@@ -274,8 +290,9 @@ export class MatchEngine {
       durationSeconds: item.guessDuration,
       choices: item.choices,
       duo: item.duo,
+      peekWindow: this.currentPeekWindow ?? undefined,
+      videoMode,
     };
-    this.channel.emit('round_start', payload);
   }
 
   handleAnswer(userId: string, answer: string, answerType: AnswerType): void {
@@ -661,18 +678,7 @@ export class MatchEngine {
         durationSeconds: this.playlist[0].guessDuration,
       };
     } else if (this.phase === 'guessing' && item) {
-      base.round = {
-        round: this.currentRoundIndex + 1,
-        totalRounds: this.playlist.length,
-        videoKey: item.videoKey,
-        videoStartTime: item.videoStartTime,
-        startBuffer: START_BUFFER_MS,
-        serverNow: Date.now(),
-        endsAt: this.clock.endsAt,
-        durationSeconds: item.guessDuration,
-        choices: item.choices,
-        duo: item.duo,
-      };
+      base.round = this.buildRoundStartPayload(item);
     } else if (this.phase === 'reveal' && item) {
       const nextItem = this.playlist[this.currentRoundIndex + 1];
       base.reveal = {

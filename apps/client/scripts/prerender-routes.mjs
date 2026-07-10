@@ -73,25 +73,25 @@ function legalBody(intro) {
 
 const ROUTES = {
   '/': { title: HOME_TITLE, body: homeBody() },
-  '/news': { title: `Actus · ${SITE}`, body: newsBody() },
+  '/news': { title: `Actus | ${SITE}`, body: newsBody() },
   '/leaderboard': {
-    title: `Classement · ${SITE}`,
+    title: `Classement | ${SITE}`,
     body: comingSoonBody('Classement global', 'Classements par niveau, victoires et précision.'),
   },
   '/library': {
-    title: `Librairie · ${SITE}`,
+    title: `Librairie | ${SITE}`,
     body: comingSoonBody('Librairie musicale', 'Catalogue des openings et endings.'),
   },
   '/legal/confidentialite': {
-    title: `Confidentialité · ${SITE}`,
+    title: `Confidentialité | ${SITE}`,
     body: legalBody('Politique de confidentialité et protection des données personnelles (RGPD).'),
   },
   '/legal/cgu': {
-    title: `CGU · ${SITE}`,
+    title: `CGU | ${SITE}`,
     body: legalBody("Conditions générales d'utilisation du service."),
   },
   '/legal/mentions': {
-    title: `Mentions légales · ${SITE}`,
+    title: `Mentions légales | ${SITE}`,
     body: legalBody("Informations légales sur l'éditeur et l'hébergement."),
   },
 };

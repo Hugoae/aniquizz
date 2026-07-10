@@ -13,6 +13,10 @@ vi.mock('@/lib/socket', () => ({
   },
 }));
 
+vi.mock('@/features/hub/hooks/useWatchedPoolStats', () => ({
+  useWatchedPoolStats: () => ({ stats: null, loading: false }),
+}));
+
 const baseConfig: RoomConfig = {
   mode: 'solo',
   gameType: 'standard',

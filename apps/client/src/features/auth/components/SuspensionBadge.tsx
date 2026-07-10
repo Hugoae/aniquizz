@@ -31,7 +31,7 @@ export function SuspensionBadge() {
       >
         <Ban className="h-4 w-4" />
         <span className="text-xs font-semibold">
-          Banni · {formatRemaining(profile.bannedUntil)}
+          Banni — {formatRemaining(profile.bannedUntil)}
         </span>
       </div>
     );
@@ -44,7 +44,7 @@ export function SuspensionBadge() {
     >
       <MicOff className="h-4 w-4" />
       <span className="text-xs font-semibold">
-        Muet · {formatRemaining(profile.mutedUntil)}
+        Muet — {formatRemaining(profile.mutedUntil)}
       </span>
     </div>
   );

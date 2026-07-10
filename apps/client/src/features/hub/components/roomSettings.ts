@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { ListMusic, Clock, Target, Mic2, Shuffle } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
+import { getPrecisionChipLabel } from '@aniquizz/shared';
 
 /**
  * Shared room-settings display helpers, used by both the room list and the
@@ -60,7 +61,7 @@ export function buildRoomSettingBadges(
   return [
     { key: 'sounds', icon: ListMusic, label: 'Sons', value: String(s.soundCount), tone: 'accent' },
     { key: 'time', icon: Clock, label: 'Temps', value: `${s.guessDuration}s`, tone: 'warning' },
-    { key: 'precision', icon: Target, label: 'Mode', value: s.precision === 'exact' ? 'Nom exact' : 'Franchise', tone: 'primary' },
+    { key: 'precision', icon: Target, label: 'Mode', value: getPrecisionChipLabel(s.precision), tone: 'primary' },
     { key: 'type', icon: Mic2, label: 'Type', value: s.responseType === 'mix' ? 'Mix' : s.responseType.toUpperCase(), tone: 'aqua' },
     { key: 'source', icon: Shuffle, label: 'Source', value: s.soundSelection === 'watched' ? 'Ma liste' : 'Aléatoire', tone: 'info' },
   ];

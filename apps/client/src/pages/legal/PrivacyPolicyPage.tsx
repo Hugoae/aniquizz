@@ -101,8 +101,9 @@ export default function PrivacyPolicyPage() {
         ).
       </p>
       <p>
-        La suppression de compte (« droit à l&apos;effacement ») sera proposée dans une mise à jour
-        ultérieure du profil utilisateur.
+        La suppression de compte (« droit à l&apos;effacement ») est disponible depuis votre profil :
+        menu <strong>⋮</strong> en haut à droite → <strong>Supprimer mon compte</strong> (confirmation
+        par pseudo et mot de passe).
       </p>
 
       <h2>7. Cookies</h2>

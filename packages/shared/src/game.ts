@@ -5,6 +5,10 @@
 import type { GamePlayer, RoomConfig } from './types';
 import type { MedalTier } from './grading';
 import type { UserRole } from './roles';
+import type { Precision } from './precision';
+import type { PeekWindow, VideoMode } from './videoMode';
+
+export type { Precision };
 
 // --- STATUS & PHASES ---
 export type GameStatus = 'waiting' | 'starting' | 'playing' | 'paused' | 'finished';
@@ -24,9 +28,6 @@ export const ANSWER_TYPE_LABELS: Record<AnswerType, string> = {
 
 /** Response mode configured for the room. `mix` lets the player pick per round. */
 export type ResponseType = 'typing' | 'qcm' | 'mix';
-
-/** Answer precision: match the exact anime name or any title in its franchise. */
-export type Precision = 'exact' | 'franchise';
 
 // --- SETTINGS ---
 /**
@@ -101,6 +102,10 @@ export interface RoundStartPayload extends PhaseTiming {
   choices?: string[];
   /** Duo choices (present when responseType is `mix`). */
   duo?: string[];
+  /** Present when `videoMode === 'peek'` — server-generated at round start. */
+  peekWindow?: PeekWindow;
+  /** Room setting echoed for client rendering (reconnect-safe). */
+  videoMode?: VideoMode;
 }
 
 /** Anti-cheat: only signals THAT a player answered, never the content. */
@@ -177,7 +182,7 @@ export interface RoundHistoryEntry {
 /** Settings strip on the game-over screen — snapshot at match end. */
 export type MatchSettingsSnapshot = Pick<
   RoomSettings,
-  'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection'
+  'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection' | 'videoMode' | 'songStartMode'
 >;
 
 export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
@@ -188,6 +193,8 @@ export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot
     precision: settings.precision,
     responseType: settings.responseType,
     soundSelection: settings.soundSelection,
+    videoMode: settings.videoMode,
+    songStartMode: settings.songStartMode,
   };
 }
 

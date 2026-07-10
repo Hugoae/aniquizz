@@ -409,6 +409,20 @@ export class GameManager {
     return true;
   }
 
+  /** Remove a user from every live room (account deletion, admin kick-all). */
+  ejectUserFromAllRooms(userId: string, reason: string): void {
+    for (const [roomId, room] of [...this.rooms.entries()]) {
+      if (!room.players.has(userId)) continue;
+      const socketId = room.kickPlayer(userId);
+      if (socketId) {
+        this.io.to(socketId).emit('room_closed', { reason });
+        this.io.in(socketId).socketsLeave(roomId);
+      }
+      if (room.humanCount === 0) this.removeRoom(roomId);
+    }
+    this.broadcastRoomList();
+  }
+
   // --- DEV TOOLING (bots / scenarios) ---------------------------------------
 
   /** DEV-only: add up to `count` bots to a room. Returns the number added. */

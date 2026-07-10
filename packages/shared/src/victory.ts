@@ -79,8 +79,7 @@ export const computeVictory = (input: VictoryInput): VictoryResult => {
     if (top) {
       const rounds = top.totalCount > 0 ? top.totalCount : input.totalRounds;
       const denom = bestPerRound * rounds;
-      const ratio = denom > 0 ? top.score / denom : 0;
-      soloMedal = computeMedal(ratio, input.songDifficulties);
+      soloMedal = computeMedal(top.score, denom, input.songDifficulties);
       if (soloMedal) winnerIds.push(top.userId);
     }
   } else {

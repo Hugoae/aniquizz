@@ -14,13 +14,17 @@ import type {
   VictoryData,
   MatchSettingsSnapshot,
   VoteUpdatePayload,
+  PeekWindow,
+  VideoMode,
 } from '@aniquizz/shared';
+import { generatePeekWindow, normalizeVideoMode } from '@aniquizz/shared';
 export type { RoundHistoryEntry };
 export type GamePhase = 'loading' | 'ready' | 'guessing' | 'revealed' | 'ended';
 /** Minimal shape the layout needs during guessing (no answer leaks). */
 export interface GuessingSong {
   videoKey: string;
   videoStartTime: number;
+  peekWindow?: PeekWindow;
 }
 export type CurrentSong = GuessingSong | RevealSong | null;
 export interface GameState {
@@ -49,13 +53,15 @@ export interface GameState {
   roundHistory: RoundHistoryEntry[];
   /** Authoritative match config from `game_over` / reconnect sync. */
   matchSettings: MatchSettingsSnapshot | null;
+  /** Active guessing-phase video presentation (from round_start / game_started). */
+  videoMode: VideoMode;
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
-  | { type: 'GAME_STARTED'; payload: GameStartedPayload }
+  | { type: 'GAME_STARTED'; payload: GameStartedPayload; clientVideoMode?: VideoMode }
   | { type: 'GAME_READY'; payload: GameReadyPayload }
   | { type: 'PRELOAD'; videoKey: string; videoStartTime: number }
-  | { type: 'ROUND_START'; payload: RoundStartPayload }
+  | { type: 'ROUND_START'; payload: RoundStartPayload; clientVideoMode?: VideoMode }
   | { type: 'ANSWERED'; userId: string }
   | { type: 'ROUND_REVEAL'; payload: RoundRevealPayload; myUserId?: string }
   | { type: 'PLAYERS_UPDATE'; payload: PlayersUpdatePayload }
@@ -77,6 +83,18 @@ function historyForUser(
   if (!byUser || !userId) return fallback;
   return byUser[userId] ?? fallback;
 }
+function resolveVideoMode(payloadMode: unknown, fallback: VideoMode): VideoMode {
+  if (payloadMode === 'blurred' || payloadMode === 'peek' || payloadMode === 'hidden') {
+    return payloadMode;
+  }
+  return normalizeVideoMode(fallback);
+}
+
+function resolvePeekWindow(mode: VideoMode, peekWindow?: PeekWindow): PeekWindow | undefined {
+  if (mode !== 'peek') return undefined;
+  return peekWindow ?? generatePeekWindow();
+}
+
 export function createInitialState(totalRounds: number, players: GamePlayer[] = []): GameState {
   return {
     phase: 'loading',
@@ -100,6 +118,7 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     victoryData: null,
     roundHistory: [],
     matchSettings: null,
+    videoMode: 'hidden',
   };
 }
 /** Convert an authoritative PhaseTiming envelope to a local end timestamp. */
@@ -110,6 +129,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'GAME_STARTED': {
       const p = action.payload;
+      const videoMode = resolveVideoMode(p.settings.videoMode, action.clientVideoMode ?? state.videoMode);
       return {
         ...state,
         phase: 'loading',
@@ -121,6 +141,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         victoryData: null,
         roundHistory: [],
         matchSettings: null,
+        videoMode,
       };
     }
     case 'PRELOAD': {
@@ -141,12 +162,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'ROUND_START': {
       const p = action.payload;
+      const videoMode = resolveVideoMode(p.videoMode, action.clientVideoMode ?? state.videoMode);
       return {
         ...state,
         phase: 'guessing',
         currentRound: p.round,
         totalRounds: p.totalRounds,
-        currentSong: { videoKey: p.videoKey, videoStartTime: p.videoStartTime },
+        currentSong: {
+          videoKey: p.videoKey,
+          videoStartTime: p.videoStartTime,
+          peekWindow: resolvePeekWindow(videoMode, p.peekWindow),
+        },
         nextVideoKey: null,
         preloadTarget: null,
         qcmChoices: p.choices ?? [],
@@ -159,6 +185,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         isPausePending: false,
         pauseVotes: 0,
         skipVotes: 0,
+        videoMode,
         players: state.players.map((pl) => ({
           ...pl,
           hasAnswered: false,
@@ -259,6 +286,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       let victoryData = state.victoryData;
       let roundHistory = state.roundHistory;
       let matchSettings = state.matchSettings;
+      let videoMode = state.videoMode;
       if (s.status === 'finished') {
         phase = 'ended';
         victoryData = s.victoryData ?? state.victoryData;
@@ -272,12 +300,18 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       } else if (s.phase === 'guessing' && s.round) {
         phase = 'guessing';
         currentRound = s.currentRound;
-        currentSong = { videoKey: s.round.videoKey, videoStartTime: s.round.videoStartTime };
+        const syncMode = resolveVideoMode(s.round.videoMode, state.videoMode);
+        currentSong = {
+          videoKey: s.round.videoKey,
+          videoStartTime: s.round.videoStartTime,
+          peekWindow: resolvePeekWindow(syncMode, s.round.peekWindow),
+        };
         nextVideoKey = null;
         qcmChoices = s.round.choices ?? [];
         duoChoices = s.round.duo ?? [];
         phaseEndsAt = localEndsAt(s.round);
         phaseDurationSeconds = s.round.durationSeconds;
+        videoMode = syncMode;
       } else if (s.phase === 'reveal' && s.reveal) {
         phase = 'revealed';
         currentRound = s.currentRound;
@@ -305,6 +339,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         victoryData,
         roundHistory,
         matchSettings,
+        videoMode,
       };
     }
     default:

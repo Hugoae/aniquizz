@@ -66,9 +66,9 @@ export function PublicFriendsList({
                     {f.status === 'offline'
                       ? formatLastSeen(f.lastSeenAt)
                       : f.roomName
-                        ? `${presenceLabel(f.status)} · ${f.roomName}`
+                        ? `${presenceLabel(f.status)} — ${f.roomName}`
                         : presenceLabel(f.status)}
-                    {' · '}Niv. {f.level}
+                    {' — '}Niv. {f.level}
                   </span>
                 </span>
               </button>

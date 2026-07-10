@@ -1,6 +1,6 @@
 import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
-import { shuffleArray, type Precision } from '@aniquizz/shared';
+import { shuffleArray, buildChoiceCandidatePool, type Precision } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 
 const toDifficultyEnum = (value: string): Difficulty => {
@@ -22,6 +22,10 @@ export interface SongFilters {
   types?: string[];
   /** Anime ids watched by the players (Watched mode). */
   watchedIds?: number[];
+  /** When true in Watched mode, missing rounds may be filled from the global catalogue. */
+  allowWatchedFallback?: boolean;
+  /** Cumulative song ids from prior matches in this lobby (excluded when possible). */
+  excludePriorMatchSongIds?: number[];
 }
 
 /** Shape of a fully-selected song (Prisma Song + anime + franchise). */
@@ -140,15 +144,39 @@ const smartShuffle = <T extends { anime: { name: string; franchise: { name: stri
 // Difficulty cascade (hardest → easiest).
 const DIFFICULTY_ORDER: Difficulty[] = [Difficulty.HARD, Difficulty.MEDIUM, Difficulty.EASY];
 
-/** Waterfall retrieval strategy: watched pool first, then global, cascading difficulty. */
+const buildSongWhere = (
+  baseWhere: Record<string, unknown>,
+  filters?: Pick<SongFilters, 'difficulty' | 'types'>,
+): Record<string, unknown> => {
+  const where = { ...baseWhere };
+  if (filters?.types?.length) {
+    const songTypes: SongType[] = [];
+    if (filters.types.includes('opening')) songTypes.push(SongType.OP);
+    if (filters.types.includes('ending')) songTypes.push(SongType.ED);
+    if (songTypes.length > 0) where.songType = { in: songTypes };
+  }
+  return where;
+};
+
+/** Options for a single fetch pass (lobby history + ids already picked this build). */
+interface FetchSongsPassOptions {
+  priorLobbySongIds?: number[];
+  alsoExcludeIds?: number[];
+}
+
+/** Waterfall retrieval strategy: watched pool first, optional global completion. */
 const fetchWithFallback = async (
   count: number,
   baseWhere: Record<string, unknown>,
   watchedIds?: number[],
   targetDifficulties: string[] = [],
-): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean }> => {
+  allowWatchedFallback = false,
+  passOptions: FetchSongsPassOptions = {},
+): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean; priorMatchReuse: boolean }> => {
+  const priorLobby = passOptions.priorLobbySongIds ?? [];
+  const alsoExclude = passOptions.alsoExcludeIds ?? [];
   const finalSongs: SelectedSong[] = [];
-  const excludedIds: number[] = [];
+  const excludedIds: number[] = [...new Set([...priorLobby, ...alsoExclude])];
   // Shared across every pass/cascade step so the same franchise is only picked
   // again once all others are exhausted (avoids the same anime twice per game).
   const usedFranchiseKeys = new Set<string>();
@@ -213,8 +241,8 @@ const fetchWithFallback = async (
       }
     }
 
-    // Global random completion.
-    if (finalSongs.length < count) {
+    // Global completion — only when the host opted in (Watched mode).
+    if (finalSongs.length < count && (!isWatchedMode || allowWatchedFallback)) {
       const remaining = count - finalSongs.length;
       const globalWhere: Record<string, unknown> = { ...baseWhere, id: { notIn: excludedIds } };
       if (diffFilter) globalWhere.difficulty = diffFilter;
@@ -241,7 +269,30 @@ const fetchWithFallback = async (
     );
   }
 
-  return { songs: smartShuffle(finalSongs), fallbackUsed };
+  let songs = smartShuffle(finalSongs);
+  let priorMatchReuse = false;
+
+  // Pool too small after excluding prior lobby matches — fill the gap without that constraint.
+  if (songs.length < count && priorLobby.length > 0) {
+    const retry = await fetchWithFallback(
+      count - songs.length,
+      baseWhere,
+      watchedIds,
+      targetDifficulties,
+      allowWatchedFallback,
+      { alsoExcludeIds: [...alsoExclude, ...songs.map((s) => s.id)] },
+    );
+    if (retry.songs.length > 0) {
+      songs = smartShuffle([...songs, ...retry.songs]);
+      priorMatchReuse = true;
+      logger.info(
+        `[GameService] Prior-match exclusion relaxed — reused ${retry.songs.length} song(s) from earlier lobby games.`,
+        'Service',
+      );
+    }
+  }
+
+  return { songs, fallbackUsed, priorMatchReuse };
 };
 
 // ---------------------------------------------------------------------------
@@ -251,30 +302,36 @@ const fetchWithFallback = async (
 export const getRandomSongs = async (
   count: number,
   filters?: SongFilters,
-): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean }> => {
-  // Only playable songs. Difficulty is applied per-cascade-step in fetchWithFallback.
-  const whereClause: Record<string, unknown> = { downloadStatus: 'COMPLETED' };
+): Promise<{ songs: SelectedSong[]; fallbackUsed: boolean; priorMatchReuse: boolean }> => {
+  const whereClause = buildSongWhere({ downloadStatus: 'COMPLETED' }, filters);
 
-  if (filters?.types?.length) {
-    const songTypes: SongType[] = [];
-    if (filters.types.includes('opening')) songTypes.push(SongType.OP);
-    if (filters.types.includes('ending')) songTypes.push(SongType.ED);
-    if (songTypes.length > 0) whereClause.songType = { in: songTypes };
-  }
-
-  return fetchWithFallback(count, whereClause, filters?.watchedIds, filters?.difficulty);
+  return fetchWithFallback(
+    count,
+    whereClause,
+    filters?.watchedIds,
+    filters?.difficulty,
+    filters?.allowWatchedFallback ?? false,
+    { priorLobbySongIds: filters?.excludePriorMatchSongIds },
+  );
 };
 
 /**
- * Count the playable songs available for a set of watched anime ids, so the
- * lobby can tell the user how many sounds their AniList list actually yields
- * (COMPLETED songs only — the same pool the playlist builder draws from).
+ * Count playable songs for watched anime ids (COMPLETED), with optional filters
+ * aligned to playlist selection (types; difficulty uses any-of for a quick hint).
  */
-export const countPlayableWatchedSongs = async (watchedIds: number[]): Promise<number> => {
+export const countPlayableWatchedSongs = async (
+  watchedIds: number[],
+  filters?: Pick<SongFilters, 'difficulty' | 'types'>,
+): Promise<number> => {
   if (!watchedIds.length) return 0;
-  return prisma.song.count({
-    where: { downloadStatus: 'COMPLETED', animeId: { in: watchedIds } },
-  });
+  const where = buildSongWhere(
+    { downloadStatus: 'COMPLETED', animeId: { in: watchedIds } },
+    filters,
+  );
+  if (filters?.difficulty?.length) {
+    where.difficulty = { in: filters.difficulty.map(toDifficultyEnum) };
+  }
+  return prisma.song.count({ where });
 };
 
 // ---------------------------------------------------------------------------
@@ -288,6 +345,7 @@ export const countPlayableWatchedSongs = async (watchedIds: number[]): Promise<n
 const CHOICE_CANDIDATES_TTL_MS = 10 * 60 * 1000;
 
 export interface AnimeNameRow {
+  id: number;
   name: string;
   franchise: string | null;
   altNames: string[];
@@ -295,9 +353,10 @@ export interface AnimeNameRow {
 
 const loadAllAnimeNames = async (): Promise<AnimeNameRow[]> => {
   const animes = await prisma.anime.findMany({
-    select: { name: true, altNames: true, franchise: { select: { name: true } } },
+    select: { id: true, name: true, altNames: true, franchise: { select: { name: true } } },
   });
   return animes.map((a) => ({
+    id: a.id,
     name: a.name,
     franchise: a.franchise?.name || null,
     altNames: a.altNames,
@@ -328,7 +387,8 @@ export const getAllAnimeNames = async (): Promise<AnimeNameRow[]> => {
 /**
  * Deduped display-name pool for building QCM/duo choices. Derived from the shared
  * anime-name cache (no extra DB scan), then cached per precision so the dedup work
- * is done once per catalogue version.
+ * is done once per catalogue version. Pass `watchedIds` in AniList mode to restrict
+ * distractors to the same list as the songs (not cached — filtered in memory).
  */
 interface ChoiceCandidatesEntry {
   timestamp: number;
@@ -337,13 +397,22 @@ interface ChoiceCandidatesEntry {
 
 const choiceCandidatesCache = new Map<Precision, ChoiceCandidatesEntry>();
 
-const loadChoiceCandidates = async (precision: Precision): Promise<string[]> => {
+const loadChoiceCandidates = async (
+  precision: Precision,
+  watchedIds?: number[],
+): Promise<string[]> => {
   const rows = await getAllAnimeNames();
-  const names = rows.map((a) => (precision === 'franchise' ? a.franchise || a.name : a.name));
-  return [...new Set(names)];
+  return buildChoiceCandidatePool(rows, precision, watchedIds);
 };
 
-export const getChoiceCandidates = async (precision: Precision): Promise<string[]> => {
+export const getChoiceCandidates = async (
+  precision: Precision,
+  watchedIds?: number[],
+): Promise<string[]> => {
+  if (watchedIds?.length) {
+    return loadChoiceCandidates(precision, watchedIds);
+  }
+
   const now = Date.now();
   const cached = choiceCandidatesCache.get(precision);
   if (cached && now - cached.timestamp < CHOICE_CANDIDATES_TTL_MS) {
@@ -371,5 +440,5 @@ export const invalidateChoiceCandidates = (): void => {
  * Best-effort and non-blocking.
  */
 export const warmCatalogueCaches = async (): Promise<void> => {
-  await Promise.all([getChoiceCandidates('franchise'), getChoiceCandidates('exact')]);
+  await Promise.all([getChoiceCandidates('franchise'), getChoiceCandidates('anime')]);
 };

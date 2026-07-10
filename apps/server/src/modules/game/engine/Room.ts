@@ -30,6 +30,12 @@ export class Room {
 
   private engine: MatchEngine | null = null;
 
+  /**
+   * Cumulative song ids from every prior match in this lobby session.
+   * Each new draw excludes them when the pool allows; relaxed automatically if too small.
+   */
+  private priorMatchSongIds = new Set<number>();
+
   constructor(id: string, io: TypedServer, hostId: string, settings: RoomSettings) {
     this.id = id;
     this.io = io;
@@ -186,7 +192,9 @@ export class Room {
     this.returnedPlayers.add(userId);
     const player = this.players.get(userId);
     if (player) player.isReady = userId === this.hostId;
-    this.settleLifecycle();
+    if (!this.abortMatchIfEveryoneInLobby()) {
+      this.settleLifecycle();
+    }
   }
 
   /**
@@ -329,6 +337,50 @@ export class Room {
     return this.settings.maxPlayers === 1;
   }
 
+  /** Song ids from all prior matches in this lobby (cumulative exclusion). */
+  getPriorMatchSongIds(): number[] {
+    return [...this.priorMatchSongIds];
+  }
+
+  /** Remember a completed draw so the next match in this lobby can avoid repeats. */
+  registerMatchPlaylistSongIds(songIds: number[]): void {
+    for (const id of songIds) this.priorMatchSongIds.add(id);
+  }
+
+  /** Connected human players (bots excluded). */
+  private connectedHumanIds(): string[] {
+    return [...this.players.values()]
+      .filter((p) => p.isConnected && !p.isBot)
+      .map((p) => p.userId);
+  }
+
+  /**
+   * True when every connected human has left the match UI and is back in the lobby.
+   * Solo: host returned is enough. Multi: all connected humans must have returned.
+   */
+  private allConnectedHumansInLobby(): boolean {
+    const ids = this.connectedHumanIds();
+    if (ids.length === 0) return false;
+    return ids.every((id) => this.returnedPlayers.has(id));
+  }
+
+  /**
+   * Abort a stale in-progress match when everyone is back in the lobby (solo or multi).
+   * Prevents relaunch from resuming the same playlist via game_state_sync.
+   */
+  private abortMatchIfEveryoneInLobby(): boolean {
+    if (!this.engine || (this.status !== 'playing' && this.status !== 'paused')) {
+      return false;
+    }
+    if (this.isSolo) {
+      if (!this.returnedPlayers.has(this.hostId)) return false;
+    } else if (!this.allConnectedHumansInLobby()) {
+      return false;
+    }
+    this.forceCancel();
+    return true;
+  }
+
   /** Whether the host may start a match now, with a user-facing reason if not. */
   canStartMatch(userId: string): { ok: boolean; reason?: string } {
     if (userId !== this.hostId) {
@@ -338,7 +390,10 @@ export class Room {
       return { ok: false, reason: 'Préparation de la partie en cours.' };
     }
     if (this.status === 'playing' || this.status === 'paused') {
-      return { ok: false, reason: 'Une partie est déjà en cours.' };
+      if (!this.allConnectedHumansInLobby()) {
+        return { ok: false, reason: 'Une partie est déjà en cours.' };
+      }
+      // Everyone is back in the lobby — host may start a fresh draw.
     }
     const connected = [...this.players.values()].filter((p) => p.isConnected);
     if (!this.isSolo && connected.length < 2) {
@@ -353,11 +408,19 @@ export class Room {
     // Re-entrancy guard: `startMatch` is async (the playlist build awaits), so
     // flip to `starting` synchronously and broadcast before any await so double
     // clicks and late joiners see the room as busy.
-    if (this.status === 'starting' || this.status === 'playing' || this.status === 'paused') return;
+    if (this.status === 'starting') return;
 
-    // Tear down any previous (e.g. finished) engine before starting fresh.
+    if ((this.status === 'playing' || this.status === 'paused') && !this.allConnectedHumansInLobby()) {
+      return;
+    }
+
+    // Always tear down any previous engine so the next match runs a full new draw.
     this.engine?.cancel();
     this.engine = null;
+    if (this.status === 'finished' || this.status === 'playing' || this.status === 'paused') {
+      this.resetToWaiting();
+    }
+
     this.status = 'starting';
     this.returnedPlayers.clear();
     this.emitLobbyUpdate();
@@ -414,7 +477,9 @@ export class Room {
     this.returnedPlayers.add(userId);
     const player = this.players.get(userId);
     if (player) player.isReady = userId === this.hostId;
-    this.settleLifecycle();
+    if (!this.abortMatchIfEveryoneInLobby()) {
+      this.settleLifecycle();
+    }
     this.emitLobbyUpdate();
   }
 

@@ -2,6 +2,9 @@
 // Shared domain types (Standard mode only).
 
 import type { UserRole } from './roles';
+import type { Precision } from './precision';
+import type { VideoMode } from './videoMode';
+import type { SongStartMode } from './songStartMode';
 
 // --- GAME & ROOM CONFIG ---
 export type GameMode = 'solo' | 'multiplayer' | 'competitive';
@@ -16,8 +19,14 @@ export interface GameConfig {
   difficulty: string[];
   guessDuration: number;
   soundSelection: SoundSelection;
-  precision: 'exact' | 'franchise';
+  precision: Precision;
   watchedMode?: 'union' | 'intersection';
+  /** When true in Watched mode, the host opted in to fill missing rounds from the global catalogue. */
+  watchedAllowFallback?: boolean;
+  /** Guessing-phase clip presentation (reveal is always full video). */
+  videoMode?: VideoMode;
+  /** Where each guessing-round clip starts: random offset (default) or beginning. */
+  songStartMode?: SongStartMode;
   hostAvatar?: string;
   hostName?: string;
 }

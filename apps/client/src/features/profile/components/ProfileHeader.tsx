@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react';
 import {
   LogOut, Loader2, Camera, Check, X, Edit2, CalendarDays, Unlink,
-  Clock, UserPlus, UserMinus, Ban, MoreVertical, KeyRound, Sword, Gavel,
+  Clock, UserPlus, UserMinus, Ban, MoreVertical, KeyRound, Sword, Gavel, Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { levelProgress } from '@aniquizz/shared';
@@ -48,6 +48,7 @@ interface ProfileHeaderProps {
   onUnlinkAniList: () => void;
   // Account menu (own only)
   onOpenPasswordModal: () => void;
+  onOpenDeleteAccountModal: () => void;
   onSignOut: () => void;
   // Relation actions (public only)
   onAddFriend: (id: string) => void;
@@ -61,7 +62,7 @@ export function ProfileHeader({
   isEditingUsername, newUsername, isSaving,
   onStartEditUsername, onChangeNewUsername, onSaveUsername, onCancelEditUsername,
   onPickAvatarFile, onOpenAniList, onUnlinkAniList,
-  onOpenPasswordModal, onSignOut,
+  onOpenPasswordModal, onOpenDeleteAccountModal, onSignOut,
   onAddFriend, onBlock, onRemoveFriend, onUnblock,
 }: ProfileHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -100,6 +101,13 @@ export function ProfileHeader({
                 className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" /> Déconnexion
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onOpenDeleteAccountModal}
+                className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+              >
+                <Trash2 className="h-4 w-4" /> Supprimer mon compte
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

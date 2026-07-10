@@ -211,8 +211,7 @@ export const registerLobbyHandlers = (
     }
   };
 
-  // DEV-only: host fills the lobby with simulated players. Gated to staff in
-  // production so the event can never be abused from a shipped bundle.
+  // Host fills the lobby with simulated players. DEV: any host; production: ADMIN only.
   const addBotsFromLobby = (payload: { roomId: string; count: number }) => {
     const room = gameManager.getRoom(payload.roomId);
     if (!room || uid() !== room.hostId || room.status !== 'waiting') return;

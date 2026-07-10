@@ -1,4 +1,8 @@
-import { getFuzzySuggestions, type AnimeSearchInput } from '@aniquizz/shared';
+import { getFuzzySuggestions, normalizePrecision, type AnimeSearchInput } from '@aniquizz/shared';
+import {
+  getWatchedPoolStatsForPlayers,
+  validateWatchedStart,
+} from './watchedPoolService';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from './gameManager';
 import { getAllAnimeNames, countPlayableWatchedSongs } from './gameService';
@@ -16,12 +20,17 @@ export const registerGameHandlers = (
   // requireAuth/guard guarantee a non-null userId before these run.
   const uid = (): string => socket.data.userId as string;
 
-  const startGame = ({ roomId }: { roomId: string }) => {
+  const startGame = async ({ roomId }: { roomId: string }) => {
     const room = gameManager.getRoom(roomId);
     if (!room) return;
     const check = room.canStartMatch(uid());
     if (!check.ok) {
       socket.emit('error', { message: check.reason ?? 'Impossible de lancer la partie.' });
+      return;
+    }
+    const watchedCheck = await validateWatchedStart(room);
+    if (!watchedCheck.ok) {
+      socket.emit('error', { message: watchedCheck.reason ?? 'Liste AniList insuffisante.' });
       return;
     }
     void room.startMatch(() => gameManager.broadcastRoomList());
@@ -107,13 +116,85 @@ export const registerGameHandlers = (
     }
   };
 
+  const getWatchedPoolStats = async (input?: {
+    roomId?: string;
+    soundCount?: number;
+    difficulty?: string[];
+    types?: string[];
+    watchedMode?: 'union' | 'intersection';
+  }) => {
+    const userId = socket.data.userId;
+    if (!userId) return;
+    try {
+      const room = input?.roomId ? gameManager.getRoom(input.roomId) : undefined;
+      if (room) {
+        const soundCount = input?.soundCount ?? room.settings.soundCount;
+        const songFilters = {
+          difficulty: input?.difficulty ?? room.settings.difficulty,
+          types: input?.types ?? room.settings.soundTypes,
+        };
+        const watchedMode = input?.watchedMode ?? room.settings.watchedMode ?? 'union';
+        const stats = await getWatchedPoolStatsForPlayers(
+          watchedMode,
+          [...room.players.values()].map((p) => ({
+            userId: p.userId,
+            isBot: p.isBot,
+            anilistUsername: p.anilistUsername,
+          })),
+          songFilters,
+          soundCount,
+        );
+        socket.emit('watched:pool_stats', stats);
+        return;
+      }
+
+      const soundCount = input?.soundCount ?? 10;
+      const songFilters = {
+        difficulty: input?.difficulty,
+        types: input?.types,
+      };
+
+      const profile = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: { anilistUsername: true },
+      });
+      const username = profile?.anilistUsername?.trim();
+      if (!username) {
+        socket.emit('watched:pool_stats', {
+          animeCount: 0,
+          playableSongs: 0,
+          soundCount,
+          insufficient: true,
+        });
+        return;
+      }
+      const ids = await getUserAnimeIds(username);
+      const playableSongs = await countPlayableWatchedSongs(ids, songFilters);
+      socket.emit('watched:pool_stats', {
+        animeCount: ids.length,
+        playableSongs,
+        soundCount,
+        insufficient: playableSongs < soundCount,
+        watchedMode: input?.watchedMode,
+      });
+    } catch (e) {
+      logger.error('Failed to resolve watched pool stats', 'Anilist', e);
+      socket.emit('watched:pool_stats', {
+        animeCount: 0,
+        playableSongs: 0,
+        soundCount: input?.soundCount ?? 10,
+        insufficient: true,
+      });
+    }
+  };
+
   // Server-side autocomplete: run the fuzzy match over the cached catalogue and
   // return only the ranked matches (tiny payload) instead of shipping the whole
   // catalogue to every client. `requestId` lets the client discard stale answers.
   const animeSearch = async ({ requestId, query, precision }: AnimeSearchInput) => {
     try {
       const list = await getAllAnimeNames();
-      const results = getFuzzySuggestions(list, query, precision === 'exact' ? 'exact' : 'franchise');
+      const results = getFuzzySuggestions(list, query, normalizePrecision(precision));
       socket.emit('anime:search_results', { requestId, results });
     } catch (error) {
       captureError(error, { context: 'Game', source: 'anime:search' });
@@ -130,5 +211,6 @@ export const registerGameHandlers = (
   socket.on('get_game_state', getGameState);
   socket.on('get_my_watched', requireAuth(socket, getMyWatched));
   socket.on('get_watched_count', requireAuth(socket, getWatchedCount));
+  socket.on('watched:get_pool_stats', requireAuth(socket, getWatchedPoolStats));
   socket.on('anime:search', guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch));
 };

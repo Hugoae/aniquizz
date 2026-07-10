@@ -12,7 +12,9 @@ import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import { collectHealthStats } from '../../routes/health';
 import type { GameManager } from '../game/gameManager';
 import type { BotConfig } from '../game/engine/types';
+import { MODERATION_BAN_MESSAGE, normalizePrecision } from '@aniquizz/shared';
 import * as adminService from './adminService';
+import { assertModerationAllowed } from '../../config/protectedAccounts';
 
 const ROLES = ['USER', 'MODERATOR', 'ADMIN'] as const;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
@@ -58,6 +60,25 @@ const isDevEnv = (): boolean => env.NODE_ENV !== 'production';
 
 /** Normalize an Express route param (typed `string | string[]`) to a string. */
 const pid = (req: AuthedRequest): string => String(req.params.id);
+
+const guardProtectedTarget = async (
+  req: AuthedRequest,
+  res: Response,
+  targetUserId: string,
+  options?: { allowSelf?: boolean },
+): Promise<boolean> => {
+  const actorId = req.actor?.userId;
+  if (!actorId) {
+    res.status(401).json({ error: 'Unauthorized.' });
+    return false;
+  }
+  const check = await assertModerationAllowed(targetUserId, actorId, options);
+  if (!check.ok) {
+    res.status(403).json({ error: check.message });
+    return false;
+  }
+  return true;
+};
 
 /** Small helper: run an async handler and forward failures as a 500. */
 const wrap =
@@ -217,17 +238,19 @@ export function registerAdminRoutes(
         res.status(400).json({ error: 'Invalid duration.' });
         return;
       }
-      const result = await adminService.setUserBan(pid(req), parsed.data.minutes);
-      pushSanctionToSockets(pid(req), result);
-      // A live ban takes effect now: drop the target's sockets (the handshake
-      // rejects any reconnection while the ban is active).
+      const targetId = pid(req);
+      if (!(await guardProtectedTarget(req, res, targetId))) return;
+      const result = await adminService.setUserBan(targetId, parsed.data.minutes);
+      pushSanctionToSockets(targetId, result);
+      // Live ban: eject from any lobby/match first, then drop sockets.
       if (parsed.data.minutes !== null) {
-        forEachUserSocket(pid(req), (s) => {
-          s.emit('error', { message: 'Vous avez été banni par la modération.' });
+        gameManager.ejectUserFromAllRooms(targetId, MODERATION_BAN_MESSAGE);
+        forEachUserSocket(targetId, (s) => {
+          s.emit('error', { message: MODERATION_BAN_MESSAGE });
           s.disconnect(true);
         });
       }
-      logger.info(`Admin ${req.actor!.username} ban(${parsed.data.minutes}) on ${pid(req)}`, 'Admin');
+      logger.info(`Admin ${req.actor!.username} ban(${parsed.data.minutes}) on ${targetId}`, 'Admin');
       res.json(result);
     }),
   );
@@ -241,9 +264,11 @@ export function registerAdminRoutes(
         res.status(400).json({ error: 'Invalid duration.' });
         return;
       }
-      const result = await adminService.setUserMute(pid(req), parsed.data.minutes);
-      pushSanctionToSockets(pid(req), result);
-      logger.info(`Admin ${req.actor!.username} mute(${parsed.data.minutes}) on ${pid(req)}`, 'Admin');
+      const targetId = pid(req);
+      if (!(await guardProtectedTarget(req, res, targetId))) return;
+      const result = await adminService.setUserMute(targetId, parsed.data.minutes);
+      pushSanctionToSockets(targetId, result);
+      logger.info(`Admin ${req.actor!.username} mute(${parsed.data.minutes}) on ${targetId}`, 'Admin');
       res.json(result);
     }),
   );
@@ -252,8 +277,10 @@ export function registerAdminRoutes(
     '/users/:id/reset-stats',
     requireRole('ADMIN'),
     wrap(async (req, res) => {
-      const result = await adminService.resetUserStats(pid(req));
-      logger.info(`Admin ${req.actor!.username} reset stats on ${pid(req)}`, 'Admin');
+      const targetId = pid(req);
+      if (!(await guardProtectedTarget(req, res, targetId, { allowSelf: true }))) return;
+      const result = await adminService.resetUserStats(targetId);
+      logger.info(`Admin ${req.actor!.username} reset stats on ${targetId}`, 'Admin');
       res.json(result);
     }),
   );
@@ -263,15 +290,17 @@ export function registerAdminRoutes(
   router.post(
     '/users/:id/disconnect',
     requireRole('MODERATOR'),
-    (req: AuthedRequest, res: Response) => {
+    wrap(async (req, res) => {
+      const targetId = pid(req);
+      if (!(await guardProtectedTarget(req, res, targetId))) return;
       let count = 0;
-      forEachUserSocket(pid(req), (s) => {
+      forEachUserSocket(targetId, (s) => {
         s.emit('force_logout', { reason: 'Vous avez été déconnecté par la modération.' });
         count += 1;
       });
-      logger.info(`Admin ${req.actor!.username} forced logout of ${pid(req)} (${count} socket(s))`, 'Admin');
+      logger.info(`Admin ${req.actor!.username} forced logout of ${targetId} (${count} socket(s))`, 'Admin');
       res.json({ disconnected: count });
-    },
+    }),
   );
 
   // --- LIVE ROOMS / MATCHES -------------------------------------------------
@@ -300,12 +329,13 @@ export function registerAdminRoutes(
     res.json({ ok: true });
   });
 
-  router.post('/rooms/:id/kick', requireRole('MODERATOR'), (req: AuthedRequest, res) => {
+  router.post('/rooms/:id/kick', requireRole('MODERATOR'), wrap(async (req, res) => {
     const parsed = z.object({ userId: z.string().min(1) }).safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Missing userId.' });
       return;
     }
+    if (!(await guardProtectedTarget(req, res, parsed.data.userId))) return;
     const ok = gameManager.kickPlayer(pid(req), parsed.data.userId);
     if (!ok) {
       res.status(404).json({ error: 'Room not found.' });
@@ -313,7 +343,7 @@ export function registerAdminRoutes(
     }
     logger.info(`Admin ${req.actor!.username} kicked ${parsed.data.userId} from ${pid(req)}`, 'Admin');
     res.json({ ok: true });
-  });
+  }));
 
   // --- CATALOGUE ------------------------------------------------------------
 
@@ -719,7 +749,10 @@ export function registerAdminRoutes(
           difficulty: z.array(z.string()).optional(),
           soundTypes: z.array(z.string()).min(1).optional(),
           guessDuration: z.coerce.number().int().min(5).max(120).optional(),
-          precision: z.enum(['exact', 'franchise']).optional(),
+          precision: z.preprocess(
+            (val) => (val === undefined ? undefined : normalizePrecision(val)),
+            z.enum(['anime', 'franchise']).optional(),
+          ),
           soundSelection: z.enum(['random', 'mix', 'watched', 'playlist']).optional(),
           config: botConfigSchema,
         })

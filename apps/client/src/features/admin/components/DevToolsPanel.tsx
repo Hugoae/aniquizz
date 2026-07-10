@@ -29,9 +29,8 @@ import {
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
 
-type ResponseType = "typing" | "qcm" | "mix";
-type Precision = "exact" | "franchise";
-type SoundSelection = "random" | "mix" | "watched" | "playlist";
+import type { Precision, ResponseType, SoundSelection } from "@aniquizz/shared";
+import { getPrecisionLabel } from "@aniquizz/shared";
 
 interface ScenarioConfig {
   botCount: number;
@@ -384,8 +383,8 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
                 setCfg((prev) => ({ ...prev, precision: e.target.value as Precision }))
               }
             >
-              <option value="franchise">Franchise</option>
-              <option value="exact">Exact</option>
+              <option value="franchise">{getPrecisionLabel('franchise')}</option>
+              <option value="anime">{getPrecisionLabel('anime')}</option>
             </select>
           </Field>
           <Field label="Source">
@@ -538,7 +537,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
               <div className="text-sm">
                 <span className="font-medium">{room.name}</span>{" "}
                 <span className="text-muted-foreground">
-                  #{room.id} · {room.playerCount}/{room.maxPlayers}
+                  #{room.id} — {room.playerCount}/{room.maxPlayers}
                 </span>{" "}
                 <Badge className="bg-secondary">{room.status}</Badge>{" "}
                 {botCount > 0 && (

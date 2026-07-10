@@ -21,6 +21,44 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 2,
+    title: 'Mise à jour v26.1 — Compte, lobby & modes de jeu',
+    description:
+      'Suppression de compte, règles du lobby, modes vidéo, départ d\'extrait au choix, AniList plus clair, et des dizaines de correctifs pour le blindtest.',
+    content:
+      "La v26.1 affine l'expérience Standard avant les grosses nouveautés à venir (Librairie, stats, MyAnimeList). Voici ce qui change :\n\n" +
+      "**Compte & confidentialité**\n" +
+      "• Suppression de compte en libre-service depuis votre profil (menu ⋮), conforme au droit à l'effacement.\n" +
+      "• Confirmation par pseudo et mot de passe avant toute suppression définitive.\n\n" +
+      "**AniList (mode Watched)**\n" +
+      "• Plus de complétion silencieuse : si votre liste est trop petite, le lancement est bloqué ou vous choisissez explicitement de compléter avec l'aléatoire.\n" +
+      "• Bannière live dans le lobby : pool suffisant ou insuffisant, mode Union ou Commun, opt-in visible.\n" +
+      "• En QCM, les mauvaises réponses restent dans votre pool AniList — fini les distracteurs d'animes que vous n'avez jamais vus.\n\n" +
+      "**Lobby — Règles & réglages**\n" +
+      "• Bouton **Règles** : panneau lisible qui explique scoring, source musicale, victoire solo/multi et votes pause/skip selon la config actuelle.\n" +
+      "• Onglet **Avancé** dans les paramètres : affichage vidéo (Audio seul, Flouté, Fenêtre) et départ de l'extrait (Aléatoire ou Au début).\n" +
+      "• Dans un même salon, les sons des parties précédentes sont évités quand le catalogue le permet.\n\n" +
+      "**Modes d'affichage vidéo**\n" +
+      "• **Audio seul** (défaut) : fond masqué, timer circulaire — comme avant, en plus propre.\n" +
+      "• **Vidéo floutée** : la vidéo joue sous un flou, barre de progression en bas.\n" +
+      "• **Fenêtre aléatoire** : petit carré net à position différente chaque manche, cadre violet, reste masqué.\n" +
+      "• La révélation montre toujours la vidéo complète ; les points ne changent pas.\n\n" +
+      "**Départ de l'extrait**\n" +
+      "• **Aléatoire** (défaut) : chaque manche commence à un moment différent du clip.\n" +
+      "• **Au début** : l'intro de l'OP/ED est toujours audible — idéal pour les puristes.\n" +
+      "• Lecture plus fiable : le client attend le bon point de départ avant de lancer l'audio.\n\n" +
+      "**Correctifs & polish**\n" +
+      "• Médailles solo : les seuils Bronze → Platine correspondent enfin à la barre de maîtrise.\n" +
+      "• Relance solo : nouvelle playlist après retour au lobby, plus de reprise de l'ancienne partie.\n" +
+      "• Modération : joueurs bannis bloqués sur /play, éjection des parties en cours, toast unique.\n" +
+      "• Admin : clic sur un utilisateur ouvre son profil complet avec retour vers le panneau admin.\n" +
+      "• Staff : les hôtes **ADMIN** peuvent ajouter des bots en lobby sur le serveur live (tests & démos).\n\n" +
+      "Prochaine étape annoncée : **v26.2** — Librairie, graphiques de stats sur le profil, et lien MyAnimeList.\n\n" +
+      "Merci de continuer à jouer et de nous remonter vos retours !",
+    date: '2026-07-10T21:00:00Z',
+    type: 'update',
+  },
+  {
     id: 1,
     title: 'Mise à jour v26.0 - AniQuizz est en ligne',
     description:
@@ -32,13 +70,13 @@ export const allNews: NewsItem[] = [
       "• Parties solo pour s'entraîner à votre rythme, ou salons privés pour défier vos amis en temps réel.\n" +
       "• Des centaines d'openings et d'endings à deviner, avec filtres de difficulté (Facile, Moyen, Difficile).\n" +
       "• Modes de réponse au choix : Typing (clavier), QCM Carré, Duo, ou Mix pour varier les plaisirs.\n" +
-      "• Précision Exact ou Franchise selon le niveau de challenge que vous voulez.\n" +
+      "• Précision Anime ou Franchise selon le niveau de challenge que vous voulez.\n" +
       "• Médailles solo (Bronze → Platine) : votre score est jugé par rapport au maximum possible, pas juste un pourcentage arbitraire.\n" +
       "• Autocomplétion intelligente en mode Typing pour aller vite sans sacrifier la précision.\n\n" +
       "**Intégration AniList**\n" +
       "• Liez votre compte AniList depuis votre profil pour synchroniser les animes que vous avez vus.\n" +
       "• Jouez uniquement avec des sons de votre watchlist — idéal pour ne pas tomber sur un anime que vous n'avez jamais vu.\n" +
-      "• En multijoueur, deux modes de fusion : Union (toutes les listes mélangées) ou Intersection (seulement les animes vus par tout le monde).\n\n" +
+      "• En multijoueur, deux modes de fusion : Union (toutes les listes mélangées) ou Commun (seulement les animes vus par tout le monde).\n\n" +
       "**Amis & Social**\n" +
       "• Ajoutez des amis par pseudo, acceptez les demandes, voyez qui est en ligne ou en partie.\n" +
       "• Invitez un ami dans votre lobby ou rejoignez le sien en un clic.\n" +

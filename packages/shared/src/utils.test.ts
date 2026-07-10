@@ -86,7 +86,7 @@ describe('getFuzzySuggestions', () => {
   });
 
   it('matches on prefixes and ranks them first', () => {
-    const res = getFuzzySuggestions(list, 'blea', 'exact');
+    const res = getFuzzySuggestions(list, 'blea', 'anime');
     expect(labels(res)).toContain('Bleach');
     expect(res[0]?.label).toBe('Bleach');
   });
@@ -196,7 +196,7 @@ describe('getFuzzySuggestions', () => {
   });
 
   it('exact mode lists individual anime names in exact mode', () => {
-    const res = labels(getFuzzySuggestions(list, 'naru', 'exact'));
+    const res = labels(getFuzzySuggestions(list, 'naru', 'anime'));
     expect(res).toContain('Naruto');
     expect(res).toContain('Naruto Shippuden');
   });
@@ -206,19 +206,19 @@ describe('getFuzzySuggestions', () => {
       getFuzzySuggestions(
         [{ name: 'Naruto Shippuden', franchise: 'Naruto', altNames: [] }],
         'naruto',
-        'exact',
+        'anime',
       ),
     );
     expect(res).toEqual(['Naruto Shippuden']);
   });
 
   it('tolerates typos via edit distance when query length >= 3', () => {
-    const res = getFuzzySuggestions(list, 'bleech', 'exact');
+    const res = getFuzzySuggestions(list, 'bleech', 'anime');
     expect(labels(res)).toContain('Bleach');
   });
 
   it('does not fuzzy-match on 2-character queries', () => {
-    const res = labels(getFuzzySuggestions(list, 'be', 'exact'));
+    const res = labels(getFuzzySuggestions(list, 'be', 'anime'));
     expect(res).not.toContain('Bleach');
   });
 
@@ -231,7 +231,7 @@ describe('getFuzzySuggestions', () => {
           { name: 'Steins Gate', franchise: 'Steins Gate', altNames: [] },
         ],
         'ga',
-        'exact',
+        'anime',
       ),
     );
     expect(res).toContain("Darwin's Game");
@@ -243,7 +243,7 @@ describe('getFuzzySuggestions', () => {
     const res = getFuzzySuggestions(
       [{ name: 'Shingeki no Kyojin', franchise: 'Shingeki no Kyojin', altNames: ["L'Attaque des Titans", 'SNK'] }],
       'attaque',
-      'exact',
+      'anime',
     );
     expect(res.map((r) => r.label)).toEqual(['Shingeki no Kyojin']);
   });
@@ -252,7 +252,7 @@ describe('getFuzzySuggestions', () => {
     const res = getFuzzySuggestions(
       [{ name: 'Shingeki no Kyojin', franchise: 'Shingeki no Kyojin', altNames: [] }],
       'snk',
-      'exact',
+      'anime',
     );
     expect(res[0]?.label).toBe('Shingeki no Kyojin');
   });
@@ -261,7 +261,7 @@ describe('getFuzzySuggestions', () => {
     const res = getFuzzySuggestions(
       [{ name: 'Fullmetal Alchemist', franchise: 'Fullmetal Alchemist', altNames: ['Hagane no Renkinjutsushi'] }],
       'hagane',
-      'exact',
+      'anime',
     );
     expect(res.map((r) => r.label)).toEqual(['Fullmetal Alchemist']);
     expect(res.every((r) => r.label !== 'Hagane no Renkinjutsushi')).toBe(true);
@@ -271,7 +271,7 @@ describe('getFuzzySuggestions', () => {
     const res = getFuzzySuggestions(
       [{ name: 'Naruto Shippuden', franchise: 'Naruto', altNames: ['NARUTO SHIPPUDEN'] }],
       'naru',
-      'exact',
+      'anime',
     );
     expect(res.map((r) => r.label)).toEqual(['Naruto Shippuden']);
   });
@@ -282,7 +282,7 @@ describe('getFuzzySuggestions', () => {
       franchise: `Franchise ${i}`,
       altNames: [],
     }));
-    expect(getFuzzySuggestions(big, 'test', 'exact').length).toBeLessThanOrEqual(5);
+    expect(getFuzzySuggestions(big, 'test', 'anime').length).toBeLessThanOrEqual(5);
   });
 });
 

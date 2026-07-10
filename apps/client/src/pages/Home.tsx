@@ -31,7 +31,7 @@ const Home = () => {
 
         {/* Version tag */}
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 text-[12px] font-mono font-bold text-muted-foreground/30 pointer-events-none z-40 select-none hidden md:block">
-            v26.0
+            v26.1
         </div>
       </div>
     </>

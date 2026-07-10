@@ -44,6 +44,7 @@ const INBOUND_INFO_EVENTS = new Set([
   'chat:sendMessage',
   'vote_pause',
   'vote_skip',
+  'profile:delete_account',
 ]);
 
 const getActor = (socket: TypedSocket) => {

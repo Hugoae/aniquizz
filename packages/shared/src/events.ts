@@ -6,6 +6,7 @@
 import type { GamePlayer } from './types';
 import type { UserRole } from './roles';
 import type { AnimeSuggestion } from './utils';
+import type { WatchedPoolStats } from './watchedPool';
 import type { Precision } from './game';
 import type {
   AnswerType,
@@ -161,6 +162,8 @@ export interface ServerToClientEvents {
   my_watched_list: (ids: number[]) => void;
   /** Size of the caller's AniList list + how many map to playable songs. */
   watched_count: (payload: { listSize: number; playableSongs: number }) => void;
+  /** Resolved Watched pool stats (solo list or lobby union/intersection). */
+  'watched:pool_stats': (payload: WatchedPoolStats) => void;
 
   // Chat / profile / general
   'chat:message': (message: ChatMessage) => void;
@@ -169,6 +172,8 @@ export interface ServerToClientEvents {
   /** Sanction applied or lifted — keeps client profile/badge in sync without a reload. */
   'profile:sanction_updated': (payload: SanctionUpdatePayload) => void;
   user_profile: (payload: { success: boolean }) => void;
+  /** Account permanently deleted — client should sign out and leave. */
+  'profile:account_deleted': () => void;
   home_stats: (stats: { animes: number; users: number; songs: number; online: number; inMultiplayer: number }) => void;
 
   // Friends (Phase 7)
@@ -189,6 +194,11 @@ export interface ServerToClientEvents {
 
   // Misc
   error: (payload: ErrorPayload) => void;
+}
+
+export interface DeleteAccountInput {
+  /** Must match the profile username exactly (case-sensitive). */
+  confirmUsername: string;
 }
 
 // --- CLIENT → SERVER ---
@@ -223,6 +233,14 @@ export interface ClientToServerEvents {
   get_my_watched: () => void;
   /** Asks how many playable songs the caller's AniList list yields (lobby hint). */
   get_watched_count: () => void;
+  /** Resolves Watched pool stats for a room or the caller's solo list. */
+  'watched:get_pool_stats': (payload?: {
+    roomId?: string;
+    soundCount?: number;
+    difficulty?: string[];
+    types?: string[];
+    watchedMode?: 'union' | 'intersection';
+  }) => void;
   /** Server-side anime autocomplete search (replaces the full catalogue transport). */
   'anime:search': (payload: AnimeSearchInput) => void;
 
@@ -230,6 +248,7 @@ export interface ClientToServerEvents {
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
   'profile:get_stats': () => void;
   update_profile_data: (payload: { username?: string; avatarUrl?: string; anilistUsername?: string | null }) => void;
+  'profile:delete_account': (payload: DeleteAccountInput) => void;
   get_home_stats: () => void;
 
   // Friends (Phase 7)

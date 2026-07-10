@@ -23,7 +23,7 @@ export function Header() {
           alt=""
           width={32}
           height={32}
-          fetchPriority="high"
+          fetchpriority="high"
           decoding="async"
           className="h-8 w-8 shrink-0 transition-transform group-hover:scale-110"
           aria-hidden

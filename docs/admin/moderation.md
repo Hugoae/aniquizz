@@ -27,7 +27,8 @@ Reference for moderators and developers. Server enforcement is authoritative; th
 ### Ban
 
 - **Effect:** the player cannot open a socket handshake while `Profile.bannedUntil > now`; HTTP admin routes also reject banned tokens.
-- **Live apply:** active sockets receive an error message and are disconnected immediately.
+- **Live apply:** `ejectUserFromAllRooms` removes the player from any lobby or in-progress match (solo engine cancelled, empty room torn down), then active sockets receive `room_closed` + an error and are disconnected.
+- **Client:** `/play` and `/game` navigate to `/` when the close reason mentions a ban; mode select is blocked while banned. Ban ejection toast is deduped (`notifyModerationBan`) across `room_closed`, `error`, and disconnect handlers.
 - **Lift:** `POST /admin/users/:id/ban` with `{ "minutes": null }`. The player can reconnect on the next attempt.
 
 ### Durations

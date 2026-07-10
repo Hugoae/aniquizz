@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,6 @@ import {
   PaginationEllipsis,
   PaginationItem,
 } from "@/components/ui/pagination";
-import { ProfileView } from "@/features/profile/components/ProfileView";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,32 +22,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   adminApi,
   AdminApiError,
   type AdminUser,
-  type AdminUserProfile,
   type Role,
   type UserListFilter,
   type UserListSort,
 } from "@/lib/adminApi";
+import type { AdminUsersListState } from "@/features/admin/adminNavigation";
 import { useAuth } from "@/features/auth/context/AuthContext";
 import { cn } from "@/lib/utils";
 import {
-  formatRelativeFromNow,
-  formatRemaining,
-  isSanctionActive,
-  useSanctionTicker,
-} from "@/lib/suspension";
-import {
   AdminUserRow,
-  PRESENCE_META,
-  formatDate,
   type AdminUserRowPending,
 } from "@/features/admin/components/AdminUserRow";
 
@@ -155,129 +141,29 @@ const SORTS: { key: SortKey; label: string }[] = [
   { key: "seen", label: "Activité" },
 ];
 
-/** Profile modal shown when clicking a player row: fetches the real profile
- * (same layout as the profile page) and overlays live presence / sanctions. */
-function UserDetailDialog({
-  user,
-  refreshKey,
-  onClose,
-  onGoToRoom,
-}: {
-  user: AdminUser | null;
-  refreshKey: number;
-  onClose: () => void;
-  onGoToRoom?: (roomId: string) => void;
-}) {
-  const [profile, setProfile] = useState<AdminUserProfile | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    adminApi
-      .getUserProfile(user.id)
-      .then((p) => {
-        if (!cancelled) setProfile(p);
-      })
-      .catch((e) => toast.error(errorMessage(e)))
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user, refreshKey]);
-
-  const banned = isSanctionActive(profile?.bannedUntil ?? user?.bannedUntil);
-  const muted = isSanctionActive(profile?.mutedUntil ?? user?.mutedUntil);
-  const meta = user ? PRESENCE_META[user.presence] : PRESENCE_META.offline;
-  useSanctionTicker(!!user && (banned || muted));
-
-  return (
-    <Dialog open={!!user} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Profil du joueur</DialogTitle>
-        </DialogHeader>
-
-        {loading || !profile || !user ? (
-          <div className="flex items-center justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : (
-          <ProfileView
-            username={profile.username}
-            avatar={profile.avatar}
-            role={profile.role}
-            anilistUsername={profile.anilistUsername}
-            presenceLabel={meta.label}
-            presenceColor={meta.dot}
-            presenceOnline={user.presence !== "offline"}
-            stats={profile.stats}
-            headerExtra={
-              <div className="flex flex-wrap items-center gap-2 text-sm">
-                {user.currentRoom && (
-                  <button
-                    className="text-primary hover:underline"
-                    onClick={() => {
-                      onGoToRoom?.(user.currentRoom!.id);
-                      onClose();
-                    }}
-                  >
-                    Salon : {user.currentRoom.name}
-                  </button>
-                )}
-                {user.presence === "offline" && (
-                  <span className="text-muted-foreground">
-                    Vu {formatRelativeFromNow(profile.lastSeenAt)}
-                  </span>
-                )}
-                <span className="text-muted-foreground">Inscrit le {formatDate(profile.createdAt)}</span>
-                {banned && (
-                  <Badge className="bg-destructive/20 text-destructive">
-                    Banni · {formatRemaining(profile?.bannedUntil ?? user.bannedUntil)}
-                  </Badge>
-                )}
-                {muted && (
-                  <Badge className="bg-warning/20 text-warning">
-                    Muet · {formatRemaining(profile?.mutedUntil ?? user.mutedUntil)}
-                  </Badge>
-                )}
-              </div>
-            }
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export function UsersPanel({
   canManage,
   onGoToRoom,
+  initialListState,
 }: {
   canManage: boolean;
   onGoToRoom?: (roomId: string) => void;
+  initialListState?: AdminUsersListState;
 }) {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("username");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [page, setPage] = useState(1);
+  const [query, setQuery] = useState(initialListState?.query ?? "");
+  const [filter, setFilter] = useState<FilterKey>(initialListState?.filter ?? "all");
+  const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? "username");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(initialListState?.sortDir ?? "asc");
+  const [page, setPage] = useState(initialListState?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({ online: 0, inGame: 0, banned: 0, muted: 0 });
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingConfirm | null>(null);
-  const [detail, setDetail] = useState<AdminUser | null>(null);
-  const [detailRefreshKey, setDetailRefreshKey] = useState(0);
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState(initialListState?.query ?? "");
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -308,10 +194,6 @@ export function UsersPanel({
       setTotalPages(res.totalPages);
       setTotal(res.total);
       setCounts(res.counts);
-      setDetail((prev) => {
-        if (!prev) return prev;
-        return res.users.find((u) => u.id === prev.id) ?? prev;
-      });
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -346,7 +228,7 @@ export function UsersPanel({
     return () => clearInterval(id);
   }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
-  const run = useCallback(async (fn: () => Promise<unknown>, successMsg: string, targetUserId?: string) => {
+  const run = useCallback(async (fn: () => Promise<unknown>, successMsg: string) => {
     try {
       await fn();
       toast.success(successMsg);
@@ -357,16 +239,24 @@ export function UsersPanel({
         sort: sortKey,
         sortDir,
       });
-      if (targetUserId && detail?.id === targetUserId) {
-        setDetailRefreshKey((k) => k + 1);
-      }
     } catch (e) {
       toast.error(errorMessage(e));
     }
-  }, [debouncedQuery, page, filter, sortKey, sortDir, load, detail?.id]);
+  }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
   const handleSetPending = useCallback((p: PendingConfirm) => setPending(p), []);
-  const handleOpenDetail = useCallback((u: AdminUser) => setDetail(u), []);
+  const handleOpenDetail = useCallback((u: AdminUser) => {
+    if (u.id === profile?.id) return;
+    navigate(`/profile/${u.id}`, {
+      state: {
+        returnTo: '/admin',
+        admin: {
+          tab: 'users',
+          users: { page, filter, sortKey, sortDir, query: debouncedQuery },
+        },
+      },
+    });
+  }, [navigate, page, filter, sortKey, sortDir, debouncedQuery, profile?.id]);
   const handleRoleChange = useCallback(
     (userId: string, role: Role) => {
       void run(() => adminApi.setRole(userId, role), "Rôle mis à jour.");
@@ -376,9 +266,9 @@ export function UsersPanel({
 
   const confirmPending = async () => {
     if (!pending) return;
-    const { action, successMsg, targetUserId } = pending;
+    const { action, successMsg } = pending;
     setPending(null);
-    await run(action, successMsg, targetUserId);
+    await run(action, successMsg);
   };
 
   const toggleSort = (key: SortKey) => {
@@ -500,17 +390,10 @@ export function UsersPanel({
 
       <div className="flex flex-col items-center gap-2">
         <p className="text-xs text-muted-foreground">
-          {total} joueur(s) · page {page} sur {totalPages} · {users.length} affiché(s) (max 50 par page)
+          {total} joueur(s) — page {page} sur {totalPages} — {users.length} affiché(s) (max 50 par page)
         </p>
         <UsersPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
-
-      <UserDetailDialog
-        user={detail}
-        refreshKey={detailRefreshKey}
-        onClose={() => setDetail(null)}
-        onGoToRoom={onGoToRoom}
-      />
 
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent>

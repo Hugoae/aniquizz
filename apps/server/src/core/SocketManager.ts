@@ -96,7 +96,7 @@ export class SocketManager {
       registerChatHandlers(this.io, socket, this.gameManager);
       registerLobbyHandlers(this.io, socket, this.gameManager);
       registerGameHandlers(this.io, socket, this.gameManager);
-      registerProfileHandlers(this.io, socket);
+      registerProfileHandlers(this.io, socket, this.gameManager);
       registerGeneralHandlers(this.io, socket, this.gameManager);
       registerFriendsHandlers(this.io, socket, this.gameManager);
 

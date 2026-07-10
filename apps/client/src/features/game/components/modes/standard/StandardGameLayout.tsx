@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
 import type { GamePlayer } from '@aniquizz/shared';
+import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
 import type { AnimeSuggestion } from '@aniquizz/shared';
@@ -40,6 +41,7 @@ interface StandardGameLayoutProps {
   skipRequired: number;
   onVoteSkip: () => void;
   currentSong: CurrentSong;
+  videoMode: VideoMode;
   myWatchedIds: number[];
   inputMode: InputMode;
   answer: string;
@@ -75,6 +77,7 @@ export function StandardGameLayout({
   currentUserId, gameMode, roomId,
   responseType = 'mix',
   configBadges,
+  videoMode,
 }: StandardGameLayoutProps) {
   const revealSong = phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
@@ -151,6 +154,7 @@ export function StandardGameLayout({
                 videoRef={videoRef}
                 phase={phase}
                 currentSong={currentSong}
+                videoMode={videoMode}
                 autoplayBlocked={autoplayBlocked}
                 onSafePlay={onSafePlay}
                 isGamePaused={isGamePaused}

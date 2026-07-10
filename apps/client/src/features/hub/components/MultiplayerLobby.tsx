@@ -1,11 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Trophy, Check, Settings, ArrowLeft, Copy, Play,
-  Eye, EyeOff, AlertTriangle, Users, Bot, Loader2,
+  Eye, EyeOff, AlertTriangle, Users, Bot, Loader2, Music2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RoomConfig, GameStatus } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,7 +26,9 @@ import { LobbyPlayerCard, type LobbyPlayer } from '@/features/hub/components/Lob
 import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
 import { buildRoomSettingBadges, getDifficultyBadge, SETTING_TONE_CLASSES } from '@/features/hub/components/roomSettings';
-import { checkWatchedLobby } from '@/features/hub/components/config/watchedSource';
+import { checkWatchedLobby, checkWatchedPoolLaunch, watchedPoolModeLabel, resolveWatchedPoolBanner, watchedPoolBannerVariantClasses } from '@/features/hub/components/config/watchedSource';
+import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
 
 export type { LobbyPlayer };
 
@@ -54,7 +57,7 @@ interface MultiplayerLobbyProps {
   gameStatus?: GameStatus;
   /** Host clicked start — waiting for server ack / playlist build. */
   isLaunchStarting?: boolean;
-  /** DEV: show the "add bots" host control. */
+  /** Show "add bots" for DEV builds or ADMIN hosts (server-gated on `dev:add_bots`). */
   canAddBots?: boolean;
   onStartGame: () => void;
   onToggleReady: () => void;
@@ -63,6 +66,10 @@ interface MultiplayerLobbyProps {
   onTransferHost: (targetId: string | number) => void;
   onKickPlayer: (targetId: string | number) => void;
   onAddBots: (count: number) => void;
+  /** Refetches Watched pool stats when lobby roster changes. */
+  watchedPlayersKey?: string;
+  /** Host-only partial settings patch (silent auto-clear of fallback opt-in). */
+  onPatchRoomSettings?: (patch: Partial<RoomConfig>, silent?: boolean) => void;
 }
 
 export function MultiplayerLobby({
@@ -83,11 +90,15 @@ export function MultiplayerLobby({
   onTransferHost,
   onKickPlayer,
   onAddBots,
+  watchedPlayersKey,
+  onPatchRoomSettings,
 }: MultiplayerLobbyProps) {
   const [showLeaveDialog, setShowLeaveDialog] = useState(false);
   const [hostTransferTarget, setHostTransferTarget] = useState<string | number | null>(null);
   const [kickTarget, setKickTarget] = useState<LobbyPlayer | null>(null);
   const [showCode, setShowCode] = useState(false);
+
+  const humanCount = useMemo(() => players.filter((p) => !p.isBot).length, [players]);
 
   const me = players.find((p) => String(p.id) === String(currentUserId));
   const isStarting = isLaunchStarting || gameStatus === 'starting';
@@ -103,8 +114,56 @@ export function MultiplayerLobby({
     gameSettings?.watchedMode ?? 'union',
     players,
   );
-  const watchedBlocked = isHost && watchedCheck.blocked;
+  const { stats: watchedStatsRaw, loading: watchedStatsLoading } = useWatchedPoolStats({
+    roomId: roomCode,
+    soundCount: gameSettings?.soundCount,
+    difficulty: gameSettings?.difficulty,
+    types: gameSettings?.soundTypes,
+    watchedMode: gameSettings?.watchedMode,
+    enabled: isHost && gameSettings?.soundSelection === 'watched',
+    refreshKey: watchedPlayersKey,
+  });
+  const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, gameSettings?.soundCount);
+  const poolCheck = checkWatchedPoolLaunch(
+    gameSettings?.soundSelection ?? 'random',
+    watchedStats,
+    gameSettings?.watchedAllowFallback,
+  );
+  const watchedBlocked = isHost && (watchedCheck.blocked || poolCheck.blocked);
+  const watchedBlockReason = watchedCheck.blocked ? watchedCheck.reason : poolCheck.reason;
   const canStart = isHost && hasEnoughPlayers && allGuestsReady && !isGameRunning && !watchedBlocked;
+
+  const prevPoolInsufficientRef = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (!isHost || watchedStatsLoading || !watchedStats) return;
+    const wasInsufficient = prevPoolInsufficientRef.current;
+    const nowInsufficient = watchedStats.insufficient;
+    if (wasInsufficient === true && nowInsufficient === false) {
+      toast.success('Plus besoin de compléter avec l\'aléatoire — le pool AniList est maintenant suffisant.');
+      if (gameSettings?.watchedAllowFallback) {
+        onPatchRoomSettings?.({ watchedAllowFallback: false }, true);
+      }
+    }
+    prevPoolInsufficientRef.current = nowInsufficient;
+  }, [
+    watchedStats,
+    watchedStatsLoading,
+    isHost,
+    gameSettings?.watchedAllowFallback,
+    onPatchRoomSettings,
+  ]);
+
+  const showWatchedPoolBanner =
+    isHost && gameSettings?.soundSelection === 'watched' && !watchedCheck.blocked;
+  const watchedModeLabel = watchedPoolModeLabel(
+    watchedStats?.watchedMode ?? gameSettings?.watchedMode,
+  );
+  const watchedPoolBanner = resolveWatchedPoolBanner(
+    watchedStats,
+    watchedStatsLoading,
+    watchedModeLabel,
+    gameSettings?.watchedAllowFallback,
+  );
 
   const freeSlots = Math.max(0, maxPlayers - players.length);
   const isFull = freeSlots === 0;
@@ -207,14 +266,61 @@ export function MultiplayerLobby({
 
         {/* Settings chips */}
         {gameSettings && (
-          <div className="flex flex-wrap gap-2 border-t border-border/50 pt-3">
-            <SettingChip icon={AlertTriangle} label="Diff" value={difficultyBadge.label} className={difficultyBadge.className} />
-            {buildRoomSettingBadges(gameSettings).map((spec) => (
-              <SettingChip key={spec.key} icon={spec.icon} label={spec.label} value={spec.value} className={SETTING_TONE_CLASSES[spec.tone]} />
-            ))}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
+            <div className="flex flex-wrap gap-2">
+              <SettingChip icon={AlertTriangle} label="Diff" value={difficultyBadge.label} className={difficultyBadge.className} />
+              {buildRoomSettingBadges(gameSettings).map((spec) => (
+                <SettingChip key={spec.key} icon={spec.icon} label={spec.label} value={spec.value} className={SETTING_TONE_CLASSES[spec.tone]} />
+              ))}
+            </div>
+            <LobbyRulesTrigger
+              config={gameSettings}
+              context={{
+                lobbyMode: 'multi',
+                playerCount: humanCount,
+              }}
+              className="ml-auto"
+            />
           </div>
         )}
       </div>
+
+      {showWatchedPoolBanner && (
+        <div
+          className={cn(
+            'flex items-start gap-2 rounded-xl border px-4 py-3 text-sm',
+            watchedPoolBannerVariantClasses(watchedPoolBanner.variant),
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          <Music2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          {watchedPoolBanner.variant === 'loading' ? (
+            <span>Analyse du pool AniList…</span>
+          ) : watchedPoolBanner.variant === 'empty' ? (
+            <span>
+              Aucun son jouable ({watchedPoolBanner.modeLabel}) pour ces filtres.
+            </span>
+          ) : watchedPoolBanner.variant === 'fallback' ? (
+            <span>
+              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
+              <b>Complétion aléatoire activée</b> pour {watchedPoolBanner.soundCount} manches
+            </span>
+          ) : watchedPoolBanner.variant === 'insufficient' ? (
+            <span>
+              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
+              <b>Insuffisant</b> pour {watchedPoolBanner.soundCount} manches
+            </span>
+          ) : (
+            <span>
+              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) — <b>Suffisant</b>
+            </span>
+          )}
+        </div>
+      )}
 
       {/* BODY: players grid + chat */}
       <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
@@ -236,7 +342,7 @@ export function MultiplayerLobby({
                 <i /><i /><i /><i />
               </span>
             </div>
-            {canAddBots && !isFull && (
+            {canAddBots && isHost && gameStatus === 'waiting' && !isFull && (
               <Button
                 variant="ghost"
                 size="sm"
@@ -305,9 +411,9 @@ export function MultiplayerLobby({
                 La partie démarre…
               </p>
             )}
-            {watchedBlocked && !isStarting && watchedCheck.reason && (
+            {watchedBlocked && !isStarting && watchedBlockReason && (
               <p className="max-w-md text-center text-sm font-medium text-destructive" role="alert">
-                {watchedCheck.reason}
+                {watchedBlockReason}
               </p>
             )}
             {!isStarting && !watchedBlocked && guests.length > 0 && !isGameRunning && (

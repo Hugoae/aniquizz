@@ -420,7 +420,7 @@ export function StatsPanel() {
           icon={Users}
           label="Joueurs inscrits"
           value={community.totalPlayers}
-          secondary={`+${community.newPlayers24h} (24 h) · +${community.newPlayers7d} (7 j)`}
+          secondary={`+${community.newPlayers24h} (24 h) — +${community.newPlayers7d} (7 j)`}
           accent="text-primary"
         />
         <StatCard
@@ -480,7 +480,7 @@ export function StatsPanel() {
           icon={Trophy}
           label="Parties jouées"
           value={activity.totalMatches}
-          secondary={`${activity.matchesToday} aujourd'hui · ${activity.matchesWeek} cette semaine`}
+          secondary={`${activity.matchesToday} aujourd'hui — ${activity.matchesWeek} cette semaine`}
           accent="text-primary"
         />
         <StatCard
@@ -560,7 +560,7 @@ export function StatsPanel() {
           empty="Aucune partie sur la période."
           items={activity.topSongs.map((s) => ({
             primary: s.title,
-            secondary: `${s.artist} · ${s.anime}`,
+            secondary: `${s.artist} — ${s.anime}`,
             count: s.count,
           }))}
         />

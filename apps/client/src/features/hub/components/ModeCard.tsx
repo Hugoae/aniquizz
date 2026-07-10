@@ -23,6 +23,9 @@ interface ModeCardProps {
   /** Index for the staggered fade-in animation. */
   index: number;
   onSelect: (id: GameMode) => void;
+  /** When true, click shows a toast instead of selecting (e.g. active ban). */
+  blocked?: boolean;
+  onBlocked?: () => void;
 }
 
 function ModeCardContent({ mode, interactive }: { mode: ModeCardData; interactive: boolean }) {
@@ -74,7 +77,7 @@ function ModeCardContent({ mode, interactive }: { mode: ModeCardData; interactiv
 
 const cardShellClass = 'glass-card relative flex h-full min-h-[300px] animate-fade-in flex-col overflow-hidden p-10 text-left';
 
-export function ModeCard({ mode, index, onSelect }: ModeCardProps) {
+export function ModeCard({ mode, index, onSelect, blocked = false, onBlocked }: ModeCardProps) {
   const animationStyle = { animationDelay: `${index * 0.1}s` };
 
   if (mode.disabled) {
@@ -93,16 +96,25 @@ export function ModeCard({ mode, index, onSelect }: ModeCardProps) {
   return (
     <button
       type="button"
-      onClick={() => onSelect(mode.id)}
+      onClick={() => {
+        if (blocked) {
+          onBlocked?.();
+          return;
+        }
+        onSelect(mode.id);
+      }}
       aria-label={`${mode.title} — ${mode.description}`}
       style={animationStyle}
       className={cn(
         cardShellClass,
-        'group cursor-pointer transition-all hover-lift hover-glow',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+        blocked
+          ? 'cursor-not-allowed opacity-60 grayscale-[0.35]'
+          : 'group cursor-pointer transition-all hover-lift hover-glow',
+        !blocked &&
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
       )}
     >
-      <ModeCardContent mode={mode} interactive />
+      <ModeCardContent mode={mode} interactive={!blocked} />
     </button>
   );
 }

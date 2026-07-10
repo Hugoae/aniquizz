@@ -1,8 +1,15 @@
 // packages/shared/src/grading.ts
 // Pure medal / performance-grade logic shared by the client and the server.
+//
 // A medal reflects a player's mastery ratio (earned score / best obtainable
 // score), so the answer mode matters: acing easy Duo rounds (1 pt) can't reach
 // the same medal as typing (5 pts). Thresholds are scaled by song difficulty.
+//
+// Integer rounding: medal tiers are resolved with Math.round(ratio × maxScore)
+// so the server award, mastery-bar labels, and "earned" markers stay aligned.
+// Raw float ratios (e.g. 0.9 vs 0.9000000000000001) caused boundary scores such
+// as 18/20 QCM to show Platinum on the bar while awarding Gold — see
+// docs/game/solo-medals.md.
 
 import { GAME_CONFIG } from './constants';
 import type { SongDifficulty } from './leveling';
@@ -17,6 +24,8 @@ export interface MedalThresholds {
   gold: number;
   platinum: number;
 }
+
+const MEDAL_ASCENDING: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
 
 const normalizeDifficulty = (raw: string): SongDifficulty => {
   switch ((raw ?? '').toLowerCase()) {
@@ -54,16 +63,46 @@ export const effectiveMedalThresholds = (difficulties: string[]): MedalThreshold
   };
 };
 
+/** Integer score required for a medal tier on this match's scale (rounded). */
+export const requiredScoreForTier = (
+  tier: Medal,
+  maxPossibleScore: number,
+  difficulties: string[],
+): number => {
+  const thresholds = effectiveMedalThresholds(difficulties);
+  return Math.round(thresholds[tier] * maxPossibleScore);
+};
+
+/** Integer score thresholds for every medal tier on this match's scale. */
+export const medalMarkerScores = (
+  maxPossibleScore: number,
+  difficulties: string[],
+): Record<Medal, number> => {
+  const thresholds = effectiveMedalThresholds(difficulties);
+  return {
+    bronze: Math.round(thresholds.bronze * maxPossibleScore),
+    silver: Math.round(thresholds.silver * maxPossibleScore),
+    gold: Math.round(thresholds.gold * maxPossibleScore),
+    platinum: Math.round(thresholds.platinum * maxPossibleScore),
+  };
+};
+
 /**
- * Resolves a medal from a mastery ratio (0–1 = earned score / best obtainable)
- * against the match's effective thresholds. Returns null below the bronze bar.
+ * Resolves a medal from the earned score against rounded integer thresholds
+ * from {@link medalMarkerScores}. Returns null below the bronze bar.
  */
-export const computeMedal = (ratio: number, difficulties: string[]): MedalTier => {
-  const t = effectiveMedalThresholds(difficulties);
-  if (ratio >= t.platinum) return 'platinum';
-  if (ratio >= t.gold) return 'gold';
-  if (ratio >= t.silver) return 'silver';
-  if (ratio >= t.bronze) return 'bronze';
+export const computeMedal = (
+  score: number,
+  maxPossibleScore: number,
+  difficulties: string[],
+): MedalTier => {
+  if (maxPossibleScore <= 0) return null;
+
+  const required = medalMarkerScores(maxPossibleScore, difficulties);
+  if (score >= required.platinum) return 'platinum';
+  if (score >= required.gold) return 'gold';
+  if (score >= required.silver) return 'silver';
+  if (score >= required.bronze) return 'bronze';
   return null;
 };
 
@@ -72,8 +111,6 @@ export interface NextMedalGoal {
   pointsNeeded: number;
   label: string;
 }
-
-const MEDAL_ASCENDING: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
 
 /**
  * Next medal tier the player has not yet reached, and how many points they still
@@ -87,13 +124,12 @@ export const nextMedalGoal = (
 ): NextMedalGoal | null => {
   if (maxPossibleScore <= 0) return null;
 
-  const thresholds = effectiveMedalThresholds(difficulties);
+  const required = medalMarkerScores(maxPossibleScore, difficulties);
   const startIdx = currentMedal ? MEDAL_ASCENDING.indexOf(currentMedal) + 1 : 0;
 
   for (let i = startIdx; i < MEDAL_ASCENDING.length; i++) {
     const tier = MEDAL_ASCENDING[i];
-    const requiredScore = Math.round(thresholds[tier] * maxPossibleScore);
-    const pointsNeeded = requiredScore - score;
+    const pointsNeeded = required[tier] - score;
     if (pointsNeeded > 0) {
       return { tier, pointsNeeded, label: GAME_CONFIG.MEDALS.META[tier].label };
     }
@@ -103,9 +139,22 @@ export const nextMedalGoal = (
 };
 
 /** Marker positions (0–1) for each medal tier on the mastery bar. */
-export const medalMarkerRatios = (difficulties: string[]): Record<Medal, number> => {
-  const t = effectiveMedalThresholds(difficulties);
-  return { bronze: t.bronze, silver: t.silver, gold: t.gold, platinum: t.platinum };
+export const medalMarkerRatios = (
+  maxPossibleScore: number,
+  difficulties: string[],
+): Record<Medal, number> => {
+  if (maxPossibleScore <= 0) {
+    const zero = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
+    return zero;
+  }
+
+  const scores = medalMarkerScores(maxPossibleScore, difficulties);
+  return {
+    bronze: scores.bronze / maxPossibleScore,
+    silver: scores.silver / maxPossibleScore,
+    gold: scores.gold / maxPossibleScore,
+    platinum: scores.platinum / maxPossibleScore,
+  };
 };
 
 export interface MedalMeta {

@@ -1,7 +1,7 @@
 import { Medal as MedalIcon } from 'lucide-react';
 import {
   getMedalMeta,
-  medalMarkerRatios,
+  medalMarkerScores,
   nextMedalGoal,
   type Medal,
   type MedalTier,
@@ -42,7 +42,7 @@ export function SoloMasteryBar({
 }: SoloMasteryBarProps) {
   const scoreRatio = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
   const progressPercent = Math.min(100, scoreRatio * 100);
-  const markers = medalMarkerRatios(songDifficulties);
+  const markerScores = medalMarkerScores(maxPossibleScore, songDifficulties);
   const hint = goalMessage(score, maxPossibleScore, songDifficulties, soloMedal);
 
   return (
@@ -50,8 +50,9 @@ export function SoloMasteryBar({
       <div className="relative w-full px-1 pt-4">
         <div className="pointer-events-none absolute inset-x-0 top-0 h-4">
           {MEDAL_ORDER.map((tier) => {
-            const pct = Math.min(100, markers[tier] * 100);
-            const earned = scoreRatio >= markers[tier];
+            const required = markerScores[tier];
+            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const earned = score >= required;
             const meta = getMedalMeta(tier);
             if (!meta) return null;
             return (
@@ -79,8 +80,9 @@ export function SoloMasteryBar({
           />
 
           {MEDAL_ORDER.map((tier) => {
-            const pct = Math.min(100, markers[tier] * 100);
-            const earned = scoreRatio >= markers[tier];
+            const required = markerScores[tier];
+            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const earned = score >= required;
             return (
               <div
                 key={tier}
@@ -100,9 +102,9 @@ export function SoloMasteryBar({
             0
           </span>
           {MEDAL_ORDER.map((tier) => {
-            const pct = Math.min(100, markers[tier] * 100);
-            const earned = scoreRatio >= markers[tier];
-            const required = Math.round(markers[tier] * maxPossibleScore);
+            const required = markerScores[tier];
+            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const earned = score >= required;
             const meta = getMedalMeta(tier);
             return (
               <span

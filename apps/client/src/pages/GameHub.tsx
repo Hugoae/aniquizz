@@ -1,8 +1,9 @@
-import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useState, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
 import { prefetchGame } from '@/lib/routePrefetch';
 import type { RoomConfig } from '@aniquizz/shared';
+import { isAdmin } from '@aniquizz/shared';
 
 import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -37,11 +38,16 @@ export default function GameHub() {
     showPasswordModal, setShowPasswordModal,
     passwordInput, setPasswordInput,
     joinCode, setJoinCode,
-    selectMode, openCreateRoom, startSolo, createOrUpdateRoom,
+    selectMode, openCreateRoom, startSolo, createOrUpdateRoom, patchRoomSettings,
     startLobbyGame, toggleReady, transferHost, kickPlayer, addBots, joinRoom, submitPassword, goBack, refreshRooms,
   } = useLobbyController();
 
   const isSoloLobby = roomConfig.maxPlayers === 1;
+
+  const watchedPlayersKey = useMemo(
+    () => lobbyPlayers.filter((p) => !p.isBot).map((p) => String(p.id)).sort().join(','),
+    [lobbyPlayers],
+  );
 
   // Settings modal edits a local DRAFT of the room config. Changes are only
   // committed (to the server AND the live lobby) when the host clicks "Mettre à
@@ -59,6 +65,8 @@ export default function GameHub() {
     if (!open) setDraftConfig(null);
   };
 
+  const canAddLobbyBots = import.meta.env.DEV || isAdmin(profile?.role);
+
   if (view === 'lobby') {
     return (
       <>
@@ -70,6 +78,7 @@ export default function GameHub() {
             playerAvatar={profile?.avatar || 'player1'}
             user={user}
             profile={profile}
+            roomId={currentRoomId}
             isLaunchStarting={isLaunchStarting}
             onStart={startLobbyGame}
             onLeave={goBack}
@@ -86,7 +95,7 @@ export default function GameHub() {
             roomCode={currentRoomId}
             gameStatus={gameStatus}
               isLaunchStarting={isLaunchStarting}
-              canAddBots={import.meta.env.DEV}
+              canAddBots={canAddLobbyBots}
               onStartGame={startLobbyGame}
             onToggleReady={toggleReady}
             onLeave={goBack}
@@ -94,6 +103,8 @@ export default function GameHub() {
             onTransferHost={transferHost}
             onKickPlayer={kickPlayer}
             onAddBots={addBots}
+            watchedPlayersKey={watchedPlayersKey}
+            onPatchRoomSettings={patchRoomSettings}
           />
         )}
         <Dialog open={showCreateModal} onOpenChange={handleSettingsOpenChange}>
@@ -115,6 +126,8 @@ export default function GameHub() {
               currentPlayersCount={lobbyPlayers.length}
               user={user}
               profile={profile}
+              roomId={currentRoomId}
+              watchedPlayersKey={watchedPlayersKey}
             />
           </DialogContent>
         </Dialog>
@@ -139,6 +152,7 @@ export default function GameHub() {
                 onSelectMode={selectMode}
                 onBack={() => navigate('/')}
                 multiplayerCount={multiplayerCount}
+                bannedUntil={profile?.bannedUntil}
               />
             )}
             {view === 'roomList' && (

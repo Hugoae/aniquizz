@@ -489,7 +489,7 @@ export const adminApi = {
     difficulty?: string[];
     soundTypes?: string[];
     guessDuration?: number;
-    precision?: "exact" | "franchise";
+    precision?: Precision;
     soundSelection?: "random" | "mix" | "watched" | "playlist";
     config?: BotConfig;
   }) =>

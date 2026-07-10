@@ -24,11 +24,11 @@ export const HOME_DESCRIPTION =
 export const DEFAULT_DESCRIPTION = HOME_DESCRIPTION;
 
 /** Browser tab title separator (compact — tabs truncate long em dashes). */
-export const TITLE_SEPARATOR = ' · ';
+export const TITLE_SEPARATOR = ' | ';
 
 /**
  * Formats a document title for `<title>` / OG.
- * Home → brand only; inner pages → `Page · AniQuizz`.
+ * Home → brand only; inner pages → `Page | AniQuizz`.
  */
 export function formatPageTitle(pageTitle?: string): string {
   if (!pageTitle || pageTitle === SITE_NAME) return SITE_NAME;

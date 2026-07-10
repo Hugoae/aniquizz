@@ -1,10 +1,14 @@
 {
-  "animeIds": [204356, 111790, 153658, 131573, 112151, 178788, 102976, 167404, 128740, 21220, 21579, 21875, 21386, 104157, 154967, 161474, 21039, 20811, 146984, 10863, 20021, 21403, 21326, 109190, 103047],
-  "songIds": [9457, 9615, 9655],
+  "animeIds": [204356, 111790, 153658, 131573, 112151, 178788, 102976, 167404, 128740, 21220, 21579, 21875, 21386, 104157, 154967, 161474, 21039, 20811, 146984, 10863, 20021, 21403, 21326, 109190, 103047, 11701, 16934, 20889, 431, 146722, 20572, 129874, 21399, 9260, 21400, 146065, 133845, 104580, 112625, 199, 32, 2759, 3784, 3785, 3786, 98702, 106286],
+  "songIds": [9457, 9615, 9655, 9653, 9736, 9753, 9801],
   "videoKeys": [
     "ONEPIECE-21-OP1.mp4",
     "NoGameNoLife-19815-OP2.mp4",
-    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4"
+    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4",
+    "AngelBeats-6547-OP2.mp4",
+    "JoJonoKimyounaBoukenDiamondwaKudakenai-21450-OP2.mp4",
+    "KimetsunoYaibaMugenResshahenTV-129874-OP1.mp4",
+    "OredakeLevelUpnaKen-151807-OP2.mp4"
   ],
   "_comments": {
     "204356": "Boku no Hero Academia No. 170+1: More — no usable OP; permanently excluded from pipeline fetches.",
@@ -37,6 +41,36 @@
     "ONEPIECE-21-OP1.mp4": "Same as song id 9457 — block by videoKey for pipeline steps 2–3.",
     "NoGameNoLife-19815-OP2.mp4": "Same as song id 9615 — block by videoKey for pipeline steps 2–3.",
     "9655": "Anohana OP2 phantom row (title 'Circle Game') — no OP2 on AnimeThemes; corrupt R2 object quarantined.",
-    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4": "Same as song id 9655 — block by videoKey for pipeline steps 2–3."
+    "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4": "Same as song id 9655 — block by videoKey for pipeline steps 2–3.",
+    "9653": "Angel Beats! OP2 (ep.4, LiSA) — duplicate cover; keep OP1 (Lia) only.",
+    "AngelBeats-6547-OP2.mp4": "Same as song id 9653 — block by videoKey for pipeline steps 2–3.",
+    "11701": "Another: The Other - Inga (OVA ep.0) — no OP; keep TV Another (11111) only.",
+    "16934": "Chuunibyou S1 OVA (Slapstick Noel, ep.13) — no OP; keep TV seasons only.",
+    "20889": "Chuunibyou Ren OVA (Jaou Shingan Mokushiroku, unaired ep.13) — no OP; keep TV Ren only.",
+    "431": "Howl's Moving Castle (movie) — no songs; excluded from catalogue.",
+    "9736": "JoJo Part 4 OP2 (EDM arrange, eps 8-9) — variant; keep main OP1 only.",
+    "JoJonoKimyounaBoukenDiamondwaKudakenai-21450-OP2.mp4": "Same as song id 9736 — block by videoKey for pipeline steps 2–3.",
+    "146722": "JoJo Stone Ocean Part 2 (cours 2-3) — duplicate split entry; keep Stone Ocean (131942) only.",
+    "20572": "Kill la Kill Tokubetsu-hen (OVA ep.25) — no OP; keep TV Kill la Kill (18679) only.",
+    "129874": "Kimetsu Mugen Train TV arc — excluded; duplicate of movie arc content.",
+    "9753": "Same as anime 129874 — Akeboshi OP for Mugen Train TV arc.",
+    "KimetsunoYaibaMugenResshahenTV-129874-OP1.mp4": "Same as song id 9753 — block by videoKey for pipeline steps 2–3.",
+    "21399": "Kizumonogatari Part 2 (movie) — no songs; excluded from catalogue.",
+    "9260": "Kizumonogatari Part 1 (movie) — no songs; excluded from catalogue.",
+    "21400": "Kizumonogatari Part 3 (movie) — no songs; excluded from catalogue.",
+    "146065": "Mushoku Tensei S2 cour 1 (duplicate split) — no songs; keep S2 Part 2 (166873) only.",
+    "9801": "Solo Leveling S1 OP2 duplicate — same LEveL as OP1; keep OP1 (9800) only.",
+    "OredakeLevelUpnaKen-151807-OP2.mp4": "Same as song id 9801 — block by videoKey for pipeline steps 2–3.",
+    "133845": "Overlord: Sei Oukoku-hen (movie) — no songs; excluded from catalogue.",
+    "104580": "Saiki K Season 3 (Kanketsu-hen special) — no songs; keep TV seasons only.",
+    "112625": "Saiki K: Reawakened (ONA Ψ-shidou-hen) — no songs; keep TV seasons only.",
+    "199": "Spirited Away (movie) — no songs; excluded from catalogue.",
+    "32": "End of Evangelion (movie) — no songs; keep TV Neon Genesis Evangelion (30) only.",
+    "2759": "Evangelion 1.0 (Rebuild movie) — no songs; excluded from catalogue.",
+    "3784": "Evangelion 2.0 (Rebuild movie) — no songs; excluded from catalogue.",
+    "3785": "Evangelion 3.0 (Rebuild movie) — no songs; excluded from catalogue.",
+    "3786": "Evangelion 3.0+1.0 (Rebuild movie) — no songs; excluded from catalogue.",
+    "98702": "Shokugeki no Souma S2 OVA (Ni no Sara) — no songs; keep TV seasons only.",
+    "106286": "Weathering With You (movie) — no songs; excluded from catalogue."
   }
 }

@@ -500,8 +500,8 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>
-                    {room.playerCount}/{room.maxPlayers} joueurs · {room.humanCount} humain(s)
-                    {botCount > 0 && ` · ${botCount} bot(s)`}
+                    {room.playerCount}/{room.maxPlayers} joueurs — {room.humanCount} humain(s)
+                    {botCount > 0 && ` — ${botCount} bot(s)`}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="h-3 w-3" /> ouvert depuis {formatOpenSince(room.createdAt)}

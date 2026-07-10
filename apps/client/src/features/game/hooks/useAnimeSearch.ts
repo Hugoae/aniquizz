@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { GAME_CONFIG, type AnimeSuggestion } from '@aniquizz/shared';
+import { GAME_CONFIG, normalizePrecision, type AnimeSuggestion, type Precision } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 
 const DEBOUNCE_MS = 120;
 
 interface UseAnimeSearchArgs {
   query: string;
-  precision?: 'franchise' | 'exact';
+  precision?: Precision;
   enabled?: boolean;
 }
 
@@ -53,7 +53,7 @@ export function useAnimeSearch({
 
     const handle = window.setTimeout(() => {
       const requestId = (requestIdRef.current += 1);
-      socket.emit('anime:search', { requestId, query: trimmed, precision });
+      socket.emit('anime:search', { requestId, query: trimmed, precision: normalizePrecision(precision) });
     }, DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);

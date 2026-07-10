@@ -22,6 +22,7 @@ import { ProfileStatsSection } from '@/features/profile/components/ProfileStatsS
 import { AvatarCropDialog } from '@/features/profile/components/AvatarCropDialog';
 import { AniListDialog } from '@/features/profile/components/AniListDialog';
 import { PasswordDialog } from '@/features/profile/components/PasswordDialog';
+import { DeleteAccountDialog } from '@/features/profile/components/DeleteAccountDialog';
 import { MatchHistory } from '@/features/profile/components/MatchHistory';
 import { ProfileSkeleton } from '@/features/profile/components/ProfileSkeleton';
 import { FriendsPanel } from '@/features/friends/FriendsPanel';
@@ -33,6 +34,7 @@ import { useFriends, type Relation } from '@/features/friends/FriendsContext';
 import { supabase } from '@/lib/supabase';
 import { socket } from '@/lib/socket';
 import { getCroppedImg } from '@/lib/canvasUtils';
+import { getProfileFromAdminState } from '@/features/admin/adminNavigation';
 
 /** Self-only stats payload from `profile:get_stats`. */
 interface StatsData {
@@ -91,6 +93,15 @@ export default function Profile() {
   } = useFriends();
 
   const isOwn = !userId || (!!user && userId === user.id);
+  const fromAdmin = getProfileFromAdminState(location.state);
+
+  const handleBack = () => {
+    if (!isOwn && fromAdmin) {
+      navigate('/admin', { state: fromAdmin.admin });
+      return;
+    }
+    navigate(isOwn ? '/' : '/profile');
+  };
 
   const [statsData, setStatsData] = useState<StatsData>(INITIAL_STATS);
   const [publicData, setPublicData] = useState<PublicProfileData | null>(null);
@@ -103,6 +114,7 @@ export default function Profile() {
   const [isSaving, setIsSaving] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
 
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [showCropModal, setShowCropModal] = useState(false);
@@ -358,11 +370,11 @@ export default function Profile() {
 
           <Button
             variant="ghost"
-            onClick={() => navigate(isOwn ? '/' : '/profile')}
+            onClick={handleBack}
             className="gap-2 mb-2 text-muted-foreground hover:text-foreground pl-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            {isOwn ? "Retour à l'accueil" : 'Retour à mon profil'}
+            {isOwn ? "Retour à l'accueil" : fromAdmin ? "Retour à l'administration" : 'Retour à mon profil'}
           </Button>
 
           <ProfileHeader
@@ -381,6 +393,7 @@ export default function Profile() {
             onOpenAniList={() => setShowAniListModal(true)}
             onUnlinkAniList={handleUnlinkAnilist}
             onOpenPasswordModal={() => setShowPasswordModal(true)}
+            onOpenDeleteAccountModal={() => setShowDeleteAccountModal(true)}
             onSignOut={signOut}
             onAddFriend={addById}
             onBlock={block}
@@ -425,7 +438,7 @@ export default function Profile() {
                             key={m.key}
                             className="absolute -translate-x-1/2 flex flex-col items-center"
                             style={{ left: `${m.min}%` }}
-                            title={`${m.label} · ${m.min}%`}
+                            title={`${m.label} — ${m.min}%`}
                           >
                             <Medal
                               className={`h-4 w-4 transition-colors ${reached ? '' : 'text-muted-foreground/30'}`}
@@ -508,6 +521,17 @@ export default function Profile() {
             open={showPasswordModal}
             onOpenChange={setShowPasswordModal}
             userEmail={user?.email}
+          />
+
+          <DeleteAccountDialog
+            open={showDeleteAccountModal}
+            onOpenChange={setShowDeleteAccountModal}
+            username={vm.username}
+            userEmail={user?.email}
+            onDeleted={async () => {
+              await signOut();
+              navigate('/');
+            }}
           />
         </>
       )}

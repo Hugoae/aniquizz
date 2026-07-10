@@ -20,11 +20,15 @@ import {
   type RoomListItem,
   type RoomSettings,
   type RoomUpdatedPayload,
+  normalizeVideoMode,
 } from '@aniquizz/shared';
 import type { LobbyPlayer } from '@/features/hub/components/MultiplayerLobby';
 
+import { isBanSanctionReason } from '@aniquizz/shared';
+import { notifyModerationBan } from '@/lib/suspension';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { socket } from '@/lib/socket';
+import { getPlayBannedMessage, isSanctionActive } from '@/lib/suspension';
 
 export type LobbyView = 'modes' | 'roomList' | 'createModal' | 'lobby';
 
@@ -48,7 +52,7 @@ type WireRoomSettings = Partial<RoomSettings> & { name?: string; password?: stri
 
 export const defaultConfig: GameConfig = {
   mode: 'solo', gameType: 'standard', responseType: 'mix', soundCount: 20, soundTypes: ['opening'], difficulty: ['medium'],
-  guessDuration: 15, soundSelection: 'random', precision: 'franchise', watchedMode: 'union'
+  guessDuration: 15, soundSelection: 'random', precision: 'franchise', watchedMode: 'union', videoMode: 'hidden', songStartMode: 'random',
 };
 
 export const defaultRoomConfig: RoomConfig = { ...defaultConfig, mode: 'multiplayer', roomName: '', isPrivate: false, password: '', maxPlayers: 16 };
@@ -84,6 +88,7 @@ export function useLobbyController() {
 
   const joinedKeyRef = useRef<string | null>(null);
   const hasAutoCreatedRef = useRef(false);
+  const silentSettingsPatchRef = useRef(false);
   // Last known host id — lets us fire the "you are host" toast only on a genuine
   // promotion (host actually changed to us), never on room creation/join where
   // being host is self-evident. Also dedupes repeated `update_players` events.
@@ -105,6 +110,10 @@ export function useLobbyController() {
 
   const [config, setConfig] = useState<GameConfig>(defaultConfig);
   const [roomConfig, setRoomConfig] = useState<RoomConfig>(defaultRoomConfig);
+  const configRef = useRef(config);
+  const roomConfigRef = useRef(roomConfig);
+  configRef.current = config;
+  roomConfigRef.current = roomConfig;
 
   const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
   const [currentRoomId, setCurrentRoomId] = useState<string>(locationState?.roomId || '');
@@ -240,14 +249,27 @@ export function useLobbyController() {
         roomName: data.roomName,
       }));
       setLobbyPlayers(mapServerPlayersToLobby(data.players, undefined));
-      toast.info('Paramètres mis à jour.');
+      if (!silentSettingsPatchRef.current) {
+        toast.info('Paramètres mis à jour.');
+      }
+      silentSettingsPatchRef.current = false;
       setShowCreateModal(false);
     };
 
     const onRoomClosed = (payload?: { reason?: string }) => {
-      toast.error(payload?.reason || 'Salon fermé.');
+      const reason = payload?.reason || 'Salon fermé.';
+      if (!notifyModerationBan(reason)) {
+        toast.error(reason);
+      }
       setIsLaunchPending(false);
-      setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('roomList');
+      setCurrentRoomId('');
+      setLobbyPlayers([]);
+      setGameStatus('waiting');
+      if (isBanSanctionReason(reason)) {
+        navigate('/', { replace: true });
+        return;
+      }
+      setView('roomList');
     };
     const onPasswordRequired = (data: { roomId: string }) => { setPendingRoomId(data.roomId); setPasswordInput(''); setShowPasswordModal(true); };
 
@@ -281,17 +303,24 @@ export function useLobbyController() {
       setGameStatus('playing');
       const safePlayers = mapServerPlayersToLobby(data.players || lobbyPlayers, undefined);
       const localStartTime = Date.now() + (data.introDuration || 3000);
+      const mergedSettings = {
+        ...data.settings,
+        videoMode: normalizeVideoMode(
+          data.settings?.videoMode ?? roomConfigRef.current.videoMode ?? configRef.current.videoMode,
+        ),
+      };
 
       navigate('/game', {
         state: {
           roomId: data.roomId, gameData: gameDataConstructed, players: safePlayers,
-          settings: data.settings, mode: isSolo ? 'solo' : 'multiplayer', gameStartTime: localStartTime,
+          settings: mergedSettings, mode: isSolo ? 'solo' : 'multiplayer', gameStartTime: localStartTime,
         },
       });
     };
 
     const onError = (err: { message: string }) => {
       setIsLaunchPending(false);
+      if (notifyModerationBan(err.message)) return;
       toast.error(err.message || 'Erreur');
       const msg = (err.message || '').toLowerCase();
       if (msg.includes('mot de passe')) setPasswordInput('');
@@ -340,10 +369,14 @@ export function useLobbyController() {
 
   const selectMode = useCallback((mode: GameMode) => {
     if (mode === 'competitive') return;
+    if (isSanctionActive(profile?.bannedUntil)) {
+      toast.error(getPlayBannedMessage(profile?.bannedUntil));
+      return;
+    }
     setConfig(prev => ({ ...prev, mode }));
     if (mode === 'multiplayer') setView('roomList');
     else setShowConfig(true);
-  }, []);
+  }, [profile?.bannedUntil]);
 
   const openCreateRoom = useCallback(() => { setRoomConfig({ ...defaultRoomConfig }); setShowCreateModal(true); }, []);
 
@@ -367,6 +400,13 @@ export function useLobbyController() {
       socket.emit('lobby:create', payload);
     }
   }, [view, currentRoomId, roomConfig, getPlayerIdentity]);
+
+  /** Host-only partial settings patch (e.g. auto-clear watched fallback). */
+  const patchRoomSettings = useCallback((patch: Partial<RoomConfig>, silent = false) => {
+    if (!currentRoomId || !isAmIHost) return;
+    silentSettingsPatchRef.current = silent;
+    socket.emit('update_room_settings', { roomId: currentRoomId, settings: patch });
+  }, [currentRoomId, isAmIHost]);
 
   const isLaunchStarting = isLaunchPending || gameStatus === 'starting';
 
@@ -412,7 +452,7 @@ export function useLobbyController() {
     passwordInput, setPasswordInput,
     joinCode, setJoinCode,
     // actions
-    selectMode, openCreateRoom, startSolo, createOrUpdateRoom,
+    selectMode, openCreateRoom, startSolo, createOrUpdateRoom, patchRoomSettings,
     startLobbyGame, toggleReady, transferHost, kickPlayer, addBots, joinRoom, submitPassword, goBack, refreshRooms,
   };
 }

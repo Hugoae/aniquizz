@@ -89,10 +89,10 @@ Media keys live in `Song.videoKey`; completed songs point at public R2 URLs.
 ## Realtime flow: Standard match
 
 1. Host creates/joins a lobby; settings stored server-side (`RoomSettings` / `GameConfig`).
-2. Host starts — `PlaylistBuilder` selects songs (filters, difficulty, watched mode, QCM choices).
+2. Host starts — `PlaylistBuilder` selects songs (filters, difficulty, watched mode, QCM choices). In Watched + QCM/Mix, distractors use the same AniList ids as the songs ([`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md)).
 3. Each round: server emits `round_start` (R2 key + start offset), collects `game:answer`, then `round_reveal`.
 4. `MatchEngine` scores answers; anti-cheat rejects answers before reveal.
-5. `game_over` persists stats/XP; solo medals computed from mastery ratio (`packages/shared` grading).
+5. `game_over` persists stats/XP; solo medals computed from mastery ratio (`packages/shared` grading, integer-rounded thresholds — see [`docs/game/solo-medals.md`](./docs/game/solo-medals.md)).
 
 ## Environment
 
@@ -103,7 +103,10 @@ per-package `.env.example` files for the required subset.
 
 | Doc | Topic |
 | --- | ----- |
+| [`docs/game/solo-medals.md`](./docs/game/solo-medals.md) | Solo medal tiers, mastery bar, rounding fix |
+| [`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md) | Watched AniList QCM/Duo distractor pool |
 | [`docs/admin/moderation.md`](./docs/admin/moderation.md) | Mute/ban behaviour |
+| [`docs/security/delete-account.md`](./docs/security/delete-account.md) | RGPD account deletion flow |
 | [`docs/security/rls-audit.md`](./docs/security/rls-audit.md) | Postgres RLS |
 | [`docs/seo/google-search-console.md`](./docs/seo/google-search-console.md) | SEO checklist |
 | [`docs/perf/baseline.md`](./docs/perf/baseline.md) | Performance snapshots |

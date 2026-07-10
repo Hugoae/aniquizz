@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { CurrentSong } from '@/features/game/state/gameReducer';
+import type { CurrentSong, GamePhase, GuessingSong } from '@/features/game/state/gameReducer';
 import { getVideoUrl } from '@/lib/video';
 
 interface UseVideoPlaybackArgs {
   /** Current round song (guessing or reveal) — drives the one-shot per-round load. */
   currentSong: CurrentSong;
+  /** Match phase — used to reset clip cache when a new game intro starts. */
+  phase: GamePhase;
   /** Whether the match is paused (pauses the media element). */
   isGamePaused: boolean;
   /** Initial volume, 0–100. */
@@ -27,17 +29,82 @@ interface UseVideoPlaybackResult {
   resumeCurrent: () => void;
 }
 
+const roundClipKey = (videoKey: string, startTime: number) => `${videoKey}:${startTime}`;
+
+const isGuessingSong = (song: CurrentSong): song is GuessingSong =>
+  song !== null && 'videoKey' in song && !('id' in song);
+
+const waitForMediaEvent = (
+  el: HTMLVideoElement,
+  event: keyof HTMLMediaElementEventMap,
+  signal?: AbortSignal,
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException('Aborted', 'AbortError'));
+      return;
+    }
+
+    const cleanup = () => {
+      el.removeEventListener(event, onEvent);
+      signal?.removeEventListener('abort', onAbort);
+    };
+
+    const onEvent = () => {
+      cleanup();
+      resolve();
+    };
+
+    const onAbort = () => {
+      cleanup();
+      reject(new DOMException('Aborted', 'AbortError'));
+    };
+
+    el.addEventListener(event, onEvent, { once: true });
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+
+const waitForLoadedMetadata = (el: HTMLVideoElement, signal?: AbortSignal): Promise<void> => {
+  if (el.readyState >= HTMLMediaElement.HAVE_METADATA) return Promise.resolve();
+  return waitForMediaEvent(el, 'loadedmetadata', signal);
+};
+
+/** Seek and wait until the frame at `startTime` is ready — avoids audible playback at t=0. */
+const seekTo = async (el: HTMLVideoElement, startTime: number, signal?: AbortSignal): Promise<void> => {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  const maxStart = Number.isFinite(el.duration) && el.duration > 0 ? el.duration - 0.25 : startTime;
+  const target = startTime <= 0 ? 0 : Math.min(startTime, Math.max(0, maxStart));
+
+  if (Math.abs(el.currentTime - target) < 0.05) return;
+
+  el.currentTime = target;
+  await waitForMediaEvent(el, 'seeked', signal);
+};
+
+const loadClipAtOffset = async (
+  el: HTMLVideoElement,
+  videoKey: string,
+  startTime: number,
+  signal?: AbortSignal,
+): Promise<void> => {
+  el.src = getVideoUrl(videoKey);
+  el.load();
+  await waitForLoadedMetadata(el, signal);
+  await seekTo(el, startTime, signal);
+};
+
 /**
  * Owns the game's `<video>` element lifecycle: per-round loading, volume/mute,
  * pause syncing and autoplay-blocked recovery. Extracted from the Game page so
  * the orchestrator stays focused on match state, not media plumbing.
  *
- * The video is loaded ONCE per round (keyed on `videoKey`) and deliberately kept
- * playing through the reveal phase for visual continuity — it is never reloaded
- * when the phase flips.
+ * Each guessing round loads once (keyed on videoKey + server offset), seeks
+ * before play(), then keeps playing through reveal without reload.
  */
 export function useVideoPlayback({
   currentSong,
+  phase,
   isGamePaused,
   initialVolume = 20,
 }: UseVideoPlaybackArgs): UseVideoPlaybackResult {
@@ -45,52 +112,66 @@ export function useVideoPlayback({
   const preloadRef = useRef<HTMLVideoElement>(null);
   const volumeRef = useRef(initialVolume);
   const isMutedRef = useRef(false);
-  const loadedVideoKeyRef = useRef<string | null>(null);
-  const warmedVideoKeyRef = useRef<string | null>(null);
+  const loadedClipRef = useRef<string | null>(null);
+  const warmedClipRef = useRef<string | null>(null);
 
   const [volume, setVolume] = useState(initialVolume);
   const [isMuted, setIsMuted] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
-  const playVideoSafe = (videoKey: string | null | undefined, startTime = 0) => {
-    if (!videoRef.current || !videoKey) return;
-    videoRef.current.src = `${getVideoUrl(videoKey)}#t=${startTime}`;
-    videoRef.current.load();
-    videoRef.current.volume = isMutedRef.current ? 0 : volumeRef.current / 100;
-    const playPromise = videoRef.current.play();
-    if (playPromise !== undefined) {
-      playPromise
-        .then(() => setAutoplayBlocked(false))
-        .catch((e: DOMException) => {
-          if (e.name !== 'AbortError') setAutoplayBlocked(true);
-        });
+  const applyVolume = (el: HTMLVideoElement) => {
+    el.volume = isMutedRef.current ? 0 : volumeRef.current / 100;
+  };
+
+  const playElement = async (el: HTMLVideoElement, signal?: AbortSignal): Promise<void> => {
+    applyVolume(el);
+    try {
+      await el.play();
+      if (!signal?.aborted) setAutoplayBlocked(false);
+    } catch (e) {
+      if (signal?.aborted) return;
+      if (e instanceof DOMException && e.name === 'AbortError') return;
+      setAutoplayBlocked(true);
     }
   };
 
   /**
    * Warm an upcoming clip in a hidden, muted element so the browser fetches and
-   * buffers the bytes at the exact play offset. When the main player later loads
-   * the same URL it hits the HTTP cache and starts without cold buffering. Used
-   * for round 1 (during the intro) and each next round (during the reveal).
+   * buffers bytes near the play offset. Best-effort — failures are ignored.
    */
   const warmVideo = useCallback((videoKey: string | null | undefined, startTime = 0) => {
     const el = preloadRef.current;
     if (!el || !videoKey) return;
-    if (warmedVideoKeyRef.current === videoKey) return;
-    warmedVideoKeyRef.current = videoKey;
-    el.preload = 'auto';
-    el.muted = true;
-    const url = `${getVideoUrl(videoKey)}#t=${startTime}`;
-    el.src = url;
-    el.load();
+
+    const clipKey = roundClipKey(videoKey, startTime);
+    if (warmedClipRef.current === clipKey) return;
+    warmedClipRef.current = clipKey;
+
+    void (async () => {
+      try {
+        el.preload = 'auto';
+        el.muted = true;
+        await loadClipAtOffset(el, videoKey, startTime);
+      } catch {
+        warmedClipRef.current = null;
+      }
+    })();
   }, []);
 
-  /** Drop warm-cache when the active round changes so the next clip can prefetch. */
+  /** Drop warm-cache when the active guessing clip changes. */
   useEffect(() => {
-    if (!currentSong || !('videoKey' in currentSong)) return;
-    if (loadedVideoKeyRef.current === currentSong.videoKey) return;
-    warmedVideoKeyRef.current = null;
+    if (!isGuessingSong(currentSong)) return;
+    const clipKey = roundClipKey(currentSong.videoKey, currentSong.videoStartTime || 0);
+    if (loadedClipRef.current === clipKey) return;
+    warmedClipRef.current = null;
   }, [currentSong]);
+
+  // New match intro — allow the same clip+offset to load again after solo replay.
+  useEffect(() => {
+    if (phase !== 'loading') return;
+    loadedClipRef.current = null;
+    warmedClipRef.current = null;
+  }, [phase]);
 
   // Keep the live element volume in sync with state.
   useEffect(() => {
@@ -99,12 +180,34 @@ export function useVideoPlayback({
     if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
   }, [volume, isMuted]);
 
-  // Load the video once per round; never restart it on reveal.
+  // Load once per guessing round; seek before play; skip reload on reveal (RevealSong).
   useEffect(() => {
-    if (!currentSong || !('videoKey' in currentSong)) return;
-    if (loadedVideoKeyRef.current === currentSong.videoKey) return;
-    loadedVideoKeyRef.current = currentSong.videoKey;
-    playVideoSafe(currentSong.videoKey, currentSong.videoStartTime || 0);
+    if (!isGuessingSong(currentSong)) return;
+
+    const { videoKey } = currentSong;
+    const startTime = currentSong.videoStartTime || 0;
+    const clipKey = roundClipKey(videoKey, startTime);
+    if (loadedClipRef.current === clipKey) return;
+
+    const el = videoRef.current;
+    if (!el) return;
+
+    const controller = new AbortController();
+
+    void (async () => {
+      try {
+        await loadClipAtOffset(el, videoKey, startTime, controller.signal);
+        if (controller.signal.aborted) return;
+        loadedClipRef.current = clipKey;
+        await playElement(el, controller.signal);
+      } catch (e) {
+        if (controller.signal.aborted) return;
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        loadedClipRef.current = null;
+      }
+    })();
+
+    return () => controller.abort();
   }, [currentSong]);
 
   // Pause the media element whenever the match is paused.

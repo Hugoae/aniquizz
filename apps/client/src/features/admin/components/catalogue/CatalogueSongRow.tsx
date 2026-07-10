@@ -49,7 +49,7 @@ export const CatalogueSongRow = memo(function CatalogueSongRow({
       <div className="min-w-0 flex-1 p-2">
         <div className="font-medium">
           {song.songType}
-          {song.sequence} · {song.title}
+          {song.sequence} — {song.title}
         </div>
         <div className="text-xs text-muted-foreground">{song.artist}</div>
       </div>

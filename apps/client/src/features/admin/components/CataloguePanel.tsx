@@ -299,7 +299,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <span>· {counts.animes} animes</span>
           <span>· {counts.songs} sons</span>
           <span>
-            · {counts.completedSongs} prêts (<span className="text-success">{coverage}%</span>)
+            — {counts.completedSongs} prêts (<span className="text-success">{coverage}%</span>)
           </span>
         </div>
       )}

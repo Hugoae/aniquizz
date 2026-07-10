@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { SeoHead } from "@/components/seo/SeoHead";
 import { PAGE_TITLES } from "@/lib/site";
 import { toast } from "sonner";
@@ -16,15 +16,18 @@ import { RoomsPanel } from "@/features/admin/components/RoomsPanel";
 import { CataloguePanel } from "@/features/admin/components/CataloguePanel";
 import { DevToolsPanel } from "@/features/admin/components/DevToolsPanel";
 import { StatsPanel } from "@/features/admin/components/StatsPanel";
+import { getAdminPanelState } from "@/features/admin/adminNavigation";
 
 const IS_DEV = import.meta.env.DEV;
 
 export default function Admin() {
   const { session, authReady, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const restored = getAdminPanelState(location.state);
   const [claiming, setClaiming] = useState(false);
-  const [tab, setTab] = useState("users");
-  const [highlightRoomId, setHighlightRoomId] = useState<string | null>(null);
+  const [tab, setTab] = useState(restored?.tab ?? "users");
+  const [highlightRoomId, setHighlightRoomId] = useState<string | null>(restored?.highlightRoomId ?? null);
 
   const goToRoom = (roomId: string) => {
     setHighlightRoomId(roomId);
@@ -107,7 +110,11 @@ export default function Admin() {
             </TabsList>
 
             <TabsContent value="users">
-              <UsersPanel canManage={canManage} onGoToRoom={goToRoom} />
+              <UsersPanel
+                canManage={canManage}
+                onGoToRoom={goToRoom}
+                initialListState={restored?.users}
+              />
             </TabsContent>
             <TabsContent value="rooms">
               <RoomsPanel highlightRoomId={highlightRoomId} />

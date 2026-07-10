@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   checkWatchedLobby,
+  checkWatchedPoolLaunch,
   isWatchedSourceBlocked,
+  resolveWatchedPoolBanner,
+  watchedPoolBannerVariantClasses,
+  watchedPoolModeLabel,
   WATCHED_SOURCE_BLOCK_MESSAGE,
 } from './watchedSource';
 
@@ -69,6 +73,98 @@ describe('checkWatchedLobby', () => {
       { id: 'bot', isBot: true, hasAniList: false },
     ]);
     expect(result.blocked).toBe(false);
+  });
+});
+
+describe('watchedPoolModeLabel', () => {
+  it('labels union mode', () => {
+    expect(watchedPoolModeLabel('union')).toMatch(/union des listes/);
+  });
+
+  it('labels commun mode', () => {
+    expect(watchedPoolModeLabel('intersection')).toBe('commun');
+  });
+});
+
+describe('checkWatchedPoolLaunch', () => {
+  it('does not block when pool is sufficient', () => {
+    const result = checkWatchedPoolLaunch('watched', {
+      playableSongs: 20,
+      soundCount: 20,
+      insufficient: false,
+    });
+    expect(result.blocked).toBe(false);
+  });
+
+  it('blocks when pool is empty', () => {
+    const result = checkWatchedPoolLaunch('watched', {
+      playableSongs: 0,
+      soundCount: 20,
+      insufficient: true,
+      watchedMode: 'intersection',
+    });
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toMatch(/Commun/i);
+  });
+
+  it('blocks when insufficient and fallback not opted in', () => {
+    const result = checkWatchedPoolLaunch(
+      'watched',
+      { playableSongs: 8, soundCount: 20, insufficient: true },
+      false,
+    );
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toMatch(/Compléter avec l'aléatoire/);
+  });
+
+  it('allows launch when host opted in to fallback', () => {
+    const result = checkWatchedPoolLaunch(
+      'watched',
+      { playableSongs: 8, soundCount: 20, insufficient: true },
+      true,
+    );
+    expect(result.blocked).toBe(false);
+  });
+
+  it('ignores non-watched sources', () => {
+    const result = checkWatchedPoolLaunch('random', {
+      playableSongs: 0,
+      soundCount: 20,
+      insufficient: true,
+    });
+    expect(result.blocked).toBe(false);
+  });
+});
+
+describe('resolveWatchedPoolBanner', () => {
+  it('returns loading while stats are pending', () => {
+    const result = resolveWatchedPoolBanner(null, true, 'union des listes');
+    expect(result.variant).toBe('loading');
+    expect(watchedPoolBannerVariantClasses(result.variant)).toMatch(/muted-foreground/);
+  });
+
+  it('returns fallback when insufficient but opt-in is enabled', () => {
+    const result = resolveWatchedPoolBanner(
+      { playableSongs: 6, soundCount: 100, insufficient: true },
+      false,
+      'union des listes',
+      true,
+    );
+    expect(result.variant).toBe('fallback');
+    expect(result.count).toBe(6);
+    expect(result.soundCount).toBe(100);
+    expect(watchedPoolBannerVariantClasses(result.variant)).toMatch(/info/);
+  });
+
+  it('returns insufficient when fallback is disabled', () => {
+    const result = resolveWatchedPoolBanner(
+      { playableSongs: 6, soundCount: 100, insufficient: true },
+      false,
+      'union des listes',
+      false,
+    );
+    expect(result.variant).toBe('insufficient');
+    expect(watchedPoolBannerVariantClasses(result.variant)).toMatch(/warning/);
   });
 });
 

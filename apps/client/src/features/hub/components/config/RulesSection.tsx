@@ -75,7 +75,7 @@ export function RulesSection({ config, update }: RulesSectionProps) {
       {/* Precision (only when typing is involved) */}
       {config.responseType !== 'qcm' && (
         <div className="space-y-2">
-          <SectionHeader icon={Target} title="Précision" tooltip="À quel point la réponse doit correspondre au titre attendu." />
+          <SectionHeader icon={Target} title="Précision" tooltip="Franchise = la saga suffit. Anime = la saison précise de l'anime est requise." />
           <div className="grid grid-cols-2 gap-2">
             {PRECISION_OPTIONS.map(({ id, label, description, icon: Icon }) => (
               <OptionButton

@@ -147,18 +147,25 @@ export const AdminUserRow = memo(function AdminUserRow({
   const muted = isSanctionActive(u.mutedUntil);
   useSanctionTicker(banned || muted);
 
+  const openProfile = () => {
+    if (!isSelf) onOpenDetail(u);
+  };
+
   return (
     <tr
-      className="border-b border-border/50 hover:bg-secondary/50 cursor-pointer"
-      onClick={() => onOpenDetail(u)}
-      onKeyDown={(e) => {
+      className={cn(
+        'border-b border-border/50',
+        isSelf ? 'cursor-default' : 'hover:bg-secondary/50 cursor-pointer',
+      )}
+      onClick={openProfile}
+      onKeyDown={isSelf ? undefined : (e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           onOpenDetail(u);
         }
       }}
-      tabIndex={0}
-      aria-label={`Voir le profil de ${u.username}`}
+      tabIndex={isSelf ? undefined : 0}
+      aria-label={isSelf ? undefined : `Voir le profil de ${u.username}`}
     >
       <td className="p-3">
         <div className="flex items-start gap-3">
@@ -194,7 +201,7 @@ export const AdminUserRow = memo(function AdminUserRow({
       </td>
 
       <td className="p-3">
-        {u.gamesPlayed} parties · Niv {u.level}
+        {u.gamesPlayed} parties — Niv {u.level}
       </td>
 
       <td className="p-3" onClick={(e) => e.stopPropagation()}>
@@ -228,12 +235,12 @@ export const AdminUserRow = memo(function AdminUserRow({
           </span>
           {banned && (
             <Badge className="bg-destructive/20 text-destructive w-fit">
-              Banni · {formatRemaining(u.bannedUntil)}
+              Banni — {formatRemaining(u.bannedUntil)}
             </Badge>
           )}
           {muted && (
             <Badge className="bg-warning/20 text-warning w-fit">
-              Muet · {formatRemaining(u.mutedUntil)}
+              Muet — {formatRemaining(u.mutedUntil)}
             </Badge>
           )}
         </div>

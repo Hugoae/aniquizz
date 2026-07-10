@@ -3,64 +3,90 @@ import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
 import { verifyAnilistUser } from '../anilist/anilistService';
 import { prisma } from '@aniquizz/database';
-import { requireAuth } from '../../core/guards';
+import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
+import type { GameManager } from '../game/gameManager';
+import { DeleteAccountError, deleteUserAccount } from './deleteAccount';
 
-export const registerProfileHandlers = (io: TypedServer, socket: TypedSocket) => {
-    
-    // Demande de stats complètes pour la page Profil
-    const handleGetStats = async () => {
-        try {
-            // Canonical identity set by socketAuthMiddleware (requireAuth guarantees it).
-            const userId = socket.data.userId as string;
+export const registerProfileHandlers = (
+  io: TypedServer,
+  socket: TypedSocket,
+  gameManager: GameManager,
+) => {
+  const handleGetStats = async () => {
+    try {
+      const userId = socket.data.userId as string;
+      const stats = await getProfileStats(userId);
+      socket.emit('profile:stats', stats);
+    } catch {
+      socket.emit('profile:error', { message: 'Impossible de charger les statistiques' });
+    }
+  };
 
-            const stats = await getProfileStats(userId);
-            socket.emit('profile:stats', stats);
-            
-        } catch (error) {
-            socket.emit('profile:error', { message: "Impossible de charger les statistiques" });
+  const handleUpdateProfile = async (payload: {
+    username?: string;
+    avatarUrl?: string;
+    anilistUsername?: string | null;
+  }) => {
+    const userId = socket.data.userId as string;
+
+    try {
+      const updateData: Record<string, unknown> = {};
+      if (payload.username) updateData.username = payload.username;
+      if (payload.avatarUrl) updateData.avatar = payload.avatarUrl;
+      if (payload.anilistUsername !== undefined) {
+        const trimmed = typeof payload.anilistUsername === 'string' ? payload.anilistUsername.trim() : null;
+        const value = trimmed && trimmed.length > 0 ? trimmed : null;
+        if (value) {
+          const check = await verifyAnilistUser(value);
+          if (check === 'not_found') {
+            socket.emit('error', { message: "Compte AniList introuvable. Vérifie l'orthographe de ton pseudo." });
+            return;
+          }
         }
-    };
+        updateData.anilistUsername = value;
+      }
 
-    // Mise à jour simple (Username, Avatar, AniList). All Profile writes go
-    // through here so the client never touches the table directly (RLS locked).
-    const handleUpdateProfile = async (payload: { username?: string, avatarUrl?: string, anilistUsername?: string | null }) => {
-        const userId = socket.data.userId as string;
+      await prisma.profile.update({
+        where: { id: userId },
+        data: updateData,
+      });
 
-        try {
-            const updateData: any = {};
-            if (payload.username) updateData.username = payload.username;
-            if (payload.avatarUrl) updateData.avatar = payload.avatarUrl;
-            if (payload.anilistUsername !== undefined) {
-                const trimmed = typeof payload.anilistUsername === 'string' ? payload.anilistUsername.trim() : null;
-                const value = trimmed && trimmed.length > 0 ? trimmed : null;
-                // Verify the AniList account exists before linking (unlink = null skips it).
-                if (value) {
-                    const check = await verifyAnilistUser(value);
-                    if (check === 'not_found') {
-                        socket.emit('error', { message: "Compte AniList introuvable. Vérifie l'orthographe de ton pseudo." });
-                        return;
-                    }
-                }
-                updateData.anilistUsername = value;
-            }
+      socket.emit('user_profile', { success: true });
+      logger.info(`Profil mis à jour pour ${userId}`, 'Profile');
+    } catch (error) {
+      logger.error('Erreur update profil', 'Profile', error);
+      socket.emit('error', {
+        message: payload.username
+          ? 'Ce pseudo est peut-être déjà pris.'
+          : 'Impossible de mettre à jour le profil.',
+      });
+    }
+  };
 
-            await prisma.profile.update({
-                where: { id: userId },
-                data: updateData
-            });
+  const handleDeleteAccount = async (payload: { confirmUsername?: string }) => {
+    const userId = socket.data.userId as string;
 
-            socket.emit('user_profile', { success: true });
-            logger.info(`Profil mis à jour pour ${userId}`, 'Profile');
-        } catch (error) {
-            logger.error("Erreur update profil", 'Profile', error);
-            socket.emit('error', {
-                message: payload.username
-                    ? "Ce pseudo est peut-être déjà pris."
-                    : "Impossible de mettre à jour le profil.",
-            });
-        }
-    };
+    try {
+      await deleteUserAccount({
+        userId,
+        confirmUsername: payload?.confirmUsername ?? '',
+        io,
+        gameManager,
+      });
+    } catch (error) {
+      if (error instanceof DeleteAccountError) {
+        socket.emit('profile:error', { message: error.message });
+        return;
+      }
+      logger.error('Erreur suppression compte', 'Profile', error);
+      socket.emit('profile:error', { message: 'Impossible de supprimer le compte. Réessaie plus tard.' });
+    }
+  };
 
-    socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
-    socket.on('update_profile_data', requireAuth(socket, handleUpdateProfile));
+  socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
+  socket.on('update_profile_data', requireAuth(socket, handleUpdateProfile));
+  socket.on(
+    'profile:delete_account',
+    guard(socket, 'profile:delete_account', RATE_LIMITS.deleteAccount, handleDeleteAccount),
+  );
 };

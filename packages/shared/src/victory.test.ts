@@ -87,6 +87,17 @@ describe('computeVictory - solo (mastery-ratio medals)', () => {
     });
     expect(res.soloMedal).toBe('gold');
   });
+
+  it('awards platinum at the QCM boundary (18/20 medium)', () => {
+    const res = computeVictory({
+      ...base,
+      isSolo: true,
+      responseType: 'qcm',
+      players: [player('solo', 18, 9, 10)],
+    });
+    expect(res.maxPossibleScore).toBe(20);
+    expect(res.soloMedal).toBe('platinum');
+  });
 });
 
 describe('computeVictory - multiplayer (no medals)', () => {

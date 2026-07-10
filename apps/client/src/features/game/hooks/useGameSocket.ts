@@ -4,6 +4,7 @@
 
 import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
+import { notifyModerationBan } from '@/lib/suspension';
 import { socket } from '@/lib/socket';
 import type {
   AnsweredPayload,
@@ -19,7 +20,9 @@ import type {
   VictoryData,
   VoteUpdatePayload,
   GameOverPayload,
+  VideoMode,
 } from '@aniquizz/shared';
+import { normalizeVideoMode } from '@aniquizz/shared';
 import {
   createInitialState,
   gameReducer,
@@ -33,9 +36,11 @@ interface UseGameSocketOptions {
   initialPlayers?: GamePlayer[];
   initialTotalRounds: number;
   initialFirstVideo?: string | null;
+  /** Lobby-selected mode — fallback when the server payload omits videoMode. */
+  initialVideoMode?: VideoMode;
   anilistUsername?: string | null;
   onCancelled?: () => void;
-  onClosed?: () => void;
+  onClosed?: (reason?: string) => void;
 }
 
 export interface GameActions {
@@ -60,6 +65,7 @@ export function useGameSocket({
   initialPlayers = [],
   initialTotalRounds,
   initialFirstVideo = null,
+  initialVideoMode,
   anilistUsername,
   onCancelled,
   onClosed,
@@ -76,6 +82,8 @@ export function useGameSocket({
 
   const [myWatchedIds, setMyWatchedIds] = useState<number[]>([]);
 
+  const clientVideoModeRef = useRef<VideoMode>(normalizeVideoMode(initialVideoMode));
+  clientVideoModeRef.current = normalizeVideoMode(initialVideoMode ?? clientVideoModeRef.current);
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCancelledRef = useRef(onCancelled);
   onCancelledRef.current = onCancelled;
@@ -170,9 +178,11 @@ export function useGameSocket({
     const handlers = {
       game_state_sync: (s: GameSyncState) =>
         dispatch({ type: 'SYNC', state: s, myUserId: currentUserId }),
-      game_started: (p: GameStartedPayload) => dispatch({ type: 'GAME_STARTED', payload: p }),
+      game_started: (p: GameStartedPayload) =>
+        dispatch({ type: 'GAME_STARTED', payload: p, clientVideoMode: clientVideoModeRef.current }),
       'game:ready': (p: GameReadyPayload) => dispatch({ type: 'GAME_READY', payload: p }),
-      round_start: (p: RoundStartPayload) => dispatch({ type: 'ROUND_START', payload: p }),
+      round_start: (p: RoundStartPayload) =>
+        dispatch({ type: 'ROUND_START', payload: p, clientVideoMode: clientVideoModeRef.current }),
       'game:answered': (p: AnsweredPayload) => dispatch({ type: 'ANSWERED', userId: p.userId }),
       round_reveal: (p: RoundRevealPayload) =>
         dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserId }),
@@ -214,10 +224,14 @@ export function useGameSocket({
         onCancelledRef.current?.();
       },
       room_closed: (p?: { reason?: string }) => {
-        toast.error(p?.reason || 'Salon fermé.');
-        onClosedRef.current?.();
+        const reason = p?.reason || 'Salon fermé.';
+        if (!notifyModerationBan(reason)) {
+          toast.error(reason);
+        }
+        onClosedRef.current?.(p?.reason);
       },
       error: (p: { message: string }) => {
+        if (notifyModerationBan(p.message)) return;
         toast.error(p.message || 'Erreur');
       },
     };

@@ -304,7 +304,7 @@ function findParentFranchise(
 function bestScoreForCandidate(
   term: string,
   anime: FuzzyAnimeCandidate,
-  precisionMode: 'franchise' | 'exact',
+  precisionMode: 'franchise' | 'anime',
   allowFuzzy: boolean,
 ): FieldScore | null {
   let best: FieldScore | null = null;
@@ -330,7 +330,7 @@ function bestScoreForCandidate(
 /** Resolve the dropdown label for a catalogue row. */
 function suggestionLabel(
   anime: FuzzyAnimeCandidate,
-  precisionMode: 'franchise' | 'exact',
+  precisionMode: 'franchise' | 'anime',
   franchiseCounts: Map<string, number>,
 ): string | null {
   if (precisionMode === 'franchise') {
@@ -355,7 +355,7 @@ function suggestionLabel(
 export const getFuzzySuggestions = (
   list: FuzzyAnimeCandidate[],
   query: string,
-  precisionMode: 'franchise' | 'exact' = 'franchise',
+  precisionMode: 'franchise' | 'anime' = 'franchise',
 ): AnimeSuggestion[] => {
   const { SUGGESTION_MIN_QUERY_LENGTH, SUGGESTION_MIN_QUERY_FOR_FUZZY, SUGGESTION_LIMIT } =
     GAME_CONFIG.FUZZY;

@@ -9,7 +9,20 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react';
-import { GAME_CONFIG, type GameConfig } from '@aniquizz/shared';
+import {
+  GAME_CONFIG,
+  PRECISION_META,
+  type GameConfig,
+  type Precision,
+} from '@aniquizz/shared';
+
+export {
+  normalizePrecision,
+  getPrecisionLabel,
+  getPrecisionChipLabel,
+  getPrecisionMeta,
+  PRECISION_META,
+} from '@aniquizz/shared';
 
 /** A togglable "sound type" filter (some tiers are gated for now). */
 export interface SoundTypeOption {
@@ -51,15 +64,25 @@ export const RESPONSE_MODES: ResponseModeOption[] = [
 ];
 
 export interface PrecisionOption {
-  id: GameConfig['precision'];
+  id: Precision;
   label: string;
   description: string;
   icon: LucideIcon;
 }
 
 export const PRECISION_OPTIONS: PrecisionOption[] = [
-  { id: 'franchise', label: 'Franchise', description: 'La saga suffit', icon: Ungroup },
-  { id: 'exact', label: 'Exact', description: 'Le titre précis', icon: Target },
+  {
+    id: 'franchise',
+    label: PRECISION_META.franchise.label,
+    description: PRECISION_META.franchise.description,
+    icon: Ungroup,
+  },
+  {
+    id: 'anime',
+    label: PRECISION_META.anime.label,
+    description: PRECISION_META.anime.description,
+    icon: Target,
+  },
 ];
 
 /**

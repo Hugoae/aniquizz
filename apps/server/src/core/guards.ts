@@ -103,4 +103,6 @@ export const RATE_LIMITS = {
   friends: { points: 15, durationMs: 10_000 },
   /** Autocomplete: client debounces (~10/s worst case); drop silently past this. */
   animeSearch: { points: 30, durationMs: 5_000 },
+  /** Account deletion: strict cap to slow abuse / accidental double-submit. */
+  deleteAccount: { points: 3, durationMs: 60 * 60_000 },
 } as const;

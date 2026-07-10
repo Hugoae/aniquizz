@@ -108,7 +108,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isS
       <div className="w-full text-center">
         <h3 className={cn('flex items-center justify-center gap-1.5 truncate text-lg font-bold', isMe && 'text-primary')}>
           <span className="truncate">
-            {player.name} {isMe && '(Moi)'}
+            {player.name}
           </span>
           {isBot ? (
             <span className="inline-flex items-center gap-1 rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">

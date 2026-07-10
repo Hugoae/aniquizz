@@ -2,16 +2,21 @@ import type { Dispatch, SetStateAction } from 'react';
 import { RotateCcw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import type { User } from '@supabase/supabase-js';
 import type { GameConfig, RoomConfig } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 import { RoomSettingsSection } from './config/RoomSettingsSection';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { FiltersSection } from './config/FiltersSection';
-import { isWatchedSourceBlocked, WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
+import { VideoDisplaySection } from './config/VideoDisplaySection';
+import { SongStartSection } from './config/SongStartSection';
+import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
+import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 
 interface GameConfigFormProps<T extends GameConfig> {
   config: T;
@@ -24,6 +29,9 @@ interface GameConfigFormProps<T extends GameConfig> {
   currentPlayersCount?: number;
   user: User | null;
   profile: Profile | null;
+  roomId?: string;
+  /** Lobby roster key — refetches Watched pool stats on join/leave/kick. */
+  watchedPlayersKey?: string;
 }
 
 export function GameConfigForm<T extends GameConfig>({
@@ -37,6 +45,8 @@ export function GameConfigForm<T extends GameConfig>({
   currentPlayersCount = 0,
   user,
   profile,
+  roomId,
+  watchedPlayersKey,
 }: GameConfigFormProps<T>) {
   // The form reads a widened RoomConfig view; room-only fields are simply absent
   // (and unused) in solo mode. Writes go through the typed `update` helper.
@@ -58,27 +68,52 @@ export function GameConfigForm<T extends GameConfig>({
   const noTypes = (cfg.soundTypes?.length ?? 0) === 0;
   const missingPassword = showRoomSettings && cfg.isPrivate && !cfg.password;
   const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile);
-  const submitDisabled = noTypes || missingPassword || watchedBlocked;
+  const { stats: watchedStatsRaw } = useWatchedPoolStats({
+    roomId,
+    soundCount: cfg.soundCount,
+    difficulty: cfg.difficulty,
+    types: cfg.soundTypes,
+    watchedMode: cfg.watchedMode,
+    enabled: cfg.soundSelection === 'watched' && (isRoom || Boolean(profile?.anilistUsername?.trim())),
+    refreshKey: isRoom ? watchedPlayersKey : undefined,
+  });
+  const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, cfg.soundCount);
+  const watchedPoolCheck = checkWatchedPoolLaunch(cfg.soundSelection, watchedStats, cfg.watchedAllowFallback);
+  const submitDisabled = noTypes || missingPassword || watchedBlocked || watchedPoolCheck.blocked;
 
   const submitLabel = isRoom ? (currentPlayersCount > 0 ? 'Mettre à jour' : 'Créer le salon') : 'Lancer la partie';
 
   return (
     <div className="flex max-h-[85vh] flex-col">
-      <div className="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-1 pr-2">
-        {showRoomSettings && <RoomSettingsSection config={cfg} update={update} minPlayers={currentPlayersCount} />}
+      <Tabs defaultValue="general" className="flex min-h-0 flex-1 flex-col">
+        <TabsList className="mb-3 w-full shrink-0 grid grid-cols-2">
+          <TabsTrigger value="general">Général</TabsTrigger>
+          <TabsTrigger value="advanced">Avancé</TabsTrigger>
+        </TabsList>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-          <RulesSection config={cfg} update={update} />
-          <SourceSection
-            config={cfg}
-            update={update}
-            isRoom={isRoom}
-            anilistLinked={Boolean(profile?.anilistUsername?.trim())}
-          />
-        </div>
+        <TabsContent value="general" className="custom-scrollbar mt-0 flex-1 space-y-4 overflow-y-auto p-1 pr-2">
+          {showRoomSettings && <RoomSettingsSection config={cfg} update={update} minPlayers={currentPlayersCount} />}
 
-        <FiltersSection config={cfg} toggleSoundType={toggleSoundType} toggleDifficulty={toggleDifficulty} />
-      </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+            <RulesSection config={cfg} update={update} />
+            <SourceSection
+              config={cfg}
+              update={update}
+              isRoom={isRoom}
+              anilistLinked={Boolean(profile?.anilistUsername?.trim())}
+              roomId={roomId}
+              watchedPlayersKey={watchedPlayersKey}
+            />
+          </div>
+
+          <FiltersSection config={cfg} toggleSoundType={toggleSoundType} toggleDifficulty={toggleDifficulty} />
+        </TabsContent>
+
+        <TabsContent value="advanced" className="custom-scrollbar mt-0 flex-1 space-y-4 overflow-y-auto p-1 pr-2">
+          <VideoDisplaySection config={cfg} update={update} />
+          <SongStartSection config={cfg} update={update} />
+        </TabsContent>
+      </Tabs>
 
       <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-border/60 pt-3">
         <div className="flex gap-3">
@@ -97,6 +132,11 @@ export function GameConfigForm<T extends GameConfig>({
         {watchedBlocked && (
           <p className="text-center text-sm font-medium text-destructive" role="alert">
             {WATCHED_SOURCE_BLOCK_MESSAGE}
+          </p>
+        )}
+        {!watchedBlocked && watchedPoolCheck.blocked && watchedPoolCheck.reason && (
+          <p className="text-center text-sm font-medium text-destructive" role="alert">
+            {watchedPoolCheck.reason}
           </p>
         )}
       </div>

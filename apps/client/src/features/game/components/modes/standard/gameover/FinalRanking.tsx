@@ -144,16 +144,6 @@ export function FinalRanking({ sortedPlayers, currentUserId, ranks, onLeave, onS
 
                       <span className="truncate">{p.username}</span>
 
-                      {isMe && (
-
-                        <span className="shrink-0 rounded border border-primary/25 bg-primary/15 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-
-                          Moi
-
-                        </span>
-
-                      )}
-
                       {isMe && typeof xp === 'number' && xp > 0 && <XpEarnedBadge xp={xp} />}
 
                     </span>

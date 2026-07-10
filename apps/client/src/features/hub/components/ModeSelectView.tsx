@@ -1,8 +1,10 @@
 /** Play landing — mode cards, daily-quiz teaser, and navigation into solo/multi flows. */
 import { useMemo } from 'react';
+import { toast } from 'sonner';
 import { ArrowLeft, User, Users, Swords } from 'lucide-react';
 import type { GameMode } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
+import { getPlayBannedMessage, isSanctionActive, useSanctionTicker } from '@/lib/suspension';
 import { ModeCard, type ModeCardData } from './ModeCard';
 import { DailyQuizCard } from './DailyQuizCard';
 
@@ -39,10 +41,15 @@ interface ModeSelectViewProps {
   onBack: () => void;
   /** Live count of players currently in multiplayer rooms, for the Multiplayer teaser. */
   multiplayerCount: number;
+  /** Active moderation ban — blocks Solo and Multiplayer. */
+  bannedUntil?: string | null;
 }
 
 /** The Play landing screen: pick a game mode. */
-export function ModeSelectView({ onSelectMode, onBack, multiplayerCount }: ModeSelectViewProps) {
+export function ModeSelectView({ onSelectMode, onBack, multiplayerCount, bannedUntil }: ModeSelectViewProps) {
+  const playBanned = isSanctionActive(bannedUntil);
+  useSanctionTicker(playBanned);
+
   const cards = useMemo<ModeCardData[]>(() => {
     return MODE_CARDS.map((card) => {
       if (card.id === 'multiplayer') {
@@ -51,6 +58,18 @@ export function ModeSelectView({ onSelectMode, onBack, multiplayerCount }: ModeS
       return card;
     });
   }, [multiplayerCount]);
+
+  const showPlayBannedToast = () => {
+    toast.error(getPlayBannedMessage(bannedUntil));
+  };
+
+  const handleSelect = (mode: GameMode) => {
+    if (playBanned && (mode === 'solo' || mode === 'multiplayer')) {
+      showPlayBannedToast();
+      return;
+    }
+    onSelectMode(mode);
+  };
 
   return (
     <div>
@@ -72,7 +91,14 @@ export function ModeSelectView({ onSelectMode, onBack, multiplayerCount }: ModeS
 
       <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 md:grid-cols-3 md:gap-8">
         {cards.map((mode, index) => (
-          <ModeCard key={mode.id} mode={mode} index={index} onSelect={onSelectMode} />
+          <ModeCard
+            key={mode.id}
+            mode={mode}
+            index={index}
+            onSelect={handleSelect}
+            blocked={playBanned && (mode.id === 'solo' || mode.id === 'multiplayer')}
+            onBlocked={showPlayBannedToast}
+          />
         ))}
       </div>
 
