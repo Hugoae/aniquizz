@@ -327,7 +327,7 @@ export const AdminUserRow = memo(function AdminUserRow({
                   onSetPending({
                     title: `Réinitialiser les statistiques de ${u.username} ?`,
                     description:
-                      'Parties, victoires, XP et niveau seront remis à zéro. Cette action est irréversible.',
+                      'Parties, victoires, XP, niveau, Pokédex musical, historique de parties, records de score et temps de réponse seront remis à zéro. Les parties multi des autres joueurs sont conservées. Cette action est irréversible.',
                     confirmLabel: 'Réinitialiser',
                     destructive: true,
                     action: () => adminApi.resetStats(u.id),

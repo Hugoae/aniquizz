@@ -280,7 +280,10 @@ export function registerAdminRoutes(
       const targetId = pid(req);
       if (!(await guardProtectedTarget(req, res, targetId, { allowSelf: true }))) return;
       const result = await adminService.resetUserStats(targetId);
-      logger.info(`Admin ${req.actor!.username} reset stats on ${targetId}`, 'Admin');
+      logger.info(
+        `Admin ${req.actor!.username} reset stats on ${targetId} (${result.matchPlayers} participations, ${result.songHistory} pokédex rows, ${result.orphanMatches} orphan matches)`,
+        'Admin',
+      );
       res.json(result);
     }),
   );

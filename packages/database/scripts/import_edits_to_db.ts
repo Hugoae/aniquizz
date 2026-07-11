@@ -26,11 +26,21 @@ async function main() {
 
     // --- 1. GESTION FRANCHISE ---
 
-    // Cas A : ID connu -> Update direct
+    // Cas A : ID connu -> upsert (create si absente, sinon update)
     if (fr.id) {
-      await prisma.franchise.update({
+      const existing = await prisma.franchise.findUnique({ where: { id: fr.id } });
+      if (!existing) {
+        console.log(`   ✨ Création franchise id=${fr.id} : "${fr.name}"`);
+      }
+      await prisma.franchise.upsert({
         where: { id: fr.id },
-        data: {
+        create: {
+          id: fr.id,
+          name: fr.name,
+          isLocked: fr.isLocked ?? false,
+          genres: fr.genres || []
+        },
+        update: {
           name: fr.name,
           isLocked: fr.isLocked,
           genres: fr.genres || []

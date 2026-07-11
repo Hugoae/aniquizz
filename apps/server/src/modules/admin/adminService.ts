@@ -216,19 +216,44 @@ export const setUserMute = (id: string, minutes: number | null) =>
     select: { id: true, bannedUntil: true, mutedUntil: true },
   });
 
-export const resetUserStats = (id: string) =>
-  prisma.profile.update({
-    where: { id },
-    data: {
-      gamesPlayed: 0,
-      gamesWon: 0,
-      totalGuesses: 0,
-      correctGuesses: 0,
-      maxStreak: 0,
-      xp: 0,
-      level: 1,
-    },
-    select: { id: true },
+export const resetUserStats = async (id: string) =>
+  prisma.$transaction(async (tx) => {
+    const participations = await tx.matchPlayer.findMany({
+      where: { profileId: id },
+      select: { matchId: true },
+    });
+    const matchIds = [...new Set(participations.map((p) => p.matchId))];
+
+    const songHistory = await tx.songHistory.deleteMany({ where: { profileId: id } });
+    const matchPlayers = await tx.matchPlayer.deleteMany({ where: { profileId: id } });
+    const orphanMatches =
+      matchIds.length > 0
+        ? await tx.match.deleteMany({
+            where: { id: { in: matchIds }, players: { none: {} } },
+          })
+        : { count: 0 };
+
+    const profile = await tx.profile.update({
+      where: { id },
+      data: {
+        gamesPlayed: 0,
+        gamesWon: 0,
+        totalGuesses: 0,
+        correctGuesses: 0,
+        maxStreak: 0,
+        currentWinStreak: 0,
+        xp: 0,
+        level: 1,
+      },
+      select: { id: true },
+    });
+
+    return {
+      ...profile,
+      songHistory: songHistory.count,
+      matchPlayers: matchPlayers.count,
+      orphanMatches: orphanMatches.count,
+    };
   });
 
 // --- STATS OVERVIEW ---------------------------------------------------------
