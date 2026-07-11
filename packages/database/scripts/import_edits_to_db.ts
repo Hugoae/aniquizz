@@ -26,7 +26,7 @@ async function main() {
 
     // --- 1. GESTION FRANCHISE ---
 
-    // Cas A : ID connu -> upsert (create si absente, sinon update)
+    // Known id -> upsert (create if missing, else update)
     if (fr.id) {
       const existing = await prisma.franchise.findUnique({ where: { id: fr.id } });
       if (!existing) {
@@ -47,7 +47,7 @@ async function main() {
         }
       });
     }
-    // Cas B : Pas d'ID -> Recherche par nom ou création
+    // No id -> find by name or create
     else {
       const existingFranchise = await prisma.franchise.findUnique({
         where: { name: fr.name }

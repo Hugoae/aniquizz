@@ -957,31 +957,6 @@
             "errorLog": null,
             "createdAt": "2026-07-09T15:31:29.748Z",
             "updatedAt": "2026-07-10T20:23:12.977Z"
-          },
-          {
-            "id": 9655,
-            "title": "Circle Game",
-            "artist": "Unknown Artist",
-            "songType": "OP",
-            "sequence": 2,
-            "videoKey": "AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4",
-            "tags": [
-              "Coming of Age",
-              "Tragedy",
-              "Ghost",
-              "Rehabilitation",
-              "Hikikomori"
-            ],
-            "sourceUrl": "https://pub-9f35a88bcc284fe98a01c77398c50276.r2.dev/AnoHiMitaHananoNamaewoBokutachiwaMadaShiranai-9989-OP2.mp4",
-            "duration": 0,
-            "difficulty": "MEDIUM",
-            "episodeRange": "",
-            "animeId": 9989,
-            "isLocked": true,
-            "downloadStatus": "PENDING",
-            "errorLog": null,
-            "createdAt": "2026-07-09T15:31:29.822Z",
-            "updatedAt": "2026-07-11T08:19:06.970Z"
           }
         ]
       }
@@ -17540,7 +17515,7 @@
             "episodeRange": "",
             "animeId": 97886,
             "isLocked": true,
-            "downloadStatus": "PENDING",
+            "downloadStatus": "COMPLETED",
             "errorLog": null,
             "createdAt": "2026-07-10T22:54:47.372Z",
             "updatedAt": "2026-07-11T10:31:39.452Z"

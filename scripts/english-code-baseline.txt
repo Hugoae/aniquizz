@@ -43,7 +43,6 @@ packages/database/scripts/global_build.ts:7
 packages/database/scripts/global_build.ts:59
 packages/database/scripts/global_build.ts:62
 packages/database/scripts/global_build.ts:65
-packages/database/scripts/import_edits_to_db.ts:40
 packages/database/scripts/seed_db.ts:16
 packages/database/scripts/seed_db.ts:53
 packages/database/scripts/seed_db.ts:66
