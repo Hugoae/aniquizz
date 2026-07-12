@@ -1,4 +1,5 @@
-import { Search } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, ChevronUp, Search } from 'lucide-react';
 import type { LibraryDifficulty, LibraryDiscoveredFilter, LibrarySort, LibrarySongType } from '@aniquizz/shared';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -72,25 +73,66 @@ export function LibraryFilters({
   resultCount,
   searchMode,
 }: LibraryFiltersProps) {
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const hasActiveFilters =
+    songTypes.length > 0 ||
+    difficulties.length > 0 ||
+    discovered !== '' ||
+    sort !== 'franchise';
+
   return (
     <section className="glass-card space-y-4 p-4 md:p-5" aria-label="Filtres de la librairie">
-      <FilterSection title={LIBRARY_COPY.filterSectionSearch}>
-        <div className="relative w-full">
-          <Search
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={rawQuery}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder={LIBRARY_COPY.searchPlaceholder}
-            className="h-11 w-full pl-10 bg-card/60 border-border/70"
-            aria-label={LIBRARY_COPY.searchPlaceholder}
-          />
+      <div className="space-y-2">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+          {LIBRARY_COPY.filterSectionSearch}
+        </p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={rawQuery}
+              onChange={(e) => onQueryChange(e.target.value)}
+              placeholder={LIBRARY_COPY.searchPlaceholder}
+              className="h-11 w-full border-border/70 bg-card/60 pl-10"
+              aria-label={LIBRARY_COPY.searchPlaceholder}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className={cn(
+              'h-11 shrink-0 gap-2 border-border/70 bg-card/60 px-4 font-semibold',
+              hasActiveFilters && !filtersOpen && 'border-primary/40',
+            )}
+            aria-expanded={filtersOpen}
+            aria-controls="library-filter-panel"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            {LIBRARY_COPY.filterToggle}
+            {hasActiveFilters && !filtersOpen ? (
+              <span
+                className="h-2 w-2 rounded-full bg-primary"
+                aria-label={LIBRARY_COPY.filterActiveBadge}
+              />
+            ) : null}
+            {filtersOpen ? (
+              <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            ) : (
+              <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            )}
+            <span className="sr-only">
+              {filtersOpen ? LIBRARY_COPY.filterToggleHide : LIBRARY_COPY.filterToggleShow}
+            </span>
+          </Button>
         </div>
-      </FilterSection>
+      </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {filtersOpen ? (
+      <div id="library-filter-panel" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 animate-fade-in">
         <FilterSection title={LIBRARY_COPY.filterSectionTypes}>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label={LIBRARY_COPY.filterSectionTypes}>
             {TYPE_OPTIONS.map((opt) => {
@@ -177,6 +219,7 @@ export function LibraryFilters({
           </select>
         </FilterSection>
       </div>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 pt-3">
         {resultCount !== null && (
