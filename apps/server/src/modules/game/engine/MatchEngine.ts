@@ -325,9 +325,9 @@ export class MatchEngine {
     // Anti-cheat: only signal THAT they answered — never the content/correctness.
     this.channel.emit('game:answered', { userId });
 
-    // Solo uses the same full guess timer as multiplayer so the player can change
-    // their pick until time runs out. Optional early reveal via `game:skip_round`.
-    if (!this.room.isSolo && this.allConnectedAnswered()) this.endRound();
+    // Solo and multiplayer both run the full guess timer so players can change
+    // their pick until time runs out. Optional early reveal via `game:skip_round` (solo).
+    // Majority skip vote (`voteSkip`) can end the round early in multiplayer.
   }
 
   private endRound(): void {
@@ -765,10 +765,6 @@ export class MatchEngine {
 
   // --- HELPERS --------------------------------------------------------------
 
-  private connectedPlayers(): RoomPlayer[] {
-    return [...this.room.players.values()].filter((p) => p.isConnected);
-  }
-
   /** Human, connected players — bots never vote to pause/skip. */
   private humanVoters(): RoomPlayer[] {
     return [...this.room.players.values()].filter((p) => p.isConnected && !p.isBot);
@@ -776,11 +772,6 @@ export class MatchEngine {
 
   private requiredVotes(): number {
     return Math.max(1, Math.ceil(this.humanVoters().length / 2));
-  }
-
-  private allConnectedAnswered(): boolean {
-    const connected = this.connectedPlayers();
-    return connected.length > 0 && connected.every((p) => p.hasAnswered);
   }
 
   /**
