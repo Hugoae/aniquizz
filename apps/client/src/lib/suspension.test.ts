@@ -18,6 +18,13 @@ describe('notifyModerationBan', () => {
     expect(notifyModerationBan('Vous avez été banni par la modération.')).toBe(true);
     expect(notifyModerationBan('Salon fermé.')).toBe(false);
   });
+
+  it('does not treat empty or missing messages as a ban', () => {
+    expect(notifyModerationBan(null)).toBe(false);
+    expect(notifyModerationBan(undefined)).toBe(false);
+    expect(notifyModerationBan('')).toBe(false);
+    expect(notifyModerationBan('   ')).toBe(false);
+  });
 });
 
 describe('isSanctionActive', () => {

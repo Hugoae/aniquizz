@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" class="dark" style="color-scheme: dark">
+<html lang="fr" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -14,22 +14,6 @@
     <link rel="canonical" href="https://aniquizz.com/" />
 
     <!-- Blocking first-paint shell — mirrors Home before React/Tailwind load. -->
-    <style>
-      /* Instant first paint before /app-shell.css arrives — prevents huge default SVGs. */
-      #app-shell svg { width: 1rem; height: 1rem; flex-shrink: 0; }
-      #app-shell .app-shell-title {
-        margin: 0 0 1rem;
-        font-size: clamp(1.875rem, 5vw, 3rem);
-        font-weight: 800;
-        line-height: 1.05;
-      }
-      #app-shell .app-shell-brand span { font-size: 1.5rem; font-weight: 800; }
-      /* React mounts under the shell; reveal only once Tailwind is verified. */
-      #root { visibility: hidden; }
-      #root.app-ready { visibility: visible; }
-      /* Safety net if Tailwind is late — Lucide SVGs default to 300×150 without size. */
-      #root:not(.app-ready) svg { width: 1.5rem; height: 1.5rem; max-width: 2rem; max-height: 2rem; }
-    </style>
     <link rel="stylesheet" href="/app-shell.css" />
     <link rel="preload" href="/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/plus-jakarta-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
@@ -82,6 +66,20 @@
             "description": "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.",
             "publisher": { "@id": "https://aniquizz.com/#organization" },
             "inLanguage": "fr-FR"
+          },
+          {
+            "@type": "VideoGame",
+            "name": "AniQuizz",
+            "url": "https://aniquizz.com/",
+            "description": "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.",
+            "applicationCategory": "Game",
+            "operatingSystem": "Web browser",
+            "inLanguage": "fr-FR",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "EUR"
+            }
           }
         ]
       }
@@ -179,8 +177,14 @@
     </div>
 
     <div id="root"></div>
+    <!-- Tailwind readiness probe — `flex` only applies once the Vite CSS bundle is parsed. -->
+    <div
+      id="tw-probe"
+      class="flex"
+      aria-hidden="true"
+    ></div>
     <!-- Crawlable route copy for bots; kept out of #root to avoid a pre-hydrate flash. -->
-    <div id="seo-content" hidden style="display: none !important"></div>
+    <div id="seo-content" hidden></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -75,7 +75,7 @@ const AppContent = () => {
   const { session, authReady } = useAuth();
   const navigate = useNavigate();
 
-  // Keep the HTML shell on top until Tailwind is parsed — module JS can run first.
+  // Keep the HTML shell covering #root until Tailwind is verified on the mounted Home.
   useLayoutEffect(() => {
     markLandingPaintDone();
   }, []);
@@ -102,7 +102,8 @@ const AppContent = () => {
       if (disposed) return;
 
       let lastServerMessage: string | null = null;
-      let sessionReplaced = false;
+      let sessionReplacedAt = 0;
+      const SESSION_REPLACED_GRACE_MS = 3_000;
 
       const onError = (p: { message?: string }) => {
         lastServerMessage = p?.message ?? null;
@@ -115,21 +116,26 @@ const AppContent = () => {
       };
 
       const onSessionReplaced = () => {
-        sessionReplaced = true;
+        sessionReplacedAt = Date.now();
       };
 
       const onDisconnect = (reason: string) => {
         if (reason !== 'io server disconnect') return;
-        if (sessionReplaced) {
-          sessionReplaced = false;
-          return;
-        }
+        // Benign single-session policy: another tab/socket replaced this connection.
+        if (Date.now() - sessionReplacedAt < SESSION_REPLACED_GRACE_MS) return;
+
         const message = lastServerMessage;
         lastServerMessage = null;
-        if (!notifyModerationBan(message)) {
-          toast.error(message || 'Vous avez été déconnecté.');
+
+        if (notifyModerationBan(message)) {
+          navigate('/', { replace: true });
+          return;
         }
-        navigate('/', { replace: true });
+
+        // Unknown server drop — let Socket.io reconnect; only surface explicit server copy.
+        if (message) {
+          toast.error(message);
+        }
       };
 
       socket.on('error', onError);

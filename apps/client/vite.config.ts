@@ -15,19 +15,38 @@ export default defineConfig(({ mode }) => ({
     react(),
     {
       name: "app-shell-css-first",
+      apply: "build",
       transformIndexHtml: {
         order: "post",
         handler(html) {
           const cssLink = html.match(
-            /<link rel="stylesheet" crossorigin href="\/assets\/[^"]+\.css">/,
+            /<link rel="stylesheet"[^>]*href="\/assets\/[^"]+\.css"[^>]*>/,
           );
-          if (!cssLink) return html;
-          const tag = cssLink[0];
-          const without = html.replace(tag, "");
-          return without.replace(
-            /(<link rel="stylesheet" href="\/app-shell\.css" \/>)/,
-            `$1\n    ${tag}`,
+          const moduleScript = html.match(
+            /<script type="module"[^>]*src="\/assets\/[^"]+\.js"[^>]*><\/script>/,
           );
+
+          let next = html;
+
+          if (cssLink) {
+            const tag = cssLink[0];
+            next = next.replace(tag, "");
+            next = next.replace(
+              /(<link rel="stylesheet" href="\/app-shell\.css" \/>)/,
+              `$1\n    ${tag}`,
+            );
+          }
+
+          // Body-end module script: CSS in <head> finishes before JS executes.
+          if (moduleScript) {
+            const tag = moduleScript[0];
+            next = next.replace(tag, "");
+            if (!next.includes(tag)) {
+              next = next.replace("</body>", `    ${tag}\n  </body>`);
+            }
+          }
+
+          return next;
         },
       },
     },

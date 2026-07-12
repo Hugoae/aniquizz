@@ -83,8 +83,8 @@ let lastBanToastAt = 0;
  * Returns true when the message is a ban reason (whether or not the toast was shown).
  */
 export function notifyModerationBan(message?: string | null): boolean {
-  const text = message?.trim() || MODERATION_BAN_MESSAGE;
-  if (!isBanSanctionReason(text)) return false;
+  const text = message?.trim();
+  if (!text || !isBanSanctionReason(text)) return false;
   const now = Date.now();
   if (now - lastBanToastAt >= BAN_TOAST_DEBOUNCE_MS) {
     lastBanToastAt = now;

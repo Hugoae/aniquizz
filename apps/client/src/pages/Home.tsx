@@ -1,6 +1,5 @@
 import { SeoHead } from '@/components/seo/SeoHead';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
-import { homeJsonLd } from '@/lib/jsonLd';
 import { PAGE_TITLES } from '@/lib/site';
 
 // Layout
@@ -14,7 +13,7 @@ import { FriendsBubble } from '@/features/friends/FriendsBubble';
 const Home = () => {
   return (
     <>
-      <SeoHead homeOnly title={PAGE_TITLES.home} path="/" jsonLd={homeJsonLd()} />
+      <SeoHead homeOnly title={PAGE_TITLES.home} path="/" />
 
       {/* Single-screen landing: fixed viewport height, no scroll. */}
       <div className="h-[100dvh] bg-background relative overflow-hidden flex flex-col font-sans">
