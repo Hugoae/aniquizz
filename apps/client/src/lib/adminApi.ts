@@ -126,6 +126,7 @@ export interface AdminUserProfile {
   lastSeenAt: string | null;
   createdAt: string;
   anilistUsername: string | null;
+  malUsername: string | null;
   isBot: boolean;
   stats: AdminProfileStats;
 }
@@ -329,6 +330,10 @@ export interface StatsOverview {
     roles: { USER: number; MODERATOR: number; ADMIN: number };
     anilistLinked: number;
     anilistLinkedPercent: number;
+    malLinked: number;
+    malLinkedPercent: number;
+    watchedListLinked: number;
+    watchedListLinkedPercent: number;
   };
   activity: {
     periodDays: number;

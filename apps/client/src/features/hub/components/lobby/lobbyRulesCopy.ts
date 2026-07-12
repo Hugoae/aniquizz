@@ -104,24 +104,26 @@ const songStartFlowLine = (songStartMode: GameConfig['songStartMode']): string =
 const REVEAL_FLOW_LINE =
   'Révélation de la bonne réponse avec la vidéo complète, puis manche suivante jusqu\'à la fin de la playlist.';
 
+const WATCHED_LIST_STATUSES = 'Completed, Watching ou On-Hold';
+
 const watchedModeExplain = (mode: GameConfig['watchedMode']): string => {
   if (mode === 'intersection') {
-    return 'Mode Commun : seuls les anime présents sur la liste AniList de chaque joueur du salon sont retenus (Completed ou Watching).';
+    return `Mode Commun : seuls les anime présents sur la liste de chaque joueur du salon sont retenus (${WATCHED_LIST_STATUSES}).`;
   }
-  return 'Mode Union : un anime est éligible dès qu\'il figure sur la liste AniList liée d\'au moins un joueur du salon (Completed ou Watching).';
+  return `Mode Union : un anime est éligible dès qu'il figure sur la liste liée d'au moins un joueur du salon (${WATCHED_LIST_STATUSES}).`;
 };
 
 const sourceLines = (config: GameConfig, _context: LobbyRulesContext): string[] => {
   if (config.soundSelection === 'watched') {
     const mode = watchedModeDisplayLabel(config.watchedMode);
     const lines = [
-      `Source : Ma liste AniList (${mode}).`,
+      `Source : Ma liste anime (${mode}) — AniList ou MyAnimeList.`,
       watchedModeExplain(config.watchedMode),
       'Seuls les openings du catalogue qui correspondent à ces anime peuvent être tirés.',
     ];
     if (config.watchedAllowFallback) {
       lines.push(
-        'Compléter avec l\'aléatoire est activé : si le pool AniList est insuffisant, des sons du catalogue global complètent la playlist (notification en partie).',
+        'Compléter avec l\'aléatoire est activé : si le pool Watched est insuffisant, des sons du catalogue global complètent la playlist (notification en partie).',
       );
     }
     return lines;
@@ -133,7 +135,7 @@ const sourceLines = (config: GameConfig, _context: LobbyRulesContext): string[] 
 
   return [
     'Source : Aléatoire — les sons sont tirés dans le catalogue selon les filtres (difficulté, type).',
-    'Aucune liste AniList requise.',
+    'Aucune liste AniList ou MyAnimeList requise.',
   ];
 };
 
@@ -158,18 +160,23 @@ const formatPercentFr = (ratio: number): string => {
 };
 
 /** Bronze bar copy from room difficulty filters (uses effectiveMedalThresholds). */
-const soloBronzeThresholdLine = (difficulties: string[] | undefined): string => {
+const soloBronzeThresholdLine = (
+  difficulties: string[] | undefined,
+  precision: GameConfig['precision'],
+): string => {
   const selected = [...new Set((difficulties?.length ? difficulties : ['medium']).map(normalizeDifficultyKey))];
   selected.sort((a, b) => DIFFICULTY_ORDER.indexOf(a) - DIFFICULTY_ORDER.indexOf(b));
+  const resolvedPrecision = normalizePrecision(precision);
 
   if (selected.length === 1) {
     const key = selected[0];
-    return `Seuil Bronze (${DIFFICULTY_FR[key]}) : ${formatPercentFr(GAME_CONFIG.MEDALS.THRESHOLDS[key].bronze)} minimum du score max (points obtenus ÷ points max par manche).`;
+    const bronze = effectiveMedalThresholds([key], resolvedPrecision).bronze;
+    return `Seuil Bronze (${DIFFICULTY_FR[key]}) : ${formatPercentFr(bronze)} minimum du score max (points obtenus ÷ points max par manche).`;
   }
 
-  const effectiveBronze = effectiveMedalThresholds(selected).bronze;
+  const effectiveBronze = effectiveMedalThresholds(selected, resolvedPrecision).bronze;
   const breakdown = selected
-    .map((key) => `${DIFFICULTY_FR[key]} ${formatPercentFr(GAME_CONFIG.MEDALS.THRESHOLDS[key].bronze)}`)
+    .map((key) => `${DIFFICULTY_FR[key]} ${formatPercentFr(effectiveMedalThresholds([key], resolvedPrecision).bronze)}`)
     .join(', ');
 
   return `Seuil Bronze : ${formatPercentFr(effectiveBronze)} minimum du score max (moyenne des difficultés sélectionnées : ${breakdown}).`;
@@ -179,7 +186,7 @@ const victoryLines = (context: LobbyRulesContext, config: GameConfig): string[] 
   if (context.lobbyMode === 'solo') {
     return [
       'Victoire solo : obtenir au moins la médaille Bronze.',
-      soloBronzeThresholdLine(config.difficulty),
+      soloBronzeThresholdLine(config.difficulty, config.precision),
       'Quatre médailles à viser : Bronze, Argent, Or et Platine.',
     ];
   }

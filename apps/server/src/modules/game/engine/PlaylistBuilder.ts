@@ -44,6 +44,7 @@ export class PlaylistBuilder {
           userId: p.userId,
           isBot: p.isBot,
           anilistUsername: p.anilistUsername,
+          malUsername: p.malUsername,
         })),
       );
       if (!watchedIds.length) {

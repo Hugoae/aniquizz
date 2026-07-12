@@ -43,4 +43,23 @@ describe('medalMarkerScores', () => {
     const scores = medalMarkerScores(20, mediumSongs(10));
     expect(scores).toEqual({ bronze: 10, silver: 12, gold: 14, platinum: 18 });
   });
+
+  it('lowers every tier by 5 pp in anime precision (medium QCM)', () => {
+    const scores = medalMarkerScores(20, mediumSongs(10), 'anime');
+    expect(scores).toEqual({ bronze: 9, silver: 11, gold: 13, platinum: 17 });
+  });
+});
+
+describe('computeMedal - anime precision offset', () => {
+  it('awards platinum at 17/20 medium QCM (85 % bar)', () => {
+    const difficulties = mediumSongs(10);
+    expect(computeMedal(17, 20, difficulties, 'anime')).toBe('platinum');
+    expect(computeMedal(16, 20, difficulties, 'anime')).toBe('gold');
+  });
+
+  it('keeps franchise thresholds unchanged', () => {
+    const difficulties = mediumSongs(10);
+    expect(computeMedal(18, 20, difficulties, 'franchise')).toBe('platinum');
+    expect(computeMedal(17, 20, difficulties, 'franchise')).toBe('gold');
+  });
 });

@@ -17,8 +17,8 @@ export interface LobbyPlayer {
   isBot?: boolean;
   role?: UserRole;
   level?: number;
-  /** Whether this player has a linked AniList account (Watched-mode gating). */
-  hasAniList?: boolean;
+  /** Whether this player has AniList or MAL linked (Watched-mode gating). */
+  hasWatchedList?: boolean;
 }
 
 interface LobbyPlayerCardProps {
@@ -27,8 +27,8 @@ interface LobbyPlayerCardProps {
   isSolo: boolean;
   /** The viewer is the host and can promote/kick other players. */
   canManage: boolean;
-  /** Show an "AniList requis" badge (Watched mode needs this player linked). */
-  needsAniList?: boolean;
+  /** Show a "liste requise" badge (Watched mode needs this player linked). */
+  needsWatchedList?: boolean;
   onTransferHost: (targetId: string | number) => void;
   onKick: (targetId: string | number) => void;
 }
@@ -36,7 +36,7 @@ interface LobbyPlayerCardProps {
 /** Whether a player id refers to a simulated bot (no friend action for those). */
 const isBotId = (id: string | number) => typeof id === 'string' && id.startsWith('bot-');
 
-export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsAniList, onTransferHost, onKick }: LobbyPlayerCardProps) {
+export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsWatchedList, onTransferHost, onKick }: LobbyPlayerCardProps) {
   const { isInGame, isReady, isHost, isBot, level } = player;
 
   return (
@@ -118,9 +118,9 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isS
             <RoleBadge role={player.role} />
           )}
         </h3>
-        {needsAniList && !isBot && (
+        {needsWatchedList && !isBot && (
           <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-warning">
-            AniList requis
+            Liste requise
           </p>
         )}
       </div>

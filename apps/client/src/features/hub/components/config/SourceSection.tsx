@@ -14,14 +14,14 @@ interface SourceSectionProps {
   config: RoomConfig;
   update: (patch: Partial<RoomConfig>) => void;
   isRoom: boolean;
-  anilistLinked?: boolean;
+  watchedListLinked?: boolean;
   /** When set, pool stats resolve the lobby union/intersection instead of solo list. */
   roomId?: string;
   /** Lobby roster key — refetches pool stats on join/leave/kick. */
   watchedPlayersKey?: string;
 }
 
-export function SourceSection({ config, update, isRoom, anilistLinked = false, roomId, watchedPlayersKey }: SourceSectionProps) {
+export function SourceSection({ config, update, isRoom, watchedListLinked = false, roomId, watchedPlayersKey }: SourceSectionProps) {
   const source = config.soundSelection;
 
   const setSource = (next: Source) => {
@@ -30,7 +30,7 @@ export function SourceSection({ config, update, isRoom, anilistLinked = false, r
     update(patch);
   };
 
-  const watchedEnabled = source === 'watched' && (isRoom || anilistLinked);
+  const watchedEnabled = source === 'watched' && (isRoom || watchedListLinked);
   const { stats: statsRaw, loading } = useWatchedPoolStats({
     roomId: isRoom ? roomId : undefined,
     soundCount: config.soundCount,
@@ -63,7 +63,7 @@ export function SourceSection({ config, update, isRoom, anilistLinked = false, r
       <SectionHeader
         icon={Eye}
         title="Source des musiques"
-        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList (Completed + Watching)."
+        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (Completed, Watching, On-Hold)."
       />
 
       <div role="tablist" aria-label="Source des musiques" className="flex gap-1 rounded-lg bg-secondary/30 p-1">
@@ -105,18 +105,18 @@ export function SourceSection({ config, update, isRoom, anilistLinked = false, r
           <div className="animate-in fade-in zoom-in space-y-4 p-2 duration-300">
             <div className="rounded-xl border border-info/20 bg-info/10 p-3 text-xs text-muted-foreground">
               <p className="mb-1 flex items-center gap-2 font-bold text-info">
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste AniList
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste anime
               </p>
-              Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b> et{' '}
-              <b className="text-foreground">Watching</b>.
-              {!anilistLinked && !isRoom && ' Un compte AniList lié est requis pour lancer une partie.'}
+              Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b>,{' '}
+              <b className="text-foreground">Watching</b> et <b className="text-foreground">On-Hold</b> (AniList ou MyAnimeList).
+              {!watchedListLinked && !isRoom && ' Liez AniList ou MyAnimeList pour lancer une partie.'}
             </div>
 
             {watchedEnabled && (
               <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
                 <Music2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
                 {loading || !stats ? (
-                  <span className="text-muted-foreground">Analyse du pool AniList…</span>
+                  <span className="text-muted-foreground">Analyse du pool…</span>
                 ) : stats.playableSongs === 0 ? (
                   <span className="text-warning">
                     Aucun son jouable dans la {modeLabel} pour ces filtres.

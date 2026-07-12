@@ -3,8 +3,10 @@ import {
   getMedalMeta,
   medalMarkerScores,
   nextMedalGoal,
+  normalizePrecision,
   type Medal,
   type MedalTier,
+  type Precision,
 } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +16,7 @@ interface SoloMasteryBarProps {
   isSuccess: boolean;
   soloMedal: MedalTier;
   songDifficulties: string[];
+  precision?: Precision;
 }
 
 const MEDAL_ORDER: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -23,8 +26,9 @@ function goalMessage(
   maxPossibleScore: number,
   difficulties: string[],
   soloMedal: MedalTier,
+  precision?: Precision,
 ): string | null {
-  const goal = nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal);
+  const goal = nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision);
   if (goal) {
     const ptLabel = goal.pointsNeeded === 1 ? 'pt' : 'pts';
     return `Encore ${goal.pointsNeeded} ${ptLabel} pour la Médaille ${goal.label}`;
@@ -39,11 +43,13 @@ export function SoloMasteryBar({
   isSuccess,
   soloMedal,
   songDifficulties,
+  precision,
 }: SoloMasteryBarProps) {
+  const resolvedPrecision = normalizePrecision(precision);
   const scoreRatio = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
   const progressPercent = Math.min(100, scoreRatio * 100);
-  const markerScores = medalMarkerScores(maxPossibleScore, songDifficulties);
-  const hint = goalMessage(score, maxPossibleScore, songDifficulties, soloMedal);
+  const markerScores = medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision);
+  const hint = goalMessage(score, maxPossibleScore, songDifficulties, soloMedal, resolvedPrecision);
 
   return (
     <div className="z-10 w-full">

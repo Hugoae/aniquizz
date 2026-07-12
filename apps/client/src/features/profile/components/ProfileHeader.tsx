@@ -4,7 +4,7 @@ import {
   Clock, UserPlus, UserMinus, Ban, MoreVertical, KeyRound, Sword, Gavel, Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { levelProgress } from '@aniquizz/shared';
+import { levelProgress, watchedListProvider, type WatchedListProvider } from '@aniquizz/shared';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -20,6 +20,12 @@ import type { Relation } from '@/features/friends/FriendsContext';
 import type { ProfileVM } from '@/features/profile/types';
 
 const ANILIST_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/6/61/AniList_logo.svg';
+const MAL_LOGO = '/logos/mal.png';
+
+const PROVIDER_LABEL: Record<WatchedListProvider, string> = {
+  anilist: 'AniList',
+  mal: 'MyAnimeList',
+};
 
 const ROLE_META: Record<string, { label: string; className: string; icon: LucideIcon }> = {
   ADMIN: { label: 'Admin', className: 'text-destructive border-destructive/40 bg-destructive/10', icon: Sword },
@@ -28,12 +34,47 @@ const ROLE_META: Record<string, { label: string; className: string; icon: Lucide
 
 const getAvatarSrc = (avatar: string) => (avatar.startsWith('http') ? avatar : undefined);
 
+function ProviderLogo({ provider, className }: { provider: WatchedListProvider; className?: string }) {
+  const src = provider === 'anilist' ? ANILIST_LOGO : MAL_LOGO;
+  return (
+    <img
+      src={src}
+      alt=""
+      className={cn('h-3.5 w-3.5', provider === 'mal' && 'rounded-sm', className)}
+    />
+  );
+}
+
+function ListProviderBadge({ provider, username }: { provider: WatchedListProvider; username: string }) {
+  return (
+    <>
+      <ProviderLogo provider={provider} />
+      <span className="max-w-[120px] truncate font-semibold">{username}</span>
+    </>
+  );
+}
+
+function ListLinkButton({ provider, onClick }: { provider: WatchedListProvider; onClick: () => void }) {
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-7 gap-1.5 px-2.5 text-xs"
+      onClick={onClick}
+      aria-label={`Lier ${PROVIDER_LABEL[provider]}`}
+    >
+      Lier
+      <ProviderLogo provider={provider} />
+    </Button>
+  );
+}
+
 interface ProfileHeaderProps {
   vm: ProfileVM;
   isOwn: boolean;
   relation: Relation;
   anilistUsername: string | null | undefined;
-  // Username editing (own only)
+  malUsername: string | null | undefined;
   isEditingUsername: boolean;
   newUsername: string;
   isSaving: boolean;
@@ -41,16 +82,12 @@ interface ProfileHeaderProps {
   onChangeNewUsername: (value: string) => void;
   onSaveUsername: () => void;
   onCancelEditUsername: () => void;
-  // Avatar (own only)
   onPickAvatarFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  // AniList (own only)
-  onOpenAniList: () => void;
-  onUnlinkAniList: () => void;
-  // Account menu (own only)
+  onOpenWatchlistLink: (provider: WatchedListProvider) => void;
+  onUnlinkWatchlist: () => void;
   onOpenPasswordModal: () => void;
   onOpenDeleteAccountModal: () => void;
   onSignOut: () => void;
-  // Relation actions (public only)
   onAddFriend: (id: string) => void;
   onBlock: (id: string) => void;
   onRemoveFriend: (id: string) => void;
@@ -58,16 +95,18 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({
-  vm, isOwn, relation, anilistUsername,
+  vm, isOwn, relation, anilistUsername, malUsername,
   isEditingUsername, newUsername, isSaving,
   onStartEditUsername, onChangeNewUsername, onSaveUsername, onCancelEditUsername,
-  onPickAvatarFile, onOpenAniList, onUnlinkAniList,
+  onPickAvatarFile, onOpenWatchlistLink, onUnlinkWatchlist,
   onOpenPasswordModal, onOpenDeleteAccountModal, onSignOut,
   onAddFriend, onBlock, onRemoveFriend, onUnblock,
 }: ProfileHeaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lvl = useMemo(() => levelProgress(vm.xp), [vm.xp]);
   const roleMeta = ROLE_META[vm.role];
+  const linkedProvider = watchedListProvider({ anilistUsername, malUsername });
+  const linkedUsername = anilistUsername?.trim() || malUsername?.trim() || '';
 
   const memberSince = useMemo(() => {
     if (!vm.createdAt) return null;
@@ -82,7 +121,6 @@ export function ProfileHeader({
     <div className="relative rounded-xl overflow-hidden bg-card border border-border p-8 shadow-elevated animate-fade-in">
       <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
 
-      {/* Top-right actions menu (own only) */}
       {isOwn && (
         <div className="absolute top-4 right-4 z-20">
           <DropdownMenu>
@@ -116,7 +154,6 @@ export function ProfileHeader({
 
       <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
 
-        {/* Avatar with XP ring + level XP under it */}
         <div className="flex flex-col items-center gap-2 shrink-0">
           {isOwn ? (
             <button
@@ -172,7 +209,6 @@ export function ProfileHeader({
           </span>
         </div>
 
-        {/* Identity */}
         <div className="flex-1 space-y-3 py-1 w-full min-w-0">
           <div className="flex flex-col md:flex-row items-center md:items-center gap-3 min-h-[48px]">
             {isOwn && isEditingUsername ? (
@@ -199,7 +235,6 @@ export function ProfileHeader({
             )}
           </div>
 
-          {/* Member since + AniList */}
           <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
             {memberSince && (
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -207,21 +242,29 @@ export function ProfileHeader({
               </span>
             )}
             {isOwn && (
-              anilistUsername ? (
+              linkedProvider ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2.5 text-xs bg-info/10 text-info border-info/30 hover:bg-info/20 hover:text-info">
-                      <img src={ANILIST_LOGO} alt="" className="w-3.5 h-3.5" />
-                      <span className="max-w-[120px] truncate font-semibold">{anilistUsername}</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'h-7 gap-1.5 px-2.5 text-xs',
+                        linkedProvider === 'anilist'
+                          ? 'bg-info/10 text-info border-info/30 hover:bg-info/20 hover:text-info'
+                          : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20',
+                      )}
+                    >
+                      <ListProviderBadge provider={linkedProvider} username={linkedUsername} />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem onClick={onOpenAniList} className="gap-2">
-                      <Edit2 className="h-4 w-4" /> Modifier le nom
+                    <DropdownMenuItem onClick={() => onOpenWatchlistLink(linkedProvider)} className="gap-2">
+                      <Edit2 className="h-4 w-4" /> Modifier le pseudo
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      onClick={onUnlinkAniList}
+                      onClick={onUnlinkWatchlist}
                       className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                     >
                       <Unlink className="h-4 w-4" /> Délier le compte
@@ -229,14 +272,14 @@ export function ProfileHeader({
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="outline" size="sm" className="h-7 gap-1.5 px-2.5 text-xs" onClick={onOpenAniList}>
-                  <img src={ANILIST_LOGO} alt="" className="w-3.5 h-3.5" /> Lier AniList
-                </Button>
+                <div className="flex items-center gap-2">
+                  <ListLinkButton provider="anilist" onClick={() => onOpenWatchlistLink('anilist')} />
+                  <ListLinkButton provider="mal" onClick={() => onOpenWatchlistLink('mal')} />
+                </div>
               )
             )}
           </div>
 
-          {/* Presence status */}
           <div className="flex items-center justify-center md:justify-start gap-2 text-sm font-medium">
             {isOwn ? (
               <>
@@ -258,7 +301,6 @@ export function ProfileHeader({
 
         </div>
 
-        {/* Relation actions (public only) */}
         {!isOwn && (
           <div className="flex flex-col gap-2 md:min-w-[160px]">
             {relation === 'none' && (

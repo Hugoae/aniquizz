@@ -198,6 +198,7 @@ function PlayerProfileDialog({
             avatar={profile.avatar}
             role={profile.role}
             anilistUsername={profile.anilistUsername}
+            malUsername={profile.malUsername}
             presenceLabel={player.connected ? "Dans le salon" : "Déconnecté"}
             presenceColor={player.connected ? "bg-success" : "bg-muted-foreground/30"}
             presenceOnline={player.connected}

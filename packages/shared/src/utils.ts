@@ -348,6 +348,23 @@ function suggestionLabel(
 }
 
 /**
+ * Whether a catalogue row matches a library search query (name, alt names, franchise,
+ * acronyms such as "mha" → My Hero Academia). Reuses the same scoring as autocomplete.
+ */
+export function animeMatchesLibrarySearch(candidate: FuzzyAnimeCandidate, query: string): boolean {
+  const trimmed = query.trim();
+  if (!trimmed) return true;
+
+  const term = normalizeString(trimmed);
+  if (term.length < 2) return false;
+
+  const allowFuzzy = term.length >= GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_FOR_FUZZY;
+  if (bestScoreForCandidate(term, candidate, 'anime', allowFuzzy)) return true;
+  if (candidate.franchise && scoreField(term, candidate.franchise, allowFuzzy)) return true;
+  return false;
+}
+
+/**
  * Ranked anime autocomplete for the in-game typing bar.
  * prefix (100) > word-prefix (85) > fuzzy (40−).
  * Matches are word-scoped so "ga" hits "Steins Gate" but not "Darwinsgame".

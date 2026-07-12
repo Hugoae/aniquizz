@@ -13,6 +13,7 @@
 
 import { GAME_CONFIG } from './constants';
 import type { SongDifficulty } from './leveling';
+import { normalizePrecision, type Precision } from './precision';
 
 export type Medal = 'bronze' | 'silver' | 'gold' | 'platinum';
 /** A medal, or null when the player did not reach the minimum (bronze). */
@@ -26,6 +27,18 @@ export interface MedalThresholds {
 }
 
 const MEDAL_ASCENDING: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
+
+const clampRatio = (value: number): number => Math.max(0, Math.min(1, value));
+
+const applyPrecisionOffset = (thresholds: MedalThresholds, precision?: Precision): MedalThresholds => {
+  const offset = GAME_CONFIG.MEDALS.PRECISION_OFFSET[normalizePrecision(precision)];
+  return {
+    bronze: clampRatio(thresholds.bronze + offset),
+    silver: clampRatio(thresholds.silver + offset),
+    gold: clampRatio(thresholds.gold + offset),
+    platinum: clampRatio(thresholds.platinum + offset),
+  };
+};
 
 const normalizeDifficulty = (raw: string): SongDifficulty => {
   switch ((raw ?? '').toLowerCase()) {
@@ -42,9 +55,12 @@ const normalizeDifficulty = (raw: string): SongDifficulty => {
  * Effective (mean) medal thresholds across the match's actual song difficulties.
  * A match of mixed difficulties blends the per-difficulty thresholds.
  */
-export const effectiveMedalThresholds = (difficulties: string[]): MedalThresholds => {
+export const effectiveMedalThresholds = (
+  difficulties: string[],
+  precision?: Precision,
+): MedalThresholds => {
   const T = GAME_CONFIG.MEDALS.THRESHOLDS;
-  if (!difficulties.length) return { ...T.medium };
+  if (!difficulties.length) return applyPrecisionOffset({ ...T.medium }, precision);
 
   const acc: MedalThresholds = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
   for (const raw of difficulties) {
@@ -55,12 +71,15 @@ export const effectiveMedalThresholds = (difficulties: string[]): MedalThreshold
     acc.platinum += t.platinum;
   }
   const n = difficulties.length;
-  return {
-    bronze: acc.bronze / n,
-    silver: acc.silver / n,
-    gold: acc.gold / n,
-    platinum: acc.platinum / n,
-  };
+  return applyPrecisionOffset(
+    {
+      bronze: acc.bronze / n,
+      silver: acc.silver / n,
+      gold: acc.gold / n,
+      platinum: acc.platinum / n,
+    },
+    precision,
+  );
 };
 
 /** Integer score required for a medal tier on this match's scale (rounded). */
@@ -68,8 +87,9 @@ export const requiredScoreForTier = (
   tier: Medal,
   maxPossibleScore: number,
   difficulties: string[],
+  precision?: Precision,
 ): number => {
-  const thresholds = effectiveMedalThresholds(difficulties);
+  const thresholds = effectiveMedalThresholds(difficulties, precision);
   return Math.round(thresholds[tier] * maxPossibleScore);
 };
 
@@ -77,8 +97,9 @@ export const requiredScoreForTier = (
 export const medalMarkerScores = (
   maxPossibleScore: number,
   difficulties: string[],
+  precision?: Precision,
 ): Record<Medal, number> => {
-  const thresholds = effectiveMedalThresholds(difficulties);
+  const thresholds = effectiveMedalThresholds(difficulties, precision);
   return {
     bronze: Math.round(thresholds.bronze * maxPossibleScore),
     silver: Math.round(thresholds.silver * maxPossibleScore),
@@ -95,10 +116,11 @@ export const computeMedal = (
   score: number,
   maxPossibleScore: number,
   difficulties: string[],
+  precision?: Precision,
 ): MedalTier => {
   if (maxPossibleScore <= 0) return null;
 
-  const required = medalMarkerScores(maxPossibleScore, difficulties);
+  const required = medalMarkerScores(maxPossibleScore, difficulties, precision);
   if (score >= required.platinum) return 'platinum';
   if (score >= required.gold) return 'gold';
   if (score >= required.silver) return 'silver';
@@ -121,10 +143,11 @@ export const nextMedalGoal = (
   maxPossibleScore: number,
   difficulties: string[],
   currentMedal: MedalTier,
+  precision?: Precision,
 ): NextMedalGoal | null => {
   if (maxPossibleScore <= 0) return null;
 
-  const required = medalMarkerScores(maxPossibleScore, difficulties);
+  const required = medalMarkerScores(maxPossibleScore, difficulties, precision);
   const startIdx = currentMedal ? MEDAL_ASCENDING.indexOf(currentMedal) + 1 : 0;
 
   for (let i = startIdx; i < MEDAL_ASCENDING.length; i++) {
@@ -142,13 +165,14 @@ export const nextMedalGoal = (
 export const medalMarkerRatios = (
   maxPossibleScore: number,
   difficulties: string[],
+  precision?: Precision,
 ): Record<Medal, number> => {
   if (maxPossibleScore <= 0) {
     const zero = { bronze: 0, silver: 0, gold: 0, platinum: 0 };
     return zero;
   }
 
-  const scores = medalMarkerScores(maxPossibleScore, difficulties);
+  const scores = medalMarkerScores(maxPossibleScore, difficulties, precision);
   return {
     bronze: scores.bronze / maxPossibleScore,
     silver: scores.silver / maxPossibleScore,

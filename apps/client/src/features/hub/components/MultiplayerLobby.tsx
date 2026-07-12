@@ -363,7 +363,7 @@ export function MultiplayerLobby({
                   isMe={String(player.id) === String(currentUserId)}
                   isSolo={false}
                   canManage={isHost}
-                  needsAniList={watchedCheck.badgeIds.has(player.id)}
+                  needsWatchedList={watchedCheck.badgeIds.has(player.id)}
                   onTransferHost={setHostTransferTarget}
                   onKick={() => setKickTarget(player)}
                 />

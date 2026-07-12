@@ -13,5 +13,5 @@
     "allowImportingTsExtensions": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "src/**/*.integration.test.ts", "src/test/**"]
+  "exclude": ["node_modules", "src/**/*.integration.test.ts", "src/**/*.test.ts", "src/test/**"]
 }

@@ -85,13 +85,14 @@ interface ModerationState {
   mutedUntil: Date | null;
   level: number;
   anilistUsername: string | null;
+  malUsername: string | null;
 }
 
 const loadModeration = async (userId: string): Promise<ModerationState | null> => {
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-      select: { role: true, bannedUntil: true, mutedUntil: true, xp: true, anilistUsername: true },
+      select: { role: true, bannedUntil: true, mutedUntil: true, xp: true, anilistUsername: true, malUsername: true },
     });
     if (!profile) return null;
     return {
@@ -100,6 +101,7 @@ const loadModeration = async (userId: string): Promise<ModerationState | null> =
       mutedUntil: profile.mutedUntil,
       level: levelFromXp(profile.xp),
       anilistUsername: profile.anilistUsername,
+      malUsername: profile.malUsername,
     };
   } catch (e) {
     logger.error('Failed to load moderation state', 'Socket', e);
@@ -130,6 +132,7 @@ export const socketAuthMiddleware = async (
   data.mutedUntil = null;
   data.level = null;
   data.anilistUsername = null;
+  data.malUsername = null;
 
   if (!token) {
     return next();
@@ -156,6 +159,7 @@ export const socketAuthMiddleware = async (
   data.role = moderation?.role ?? 'USER';
   data.level = moderation?.level ?? 1;
   data.anilistUsername = moderation?.anilistUsername ?? null;
+  data.malUsername = moderation?.malUsername ?? null;
   data.mutedUntil =
     moderation?.mutedUntil && moderation.mutedUntil.getTime() > now
       ? moderation.mutedUntil.toISOString()

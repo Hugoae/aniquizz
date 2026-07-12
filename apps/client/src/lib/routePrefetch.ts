@@ -8,6 +8,7 @@ const importers = {
   game: () => import('@/pages/Game'),
   profile: () => import('@/pages/Profile'),
   admin: () => import('@/pages/Admin'),
+  library: () => import('@/pages/Library'),
 } as const;
 
 type RouteKey = keyof typeof importers;

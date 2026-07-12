@@ -12,6 +12,7 @@ export interface ProfileViewProps {
   avatar: string;
   role: Role;
   anilistUsername?: string | null;
+  malUsername?: string | null;
   presenceLabel?: string;
   presenceColor?: string;
   presenceOnline?: boolean;
@@ -29,6 +30,7 @@ export function ProfileView({
   avatar,
   role,
   anilistUsername,
+  malUsername,
   presenceLabel = "Hors ligne",
   presenceColor = "bg-white/30",
   presenceOnline = false,
@@ -80,7 +82,16 @@ export function ProfileView({
                   className="w-4 h-4"
                 />
                 <span>
-                  Lié à : <b>{anilistUsername}</b>
+                  AniList : <b>{anilistUsername}</b>
+                </span>
+              </div>
+            )}
+
+            {malUsername && (
+              <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-primary mt-2 bg-primary/10 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
+                <img src="/logos/mal.png" alt="MyAnimeList" className="h-4 w-4 rounded-sm" />
+                <span>
+                  MyAnimeList : <b>{malUsername}</b>
                 </span>
               </div>
             )}

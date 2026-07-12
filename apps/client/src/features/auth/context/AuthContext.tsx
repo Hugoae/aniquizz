@@ -20,6 +20,7 @@ export type Profile = {
   bannedUntil?: string | null;
   mutedUntil?: string | null;
   anilistUsername?: string | null;
+  malUsername?: string | null;
   lastListSync?: string | null;
   totalGuesses?: number;
   correctGuesses?: number;

@@ -62,6 +62,7 @@ export interface GamePlayer extends BasePlayer {
   level?: number;
 
   anilistUsername?: string | null;
+  malUsername?: string | null;
 
   currentAnswer?: string | null;
   isCorrect?: boolean | null;

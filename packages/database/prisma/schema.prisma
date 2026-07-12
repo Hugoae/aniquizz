@@ -57,6 +57,25 @@ enum FriendshipStatus {
   BLOCKED
 }
 
+// Match setting snapshots (reserved for future profile charts — migration applied, feature deferred).
+enum StoredResponseType {
+  TYPING
+  QCM
+  MIX
+}
+
+enum StoredPrecision {
+  FRANCHISE
+  ANIME
+}
+
+enum StoredSoloMedal {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
 // --- IDENTITY ---
 model Profile {
   // = auth.users.id — populated by the Supabase `handle_new_user()` trigger.
@@ -69,6 +88,7 @@ model Profile {
   xp    Int @default(0)
 
   anilistUsername String?
+  malUsername     String?
   lastListSync    DateTime?
 
   role UserRole @default(USER)
@@ -130,11 +150,14 @@ model Match {
   totalRounds Int
   startedAt   DateTime    @default(now())
   endedAt     DateTime?
+  responseType StoredResponseType?
+  precision    StoredPrecision?
 
   players MatchPlayer[]
   rounds  MatchRound[]
 
   @@index([status])
+  @@index([startedAt(sort: Desc)])
 }
 
 model MatchPlayer {
@@ -146,6 +169,7 @@ model MatchPlayer {
   isWinner     Boolean @default(false)
   correctCount Int     @default(0)
   xpEarned     Int     @default(0)
+  soloMedal    StoredSoloMedal?
 
   match   Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
   profile Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
@@ -192,13 +216,17 @@ model RoundAnswer {
 
 // --- CATALOGUE ---
 model Franchise {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  genres    String[]
-  isLocked  Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  animes    Anime[]
+  id             Int      @id @default(autoincrement())
+  name           String   @unique
+  genres         String[]
+  /** Max AniList popularity among linked animes — denormalized for library sort. */
+  maxPopularity  Int      @default(0)
+  isLocked       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  animes         Anime[]
+
+  @@index([maxPopularity(sort: Desc)])
 }
 
 model Anime {
@@ -237,6 +265,7 @@ model Anime {
 
   @@index([franchiseId])
   @@index([popularity(sort: Desc)])
+  @@index([idMal])
 }
 
 model Song {

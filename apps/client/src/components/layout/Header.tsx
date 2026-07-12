@@ -11,9 +11,11 @@ import { prefetchRoute } from '@/lib/routePrefetch';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, authReady } = useAuth();
   const { setShowAuthModal } = useAuthModal();
   const isStaff = hasRole(profile?.role, 'MODERATOR');
+
+  const showProfileLoading = !authReady || Boolean(user && !profile);
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
@@ -33,7 +35,7 @@ export function Header() {
         </span>
       </Link>
 
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-[2.75rem] items-center justify-end gap-3">
         {user && profile && <SuspensionBadge />}
         {user && profile && isStaff && (
           <Button
@@ -53,7 +55,9 @@ export function Header() {
         {user && profile && isStaff && (
           <div className="h-6 w-px bg-border/70" aria-hidden="true" />
         )}
-        {user && profile ? (
+        {showProfileLoading ? (
+          <ProfileButton loading />
+        ) : user && profile ? (
           <ProfileButton
             username={profile.username}
             avatar={profile.avatar}

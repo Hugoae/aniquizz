@@ -1,5 +1,5 @@
 import { Medal } from 'lucide-react';
-import type { GamePlayer, MedalTier } from '@aniquizz/shared';
+import type { GamePlayer, MedalTier, Precision } from '@aniquizz/shared';
 import { getMedalMeta } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -13,6 +13,7 @@ interface SoloScoreCardProps {
   score: number;
   maxPossibleScore: number;
   songDifficulties: string[];
+  precision?: Precision;
   xpEarned?: number;
 }
 
@@ -23,6 +24,7 @@ export function SoloScoreCard({
   score,
   maxPossibleScore,
   songDifficulties,
+  precision,
   xpEarned,
 }: SoloScoreCardProps) {
   const medalMeta = getMedalMeta(soloMedal);
@@ -103,6 +105,7 @@ export function SoloScoreCard({
           isSuccess={isSuccess}
           soloMedal={soloMedal}
           songDifficulties={songDifficulties}
+          precision={precision}
         />
       </div>
     </div>

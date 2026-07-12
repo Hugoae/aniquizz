@@ -137,7 +137,7 @@ export function DefaultRouteSkeleton() {
 export function RouteSkeletonFallback() {
   const { pathname } = useLocation();
 
-  if (pathname === '/') return <HomeRouteSkeleton />;
+  if (pathname === '/') return null;
   if (pathname.startsWith('/play')) return <HubRouteSkeleton />;
   if (pathname.startsWith('/game')) return <GameRouteSkeleton />;
   if (pathname.startsWith('/profile') || pathname.startsWith('/admin')) return <ProfileRouteSkeleton />;

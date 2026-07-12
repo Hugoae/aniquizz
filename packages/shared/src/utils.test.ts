@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   shuffleArray,
   getFuzzySuggestions,
+  animeMatchesLibrarySearch,
   isAnswerCorrect,
   getLevenshteinDistance,
   normalizeString,
@@ -276,13 +277,26 @@ describe('getFuzzySuggestions', () => {
     expect(res.map((r) => r.label)).toEqual(['Naruto Shippuden']);
   });
 
-  it('caps the result list at five entries', () => {
+  it('returns every matching suggestion up to SUGGESTION_LIMIT', () => {
     const big: FuzzyAnimeCandidate[] = Array.from({ length: 20 }, (_, i) => ({
       name: `Test Anime ${i}`,
       franchise: `Franchise ${i}`,
       altNames: [],
     }));
-    expect(getFuzzySuggestions(big, 'test', 'anime').length).toBeLessThanOrEqual(5);
+    expect(getFuzzySuggestions(big, 'test', 'anime').length).toBe(20);
+  });
+});
+
+describe('animeMatchesLibrarySearch', () => {
+  it('matches acronyms and alt names used in library search', () => {
+    const mha: FuzzyAnimeCandidate = {
+      name: 'Boku no Hero Academia',
+      franchise: 'Boku no Hero Academia',
+      altNames: ['My Hero Academia', 'MHA'],
+    };
+    expect(animeMatchesLibrarySearch(mha, 'mha')).toBe(true);
+    expect(animeMatchesLibrarySearch(mha, 'my hero')).toBe(true);
+    expect(animeMatchesLibrarySearch(mha, 'naruto')).toBe(false);
   });
 });
 

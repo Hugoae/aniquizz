@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect, type ReactElement, type ReactNode } from 'react';
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useLayoutEffect, type ReactElement, type ReactNode } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
 import { RouteSkeletonFallback, DelayedRouteFallback } from '@/components/layout/RouteSkeletonFallback';
 import { warmLikelyRoutes } from '@/lib/routePrefetch';
+import { dismissAppShell } from '@/lib/appShell';
+import { markLandingPaintDone } from '@/lib/initialPaint';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthModalContext';
@@ -12,7 +14,7 @@ import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 
-const Home = lazy(() => import('@/pages/Home'));
+import Home from '@/pages/Home';
 const GameHub = lazy(() => import('@/pages/GameHub'));
 const Game = lazy(() => import('@/pages/Game'));
 const Profile = lazy(() => import('@/pages/Profile'));
@@ -61,10 +63,23 @@ function SessionFriendsProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** No skeleton on `/` — Home is eager-imported and the HTML app-shell covers first paint. */
+function AppSuspenseFallback() {
+  const { pathname } = useLocation();
+  if (pathname === '/') return null;
+  return <DelayedRouteFallback />;
+}
+
 const AppContent = () => {
   const { showAuthModal, setShowAuthModal } = useAuthModal();
   const { session, authReady } = useAuth();
   const navigate = useNavigate();
+
+  // Swap the static HTML shell for React in the same frame — no blank flash between them.
+  useLayoutEffect(() => {
+    dismissAppShell();
+    markLandingPaintDone();
+  }, []);
 
   // Warm the most likely next route chunks once idle so navigation never flashes
   // a Suspense skeleton. Signed-in users also get the profile chunk.
@@ -136,7 +151,7 @@ const AppContent = () => {
   return (
     <div className="min-h-screen bg-background text-foreground font-sans antialiased">
       <SkipLink />
-      <Suspense fallback={<DelayedRouteFallback />}>
+      <Suspense fallback={<AppSuspenseFallback />}>
         <Routes>
           <Route path="/" element={<Home />} />
 

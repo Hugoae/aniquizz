@@ -21,6 +21,38 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 3,
+    title: 'Mise à jour v26.2 — Librairie, MyAnimeList & polish jeu',
+    description:
+      'Parcourez tout le catalogue, liez MyAnimeList pour le mode Watched, fluidité en partie améliorée, et phase de guess solo alignée sur le multijoueur.',
+    content:
+      "La v26.2 ouvre AniQuizz sur la découverte du catalogue et une deuxième source de listes d'animes regardés. Voici le détail :\n\n" +
+      "**Librairie musicale**\n" +
+      "• Nouvelle page **Librairie** : parcourez le catalogue par franchise, filtrez par type de son (OP/ED), difficulté ou recherche texte.\n" +
+      "• Vue arborescente paginée + fiche détaillée par son (aperçu vidéo, anime, saison, difficulté).\n" +
+      "• Seuls les sons téléchargés et jouables apparaissent — fini le Coming Soon.\n\n" +
+      "**MyAnimeList (mode Watched)**\n" +
+      "• Liez votre pseudo MAL depuis le profil — alternative à AniList pour alimenter le mode Watched.\n" +
+      "• Listes prises en charge : En cours, Terminé et En pause — synchronisées avec notre catalogue.\n" +
+      "• Un seul fournisseur par profil (AniList **ou** MAL) ; en multijoueur, union ou intersection cross-provider entre joueurs.\n" +
+      "• Mêmes garde-fous que l'AniList : pool insuffisant = blocage ou opt-in explicite pour compléter avec l'aléatoire.\n\n" +
+      "**Gameplay solo**\n" +
+      "• La manche ne se révèle plus instantanément à la première réponse — le chrono complet s'applique comme en multijoueur.\n" +
+      "• Vous pouvez changer votre réponse jusqu'à la fin du timer.\n" +
+      "• Nouveau bouton **Révéler** (après au moins une réponse) pour passer à la révélation quand vous êtes prêt.\n\n" +
+      "**Fluidité & chargement**\n" +
+      "• Accueil plus réactif : shell HTML aligné sur la vraie page, moins de flash au premier chargement.\n" +
+      "• En partie : timer isolé, visualiseur audio en CSS pur, suppression du flou GPU sur les overlays — moins de saccades sur machines modestes.\n" +
+      "• Vidéo floutée : masquage légèrement renforcé (+5 %) pendant la phase de guess.\n\n" +
+      "**Playlist & polish**\n" +
+      "• Ordre des manches plus équitable : shuffle uniforme après la sélection diversifiée par franchise.\n" +
+      "• Admin : stats des listes liées (AniList / MAL) et pseudo MAL visible dans les salons.\n\n" +
+      "Prochaine étape annoncée : graphiques de stats sur le profil, puis **Mode Rapidité** et **Playlists thématiques** (voir la Roadmap).\n\n" +
+      "Merci de continuer à jouer et de nous remonter vos retours !",
+    date: '2026-07-12T21:00:00Z',
+    type: 'update',
+  },
+  {
     id: 2,
     title: 'Mise à jour v26.1 — Compte, lobby & modes de jeu',
     description:

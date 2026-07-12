@@ -192,6 +192,7 @@ export const getUserProfile = async (id: string) => {
       lastSeenAt: true,
       createdAt: true,
       anilistUsername: true,
+      malUsername: true,
     },
   });
   if (!profile) return null;
@@ -275,6 +276,10 @@ export interface StatsOverview {
     roles: { USER: number; MODERATOR: number; ADMIN: number };
     anilistLinked: number;
     anilistLinkedPercent: number;
+    malLinked: number;
+    malLinkedPercent: number;
+    watchedListLinked: number;
+    watchedListLinkedPercent: number;
   };
   activity: {
     periodDays: number;
@@ -333,6 +338,8 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     banned,
     muted,
     anilistLinked,
+    malLinked,
+    watchedListLinked,
     rolesGrouped,
   ] = await Promise.all([
     prisma.profile.count({ where: NOT_BOT }),
@@ -343,6 +350,12 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     prisma.profile.count({ where: mergeWhere(NOT_BOT, { bannedUntil: { gt: nowDate } }) }),
     prisma.profile.count({ where: mergeWhere(NOT_BOT, { mutedUntil: { gt: nowDate } }) }),
     prisma.profile.count({ where: mergeWhere(NOT_BOT, { anilistUsername: { not: null } }) }),
+    prisma.profile.count({ where: mergeWhere(NOT_BOT, { malUsername: { not: null } }) }),
+    prisma.profile.count({
+      where: mergeWhere(NOT_BOT, {
+        OR: [{ anilistUsername: { not: null } }, { malUsername: { not: null } }],
+      }),
+    }),
     prisma.profile.groupBy({ by: ['role'], where: NOT_BOT, _count: { _all: true } }),
   ]);
 
@@ -493,6 +506,10 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
       roles,
       anilistLinked,
       anilistLinkedPercent: pct(anilistLinked, totalPlayers),
+      malLinked,
+      malLinkedPercent: pct(malLinked, totalPlayers),
+      watchedListLinked,
+      watchedListLinkedPercent: pct(watchedListLinked, totalPlayers),
     },
     activity: {
       periodDays: periodDays ?? 0,

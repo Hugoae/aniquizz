@@ -10,7 +10,7 @@ export interface ConfigBadgesData {
 }
 
 const Chip = ({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone: string }) => (
-  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/70 px-3 py-1.5 shadow-lg backdrop-blur-md">
+  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/95 px-3 py-1.5 shadow-lg">
     <Icon className={`h-3 w-3 ${tone}`} aria-hidden="true" />
     <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">{label}</span>
   </div>

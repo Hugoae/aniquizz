@@ -6,7 +6,8 @@ import {
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from './gameManager';
 import { getAllAnimeNames, countPlayableWatchedSongs } from './gameService';
-import { getUserAnimeIds } from '../anilist/anilistService';
+import { resolvePlayerCatalogueIds } from '../lists/listResolver';
+import { hasWatchedListLink } from '@aniquizz/shared';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import { captureError } from '../../utils/errorReporter';
@@ -30,7 +31,7 @@ export const registerGameHandlers = (
     }
     const watchedCheck = await validateWatchedStart(room);
     if (!watchedCheck.ok) {
-      socket.emit('error', { message: watchedCheck.reason ?? 'Liste AniList insuffisante.' });
+      socket.emit('error', { message: watchedCheck.reason ?? 'Liste insuffisante pour le mode Vu.' });
       return;
     }
     void room.startMatch(() => gameManager.broadcastRoomList());
@@ -77,19 +78,10 @@ export const registerGameHandlers = (
     const userId = socket.data.userId;
     if (!userId) return;
     try {
-      const profile = await prisma.profile.findUnique({
-        where: { id: userId },
-        select: { anilistUsername: true },
-      });
-      const username = profile?.anilistUsername?.trim();
-      if (!username) {
-        socket.emit('my_watched_list', []);
-        return;
-      }
-      const ids = await getUserAnimeIds(username);
+      const ids = await resolvePlayerCatalogueIds(userId);
       socket.emit('my_watched_list', ids);
     } catch (e) {
-      logger.error('Failed to fetch watched list', 'Anilist', e);
+      logger.error('Failed to fetch watched list', 'Watched', e);
       socket.emit('my_watched_list', []);
     }
   };
@@ -98,20 +90,11 @@ export const registerGameHandlers = (
     const userId = socket.data.userId;
     if (!userId) return;
     try {
-      const profile = await prisma.profile.findUnique({
-        where: { id: userId },
-        select: { anilistUsername: true },
-      });
-      const username = profile?.anilistUsername?.trim();
-      if (!username) {
-        socket.emit('watched_count', { listSize: 0, playableSongs: 0 });
-        return;
-      }
-      const ids = await getUserAnimeIds(username);
+      const ids = await resolvePlayerCatalogueIds(userId);
       const playableSongs = await countPlayableWatchedSongs(ids);
       socket.emit('watched_count', { listSize: ids.length, playableSongs });
     } catch (e) {
-      logger.error('Failed to count watched songs', 'Anilist', e);
+      logger.error('Failed to count watched songs', 'Watched', e);
       socket.emit('watched_count', { listSize: 0, playableSongs: 0 });
     }
   };
@@ -140,6 +123,7 @@ export const registerGameHandlers = (
             userId: p.userId,
             isBot: p.isBot,
             anilistUsername: p.anilistUsername,
+            malUsername: p.malUsername,
           })),
           songFilters,
           soundCount,
@@ -156,10 +140,9 @@ export const registerGameHandlers = (
 
       const profile = await prisma.profile.findUnique({
         where: { id: userId },
-        select: { anilistUsername: true },
+        select: { anilistUsername: true, malUsername: true },
       });
-      const username = profile?.anilistUsername?.trim();
-      if (!username) {
+      if (!profile || !hasWatchedListLink(profile)) {
         socket.emit('watched:pool_stats', {
           animeCount: 0,
           playableSongs: 0,
@@ -168,7 +151,7 @@ export const registerGameHandlers = (
         });
         return;
       }
-      const ids = await getUserAnimeIds(username);
+      const ids = await resolvePlayerCatalogueIds(userId, profile);
       const playableSongs = await countPlayableWatchedSongs(ids, songFilters);
       socket.emit('watched:pool_stats', {
         animeCount: ids.length,
@@ -178,7 +161,7 @@ export const registerGameHandlers = (
         watchedMode: input?.watchedMode,
       });
     } catch (e) {
-      logger.error('Failed to resolve watched pool stats', 'Anilist', e);
+      logger.error('Failed to resolve watched pool stats', 'Watched', e);
       socket.emit('watched:pool_stats', {
         animeCount: 0,
         playableSongs: 0,

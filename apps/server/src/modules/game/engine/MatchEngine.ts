@@ -7,6 +7,7 @@ import {
   xpForMatch,
   generatePeekWindow,
   normalizeVideoMode,
+  normalizePrecision,
   type AnswerType,
   type CorrectByDifficulty,
   type GamePlayer,
@@ -324,10 +325,9 @@ export class MatchEngine {
     // Anti-cheat: only signal THAT they answered — never the content/correctness.
     this.channel.emit('game:answered', { userId });
 
-    // Solo ends as soon as the lone player answers (fast flow). In multiplayer the
-    // round runs the full timer so everyone can still change their pick until the
-    // end — ending early would prevent last-second changes and feel abrupt.
-    if (this.room.isSolo && this.allConnectedAnswered()) this.endRound();
+    // Solo uses the same full guess timer as multiplayer so the player can change
+    // their pick until time runs out. Optional early reveal via `game:skip_round`.
+    if (!this.room.isSolo && this.allConnectedAnswered()) this.endRound();
   }
 
   private endRound(): void {
@@ -415,6 +415,7 @@ export class MatchEngine {
       isSolo: this.room.isSolo,
       difficulties: settings.difficulty ?? [],
       songDifficulties,
+      precision: normalizePrecision(settings.precision),
     });
 
     const rankByUser = computeCompetitionRanks(

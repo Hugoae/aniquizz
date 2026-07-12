@@ -11,6 +11,7 @@ import { maxPointsPerRound } from './scoring';
 import { computeMedal, effectiveMedalThresholds, type MedalTier } from './grading';
 import { computeCompetitionRanks } from './ranking';
 import type { ResponseType } from './game';
+import type { Precision } from './precision';
 
 export interface VictoryPlayerInput {
   userId: string;
@@ -30,6 +31,8 @@ export interface VictoryInput {
   difficulties: string[];
   /** Actual difficulty of each song played (drives the medal thresholds). */
   songDifficulties: string[];
+  /** Answer precision — Anime lowers medal thresholds vs Franchise. */
+  precision?: Precision;
 }
 
 export interface VictoryResult {
@@ -68,7 +71,7 @@ export const computeVictory = (input: VictoryInput): VictoryResult => {
   const maxPossibleScore = input.totalRounds * bestPerRound;
   const rankings = [...input.players].sort((a, b) => b.score - a.score);
 
-  const soloTargetRatio = effectiveMedalThresholds(input.songDifficulties).bronze;
+  const soloTargetRatio = effectiveMedalThresholds(input.songDifficulties, input.precision).bronze;
 
   const winnerIds: string[] = [];
   let multiWinnerCount = 1;
@@ -79,7 +82,7 @@ export const computeVictory = (input: VictoryInput): VictoryResult => {
     if (top) {
       const rounds = top.totalCount > 0 ? top.totalCount : input.totalRounds;
       const denom = bestPerRound * rounds;
-      soloMedal = computeMedal(top.score, denom, input.songDifficulties);
+      soloMedal = computeMedal(top.score, denom, input.songDifficulties, input.precision);
       if (soloMedal) winnerIds.push(top.userId);
     }
   } else {

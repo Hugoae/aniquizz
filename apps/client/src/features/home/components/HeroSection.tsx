@@ -2,12 +2,15 @@ import { startTransition } from 'react';
 import { Play, Music, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { prefetchGameHub } from '@/lib/routePrefetch';
+import { prefetchGameHub, prefetchRoute } from '@/lib/routePrefetch';
+import { isFirstLandingPaint } from '@/lib/initialPaint';
+import { cn } from '@/lib/utils';
 
 import { NewsSection } from './NewsSection';
 
 export function HeroSection() {
   const navigate = useNavigate();
+  const skipEntryAnimation = isFirstLandingPaint();
 
   return (
     <div className="relative w-full flex flex-col items-center">
@@ -18,7 +21,12 @@ export function HeroSection() {
       </div>
 
       <section className="relative flex flex-col items-center justify-center px-4 pt-4 pb-2">
-        <div className="relative z-10 text-center max-w-4xl mx-auto animate-fade-in">
+        <div
+          className={cn(
+            'relative z-10 mx-auto max-w-4xl text-center',
+            !skipEntryAnimation && 'animate-fade-in',
+          )}
+        >
           
           {/* Eyebrow — the audio signature made literal */}
           <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-secondary/60 border border-border mb-5 backdrop-blur-sm">
@@ -60,6 +68,8 @@ export function HeroSection() {
                 variant="glass"
                 size="lg"
                 onClick={() => navigate('/library')}
+                onMouseEnter={() => prefetchRoute('library')}
+                onFocus={() => prefetchRoute('library')}
                 className="hover-lift gap-2"
               >
                 <Music className="h-5 w-5" />

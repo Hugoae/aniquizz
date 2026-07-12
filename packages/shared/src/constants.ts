@@ -26,11 +26,17 @@ export const GAME_CONFIG = {
   // medal; harder songs are more lenient. Platinum keeps a small margin (not a
   // strict 100%). For a mixed-difficulty match the effective threshold is the
   // mean across the songs actually played (see effectiveMedalThresholds).
+  // Anime precision (exact season) subtracts PRECISION_OFFSET.anime from each tier.
   MEDALS: {
     THRESHOLDS: {
       easy: { bronze: 0.55, silver: 0.65, gold: 0.8, platinum: 0.95 },
       medium: { bronze: 0.5, silver: 0.58, gold: 0.7, platinum: 0.9 },
       hard: { bronze: 0.45, silver: 0.5, gold: 0.62, platinum: 0.8 },
+    },
+    /** Ratio adjustment per answer precision (added to each tier after difficulty blend). */
+    PRECISION_OFFSET: {
+      franchise: 0,
+      anime: -0.05,
     },
     // Highest → lowest, used to resolve a medal from an accuracy.
     TIERS: ['platinum', 'gold', 'silver', 'bronze'] as const,
@@ -68,8 +74,11 @@ export const GAME_CONFIG = {
     ANSWER_SIMILARITY: 0.8,
     /** Min normalized answer length before typo tolerance applies. */
     MIN_LENGTH_FOR_FUZZY: 4,
-    /** Max suggestions returned by `getFuzzySuggestions`. */
-    SUGGESTION_LIMIT: 5,
+    /**
+     * Soft cap for autocomplete payloads (safety against pathological broad queries).
+     * The dropdown scrolls to show every match up to this limit.
+     */
+    SUGGESTION_LIMIT: 100,
     /** Min query length before any suggestion is shown. */
     SUGGESTION_MIN_QUERY_LENGTH: 2,
     /** Min query length before Levenshtein fallback is used in suggestions. */

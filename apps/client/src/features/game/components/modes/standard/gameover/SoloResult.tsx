@@ -88,6 +88,7 @@ export function SoloResult({
               score={score}
               maxPossibleScore={maxPossibleScore}
               songDifficulties={songDifficulties}
+              precision={settings.precision}
               xpEarned={me?.xpEarned}
             />
 

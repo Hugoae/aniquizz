@@ -51,7 +51,13 @@ export class Room {
     username: string,
     avatar: string,
     socketId: string,
-    opts: { asHost?: boolean; anilistUsername?: string | null; role?: UserRole | null; level?: number | null } = {},
+    opts: {
+      asHost?: boolean;
+      anilistUsername?: string | null;
+      malUsername?: string | null;
+      role?: UserRole | null;
+      level?: number | null;
+    } = {},
   ): RoomPlayer {
     const safeUsername = username?.trim() || `Joueur ${userId.substring(0, 4).toUpperCase()}`;
     const existing = this.players.get(userId);
@@ -62,6 +68,7 @@ export class Room {
       existing.username = safeUsername;
       existing.avatar = avatar || existing.avatar;
       if (opts.anilistUsername !== undefined) existing.anilistUsername = opts.anilistUsername;
+      if (opts.malUsername !== undefined) existing.malUsername = opts.malUsername;
       if (opts.role) existing.role = opts.role;
       if (opts.level != null) existing.level = opts.level;
       logger.info(`[Room ${this.id}] Reconnected: ${safeUsername} (${userId})`, 'Lobby');
@@ -77,6 +84,7 @@ export class Room {
       isConnected: true,
       isReady: opts.asHost === true || userId === this.hostId,
       anilistUsername: opts.anilistUsername ?? null,
+      malUsername: opts.malUsername ?? null,
       role: opts.role ?? 'USER',
       level: opts.level ?? 1,
       score: 0,
@@ -116,6 +124,7 @@ export class Room {
       isConnected: true,
       isReady: true,
       anilistUsername: null,
+      malUsername: null,
       isBot: true,
       botConfig: config,
       score: 0,

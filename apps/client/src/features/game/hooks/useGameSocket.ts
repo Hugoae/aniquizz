@@ -38,7 +38,8 @@ interface UseGameSocketOptions {
   initialFirstVideo?: string | null;
   /** Lobby-selected mode — fallback when the server payload omits videoMode. */
   initialVideoMode?: VideoMode;
-  anilistUsername?: string | null;
+  /** When true, fetches the player's AniList/MAL watched ids for in-game hints. */
+  watchedListLinked?: boolean;
   onCancelled?: () => void;
   onClosed?: (reason?: string) => void;
 }
@@ -66,7 +67,7 @@ export function useGameSocket({
   initialTotalRounds,
   initialFirstVideo = null,
   initialVideoMode,
-  anilistUsername,
+  watchedListLinked,
   onCancelled,
   onClosed,
 }: UseGameSocketOptions): UseGameSocketResult {
@@ -119,11 +120,11 @@ export function useGameSocket({
   useEffect(() => {
     const onMyWatched = (ids: number[]) => setMyWatchedIds(ids);
     socket.on('my_watched_list', onMyWatched);
-    if (anilistUsername) socket.emit('get_my_watched');
+    if (watchedListLinked) socket.emit('get_my_watched');
     return () => {
       socket.off('my_watched_list', onMyWatched);
     };
-  }, [anilistUsername]);
+  }, [watchedListLinked]);
 
   // --- Match event subscription ---
   useEffect(() => {

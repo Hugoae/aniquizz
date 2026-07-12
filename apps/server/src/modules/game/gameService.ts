@@ -104,43 +104,6 @@ const pickBestCandidates = (
   return selected.slice(0, count);
 };
 
-/**
- * Order the final playlist so the same anime/franchise never plays twice in a
- * row when it can be avoided. Greedy: at each step take the group with the most
- * songs left whose key differs from the one just placed. Two songs from the same
- * franchise become adjacent only if that franchise makes up more than half the
- * playlist (unavoidable — the pool has too little variety).
- */
-const smartShuffle = <T extends { anime: { name: string; franchise: { name: string } | null } }>(
-  songs: T[],
-): T[] => {
-  if (!songs || songs.length === 0) return [];
-
-  const groups = new Map<string, T[]>();
-  for (const song of songs) {
-    const key = song.anime.franchise?.name || song.anime.name || 'Unknown';
-    const bucket = groups.get(key);
-    if (bucket) bucket.push(song);
-    else groups.set(key, [song]);
-  }
-
-  const buckets = [...groups.entries()].map(([key, arr]) => ({ key, arr: shuffleArray(arr) }));
-
-  const result: T[] = [];
-  let lastKey: string | null = null;
-  while (result.length < songs.length) {
-    // Largest remaining group first keeps a dominant franchise spread out.
-    buckets.sort((a, b) => b.arr.length - a.arr.length);
-    let chosen = buckets.find((b) => b.arr.length > 0 && b.key !== lastKey);
-    // Only the just-played group has songs left — adjacency is unavoidable.
-    if (!chosen) chosen = buckets.find((b) => b.arr.length > 0);
-    if (!chosen) break;
-    result.push(chosen.arr.pop() as T);
-    lastKey = chosen.key;
-  }
-  return result;
-};
-
 // Difficulty cascade (hardest → easiest).
 const DIFFICULTY_ORDER: Difficulty[] = [Difficulty.HARD, Difficulty.MEDIUM, Difficulty.EASY];
 
@@ -269,7 +232,8 @@ const fetchWithFallback = async (
     );
   }
 
-  let songs = smartShuffle(finalSongs);
+  // Uniform random round order; franchise diversity is already enforced at pick time.
+  let songs = shuffleArray(finalSongs);
   let priorMatchReuse = false;
 
   // Pool too small after excluding prior lobby matches — fill the gap without that constraint.
@@ -283,7 +247,7 @@ const fetchWithFallback = async (
       { alsoExcludeIds: [...alsoExclude, ...songs.map((s) => s.id)] },
     );
     if (retry.songs.length > 0) {
-      songs = smartShuffle([...songs, ...retry.songs]);
+      songs = shuffleArray([...songs, ...retry.songs]);
       priorMatchReuse = true;
       logger.info(
         `[GameService] Prior-match exclusion relaxed — reused ${retry.songs.length} song(s) from earlier lobby games.`,

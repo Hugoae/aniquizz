@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import type { User } from '@supabase/supabase-js';
 import type { GameConfig, RoomConfig } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount, hasWatchedListLink } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 import { RoomSettingsSection } from './config/RoomSettingsSection';
@@ -74,7 +74,7 @@ export function GameConfigForm<T extends GameConfig>({
     difficulty: cfg.difficulty,
     types: cfg.soundTypes,
     watchedMode: cfg.watchedMode,
-    enabled: cfg.soundSelection === 'watched' && (isRoom || Boolean(profile?.anilistUsername?.trim())),
+    enabled: cfg.soundSelection === 'watched' && (isRoom || hasWatchedListLink(profile ?? {})),
     refreshKey: isRoom ? watchedPlayersKey : undefined,
   });
   const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, cfg.soundCount);
@@ -100,7 +100,7 @@ export function GameConfigForm<T extends GameConfig>({
               config={cfg}
               update={update}
               isRoom={isRoom}
-              anilistLinked={Boolean(profile?.anilistUsername?.trim())}
+              watchedListLinked={hasWatchedListLink(profile ?? {})}
               roomId={roomId}
               watchedPlayersKey={watchedPlayersKey}
             />

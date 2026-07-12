@@ -147,7 +147,7 @@ export function SongInfoCard({
   if (variant === 'band') {
     return (
       <div
-        className="group flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card/90 shadow-xl backdrop-blur-xl transition-all duration-300 hover:border-primary/30"
+        className="group flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card shadow-xl transition-all duration-300 hover:border-primary/30"
         style={accentStyle}
       >
         {coverImage && (
@@ -204,7 +204,7 @@ export function SongInfoCard({
 
   return (
     <div
-      className="group flex h-full min-h-[200px] w-full max-w-[640px] animate-in slide-in-from-right-4 overflow-hidden rounded-xl border border-border bg-card/90 shadow-2xl backdrop-blur-xl transition-all duration-500 hover:border-primary/30"
+      className="group flex h-full min-h-[200px] w-full max-w-[640px] animate-in slide-in-from-right-4 overflow-hidden rounded-xl border border-border bg-card shadow-2xl transition-all duration-500 hover:border-primary/30"
       style={accentStyle}
     >
       <div className="relative flex min-w-0 flex-1 flex-col p-4">

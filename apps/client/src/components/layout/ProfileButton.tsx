@@ -1,27 +1,47 @@
 import { ChevronRight } from 'lucide-react';
 import { levelProgress } from '@aniquizz/shared';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface ProfileButtonProps {
-  username: string;
-  avatar: string;
+  username?: string;
+  avatar?: string;
   xp?: number;
-  onClick: () => void;
+  onClick?: () => void;
   /** Warm the target route chunk on hover/focus so the click navigates instantly. */
   onPrefetch?: () => void;
   className?: string;
+  /** Reserved shell while the Supabase profile row is still loading. */
+  loading?: boolean;
 }
 
 /** Shared profile chip: XP ring, level badge, avatar, username. Used in the site header and in-game. */
 export function ProfileButton({
-  username,
-  avatar,
+  username = '',
+  avatar = '',
   xp = 0,
   onClick,
   onPrefetch,
   className,
+  loading = false,
 }: ProfileButtonProps) {
+  if (loading) {
+    return (
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-full border border-border/60 bg-secondary/30 py-1 pl-1 pr-2.5',
+          className,
+        )}
+        aria-busy="true"
+        aria-label="Chargement du profil"
+      >
+        <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+        <Skeleton className="hidden h-4 w-20 rounded md:block" />
+      </div>
+    );
+  }
+
   const { level, percent } = levelProgress(xp);
 
   return (

@@ -1,26 +1,16 @@
-import { Music } from 'lucide-react';
-import { ComingSoonPage } from '@/components/pages/ComingSoonPage';
+import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
+import { LibraryPageContent } from '@/features/library/components/LibraryPageContent';
 
 export default function Library() {
   return (
-    <ComingSoonPage
-      helmetTitle={PAGE_TITLES.library}
-      helmetDescription="La librairie musicale arrive bientôt sur AniQuizz."
-      canonicalPath="/library"
-      backLabel="Retour à l'accueil"
-      backTo="/"
-      icon={Music}
-      iconClassName="text-primary"
-      glowClassName="bg-primary/20"
-      headingClassName="gradient-text"
-      showHeader
-      description={
-        <>
-          La plus grande librairie musicale d&apos;anime est en cours de construction.
-          Préparez vos playlists, ça arrive très vite !
-        </>
-      }
-    />
+    <>
+      <SeoHead
+        title={PAGE_TITLES.library}
+        description="Parcourez le catalogue AniQuizz : openings, endings et inserts. Écoutez les extraits et retrouvez vos découvertes en partie."
+        canonicalPath="/library"
+      />
+      <LibraryPageContent />
+    </>
   );
 }

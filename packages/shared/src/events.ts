@@ -51,6 +51,8 @@ export interface SocketData {
   level: number | null;
   /** Linked AniList username (server-resolved) or null. Used for Watched-mode gating. */
   anilistUsername: string | null;
+  /** Linked MyAnimeList username (server-resolved) or null. Mutually exclusive with anilistUsername. */
+  malUsername: string | null;
 }
 
 // --- CLIENT → SERVER INPUT PAYLOADS ---
@@ -247,7 +249,12 @@ export interface ClientToServerEvents {
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
   'profile:get_stats': () => void;
-  update_profile_data: (payload: { username?: string; avatarUrl?: string; anilistUsername?: string | null }) => void;
+  update_profile_data: (payload: {
+    username?: string;
+    avatarUrl?: string;
+    anilistUsername?: string | null;
+    malUsername?: string | null;
+  }) => void;
   'profile:delete_account': (payload: DeleteAccountInput) => void;
   get_home_stats: () => void;
 
@@ -274,7 +281,7 @@ export interface AnimeSearchInput {
   precision: Precision;
 }
 
-/** Ranked matches for a single `anime:search` request (small payload, ≤ SUGGESTION_LIMIT). */
+/** Ranked matches for a single `anime:search` request (≤ SUGGESTION_LIMIT, scrollable dropdown). */
 export interface AnimeSearchResults {
   requestId: number;
   results: AnimeSuggestion[];

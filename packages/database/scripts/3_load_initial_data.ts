@@ -11,6 +11,7 @@ import {
 } from './lib/song-helpers';
 import { formatDuration, Progress, Tally } from './lib/progress';
 import { isSongExcluded, loadAllPipelineExclusions } from './lib/load-pipeline-exclusions';
+import { recomputeFranchiseMaxPopularity } from './lib/franchise-popularity';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -200,6 +201,8 @@ async function main() {
         }
       }
     }
+
+    await recomputeFranchiseMaxPopularity(prisma, franchiseId);
   }
 
   progress.done();

@@ -13,8 +13,10 @@
     <meta name="apple-mobile-web-app-title" content="AniQuizz" />
     <link rel="canonical" href="https://aniquizz.com/" />
 
-    <!-- Blocking first-paint shell — replaced seamlessly when React mounts. -->
+    <!-- Blocking first-paint shell — mirrors Home before React/Tailwind load. -->
     <link rel="stylesheet" href="/app-shell.css" />
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <!-- Google favicons: multiples of 48px (16/32 alone are often ignored). -->
@@ -71,30 +73,96 @@
   </head>
 
   <body>
-    <div id="root">
-      <div id="app-shell" aria-hidden="true">
-        <header class="app-shell-header">
-          <a class="app-shell-brand" href="/" title="AniQuizz">
-            <img src="/favicon-32x32.png" alt="AniQuizz" width="32" height="32" decoding="async" />
-            <span>AniQuizz</span>
-          </a>
-          <div class="app-shell-auth" aria-hidden="true"></div>
-        </header>
+    <!--
+      Static first-paint shell — layout mirrors Home.tsx.
+      News copy: keep in sync with allNews.slice(0, 2) in newsData.ts.
+    -->
+    <div id="app-shell" aria-hidden="true">
+      <header class="app-shell-header">
+        <a class="app-shell-brand" href="/" title="AniQuizz" aria-label="AniQuizz — accueil">
+          <img src="/favicon-32x32.png" alt="" width="32" height="32" decoding="async" />
+          <span>AniQuizz</span>
+        </a>
+        <div class="app-shell-auth-slot">
+          <div class="app-shell-profile-chip" aria-hidden="true">
+            <span class="app-shell-profile-avatar"></span>
+            <span class="app-shell-profile-name"></span>
+          </div>
+        </div>
+      </header>
+
+      <div class="app-shell-page">
         <main class="app-shell-main">
-          <div class="app-shell-eyebrow">Devine l'anime rien qu'à sa musique</div>
-          <h1 class="app-shell-title">Testez votre <span>culture anime</span></h1>
-          <p class="app-shell-sub">
-            Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
-          </p>
-          <!-- Decorative placeholders — labels via CSS so crawlers don't append "Jouer Librairie Classement" to snippets. -->
-          <div class="app-shell-cta" aria-hidden="true"></div>
-          <div class="app-shell-secondary" aria-hidden="true">
-            <span></span>
-            <span></span>
+          <div class="app-shell-hero-wrap">
+            <section class="app-shell-hero">
+              <div class="app-shell-hero-inner">
+                <div class="app-shell-eyebrow">
+                  <span class="app-shell-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+                  <span>Devine l'anime rien qu'à sa musique</span>
+                </div>
+                <h1 class="app-shell-title">Testez votre <span>culture anime</span></h1>
+                <p class="app-shell-sub">
+                  Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
+                </p>
+                <div class="app-shell-ctas" aria-hidden="true">
+                  <div class="app-shell-cta-primary">Jouer</div>
+                  <div class="app-shell-cta-row">
+                    <span class="app-shell-cta-glass">Librairie</span>
+                    <span class="app-shell-cta-glass">Classement</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section class="app-shell-news" aria-hidden="true">
+              <div class="app-shell-news-inner">
+                <div class="app-shell-news-header">
+                  <div class="app-shell-news-heading">
+                    <div class="app-shell-news-icon" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                    </div>
+                    <h2 class="app-shell-news-title">Actualités</h2>
+                  </div>
+                  <span class="app-shell-news-more">Voir tout</span>
+                </div>
+                <div class="app-shell-news-list">
+                  <article class="app-shell-news-card">
+                    <div class="app-shell-news-card-icon" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                    </div>
+                    <div class="app-shell-news-card-body">
+                      <div class="app-shell-news-card-top">
+                        <h3>Mise à jour v26.2 — Librairie, MyAnimeList &amp; polish jeu</h3>
+                        <span class="app-shell-news-card-date">12 juil.</span>
+                      </div>
+                      <p class="app-shell-news-card-desc">Parcourez tout le catalogue, liez MyAnimeList pour le mode Watched, fluidité en partie améliorée, et phase de guess solo alignée sur le multijoueur.</p>
+                    </div>
+                    <svg class="app-shell-news-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                  </article>
+                  <article class="app-shell-news-card">
+                    <div class="app-shell-news-card-icon" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                    </div>
+                    <div class="app-shell-news-card-body">
+                      <div class="app-shell-news-card-top">
+                        <h3>Mise à jour v26.1 — Compte, lobby &amp; modes de jeu</h3>
+                        <span class="app-shell-news-card-date">10 juil.</span>
+                      </div>
+                      <p class="app-shell-news-card-desc">Suppression de compte, règles du lobby, modes vidéo, départ d'extrait au choix, AniList plus clair, et des dizaines de correctifs pour le blindtest.</p>
+                    </div>
+                    <svg class="app-shell-news-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                  </article>
+                </div>
+              </div>
+            </section>
           </div>
         </main>
+
+        <div class="app-shell-version">v26.2</div>
       </div>
     </div>
+
+    <div id="root"></div>
     <!-- Crawlable route copy for bots; kept out of #root to avoid a pre-hydrate flash. -->
     <div id="seo-content" hidden></div>
     <script type="module" src="/src/main.tsx"></script>

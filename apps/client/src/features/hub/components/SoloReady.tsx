@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { Trophy, ArrowLeft, Play, Settings, AlertTriangle, Music, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount } from '@aniquizz/shared';
+import { withWatchedPoolSoundCount, hasWatchedListLink } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -62,7 +62,7 @@ export function SoloReady({
     difficulty: gameSettings?.difficulty,
     types: gameSettings?.soundTypes,
     watchedMode: gameSettings?.watchedMode,
-    enabled: gameSettings?.soundSelection === 'watched' && Boolean(profile?.anilistUsername?.trim()),
+    enabled: gameSettings?.soundSelection === 'watched' && hasWatchedListLink(profile ?? {}),
   });
   const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, gameSettings?.soundCount);
   const poolCheck = checkWatchedPoolLaunch(

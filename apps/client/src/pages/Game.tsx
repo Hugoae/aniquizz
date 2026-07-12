@@ -22,11 +22,12 @@ import {
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode } from '@aniquizz/shared';
+import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { parseGameNavState } from '@/features/game/gameNavState';
+import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
 
 type InputMode = 'typing' | 'carre' | 'duo';
 type GameMode = 'solo' | 'multiplayer';
@@ -57,7 +58,7 @@ export default function Game() {
     initialTotalRounds: settings.soundCount ?? 20,
     initialFirstVideo: initialState.gameData?.firstVideo ?? null,
     initialVideoMode: normalizeVideoMode(settings.videoMode),
-    anilistUsername: profile?.anilistUsername,
+    watchedListLinked: hasWatchedListLink(profile ?? {}),
     onCancelled: () => navigate('/play', { state: { returnToLobby: true, roomId }, replace: true }),
     onClosed: (reason) => {
       if (isBanSanctionReason(reason)) {
@@ -86,9 +87,6 @@ export default function Game() {
     precision: normalizePrecision(settings.precision),
     enabled: inputMode === 'typing' && phase === 'guessing',
   });
-
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [progress, setProgress] = useState(100);
 
   const [showLeaveChoice, setShowLeaveChoice] = useState(false);
   /** Hard leave (`leave_room`): destination after the user confirms quitting the salon. */
@@ -143,35 +141,6 @@ export default function Game() {
   useEffect(() => {
     if (phase === 'guessing') setShowPointsAnimation(false);
   }, [phase, state.currentRound]);
-
-  // --- Authoritative countdown ---
-  useEffect(() => {
-    if (phase === 'loading' || phase === 'ended' || state.isGamePaused) return;
-    if (phase === 'ready') {
-      setTimeLeft(state.phaseDurationSeconds);
-      setProgress(100);
-      return;
-    }
-    const tick = () => {
-      // During guessing, `phaseEndsAt` includes a tail (load buffer + end grace)
-      // beyond the chosen duration. Strip it so the countdown lands on 0 exactly
-      // when the player's time is up, then lingers on 0 during the grace before
-      // the round cuts — softer than snapping straight to the reveal.
-      const tailMs =
-        phase === 'guessing'
-          ? GAME_CONFIG.TIMERS.GUESS_START_BUFFER + GAME_CONFIG.TIMERS.GUESS_END_GRACE
-          : 0;
-      const remainingMs = Math.max(0, state.phaseEndsAt - Date.now());
-      const playableMs = Math.max(0, remainingMs - tailMs);
-      const totalMs = state.phaseDurationSeconds * 1000;
-      const visibleMs = Math.min(playableMs, totalMs);
-      setTimeLeft(Math.ceil(visibleMs / 1000));
-      setProgress(totalMs > 0 ? (visibleMs / totalMs) * 100 : 0);
-    };
-    tick();
-    const interval = setInterval(tick, 100);
-    return () => clearInterval(interval);
-  }, [phase, state.isGamePaused, state.phaseEndsAt, state.phaseDurationSeconds]);
 
   // --- Preload the upcoming clip (round 1 during the intro, next during reveal) ---
   useEffect(() => {
@@ -263,7 +232,8 @@ export default function Game() {
   }
 
   const commonProps = {
-    phase, players, currentRound: state.currentRound, totalRounds: state.totalRounds, timeLeft, progress,
+    phase, players, currentRound: state.currentRound, totalRounds: state.totalRounds,
+    phaseEndsAt: state.phaseEndsAt, phaseDurationSeconds: state.phaseDurationSeconds,
     volume, isMuted, onVolumeChange: setVolume, onToggleMute: toggleMute,
     videoRef, autoplayBlocked,
     onSafePlay: resumeCurrent,
@@ -330,18 +300,20 @@ export default function Game() {
           )}
         </div>
       ) : (
-        <StandardGameLayout
-          {...commonProps}
-          videoRef={videoRef}
-          myWatchedIds={myWatchedIds}
-          inputMode={inputMode}
-          choices={choices}
-          onSwitchCarre={() => settings.responseType === 'mix' && setInputMode('carre')}
-          onSwitchDuo={() => settings.responseType === 'mix' && setInputMode('duo')}
-          responseType={settings.responseType}
-          showPointsAnimation={showPointsAnimation}
-          pointsEarned={pointsEarned}
-        />
+        <DevRenderProfiler id="StandardGameLayout">
+          <StandardGameLayout
+            {...commonProps}
+            videoRef={videoRef}
+            myWatchedIds={myWatchedIds}
+            inputMode={inputMode}
+            choices={choices}
+            onSwitchCarre={() => settings.responseType === 'mix' && setInputMode('carre')}
+            onSwitchDuo={() => settings.responseType === 'mix' && setInputMode('duo')}
+            responseType={settings.responseType}
+            showPointsAnimation={showPointsAnimation}
+            pointsEarned={pointsEarned}
+          />
+        </DevRenderProfiler>
       )}
 
       <GlobalSettingsModal open={showSettings} onOpenChange={setShowSettings} />

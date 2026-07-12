@@ -40,7 +40,7 @@ export function GameTopBar({
       : 'Pause';
 
   return (
-    <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/50 px-4 backdrop-blur-sm">
+    <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/95 px-4">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onShowLeave} className="gap-2 text-muted-foreground hover:text-destructive">
           <LogOut className="h-4 w-4" />

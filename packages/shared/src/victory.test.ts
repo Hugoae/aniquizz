@@ -98,6 +98,18 @@ describe('computeVictory - solo (mastery-ratio medals)', () => {
     expect(res.maxPossibleScore).toBe(20);
     expect(res.soloMedal).toBe('platinum');
   });
+
+  it('lowers medal thresholds in anime precision (platinum at 17/20 QCM)', () => {
+    const res = computeVictory({
+      ...base,
+      isSolo: true,
+      responseType: 'qcm',
+      precision: 'anime',
+      players: [player('solo', 17, 9, 10)],
+    });
+    expect(res.soloTargetRatio).toBeCloseTo(0.45);
+    expect(res.soloMedal).toBe('platinum');
+  });
 });
 
 describe('computeVictory - multiplayer (no medals)', () => {

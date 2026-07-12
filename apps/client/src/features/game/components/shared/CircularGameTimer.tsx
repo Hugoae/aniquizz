@@ -76,7 +76,7 @@ export function CircularGameTimer({
             pathLength="100"
             strokeDasharray="100"
             strokeDashoffset={isReady ? 0 : (100 - calculatedProgress) * -1}
-            className={cn('transition-[stroke-dashoffset] duration-200 ease-linear', isReady && 'drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)]')}
+            className={cn('transition-[stroke-dashoffset] duration-100 ease-linear', isReady && 'drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)]')}
           />
         </svg>
 

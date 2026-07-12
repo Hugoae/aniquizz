@@ -1,11 +1,14 @@
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { isFirstLandingPaint } from '@/lib/initialPaint';
+import { cn } from '@/lib/utils';
 
 import { allNews, typeConfig } from '@/features/news/data/newsData';
 
 export function NewsSection() {
   const navigate = useNavigate();
+  const skipEntryAnimation = isFirstLandingPaint();
 
   const openNewsList = () => navigate('/news');
   const openNewsItem = (id: number) => navigate(`/news#news-${id}`);
@@ -13,7 +16,10 @@ export function NewsSection() {
   const latestNews = allNews.slice(0, 2);
 
   return (
-    <section className="px-4 pb-6 pt-6 w-full animate-slide-up" style={{ animationDelay: '0.2s' }}>
+    <section
+      className={cn('w-full px-4 pb-6 pt-6', !skipEntryAnimation && 'animate-slide-up')}
+      style={skipEntryAnimation ? undefined : { animationDelay: '0.2s' }}
+    >
       <div className="max-w-xl mx-auto"> 
         
         {/* Header Section */}

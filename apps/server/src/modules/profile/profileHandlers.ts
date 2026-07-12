@@ -2,6 +2,7 @@ import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
 import { verifyAnilistUser } from '../anilist/anilistService';
+import { verifyMalUser } from '../mal/malService';
 import { prisma } from '@aniquizz/database';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { GameManager } from '../game/gameManager';
@@ -26,6 +27,7 @@ export const registerProfileHandlers = (
     username?: string;
     avatarUrl?: string;
     anilistUsername?: string | null;
+    malUsername?: string | null;
   }) => {
     const userId = socket.data.userId as string;
 
@@ -33,6 +35,7 @@ export const registerProfileHandlers = (
       const updateData: Record<string, unknown> = {};
       if (payload.username) updateData.username = payload.username;
       if (payload.avatarUrl) updateData.avatar = payload.avatarUrl;
+
       if (payload.anilistUsername !== undefined) {
         const trimmed = typeof payload.anilistUsername === 'string' ? payload.anilistUsername.trim() : null;
         const value = trimmed && trimmed.length > 0 ? trimmed : null;
@@ -42,8 +45,27 @@ export const registerProfileHandlers = (
             socket.emit('error', { message: "Compte AniList introuvable. Vérifie l'orthographe de ton pseudo." });
             return;
           }
+          updateData.anilistUsername = value;
+          updateData.malUsername = null;
+        } else {
+          updateData.anilistUsername = null;
         }
-        updateData.anilistUsername = value;
+      }
+
+      if (payload.malUsername !== undefined) {
+        const trimmed = typeof payload.malUsername === 'string' ? payload.malUsername.trim() : null;
+        const value = trimmed && trimmed.length > 0 ? trimmed : null;
+        if (value) {
+          const check = await verifyMalUser(value);
+          if (check === 'not_found') {
+            socket.emit('error', { message: "Compte MyAnimeList introuvable. Vérifie l'orthographe de ton pseudo." });
+            return;
+          }
+          updateData.malUsername = value;
+          updateData.anilistUsername = null;
+        } else {
+          updateData.malUsername = null;
+        }
       }
 
       await prisma.profile.update({

@@ -43,7 +43,7 @@ describe('SourceSection', () => {
         config={baseConfig}
         update={() => {}}
         isRoom={false}
-        anilistLinked={false}
+        watchedListLinked={false}
       />,
     );
 
@@ -60,7 +60,7 @@ describe('SourceSection', () => {
         config={baseConfig}
         update={update}
         isRoom={false}
-        anilistLinked={false}
+        watchedListLinked={false}
       />,
     );
 
@@ -74,7 +74,7 @@ describe('SourceSection', () => {
         config={baseConfig}
         update={() => {}}
         isRoom={false}
-        anilistLinked={false}
+        watchedListLinked={false}
       />,
     );
 

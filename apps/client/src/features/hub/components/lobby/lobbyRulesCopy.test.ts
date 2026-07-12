@@ -183,4 +183,13 @@ describe('buildLobbyRulesSections', () => {
     expect(victory?.lines?.some((l) => l.includes('Facile 55 %'))).toBe(true);
     expect(victory?.lines?.some((l) => l.includes('Moyen 50 %'))).toBe(true);
   });
+
+  it('lowers solo bronze threshold copy in anime precision', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, mode: 'solo', difficulty: ['medium'], precision: 'anime' },
+      { lobbyMode: 'solo' },
+    );
+    const victory = sections.find((s) => s.id === 'victory');
+    expect(victory?.lines?.some((l) => l.includes('Seuil Bronze (Moyen) : 45 %'))).toBe(true);
+  });
 });

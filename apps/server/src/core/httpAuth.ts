@@ -24,6 +24,53 @@ const extractBearer = (req: Request): string | null => {
 };
 
 /**
+ * Optional auth: attaches `req.actor` when a valid token is present; never rejects.
+ * Used for public routes that enrich the payload for signed-in users (e.g. library).
+ */
+export const optionalAuth = async (
+  req: AuthedRequest,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const token = extractBearer(req);
+  if (!token) {
+    next();
+    return;
+  }
+
+  const identity = await resolveIdentityFromToken(token);
+  if (!identity) {
+    next();
+    return;
+  }
+
+  try {
+    const row = await prisma.profile.findUnique({
+      where: { id: identity.userId },
+      select: { role: true, bannedUntil: true },
+    });
+    if (!row) {
+      next();
+      return;
+    }
+    if (row.bannedUntil && row.bannedUntil.getTime() > Date.now()) {
+      next();
+      return;
+    }
+    req.actor = {
+      userId: identity.userId,
+      username: identity.username,
+      role: row.role as UserRole,
+    };
+  } catch (e) {
+    logger.warn('Optional auth: profile lookup failed', 'Auth', e);
+  }
+  next();
+};
+
+export { extractBearer };
+
+/**
  * Express middleware factory: authenticates the request via the Supabase access
  * token and enforces a minimum role — read from the database, never from the
  * client. Attaches `req.actor` on success.

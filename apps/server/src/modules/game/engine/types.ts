@@ -22,6 +22,7 @@ export interface RoomPlayer {
   isConnected: boolean;
   isReady: boolean;
   anilistUsername: string | null;
+  malUsername: string | null;
   /** Trusted account role (from socket auth), for the staff badge. */
   role?: UserRole;
   /** Player level (from lifetime XP, resolved at socket auth). */
@@ -127,6 +128,7 @@ export const toPublicPlayer = (
     isInGame:
       opts.status !== 'waiting' && opts.status !== 'starting' && !opts.returned,
     anilistUsername: player.anilistUsername,
+    malUsername: player.malUsername,
     hasAnswered: player.hasAnswered,
     matchCorrectCount: player.matchCorrectCount,
     matchTotalCount: player.matchTotalCount,

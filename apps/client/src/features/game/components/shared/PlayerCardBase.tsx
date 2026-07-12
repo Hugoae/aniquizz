@@ -40,14 +40,14 @@ export function PlayerCardBase({
   return (
     <div
       className={cn(
-        'group relative flex w-full min-w-[150px] items-center gap-2.5 overflow-visible rounded-xl border p-2.5 shadow-lg backdrop-blur-md transition-all duration-300',
+        'group relative flex w-full min-w-[150px] items-center gap-2.5 overflow-visible rounded-xl border p-2.5 shadow-lg transition-all duration-300',
         player.isEliminated
           ? 'border-destructive/30 bg-destructive/10 opacity-60 grayscale'
           : isDisconnected
-            ? 'border-border/40 bg-card/40 opacity-50 grayscale'
+            ? 'border-border/40 bg-card/85 opacity-50 grayscale'
             : isCurrentUser
               ? 'border-primary/40 bg-primary/10 shadow-primary/10'
-              : 'border-border/60 bg-card/60 hover:bg-card/80',
+              : 'border-border/60 bg-card/95 hover:bg-card',
         className,
       )}
       onClick={onClick}

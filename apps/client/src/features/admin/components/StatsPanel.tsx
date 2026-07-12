@@ -439,9 +439,9 @@ export function StatsPanel() {
         />
         <StatCard
           icon={Link2}
-          label="Comptes AniList"
-          value={community.anilistLinked}
-          secondary={`${community.anilistLinkedPercent}% des joueurs`}
+          label="Listes anime liées"
+          value={community.watchedListLinked}
+          secondary={`${community.watchedListLinkedPercent}% — AniList ${community.anilistLinked} · MAL ${community.malLinked}`}
           accent="text-info"
         />
         <StatCard icon={Ban} label="Bannis" value={community.banned} accent="text-destructive" />

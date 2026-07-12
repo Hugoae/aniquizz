@@ -39,7 +39,8 @@ src/
 | `/game` | Active match | ✓ |
 | `/profile`, `/profile/:userId` | Profile | ✓ |
 | `/admin` | Admin panel | ✓ (MODERATOR+) |
-| `/news`, `/library`, `/leaderboard` | Content / coming soon | — |
+| `/library` | Music catalogue browse | prefetch |
+| `/news`, `/leaderboard` | Content / coming soon | — |
 | `/legal/*` | CGU, privacy, mentions | — |
 
 ## Scripts

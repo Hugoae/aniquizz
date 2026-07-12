@@ -22,8 +22,8 @@ interface StandardGameLayoutProps {
   players: GamePlayer[];
   currentRound: number;
   totalRounds: number;
-  timeLeft: number;
-  progress: number;
+  phaseEndsAt: number;
+  phaseDurationSeconds: number;
   volume: number;
   isMuted: boolean;
   onVolumeChange: (v: number) => void;
@@ -68,7 +68,7 @@ interface StandardGameLayoutProps {
 }
 
 export function StandardGameLayout({
-  phase, players, currentRound, totalRounds, timeLeft, progress,
+  phase, players, currentRound, totalRounds, phaseEndsAt, phaseDurationSeconds,
   volume, isMuted, onVolumeChange, onToggleMute, videoRef, autoplayBlocked, onSafePlay,
   isGamePaused, isPausePending, resumeCountdown, onVotePause, pauseVotes, pauseRequired, skipVotes, skipRequired, onVoteSkip,
   currentSong, myWatchedIds,
@@ -163,8 +163,8 @@ export function StandardGameLayout({
                 volume={volume}
                 onToggleMute={onToggleMute}
                 onVolumeChange={onVolumeChange}
-                timeLeft={timeLeft}
-                progress={progress}
+                phaseEndsAt={phaseEndsAt}
+                phaseDurationSeconds={phaseDurationSeconds}
                 gameMode={gameMode}
                 isPausePending={isPausePending}
                 submittedAnswer={submittedAnswer}
@@ -231,7 +231,7 @@ export function StandardGameLayout({
                 type="button"
                 aria-label="Fermer le panneau"
                 onClick={() => setSidebarCollapsed(true)}
-                className="absolute inset-0 z-30 bg-background/60 backdrop-blur-sm"
+                className="absolute inset-0 z-30 bg-background/80"
               />
             )}
             <div className="absolute inset-y-0 right-0 z-40 flex">

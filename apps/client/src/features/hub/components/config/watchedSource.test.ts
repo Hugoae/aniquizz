@@ -14,9 +14,9 @@ describe('isWatchedSourceBlocked', () => {
     expect(isWatchedSourceBlocked('watched', null, null)).toBe(true);
   });
 
-  it('blocks watched source when AniList is not linked', () => {
+  it('blocks watched source when no list provider is linked', () => {
     expect(
-      isWatchedSourceBlocked('watched', { id: 'u1' } as never, { anilistUsername: null } as never),
+      isWatchedSourceBlocked('watched', { id: 'u1' } as never, { anilistUsername: null, malUsername: null } as never),
     ).toBe(true);
   });
 
@@ -28,6 +28,14 @@ describe('isWatchedSourceBlocked', () => {
     ).toBe(false);
   });
 
+  it('allows watched source when MAL is linked', () => {
+    expect(
+      isWatchedSourceBlocked('watched', { id: 'u1' } as never, {
+        malUsername: 'PlayerOne',
+      } as never),
+    ).toBe(false);
+  });
+
   it('does not block random source', () => {
     expect(isWatchedSourceBlocked('random', null, null)).toBe(false);
   });
@@ -35,8 +43,8 @@ describe('isWatchedSourceBlocked', () => {
 
 describe('checkWatchedLobby', () => {
   const humans = [
-    { id: 'a', hasAniList: true },
-    { id: 'b', hasAniList: false },
+    { id: 'a', hasWatchedList: true },
+    { id: 'b', hasWatchedList: false },
   ];
 
   it('returns no block for non-watched sources', () => {
@@ -44,13 +52,13 @@ describe('checkWatchedLobby', () => {
     expect(result.blocked).toBe(false);
   });
 
-  it('blocks union when no human has AniList linked', () => {
+  it('blocks union when no human has a list linked', () => {
     const result = checkWatchedLobby('watched', 'union', [
-      { id: 'a', hasAniList: false },
-      { id: 'b', hasAniList: false },
+      { id: 'a', hasWatchedList: false },
+      { id: 'b', hasWatchedList: false },
     ]);
     expect(result.blocked).toBe(true);
-    expect(result.reason).toMatch(/AniList/i);
+    expect(result.reason).toMatch(/AniList|MyAnimeList/i);
   });
 
   it('blocks intersection when any human is unlinked', () => {
@@ -61,16 +69,16 @@ describe('checkWatchedLobby', () => {
 
   it('allows intersection when all humans are linked', () => {
     const result = checkWatchedLobby('watched', 'intersection', [
-      { id: 'a', hasAniList: true },
-      { id: 'b', hasAniList: true },
+      { id: 'a', hasWatchedList: true },
+      { id: 'b', hasWatchedList: true },
     ]);
     expect(result.blocked).toBe(false);
   });
 
   it('ignores bots for watched lobby validation', () => {
     const result = checkWatchedLobby('watched', 'intersection', [
-      { id: 'a', hasAniList: true },
-      { id: 'bot', isBot: true, hasAniList: false },
+      { id: 'a', hasWatchedList: true },
+      { id: 'bot', isBot: true, hasWatchedList: false },
     ]);
     expect(result.blocked).toBe(false);
   });
@@ -170,6 +178,6 @@ describe('resolveWatchedPoolBanner', () => {
 
 describe('WATCHED_SOURCE_BLOCK_MESSAGE', () => {
   it('is a French user-facing string', () => {
-    expect(WATCHED_SOURCE_BLOCK_MESSAGE).toMatch(/AniList/);
+    expect(WATCHED_SOURCE_BLOCK_MESSAGE).toMatch(/AniList|MyAnimeList/i);
   });
 });

@@ -5,7 +5,8 @@ import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
 import type { Room } from '../game/engine/Room';
 import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
-import { getUserAnimeIds } from '../anilist/anilistService';
+import { resolvePlayerCatalogueIds } from '../lists/listResolver';
+import { hasWatchedListLink } from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { BotConfig } from '../game/engine/types';
 import { LOBBY_LIST_ROOM } from './lobbyRooms';
@@ -14,34 +15,27 @@ import { LOBBY_LIST_ROOM } from './lobbyRooms';
 const DEV_BOT_CONFIG: BotConfig = { accuracy: 0.7, minDelayMs: 2_000, maxDelayMs: 8_000 };
 
 /**
- * Warm a player's AniList watched list while they sit in the lobby, so the
- * playlist build at match start reads it from cache instead of blocking on the
- * network (removes the "Watched" start-time spike). Resolves the AniList
- * username from the profile if needed and stores it on the player, then fetches
- * the list in the background and caches the ids on the player. Fire-and-forget.
+ * Warm a player's watched list (AniList or MAL) while they sit in the lobby so
+ * match-start playlist build hits the in-memory cache. Fire-and-forget.
  */
 const warmWatchedList = async (room: Room, userId: string): Promise<void> => {
   if (room.settings.soundSelection !== 'watched') return;
   const player = room.players.get(userId);
   if (!player || player.isBot) return;
 
-  let username = player.anilistUsername ?? null;
-  if (!username) {
-    const profile = await prisma.profile.findUnique({
-      where: { id: userId },
-      select: { anilistUsername: true },
-    });
-    username = profile?.anilistUsername ?? null;
-    if (username) player.anilistUsername = username;
-  }
-  if (!username) return;
+  const profile = await prisma.profile.findUnique({
+    where: { id: userId },
+    select: { anilistUsername: true, malUsername: true },
+  });
+  if (!profile || !hasWatchedListLink(profile)) return;
+
+  if (profile.anilistUsername) player.anilistUsername = profile.anilistUsername;
+  if (profile.malUsername) player.malUsername = profile.malUsername;
 
   try {
-    const ids = await getUserAnimeIds(username);
-    // Warm the in-memory AniList cache only — playlist build re-fetches from username.
-    void ids;
+    await resolvePlayerCatalogueIds(userId, profile);
   } catch {
-    // Non-fatal: the build will retry the (now-warm) cache at start time.
+    // Non-fatal: playlist build will retry at start time.
   }
 };
 
@@ -81,6 +75,7 @@ export const registerLobbyHandlers = (
         role: socket.data.role,
         level: socket.data.level,
         anilistUsername: socket.data.anilistUsername,
+        malUsername: socket.data.malUsername,
       });
 
       logger.info(
@@ -140,6 +135,7 @@ export const registerLobbyHandlers = (
         role: socket.data.role,
         level: socket.data.level,
         anilistUsername: socket.data.anilistUsername,
+        malUsername: socket.data.malUsername,
       });
       // Entering the lobby view means this player is no longer on the game-over
       // screen; clears their "in game" badge and can settle the room to waiting.

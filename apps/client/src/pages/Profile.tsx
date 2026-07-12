@@ -13,14 +13,14 @@ import { toast } from 'sonner';
 import { type Area } from 'react-easy-crop';
 
 import { ArrowLeft, Disc, Music2, Medal, Award } from 'lucide-react';
-import type { MatchHistoryEntry, PublicProfile as PublicProfileData } from '@aniquizz/shared';
+import type { MatchHistoryEntry, PublicProfile as PublicProfileData, WatchedListProvider } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 
 import { Header } from '@/components/layout/Header';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileStatsSection } from '@/features/profile/components/ProfileStatsSection';
 import { AvatarCropDialog } from '@/features/profile/components/AvatarCropDialog';
-import { AniListDialog } from '@/features/profile/components/AniListDialog';
+import { WatchlistLinkDialog } from '@/features/profile/components/WatchlistLinkDialog';
 import { PasswordDialog } from '@/features/profile/components/PasswordDialog';
 import { DeleteAccountDialog } from '@/features/profile/components/DeleteAccountDialog';
 import { MatchHistory } from '@/features/profile/components/MatchHistory';
@@ -106,9 +106,10 @@ export default function Profile() {
   const [statsData, setStatsData] = useState<StatsData>(INITIAL_STATS);
   const [publicData, setPublicData] = useState<PublicProfileData | null>(null);
 
-  const [showAniListModal, setShowAniListModal] = useState(false);
-  const [anilistName, setAnilistName] = useState('');
-  const pendingAnilistRef = useRef<'link' | 'unlink' | null>(null);
+  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
+  const [watchlistProvider, setWatchlistProvider] = useState<WatchedListProvider>('anilist');
+  const [watchlistName, setWatchlistName] = useState('');
+  const pendingWatchlistRef = useRef<{ action: 'link' | 'unlink'; provider: WatchedListProvider } | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -135,7 +136,7 @@ export default function Profile() {
 
   useEffect(() => {
     if (profile) {
-      setAnilistName(profile.anilistUsername || '');
+      setWatchlistName(profile.anilistUsername || profile.malUsername || '');
       setNewUsername(profile.username);
     }
   }, [profile]);
@@ -167,15 +168,19 @@ export default function Profile() {
       if (isStatsData(data)) setStatsData(data);
     };
     const onProfileUpdate = () => {
-      const action = pendingAnilistRef.current;
-      pendingAnilistRef.current = null;
-      if (action === 'link') toast.success('Compte AniList lié !');
-      else if (action === 'unlink') toast.success('Compte AniList délié.');
-      else toast.success('Profil mis à jour !');
+      const pending = pendingWatchlistRef.current;
+      pendingWatchlistRef.current = null;
+      if (pending?.action === 'link') {
+        toast.success(pending.provider === 'mal' ? 'Compte MyAnimeList lié !' : 'Compte AniList lié !');
+      } else if (pending?.action === 'unlink') {
+        toast.success(pending.provider === 'mal' ? 'Compte MyAnimeList délié.' : 'Compte AniList délié.');
+      } else {
+        toast.success('Profil mis à jour !');
+      }
       setIsSaving(false); setIsEditingUsername(false); refreshProfileRef.current();
     };
     const onError = (err: { message?: string }) => {
-      pendingAnilistRef.current = null;
+      pendingWatchlistRef.current = null;
       toast.error(err?.message || 'Une erreur est survenue'); setIsSaving(false);
     };
 
@@ -287,19 +292,36 @@ export default function Profile() {
 
   // All Profile writes go through the server (socket) so the client never
   // touches the table directly — the Profile RLS update policy is locked down.
-  const handleLinkAnilist = () => {
-    const name = anilistName.trim();
-    if (!name || !user) return;
-    pendingAnilistRef.current = 'link';
-    socket.emit('update_profile_data', { anilistUsername: name });
-    setShowAniListModal(false);
+  const openWatchlistLink = (provider: WatchedListProvider) => {
+    setWatchlistProvider(provider);
+    setWatchlistName(
+      provider === 'anilist' ? (profile?.anilistUsername || '') : (profile?.malUsername || ''),
+    );
+    setShowWatchlistModal(true);
   };
 
-  const handleUnlinkAnilist = () => {
+  const handleLinkWatchlist = () => {
+    const name = watchlistName.trim();
+    if (!name || !user) return;
+    pendingWatchlistRef.current = { action: 'link', provider: watchlistProvider };
+    if (watchlistProvider === 'mal') {
+      socket.emit('update_profile_data', { malUsername: name });
+    } else {
+      socket.emit('update_profile_data', { anilistUsername: name });
+    }
+    setShowWatchlistModal(false);
+  };
+
+  const handleUnlinkWatchlist = () => {
     if (!user) return;
-    pendingAnilistRef.current = 'unlink';
-    socket.emit('update_profile_data', { anilistUsername: null });
-    setAnilistName('');
+    const provider = profile?.malUsername ? 'mal' : 'anilist';
+    pendingWatchlistRef.current = { action: 'unlink', provider };
+    if (provider === 'mal') {
+      socket.emit('update_profile_data', { malUsername: null });
+    } else {
+      socket.emit('update_profile_data', { anilistUsername: null });
+    }
+    setWatchlistName('');
   };
 
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -382,6 +404,7 @@ export default function Profile() {
             isOwn={isOwn}
             relation={relation}
             anilistUsername={profile?.anilistUsername}
+            malUsername={profile?.malUsername}
             isEditingUsername={isEditingUsername}
             newUsername={newUsername}
             isSaving={isSaving}
@@ -390,8 +413,8 @@ export default function Profile() {
             onSaveUsername={saveUsername}
             onCancelEditUsername={() => { setIsEditingUsername(false); setNewUsername(vm.username); }}
             onPickAvatarFile={onFileChange}
-            onOpenAniList={() => setShowAniListModal(true)}
-            onUnlinkAniList={handleUnlinkAnilist}
+            onOpenWatchlistLink={openWatchlistLink}
+            onUnlinkWatchlist={handleUnlinkWatchlist}
             onOpenPasswordModal={() => setShowPasswordModal(true)}
             onOpenDeleteAccountModal={() => setShowDeleteAccountModal(true)}
             onSignOut={signOut}
@@ -509,12 +532,22 @@ export default function Profile() {
             onConfirm={uploadAvatar}
           />
 
-          <AniListDialog
-            open={showAniListModal}
-            onOpenChange={(open) => { setShowAniListModal(open); if (!open) setAnilistName(profile?.anilistUsername || ''); }}
-            value={anilistName}
-            onChange={setAnilistName}
-            onSave={handleLinkAnilist}
+          <WatchlistLinkDialog
+            provider={watchlistProvider}
+            open={showWatchlistModal}
+            onOpenChange={(open) => {
+              setShowWatchlistModal(open);
+              if (!open) {
+                setWatchlistName(
+                  watchlistProvider === 'mal'
+                    ? (profile?.malUsername || '')
+                    : (profile?.anilistUsername || ''),
+                );
+              }
+            }}
+            value={watchlistName}
+            onChange={setWatchlistName}
+            onSave={handleLinkWatchlist}
           />
 
           <PasswordDialog

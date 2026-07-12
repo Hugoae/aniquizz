@@ -42,9 +42,6 @@ export default defineConfig(({ mode }) => ({
         const tags: string[] = [];
 
         for (const file of fs.readdirSync(assetsDir)) {
-          if (/^Home-.*\.js$/.test(file)) {
-            tags.push(`<link rel="modulepreload" crossorigin href="/assets/${file}">`);
-          }
           if (/bricolage-grotesque-latin-800-normal.*\.woff2$/i.test(file)) {
             tags.push(
               `<link rel="preload" href="/assets/${file}" as="font" type="font/woff2" crossorigin>`,

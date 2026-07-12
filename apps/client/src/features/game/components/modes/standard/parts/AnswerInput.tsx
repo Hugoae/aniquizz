@@ -79,7 +79,7 @@ export function AnswerInput({
   return (
     <div className={cn('relative flex w-full flex-col items-center gap-3', disabled && 'pointer-events-none opacity-60')}>
       {submittedAnswer && (
-        <div className="flex animate-fade-in items-center gap-2 rounded-md border border-primary/30 bg-primary/20 px-4 py-1.5 shadow-lg backdrop-blur-sm">
+        <div className="flex animate-fade-in items-center gap-2 rounded-md border border-primary/30 bg-primary/20 px-4 py-1.5 shadow-lg">
           <span className="text-xs font-bold uppercase text-primary">Votre réponse :</span>
           <span className="text-sm font-bold text-foreground">{submittedAnswer}</span>
         </div>
@@ -145,7 +145,7 @@ export function AnswerInput({
             aria-activedescendant={showPanel ? `answer-suggestion-${activeIndex}` : undefined}
             autoComplete="off"
             className={cn(
-              'h-14 flex-1 rounded-lg border-primary/20 bg-card/50 pl-4 text-lg backdrop-blur-sm focus-visible:ring-primary/50',
+              'h-14 flex-1 rounded-lg border-primary/20 bg-card/90 pl-4 text-lg focus-visible:ring-primary/50',
               submittedAnswer && 'border-primary/50 bg-primary/5',
             )}
             autoFocus={!disabled}
