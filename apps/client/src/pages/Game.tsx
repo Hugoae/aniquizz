@@ -85,7 +85,7 @@ export default function Game() {
   const suggestions = useAnimeSearch({
     query: answer,
     precision: normalizePrecision(settings.precision),
-    enabled: inputMode === 'typing' && phase === 'guessing',
+    enabled: inputMode === 'typing' && phase === 'guessing' && !submittedAnswer,
   });
 
   const [showLeaveChoice, setShowLeaveChoice] = useState(false);

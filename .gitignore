@@ -36,11 +36,13 @@ coverage/
 # Prisma
 packages/database/prisma/*.db
 
-# Data pipeline: ignore heavy generated intermediates, keep versioned manual edits
+# Data pipeline: generated / local-only (not published to GitHub)
 packages/database/data/data_step1.json
 packages/database/data/data_step2.json
 packages/database/data/animethemes_cache.json
 packages/database/data/r2-integrity-report.json
+packages/database/data/manual_edits.json
+packages/database/data/pipeline_exclusions.json
 packages/database/data/tmp/
 
 # Stray package manager locks (this repo uses pnpm)

@@ -12,6 +12,7 @@ import {
 } from "./lib/r2-client";
 import { compressMp4, downloadToFile, getVideoDurationSeconds, isPlayableMp4, safeUnlink } from "./lib/media";
 import { formatDuration, Progress, Tally } from "./lib/progress";
+import { isPermanentWorkerError, parseSkipVideoKeys } from "./lib/worker-errors";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -31,6 +32,8 @@ const RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? 2000);
 // skip stale/dead sources (e.g. the old Supabase bucket) and only download freshly
 // resolved AnimeThemes URLs — set `WORKER_SOURCE_INCLUDE=animethemes.moe`.
 const SOURCE_INCLUDE = process.env.WORKER_SOURCE_INCLUDE?.trim() || null;
+// Comma-separated videoKeys to mark SKIPPED before processing (e.g. broken encodes).
+const SKIP_VIDEO_KEYS = parseSkipVideoKeys(process.env.WORKER_SKIP_VIDEO_KEYS);
 
 const pendingWhere: Prisma.SongWhereInput = {
   downloadStatus: "PENDING",
@@ -208,11 +211,45 @@ async function main() {
   await reclaimStale();
 
   if (RESET_ERRORS_ON_START) {
-    const updated = await prisma.song.updateMany({
+    const errors = await prisma.song.findMany({
       where: { downloadStatus: "ERROR" },
-      data: { downloadStatus: "PENDING", errorLog: null },
+      select: { id: true, videoKey: true, errorLog: true },
     });
-    console.log(`♻️  Reset ${updated.count} ERROR song(s) -> PENDING.`);
+
+    const retryable = errors.filter((s) => !isPermanentWorkerError(s.errorLog));
+    const permanent = errors.filter((s) => isPermanentWorkerError(s.errorLog));
+
+    if (retryable.length) {
+      await prisma.song.updateMany({
+        where: { id: { in: retryable.map((s) => s.id) } },
+        data: { downloadStatus: "PENDING", errorLog: null },
+      });
+      console.log(`♻️  Reset ${retryable.length} ERROR song(s) -> PENDING.`);
+    }
+
+    if (permanent.length) {
+      await prisma.song.updateMany({
+        where: { id: { in: permanent.map((s) => s.id) } },
+        data: { downloadStatus: "SKIPPED" },
+      });
+      console.log(`⏭️  Marked ${permanent.length} permanent ERROR song(s) as SKIPPED.`);
+      for (const song of permanent) {
+        console.log(`      - ${song.videoKey}`);
+      }
+    }
+  }
+
+  if (SKIP_VIDEO_KEYS.size) {
+    const skipped = await prisma.song.updateMany({
+      where: {
+        videoKey: { in: [...SKIP_VIDEO_KEYS] },
+        downloadStatus: { in: ["PENDING", "ERROR"] },
+      },
+      data: { downloadStatus: "SKIPPED", errorLog: "Skipped via WORKER_SKIP_VIDEO_KEYS" },
+    });
+    if (skipped.count) {
+      console.log(`⏭️  Skipped ${skipped.count} song(s) via WORKER_SKIP_VIDEO_KEYS.`);
+    }
   }
 
   const initialPending = await prisma.song.count({ where: pendingWhere });
@@ -229,11 +266,13 @@ async function main() {
   progress.done();
 
   const finalSuccess = await prisma.song.count({ where: { downloadStatus: "COMPLETED" } });
+  const finalSkipped = await prisma.song.count({ where: { downloadStatus: "SKIPPED" } });
   const finalErrors = await prisma.song.count({ where: { downloadStatus: "ERROR" } });
 
   tally.print("📊 BILAN WORKER (ce run)");
   console.log(`\n✨ JOB DONE in ${formatDuration(progress.elapsedMs)}`);
   console.log(`   ✅ COMPLETED (total DB): ${finalSuccess}`);
+  console.log(`   ⏭️  SKIPPED (total DB)   : ${finalSkipped}`);
   console.log(`   ❌ ERROR (total DB)    : ${finalErrors}`);
 
   await prisma.$disconnect();

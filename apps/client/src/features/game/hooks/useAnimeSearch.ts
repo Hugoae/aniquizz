@@ -26,10 +26,23 @@ export function useAnimeSearch({
   const [suggestions, setSuggestions] = useState<AnimeSuggestion[]>([]);
   const requestIdRef = useRef(0);
   const appliedRequestIdRef = useRef(0);
+  const queryRef = useRef(query);
+  /** Query string sent with each requestId — drops stale socket replies after submit/clear. */
+  const sentQueryByRequestIdRef = useRef<Map<number, string>>(new Map());
+
+  useEffect(() => {
+    queryRef.current = query;
+  }, [query]);
 
   useEffect(() => {
     const onResults = (payload: { requestId: number; results: AnimeSuggestion[] }) => {
       if (payload.requestId < appliedRequestIdRef.current) return;
+
+      const sentQuery = sentQueryByRequestIdRef.current.get(payload.requestId);
+      const currentQuery = queryRef.current.trim();
+      // Ignore replies that no longer match the input (e.g. answer submitted, field cleared).
+      if (sentQuery === undefined || sentQuery !== currentQuery) return;
+
       appliedRequestIdRef.current = payload.requestId;
       setSuggestions(payload.results);
     };
@@ -53,6 +66,7 @@ export function useAnimeSearch({
 
     const handle = window.setTimeout(() => {
       const requestId = (requestIdRef.current += 1);
+      sentQueryByRequestIdRef.current.set(requestId, trimmed);
       socket.emit('anime:search', { requestId, query: trimmed, precision: normalizePrecision(precision) });
     }, DEBOUNCE_MS);
 

@@ -61,10 +61,14 @@ export function AnswerInput({
   const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
+    if (submittedAnswer) {
+      setPanelOpen(false);
+      return;
+    }
     setActiveIndex(0);
     if (suggestions.length > 0 && !disabled) setPanelOpen(true);
     if (suggestions.length === 0) setPanelOpen(false);
-  }, [suggestions, disabled]);
+  }, [suggestions, disabled, submittedAnswer]);
 
   const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
   const showChoices = !showTyping && choices.length > 0;
@@ -171,6 +175,7 @@ export function AnswerInput({
               }
               if (e.key === 'Enter') {
                 e.preventDefault();
+                setPanelOpen(false);
                 if (showPanel && suggestions[activeIndex]) {
                   pickSuggestion(suggestions[activeIndex]);
                 } else {

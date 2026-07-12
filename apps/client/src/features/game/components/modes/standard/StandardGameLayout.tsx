@@ -149,7 +149,7 @@ export function StandardGameLayout({
 
           <div className="relative flex h-full min-h-0 w-full max-w-[1400px] animate-fade-in flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
             {/* Left stack: video, answer slot, players floor. */}
-            <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center">
+            <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-hidden">
               <VideoStage
                 videoRef={videoRef}
                 phase={phase}

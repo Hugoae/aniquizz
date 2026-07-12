@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Eye, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { AlertCircle, Clock, Eye, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
@@ -59,15 +59,18 @@ export const VideoStage = memo(function VideoStage({
   onVoteSkip,
 }: VideoStageProps) {
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [hasPaintedFrame, setHasPaintedFrame] = useState(false);
   const currentVideoKey = currentSong?.videoKey ?? null;
 
   useEffect(() => {
     setIsVideoReady(false);
+    setHasPaintedFrame(false);
   }, [currentVideoKey]);
 
   const markVideoReady = () => setIsVideoReady(true);
+  const markPaintedFrame = () => setHasPaintedFrame(true);
 
-  const isRevealed = phase === 'revealed' && isVideoReady;
+  const isRevealed = phase === 'revealed' && isVideoReady && hasPaintedFrame;
   const isGuessing = phase === 'guessing';
   const visualGuessMode = videoMode === 'blurred' || videoMode === 'peek';
   const useCenterTimer = phase === 'loading' || phase === 'ready' || (isGuessing && !visualGuessMode);
@@ -81,7 +84,7 @@ export const VideoStage = memo(function VideoStage({
 
   const videoClassName = useMemo(() => {
     if (isRevealed) {
-      return 'absolute inset-0 z-0 h-full w-full object-cover opacity-100 transition-opacity duration-500';
+      return 'absolute inset-0 z-0 h-full w-full object-cover object-center opacity-100 transition-opacity duration-500';
     }
     if (!isGuessing) {
       return 'absolute inset-0 z-0 h-full w-full object-cover opacity-0';
@@ -109,7 +112,7 @@ export const VideoStage = memo(function VideoStage({
   return (
     <div
       className={cn(
-        'group relative aspect-video max-h-[40vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500',
+        'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500',
         isGuessing && videoMode === 'peek' ? 'bg-background' : 'bg-black',
       )}
     >
@@ -127,6 +130,7 @@ export const VideoStage = memo(function VideoStage({
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback"
         onSeeked={markVideoReady}
+        onPlaying={markPaintedFrame}
         onLoadedData={() => {
           if ((currentSong?.videoStartTime ?? 0) === 0) markVideoReady();
         }}
@@ -207,12 +211,21 @@ export const VideoStage = memo(function VideoStage({
       )}
 
       <DevRenderProfiler id="MatchCountdownOverlays">
+        {isPausePending && !isGamePaused && (
+          <div
+            className="pointer-events-none absolute left-4 top-3 z-40 flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-full border border-warning/40 bg-background/95 px-3 py-1.5 shadow-lg"
+            role="status"
+            aria-live="polite"
+          >
+            <Clock className="h-3.5 w-3.5 animate-pulse text-warning" aria-hidden="true" />
+            <span className="text-xs font-bold text-warning">Pause en fin de round</span>
+          </div>
+        )}
         <MatchCountdownOverlays
           phase={phase}
           phaseEndsAt={phaseEndsAt}
           phaseDurationSeconds={phaseDurationSeconds}
           isGamePaused={isGamePaused}
-          isPausePending={isPausePending}
           useCenterTimer={useCenterTimer}
           useBottomBar={useBottomBar}
         />

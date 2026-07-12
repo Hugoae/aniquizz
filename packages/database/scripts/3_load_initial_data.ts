@@ -12,6 +12,7 @@ import {
 import { formatDuration, Progress, Tally } from './lib/progress';
 import { isSongExcluded, loadAllPipelineExclusions } from './lib/load-pipeline-exclusions';
 import { recomputeFranchiseMaxPopularity } from './lib/franchise-popularity';
+import { syncPipelineSerialSequences } from './lib/sync-serial-sequences';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -30,6 +31,11 @@ async function main() {
   const rawJson = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf-8'));
   const franchisesData = parsePipelineJson(rawJson, 'data_step2.json');
   const pipelineExclusions = loadAllPipelineExclusions(DATA_DIR);
+
+  // manual_edits import can insert Franchise rows with explicit ids and leave the
+  // serial sequence behind MAX(id) — the next create then hits P2002 on id.
+  await syncPipelineSerialSequences(prisma);
+
   console.log(`📦 ${franchisesData.length} Franchises à traiter...`);
 
   const tally = new Tally();
@@ -69,17 +75,23 @@ async function main() {
 
     if (dbFranchise && dbFranchise.isLocked) {
       franchiseId = dbFranchise.id;
+    } else if (dbFranchise) {
+      // Linked via an existing anime (name in JSON may differ from DB row).
+      const f = await prisma.franchise.update({
+        where: { id: dbFranchise.id },
+        data: { genres: fData.genres || [] },
+      });
+      franchiseId = f.id;
     } else {
-      // ✅ FIX 2: Upsert propre sur le 'name' (au lieu de l'ID -1)
       const f = await prisma.franchise.upsert({
         where: { name: franchiseName },
         create: {
           name: franchiseName,
-          genres: fData.genres || []
+          genres: fData.genres || [],
         },
         update: {
-          genres: fData.genres || []
-        }
+          genres: fData.genres || [],
+        },
       });
       franchiseId = f.id;
     }

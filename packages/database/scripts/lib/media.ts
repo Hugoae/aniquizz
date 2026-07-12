@@ -160,19 +160,78 @@ export async function compressMp4(
   outputPath: string,
   timeoutMs = 60_000,
 ): Promise<void> {
+  // VP9/Opus WebM sources (e.g. AnimeThemes) can have negative audio start_pts;
+  // without a larger mux queue ffmpeg fails with "Too many packets buffered".
+  const strategies: string[][] = [
+    [
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "28",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
+      "-avoid_negative_ts",
+      "make_zero",
+      "-max_muxing_queue_size",
+      "1024",
+      "-vf",
+      "scale=-2:720",
+    ],
+    [
+      "-c:v",
+      "libx264",
+      "-preset",
+      "veryfast",
+      "-crf",
+      "28",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-b:a",
+      "128k",
+      "-movflags",
+      "+faststart",
+      "-avoid_negative_ts",
+      "make_zero",
+      "-max_muxing_queue_size",
+      "1024",
+    ],
+  ];
+
+  let lastError: unknown;
+  for (const outputOptions of strategies) {
+    await safeUnlink(outputPath);
+    try {
+      await runFfmpegCompress(inputPath, outputPath, outputOptions, timeoutMs);
+      return;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Compression failed");
+}
+
+function runFfmpegCompress(
+  inputPath: string,
+  outputPath: string,
+  outputOptions: string[],
+  timeoutMs: number,
+): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const safetyTimeout = setTimeout(() => reject(new Error("Compression Timeout")), timeoutMs);
 
     ffmpeg(inputPath)
-      .outputOptions([
-        "-c:v libx264",
-        "-preset veryfast",
-        "-crf 28",
-        "-c:a aac",
-        "-b:a 128k",
-        "-movflags +faststart",
-        "-vf scale=-2:720",
-      ])
+      .outputOptions(outputOptions)
       .on("end", () => {
         clearTimeout(safetyTimeout);
         resolve();
