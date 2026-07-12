@@ -13,7 +13,13 @@
     <meta name="apple-mobile-web-app-title" content="AniQuizz" />
     <link rel="canonical" href="https://aniquizz.com/" />
 
-    <!-- Blocking first-paint shell — mirrors Home before React/Tailwind load. -->
+    <!--
+      First-paint shell CSS — mirrors Home before React/Tailwind load.
+      This link is replaced at build time by an inline <style> (see
+      app-shell-inline-css in vite.config.ts) so the shell is styled on the
+      very first paint with no extra round-trip. public/app-shell.css stays
+      the single source of truth.
+    -->
     <link rel="stylesheet" href="/app-shell.css" />
     <link rel="preload" href="/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/plus-jakarta-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />

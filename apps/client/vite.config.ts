@@ -14,30 +14,44 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     {
-      name: "app-shell-css-first",
-      apply: "build",
+      // Inline the critical shell CSS and keep it first, so the static #app-shell
+      // is fully styled on the very first paint with zero extra round-trip.
+      // A separate <link href="/app-shell.css"> is a second request that paints
+      // the raw shell HTML unstyled for ~0.2s on warm connections (cold-load FOUC).
+      name: "app-shell-inline-css",
       transformIndexHtml: {
         order: "post",
         handler(html) {
-          const cssLink = html.match(
-            /<link rel="stylesheet"[^>]*href="\/assets\/[^"]+\.css"[^>]*>/,
-          );
-          const moduleScript = html.match(
-            /<script type="module"[^>]*src="\/assets\/[^"]+\.js"[^>]*><\/script>/,
-          );
-
           let next = html;
 
+          // 1. Inline public/app-shell.css (single source of truth) into <head>.
+          //    CSP allows this: style-src includes 'unsafe-inline'.
+          const shellCssPath = path.resolve(__dirname, "public/app-shell.css");
+          if (fs.existsSync(shellCssPath)) {
+            const shellCss = fs.readFileSync(shellCssPath, "utf8").trimEnd();
+            next = next.replace(
+              /<link rel="stylesheet" href="\/app-shell\.css" \/>/,
+              `<style id="app-shell-critical">\n${shellCss}\n    </style>`,
+            );
+          }
+
+          // 2. Keep the hashed Tailwind bundle right after the critical CSS.
+          const cssLink = next.match(
+            /<link rel="stylesheet"[^>]*href="\/assets\/[^"]+\.css"[^>]*>/,
+          );
           if (cssLink) {
             const tag = cssLink[0];
             next = next.replace(tag, "");
             next = next.replace(
-              /(<link rel="stylesheet" href="\/app-shell\.css" \/>)/,
+              /(<style id="app-shell-critical">[\s\S]*?<\/style>)/,
               `$1\n    ${tag}`,
             );
           }
 
-          // Body-end module script: CSS in <head> finishes before JS executes.
+          // 3. Body-end module script: head CSS parses before JS executes.
+          const moduleScript = next.match(
+            /<script type="module"[^>]*src="\/assets\/[^"]+\.js"[^>]*><\/script>/,
+          );
           if (moduleScript) {
             const tag = moduleScript[0];
             next = next.replace(tag, "");
