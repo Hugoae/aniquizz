@@ -64,6 +64,25 @@ ANILIST_LIMIT=500 npx ts-node scripts/1_fetch_anilist.ts
 # ... then steps 2, 3, 4 again.
 ```
 
+### Fast incremental re-run (skip sequel walks)
+
+Sequel expansion (locked franchises + new top entries) is the slowest part of
+step 1: one AniList request plus `ANILIST_DELAY_MS` per hop in the chain. After a
+recent full run, skip it when you only want to refresh the popularity top:
+
+```bash
+# Skip all sequel walks (locked + new franchises)
+ANILIST_SKIP_SEQUELS=1 ANILIST_LIMIT=500 npx ts-node scripts/1_fetch_anilist.ts
+
+# Or skip only one side:
+ANILIST_SKIP_LOCKED_SEQUELS=1 npx ts-node scripts/1_fetch_anilist.ts   # phase 1b
+ANILIST_SKIP_NEW_SEQUELS=1 npx ts-node scripts/1_fetch_anilist.ts      # phase 4
+```
+
+Prequel expansion (phase 2b) still runs — it fills earlier seasons missing from
+the top list. Do **not** skip sequels on a weekly/monthly full sync or right
+after a major new season release; you may miss freshly published sequels.
+
 `WORKER_SOURCE_INCLUDE=animethemes.moe` makes the worker only download freshly
 resolved AnimeThemes sources and skip any stale ones (e.g. rows left over from
 the retired Supabase storage bucket).

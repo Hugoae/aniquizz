@@ -25,6 +25,21 @@ const ANIME_LIMIT = Math.max(1, Number(process.env.ANILIST_LIMIT ?? 500));
 const ITEMS_PER_PAGE = Math.min(50, Math.max(1, Number(process.env.ANILIST_PER_PAGE ?? 50)));
 const DELAY_MS = Math.max(0, Number(process.env.ANILIST_DELAY_MS ?? 1000));
 
+/** Truthy when env is 1, true, or yes (case-insensitive). */
+function isTruthyEnv(value: string | undefined): boolean {
+  if (!value?.trim()) return false;
+  const normalized = value.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+// Sequel walks are the slowest step (1 API call + DELAY_MS per hop). Skip for
+// incremental runs shortly after a full fetch — see README.
+const SKIP_ALL_SEQUELS = isTruthyEnv(process.env.ANILIST_SKIP_SEQUELS);
+const SKIP_LOCKED_SEQUELS =
+  SKIP_ALL_SEQUELS || isTruthyEnv(process.env.ANILIST_SKIP_LOCKED_SEQUELS);
+const SKIP_NEW_SEQUELS =
+  SKIP_ALL_SEQUELS || isTruthyEnv(process.env.ANILIST_SKIP_NEW_SEQUELS);
+
 // Paths relative to database/scripts/
 const OUTPUT_DIR = path.join(__dirname, '../data');
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'data_step1.json');
@@ -221,6 +236,12 @@ function normalizeSeason(s: any) {
 async function generateCompleteTree() {
   const started = Date.now();
   console.log(`🚀 PHASE 1 : Récupération AniList (top ${ANIME_LIMIT} par popularité)...`);
+  if (SKIP_LOCKED_SEQUELS || SKIP_NEW_SEQUELS) {
+    const parts: string[] = [];
+    if (SKIP_LOCKED_SEQUELS) parts.push('locked-franchise sequels');
+    if (SKIP_NEW_SEQUELS) parts.push('new-franchise sequels');
+    console.log(`⏭️  Sequel expansion skipped: ${parts.join(', ')}`);
+  }
 
   // 1. Load locked franchises (manual_edits.json, then DB fallback)
   const prisma = new PrismaClient();
@@ -273,7 +294,7 @@ async function generateCompleteTree() {
   // SEQUEL entries released since and add them as UNLOCKED seasons so they follow
   // the normal pipeline. Their ids are added to lockedAnimeIds so they are not
   // fetched again as a separate franchise during the top pass.
-  if (lockedFranchises.length > 0) {
+  if (lockedFranchises.length > 0 && !SKIP_LOCKED_SEQUELS) {
     console.log("🔓 Recherche de nouvelles saisons pour les franchises verrouillées...");
     let newlyAdded = 0;
 
@@ -287,6 +308,8 @@ async function generateCompleteTree() {
     }
 
     console.log(`✅ ${newlyAdded} nouvelle(s) saison(s) ajoutée(s) aux franchises verrouillées.`);
+  } else if (lockedFranchises.length > 0 && SKIP_LOCKED_SEQUELS) {
+    console.log('⏭️  Recherche de suites (franchises verrouillées) ignorée.');
   }
 
   // 2. Fetch popularity top
@@ -404,46 +427,50 @@ async function generateCompleteTree() {
   }
 
   // 4. Expansion des suites (Sequels)
-  console.log("🕵️ Expansion des suites...");
-  const franchiseNames = Object.keys(franchises);
+  if (!SKIP_NEW_SEQUELS) {
+    console.log("🕵️ Expansion des suites...");
+    const franchiseNames = Object.keys(franchises);
 
-  for (const fName of franchiseNames) {
-    const franchiseList = franchises[fName];
+    for (const fName of franchiseNames) {
+      const franchiseList = franchises[fName];
 
-    let expanded = true;
-    while (expanded) {
-      expanded = false;
+      let expanded = true;
+      while (expanded) {
+        expanded = false;
 
-      for (const anime of [...franchiseList]) {
-        const sequelEdge = findSequelEdge(anime);
-        if (!sequelEdge) continue;
+        for (const anime of [...franchiseList]) {
+          const sequelEdge = findSequelEdge(anime);
+          if (!sequelEdge) continue;
 
-        const sequelId = sequelEdge.node.id;
-        if (lockedAnimeIds.has(sequelId) || excludedAnimeIds.has(sequelId)) continue;
-        if (franchiseList.find((a) => a.id === sequelId)) continue;
+          const sequelId = sequelEdge.node.id;
+          if (lockedAnimeIds.has(sequelId) || excludedAnimeIds.has(sequelId)) continue;
+          if (franchiseList.find((a) => a.id === sequelId)) continue;
 
-        if (animeMap.has(sequelId)) {
-          franchiseList.push(animeMap.get(sequelId));
-          expanded = true;
-          continue;
-        }
+          if (animeMap.has(sequelId)) {
+            franchiseList.push(animeMap.get(sequelId));
+            expanded = true;
+            continue;
+          }
 
-        process.stdout.write(`   + Suite de ${fName}... `);
-        await delay(DELAY_MS);
-        const newAnime = await fetchWithRetry(sequelId);
+          process.stdout.write(`   + Suite de ${fName}... `);
+          await delay(DELAY_MS);
+          const newAnime = await fetchWithRetry(sequelId);
 
-        if (newAnime && isValidStatus(newAnime.status)) {
-          console.log(`OK (${newAnime.title.romaji})`);
-          franchiseList.push(newAnime);
-          animeMap.set(newAnime.id, newAnime);
-          expanded = true;
-        } else if (newAnime) {
-          console.log(`Stop (Statut: ${newAnime.status})`);
-        } else {
-          console.log('Stop (Erreur/Non trouvé)');
+          if (newAnime && isValidStatus(newAnime.status)) {
+            console.log(`OK (${newAnime.title.romaji})`);
+            franchiseList.push(newAnime);
+            animeMap.set(newAnime.id, newAnime);
+            expanded = true;
+          } else if (newAnime) {
+            console.log(`Stop (Statut: ${newAnime.status})`);
+          } else {
+            console.log('Stop (Erreur/Non trouvé)');
+          }
         }
       }
     }
+  } else {
+    console.log('⏭️  Expansion des suites (nouvelles franchises) ignorée.');
   }
 
   console.log("\n💾 Traitement final et Fusion...");
