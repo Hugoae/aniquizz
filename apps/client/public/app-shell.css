@@ -3,7 +3,7 @@
   font-family: 'Bricolage Grotesque';
   font-style: normal;
   font-weight: 800;
-  font-display: swap;
+  font-display: optional;
   src: url('/fonts/bricolage-grotesque-latin-800-normal.woff2') format('woff2');
 }
 
@@ -11,7 +11,7 @@
   font-family: 'Plus Jakarta Sans';
   font-style: normal;
   font-weight: 400;
-  font-display: swap;
+  font-display: optional;
   src: url('/fonts/plus-jakarta-sans-latin-400-normal.woff2') format('woff2');
 }
 
@@ -19,7 +19,7 @@
   font-family: 'Plus Jakarta Sans';
   font-style: normal;
   font-weight: 600;
-  font-display: swap;
+  font-display: optional;
   src: url('/fonts/plus-jakarta-sans-latin-600-normal.woff2') format('woff2');
 }
 

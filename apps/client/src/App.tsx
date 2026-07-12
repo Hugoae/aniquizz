@@ -5,7 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
 import { RouteSkeletonFallback, DelayedRouteFallback } from '@/components/layout/RouteSkeletonFallback';
 import { warmLikelyRoutes } from '@/lib/routePrefetch';
-import { dismissAppShell } from '@/lib/appShell';
+import { dismissAppShellWhenReady } from '@/lib/appShell';
 import { markLandingPaintDone } from '@/lib/initialPaint';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
@@ -75,10 +75,13 @@ const AppContent = () => {
   const { session, authReady } = useAuth();
   const navigate = useNavigate();
 
-  // Swap the static HTML shell for React in the same frame — no blank flash between them.
+  // Keep the HTML shell on top until Tailwind is parsed — module JS can run first.
   useLayoutEffect(() => {
-    dismissAppShell();
     markLandingPaintDone();
+  }, []);
+
+  useEffect(() => {
+    void dismissAppShellWhenReady();
   }, []);
 
   // Warm the most likely next route chunks once idle so navigation never flashes

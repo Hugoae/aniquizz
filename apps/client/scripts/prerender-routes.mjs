@@ -103,7 +103,7 @@ function injectSeoContent(html, inner) {
   }
   return html.replace(
     /<div id="seo-content"[^>]*>[\s\S]*?<\/div>/,
-    `<div id="seo-content" hidden>${inner}</div>`,
+    `<div id="seo-content" hidden style="display: none !important">${inner}</div>`,
   );
 }
 

@@ -108,7 +108,10 @@
     letter-spacing: -0.01em;
   }
 
-  h1, h2, h3, .font-display {
+  #root h1,
+  #root h2,
+  #root h3,
+  #root .font-display {
     font-family: var(--font-display);
     letter-spacing: -0.02em;
   }
