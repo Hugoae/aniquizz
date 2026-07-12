@@ -14,6 +14,22 @@
     <link rel="canonical" href="https://aniquizz.com/" />
 
     <!-- Blocking first-paint shell — mirrors Home before React/Tailwind load. -->
+    <style>
+      /* Instant first paint before /app-shell.css arrives — prevents huge default SVGs. */
+      #app-shell svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+      #app-shell .app-shell-title {
+        margin: 0 0 1rem;
+        font-size: clamp(1.875rem, 5vw, 3rem);
+        font-weight: 800;
+        line-height: 1.05;
+      }
+      #app-shell .app-shell-brand span { font-size: 1.5rem; font-weight: 800; }
+      /* React mounts under the shell; reveal only once Tailwind is verified. */
+      #root { visibility: hidden; }
+      #root.app-ready { visibility: visible; }
+      /* Safety net if Tailwind is late — Lucide SVGs default to 300×150 without size. */
+      #root:not(.app-ready) svg { width: 1.5rem; height: 1.5rem; max-width: 2rem; max-height: 2rem; }
+    </style>
     <link rel="stylesheet" href="/app-shell.css" />
     <link rel="preload" href="/fonts/bricolage-grotesque-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/plus-jakarta-sans-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
@@ -119,7 +135,7 @@
                 <div class="app-shell-news-header">
                   <div class="app-shell-news-heading">
                     <div class="app-shell-news-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                      <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
                     </div>
                     <h2 class="app-shell-news-title">Actualités</h2>
                   </div>
@@ -128,7 +144,7 @@
                 <div class="app-shell-news-list">
                   <article class="app-shell-news-card">
                     <div class="app-shell-news-card-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                      <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
                     </div>
                     <div class="app-shell-news-card-body">
                       <div class="app-shell-news-card-top">
@@ -137,11 +153,11 @@
                       </div>
                       <p class="app-shell-news-card-desc">Parcourez tout le catalogue, liez MyAnimeList pour le mode Watched, fluidité en partie améliorée, et phase de guess solo alignée sur le multijoueur.</p>
                     </div>
-                    <svg class="app-shell-news-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                      <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                   </article>
                   <article class="app-shell-news-card">
                     <div class="app-shell-news-card-icon" aria-hidden="true">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                      <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
                     </div>
                     <div class="app-shell-news-card-body">
                       <div class="app-shell-news-card-top">
@@ -150,7 +166,7 @@
                       </div>
                       <p class="app-shell-news-card-desc">Suppression de compte, règles du lobby, modes vidéo, départ d'extrait au choix, AniList plus clair, et des dizaines de correctifs pour le blindtest.</p>
                     </div>
-                    <svg class="app-shell-news-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                      <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                   </article>
                 </div>
               </div>

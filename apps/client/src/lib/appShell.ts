@@ -6,7 +6,7 @@ function getAppStylesheetLink(): HTMLLinkElement | null {
 }
 
 /** Wait until the app CSS bundle is downloaded and parsed (module JS can run before this). */
-function waitForAppStyles(): Promise<void> {
+function waitForAppStylesheet(): Promise<void> {
   const link = getAppStylesheetLink();
   if (!link) return Promise.resolve();
 
@@ -20,20 +20,56 @@ function waitForAppStyles(): Promise<void> {
 }
 
 /**
- * Remove the static HTML shell only once Tailwind is ready underneath.
- * Keeps #app-shell covering #root until styled React is paintable — avoids
- * the brief unstyled h1 flash when the module script wins the network race.
+ * True when the mounted Home tree has Tailwind utilities applied (not just link.sheet).
+ * Guards against the brief unstyled flash: huge Lucide SVGs, raw button text, etc.
+ */
+function isHomePaintReady(): boolean {
+  const h1 = document.querySelector('#root h1');
+  if (!h1) return false;
+
+  const title = getComputedStyle(h1);
+  const titlePx = parseFloat(title.fontSize);
+  if (titlePx < 40) return false;
+
+  const playBtn = document.querySelector('#root button');
+  if (!playBtn) return false;
+
+  const btn = getComputedStyle(playBtn);
+  if (btn.display === 'inline') return false;
+  if (parseFloat(btn.height) < 48) return false;
+
+  const icon = playBtn.querySelector('svg');
+  if (icon) {
+    const iconBox = icon.getBoundingClientRect();
+    if (iconBox.width > 80 || iconBox.height > 80) return false;
+  }
+
+  return true;
+}
+
+async function waitForHomePaintReady(): Promise<void> {
+  await waitForAppStylesheet();
+
+  const deadline = Date.now() + 4_000;
+  while (Date.now() < deadline) {
+    if (isHomePaintReady()) return;
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  }
+}
+
+/**
+ * Remove the static HTML shell only once styled React is confirmed underneath.
+ * #root stays hidden (inline critical CSS) until this runs.
  */
 export async function dismissAppShellWhenReady(): Promise<void> {
   if (shellDismissed) return;
 
-  await waitForAppStyles();
-  // One frame so React's committed tree picks up the newly parsed stylesheet.
-  await new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
+  await waitForHomePaintReady();
 
   shellDismissed = true;
+  document.getElementById('root')?.classList.add('app-ready');
   document.getElementById('app-shell')?.remove();
 }
 
