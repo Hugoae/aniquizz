@@ -280,7 +280,7 @@ export default function Game() {
               {/* "GO!" only once the first clip is actually ready (build done). If the
                   build overruns the countdown, keep the spinner instead of a
                   misleading "GO!" that would sit there until the round truly starts. */}
-              <span className="text-xs font-bold text-primary">
+              <span className="text-2xl font-bold tabular-nums text-primary">
                 {loadingCount > 0 ? loadingCount : firstClipReady ? 'GO!' : ''}
               </span>
             </div>
