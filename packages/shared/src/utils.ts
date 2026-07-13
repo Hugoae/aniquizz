@@ -181,7 +181,7 @@ function scoreAcronym(term: string, raw: string): FieldScore | null {
 function scorePhrase(query: string, raw: string): FieldScore | null {
   const queryWords = tokenizeWords(query)
     .map(normalizeString)
-    .filter((w) => w.length >= 2);
+    .filter((w) => w.length >= 2 && w !== 'of' && w !== 'the' && w !== 'no');
   if (queryWords.length < 2) return null;
 
   const titleWords = tokenizeWords(raw).map(normalizeString);
@@ -192,7 +192,7 @@ function scorePhrase(query: string, raw: string): FieldScore | null {
     let found = false;
     while (ti < titleWords.length) {
       const tw = titleWords[ti];
-      if (tw.startsWith(qw) || (qw.length >= 3 && tw.includes(qw))) {
+      if (tw.startsWith(qw) || (qw.length >= 3 && tw.length >= 2 && tw.includes(qw))) {
         found = true;
         ti++;
         break;
@@ -326,10 +326,23 @@ function franchiseStem(s: string): string {
   return base.replace(/\s+(OVA|Gaiden|Season|Part|Final).*$/i, '').trim();
 }
 
+/** Whether `words` begins with the full `prefix` token sequence (word-boundary match). */
+function wordsStartWith(words: string[], prefix: string[]): boolean {
+  if (prefix.length === 0 || prefix.length > words.length) return false;
+  for (let i = 0; i < prefix.length; i++) {
+    if (words[i] !== prefix[i]) return false;
+  }
+  return true;
+}
+
 /**
  * Spin-offs often have their own Franchise row in the DB (OVA, Gaiden…). When
  * their alt names reference a larger series ("Attack on Titan: No Regrets"),
  * bubble the suggestion up to that parent franchise instead.
+ *
+ * Matching is WORD-boundary based, never a bare character prefix: a single-letter
+ * franchise like "K" must not swallow "Kiseijuu" / "Kimi no Uso" (see regression
+ * where every "k…" title got relabeled to the "K" franchise).
  */
 function findParentFranchise(
   anime: FuzzyAnimeCandidate,
@@ -341,16 +354,25 @@ function findParentFranchise(
 
   const haystacks = [...(anime.altNames ?? []), anime.name];
   for (const [parentName] of popular) {
-    const normParent = normalizeString(parentName);
-    if (!normParent) continue;
+    const parentWords = tokenizeWords(parentName);
+    if (parentWords.length === 0) continue;
 
     for (const h of haystacks) {
-      const normH = normalizeString(h);
-      const normStem = normalizeString(franchiseStem(h));
-      if (!normH && !normStem) continue;
+      const hWords = tokenizeWords(h);
+      if (hWords.length === 0) continue;
 
-      if (normH.startsWith(normParent)) return parentName;
-      if (normStem.length >= 3 && normParent.startsWith(normStem)) return parentName;
+      // Alt name starts with the whole parent name ("Attack on Titan: No Regrets").
+      if (wordsStartWith(hWords, parentWords)) return parentName;
+
+      // Or the spin-off stem is itself a full-word prefix of the parent name.
+      const stemWords = tokenizeWords(franchiseStem(h));
+      if (
+        stemWords.length > 0 &&
+        normalizeString(franchiseStem(h)).length >= 3 &&
+        wordsStartWith(parentWords, stemWords)
+      ) {
+        return parentName;
+      }
     }
   }
   return null;

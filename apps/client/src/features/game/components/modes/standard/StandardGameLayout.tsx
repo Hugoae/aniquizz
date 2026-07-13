@@ -187,7 +187,7 @@ function StandardGameLayoutInner({
 
               {/* Slot under the video: answer input while guessing; on small screens
                   the reveal info shows here as a band (the big side card is hidden). */}
-              <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center">
+              <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
                 {(phase === 'guessing' || phase === 'ready') ? (
                   <AnswerInput
                     responseType={responseType}

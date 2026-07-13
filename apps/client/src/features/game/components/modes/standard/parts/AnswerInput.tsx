@@ -1,15 +1,18 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Grid2X2, Columns2, Send } from 'lucide-react';
-import type { Precision } from '@aniquizz/shared';
+import { GAME_CONFIG, type Precision } from '@aniquizz/shared';
 import { normalizePrecision } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
+import { useSuggestionPanelPosition } from '@/features/game/hooks/useSuggestionPanelPosition';
 import type { InputMode } from './types';
 
 const SUGGESTION_LIST_ID = 'answer-suggestions';
+const MIN_SUBMIT_LENGTH = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
 
 interface AnswerInputProps {
   responseType: 'typing' | 'qcm' | 'mix';
@@ -64,20 +67,25 @@ function AnswerInputInner({
   const [draft, setDraft] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
+  const inputRowRef = useRef<HTMLDivElement>(null);
 
   const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
   const canType = showTyping && !disabled;
 
-  const { suggestions, isSearching, isCatalogueLoading } = useAnimeSearch({
+  const { suggestions, isSearching } = useAnimeSearch({
     query: draft,
     precision: normalizePrecision(precision),
     enabled: canType,
   });
 
+  const queryReady = draft.trim().length >= MIN_SUBMIT_LENGTH;
+  const showPanel = panelOpen && queryReady && canType;
+  const panelPosition = useSuggestionPanelPosition(inputRowRef, showPanel);
+
   const submitAnswer = useCallback(
     (value: string) => {
       const trimmed = value.trim();
-      if (!trimmed) return;
+      if (trimmed.length < MIN_SUBMIT_LENGTH) return;
       setDraft('');
       setPanelOpen(false);
       setActiveIndex(0);
@@ -93,21 +101,64 @@ function AnswerInputInner({
   }, [roundKey]);
 
   useEffect(() => {
-    if (submittedAnswer) {
-      setDraft('');
-      setPanelOpen(false);
-    }
-  }, [submittedAnswer]);
-
-  useEffect(() => {
     setActiveIndex(0);
   }, [suggestions]);
 
   const showChoices = !showTyping && choices.length > 0;
-  const queryReady = draft.trim().length >= 2;
   const showMixSwitchers =
     responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && !disabled;
-  const showPanel = panelOpen && queryReady && canType;
+
+  const suggestionPanel =
+    showPanel && panelPosition
+      ? createPortal(
+          <div
+            id={SUGGESTION_LIST_ID}
+            role="listbox"
+            aria-label="Suggestions d'animes"
+            className="custom-scrollbar fixed z-[200] flex flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
+            style={{
+              left: panelPosition.left,
+              width: panelPosition.width,
+              maxHeight: panelPosition.maxHeight,
+              bottom: panelPosition.bottom,
+            }}
+          >
+            {isSearching && suggestions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-muted-foreground">Recherche…</div>
+            ) : suggestions.length === 0 ? (
+              <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
+            ) : (
+              suggestions.map((suggestion, idx) => (
+                <button
+                  key={`${suggestion.label}-${idx}`}
+                  id={`answer-suggestion-${idx}`}
+                  role="option"
+                  aria-selected={idx === activeIndex}
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between border-b border-border/50 px-4 py-3 text-left text-sm font-medium transition-colors last:border-0',
+                    idx === activeIndex
+                      ? 'border-l-4 border-l-primary bg-primary/20 text-primary'
+                      : 'hover:bg-primary/20 hover:text-primary',
+                    FOCUS_RING,
+                  )}
+                  onMouseEnter={() => setActiveIndex(idx)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => submitAnswer(suggestion.label)}
+                >
+                  <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
+                  {idx === activeIndex && (
+                    <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
+                      ENTRÉE
+                    </span>
+                  )}
+                </button>
+              ))
+            )}
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <div className={cn('relative flex w-full flex-col items-center gap-3', disabled && 'pointer-events-none opacity-60')}>
@@ -134,58 +185,19 @@ function AnswerInputInner({
       )}
 
       {canType && (
-        <div className="relative z-50 flex w-full items-center gap-3">
-          {showPanel && (
-            <div
-              id={SUGGESTION_LIST_ID}
-              role="listbox"
-              aria-label="Suggestions d'animes"
-              className="custom-scrollbar absolute bottom-full left-0 z-50 mb-2 flex max-h-60 w-full flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
-            >
-              {isCatalogueLoading || (isSearching && suggestions.length === 0) ? (
-                <div className="px-4 py-3 text-sm text-muted-foreground">
-                  {isCatalogueLoading ? 'Chargement du catalogue…' : 'Recherche…'}
-                </div>
-              ) : suggestions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
-              ) : (
-                suggestions.map((suggestion, idx) => (
-                  <button
-                    key={`${suggestion.label}-${idx}`}
-                    id={`answer-suggestion-${idx}`}
-                    role="option"
-                    aria-selected={idx === activeIndex}
-                    type="button"
-                    className={cn(
-                      'flex w-full items-center justify-between border-b border-border/50 px-4 py-3 text-left text-sm font-medium transition-colors last:border-0',
-                      idx === activeIndex ? 'border-l-4 border-l-primary bg-primary/20 text-primary' : 'hover:bg-primary/20 hover:text-primary',
-                      FOCUS_RING,
-                    )}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                    onClick={() => submitAnswer(suggestion.label)}
-                  >
-                    <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
-                    {idx === activeIndex && (
-                      <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
-                        ENTRÉE
-                      </span>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          )}
+        <div ref={inputRowRef} className="relative z-50 flex w-full items-center gap-3">
+          {suggestionPanel}
 
           <Input
             value={draft}
             onChange={(e) => {
               const next = e.target.value;
               setDraft(next);
-              if (next.trim().length >= 2) setPanelOpen(true);
+              if (next.trim().length >= MIN_SUBMIT_LENGTH) setPanelOpen(true);
               else setPanelOpen(false);
             }}
             onFocus={() => {
-              if (draft.trim().length >= 2) setPanelOpen(true);
+              if (draft.trim().length >= MIN_SUBMIT_LENGTH) setPanelOpen(true);
             }}
             placeholder={submittedAnswer ? 'Modifier votre réponse…' : 'Nom de l\'anime…'}
             aria-label="Votre réponse"
@@ -220,7 +232,7 @@ function AnswerInputInner({
                 e.preventDefault();
                 if (showPanel && suggestions[activeIndex]) {
                   submitAnswer(suggestions[activeIndex].label);
-                } else {
+                } else if (draft.trim().length >= MIN_SUBMIT_LENGTH) {
                   submitAnswer(draft);
                 }
               }
@@ -236,7 +248,7 @@ function AnswerInputInner({
               variant="glow"
               size="lg"
               onClick={() => submitAnswer(draft)}
-              disabled={disabled || !draft.trim()}
+              disabled={disabled || draft.trim().length < MIN_SUBMIT_LENGTH}
               aria-label="Valider la réponse"
               className="h-14 w-14 rounded-lg p-0"
             >

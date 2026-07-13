@@ -11,10 +11,11 @@ import {
 import { socket } from '@/lib/socket';
 import { buildCataloguePrefixIndex, narrowCatalogueByPrefix } from '@/features/game/hooks/animeSearchIndex';
 
-/** Re-emit the bulk request until the list arrives (covers reconnects / dropped emits). */
 const RETRY_INTERVAL_MS = 2_500;
 const DEBOUNCE_TYPING_MS = 80;
 const DEBOUNCE_DELETING_MS = 200;
+const SEARCH_TIMEOUT_MS = 4_000;
+const LOCAL_CONFIDENT_SCORE = 85;
 
 interface UseAnimeSearchArgs {
   query: string;
@@ -24,14 +25,11 @@ interface UseAnimeSearchArgs {
 
 interface UseAnimeSearchResult {
   suggestions: AnimeSuggestion[];
-  /** True while catalogue loads or debounced query is catching up. */
   isSearching: boolean;
-  /** True when the anime catalogue has not loaded yet. */
-  isCatalogueLoading: boolean;
 }
 
 let cachedCatalogue: FuzzyAnimeCandidate[] | null = null;
-let inflight: Promise<FuzzyAnimeCandidate[]> | null = null;
+let inflightCatalogue: Promise<FuzzyAnimeCandidate[]> | null = null;
 
 function isUsableCatalogue(
   list: FuzzyAnimeCandidate[] | null | undefined,
@@ -39,44 +37,42 @@ function isUsableCatalogue(
   return !!list && list.length > 0;
 }
 
-/** Test helper — reset module cache between tests. */
 export function resetAnimeSearchCache(): void {
   cachedCatalogue = null;
-  inflight = null;
+  inflightCatalogue = null;
 }
 
-// Purge a poisoned empty cache from older sessions / failed first loads.
 if (!isUsableCatalogue(cachedCatalogue)) cachedCatalogue = null;
 
 function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
   if (isUsableCatalogue(cachedCatalogue)) return Promise.resolve(cachedCatalogue);
-  if (inflight) return inflight;
+  if (inflightCatalogue) return inflightCatalogue;
 
-  inflight = new Promise((resolve) => {
+  inflightCatalogue = new Promise((resolve) => {
     let settled = false;
-    const retry = setInterval(() => socket.emit('anime:get_all'), RETRY_INTERVAL_MS);
+    const retry = setInterval(() => {
+      if (socket.connected) socket.emit('anime:get_all');
+    }, RETRY_INTERVAL_MS);
 
     const onAll = (payload: { animes: FuzzyAnimeCandidate[] }) => {
       const list = payload?.animes ?? [];
-      // Ignore empty payloads — keep retrying until the catalogue actually loads.
       if (!list.length) return;
       if (settled) return;
       settled = true;
       clearInterval(retry);
       socket.off('anime:all_names', onAll);
       cachedCatalogue = list;
-      inflight = null;
-      resolve(cachedCatalogue);
+      inflightCatalogue = null;
+      resolve(list);
     };
 
     socket.on('anime:all_names', onAll);
-    socket.emit('anime:get_all');
+    if (socket.connected) socket.emit('anime:get_all');
   });
 
-  return inflight;
+  return inflightCatalogue;
 }
 
-/** Longer debounce while backspacing — avoids re-scanning on every delete tick. */
 function useAdaptiveDebouncedValue(value: string): string {
   const [debounced, setDebounced] = useState(value);
   const previousRef = useRef(value);
@@ -92,6 +88,30 @@ function useAdaptiveDebouncedValue(value: string): string {
   return debounced;
 }
 
+function runLocalSearch(
+  catalogue: FuzzyAnimeCandidate[],
+  query: string,
+  precision: Precision,
+): AnimeSuggestion[] {
+  const prefixIndex = buildCataloguePrefixIndex(catalogue);
+  const franchiseCounts =
+    precision === 'franchise' ? buildFranchiseCountsMap(catalogue) : undefined;
+  const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, query);
+  let next = getFuzzySuggestions(scoped, query, precision, franchiseCounts);
+  const bestScopedScore = next[0]?.score ?? 0;
+  if (
+    (next.length === 0 || bestScopedScore < LOCAL_CONFIDENT_SCORE) &&
+    scoped.length < catalogue.length
+  ) {
+    next = getFuzzySuggestions(catalogue, query, precision, franchiseCounts);
+  }
+  return next;
+}
+
+/**
+ * Hybrid autocomplete: instant local fuzzy when the catalogue is cached, with a
+ * server `anime:search` fallback until warm-up completes or local results are empty.
+ */
 export function useAnimeSearch({
   query,
   precision = 'franchise',
@@ -101,7 +121,29 @@ export function useAnimeSearch({
     isUsableCatalogue(cachedCatalogue) ? cachedCatalogue : null,
   );
   const [suggestions, setSuggestions] = useState<AnimeSuggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [, startTransition] = useTransition();
+
+  const requestIdRef = useRef(0);
+  const appliedRequestIdRef = useRef(0);
+  const queryRef = useRef(query);
+  const pendingTimeoutRef = useRef<number | null>(null);
+  const sentQueryByRequestIdRef = useRef<Map<number, string>>(new Map());
+
+  const trimmed = query.trim();
+  const minLen = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
+  const debouncedTrimmed = useAdaptiveDebouncedValue(trimmed);
+  const normalizedPrecision = normalizePrecision(precision);
+  const queryReady = debouncedTrimmed.length >= minLen;
+
+  queryRef.current = query;
+
+  const clearPendingTimeout = () => {
+    if (pendingTimeoutRef.current != null) {
+      window.clearTimeout(pendingTimeoutRef.current);
+      pendingTimeoutRef.current = null;
+    }
+  };
 
   useEffect(() => {
     if (isUsableCatalogue(catalogue)) return;
@@ -115,80 +157,99 @@ export function useAnimeSearch({
   }, [catalogue]);
 
   useEffect(() => {
-    const reload = () => {
-      if (isUsableCatalogue(cachedCatalogue)) return;
-      resetAnimeSearchCache();
+    const warm = () => {
+      if (isUsableCatalogue(cachedCatalogue)) {
+        setCatalogue(cachedCatalogue);
+        return;
+      }
       loadCatalogue().then((list) => {
         if (isUsableCatalogue(list)) setCatalogue(list);
       });
     };
-    socket.on('connect', reload);
+    socket.on('connect', warm);
+    if (socket.connected) warm();
     return () => {
-      socket.off('connect', reload);
+      socket.off('connect', warm);
     };
   }, []);
 
-  const trimmed = query.trim();
-  const minLen = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
-  const debouncedTrimmed = useAdaptiveDebouncedValue(trimmed);
-  const normalizedPrecision = normalizePrecision(precision);
-  const queryReady = debouncedTrimmed.length >= minLen;
+  useEffect(() => {
+    const onResults = (payload: { requestId: number; results: AnimeSuggestion[] }) => {
+      if (payload.requestId < appliedRequestIdRef.current) return;
+      const sentQuery = sentQueryByRequestIdRef.current.get(payload.requestId);
+      const currentQuery = queryRef.current.trim();
+      if (sentQuery === undefined || sentQuery !== currentQuery) return;
 
-  const prefixIndex = useMemo(
-    () => (catalogue ? buildCataloguePrefixIndex(catalogue) : null),
-    [catalogue],
-  );
+      appliedRequestIdRef.current = payload.requestId;
+      clearPendingTimeout();
+      startTransition(() => {
+        setSuggestions(payload.results);
+        setIsSearching(false);
+      });
+    };
+    socket.on('anime:search_results', onResults);
+    return () => {
+      socket.off('anime:search_results', onResults);
+    };
+  }, []);
 
-  const franchiseCounts = useMemo(() => {
-    if (!catalogue || normalizedPrecision !== 'franchise') return undefined;
-    return buildFranchiseCountsMap(catalogue);
-  }, [catalogue, normalizedPrecision]);
-
-  // Drop suggestions immediately when the live query is too short (backspace path).
   useEffect(() => {
     if (trimmed.length < minLen) setSuggestions([]);
   }, [trimmed, minLen]);
 
   useEffect(() => {
-    if (!enabled || !queryReady || !catalogue || !prefixIndex) return;
+    clearPendingTimeout();
 
-    let cancelled = false;
+    if (!enabled || !queryReady) {
+      setSuggestions([]);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
     const frame = window.requestAnimationFrame(() => {
-      const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, debouncedTrimmed);
-      let next = getFuzzySuggestions(
-        scoped,
-        debouncedTrimmed,
-        normalizedPrecision,
-        franchiseCounts,
-      );
-      const bestScopedScore = next[0]?.score ?? 0;
-      // Prefix bucket can miss matches or surface weak noise — fall back when unconfident.
-      if (
-        (next.length === 0 || bestScopedScore < 85) &&
-        scoped.length < catalogue.length
-      ) {
-        next = getFuzzySuggestions(
-          catalogue,
-          debouncedTrimmed,
-          normalizedPrecision,
-          franchiseCounts,
-        );
+      if (isUsableCatalogue(catalogue)) {
+        const local = runLocalSearch(catalogue, debouncedTrimmed, normalizedPrecision);
+        const bestLocalScore = local[0]?.score ?? 0;
+        if (local.length > 0) {
+          startTransition(() => {
+            setSuggestions(local);
+            if (bestLocalScore >= LOCAL_CONFIDENT_SCORE) setIsSearching(false);
+          });
+          if (bestLocalScore >= LOCAL_CONFIDENT_SCORE) return;
+        }
       }
-      if (cancelled) return;
-      startTransition(() => setSuggestions(next));
+
+      if (!socket.connected) {
+        setIsSearching(false);
+        return;
+      }
+
+      const requestId = (requestIdRef.current += 1);
+      sentQueryByRequestIdRef.current.set(requestId, debouncedTrimmed);
+      socket.emit('anime:search', {
+        requestId,
+        query: debouncedTrimmed,
+        precision: normalizedPrecision,
+      });
+
+      pendingTimeoutRef.current = window.setTimeout(() => {
+        if (queryRef.current.trim() !== debouncedTrimmed) return;
+        setIsSearching(false);
+      }, SEARCH_TIMEOUT_MS);
     });
 
     return () => {
-      cancelled = true;
       window.cancelAnimationFrame(frame);
+      clearPendingTimeout();
     };
-  }, [enabled, queryReady, catalogue, prefixIndex, debouncedTrimmed, normalizedPrecision, franchiseCounts]);
+  }, [enabled, queryReady, catalogue, debouncedTrimmed, normalizedPrecision]);
 
-  const isCatalogueLoading = enabled && !isUsableCatalogue(catalogue);
-  const isSearching =
-    enabled &&
-    trimmed.length >= minLen &&
-    (isCatalogueLoading || debouncedTrimmed !== trimmed);
+  const isDebouncing = enabled && trimmed.length >= minLen && debouncedTrimmed !== trimmed;
 
-  return { suggestions, isSearching, isCatalogueLoading };
+  return {
+    suggestions,
+    isSearching: enabled && trimmed.length >= minLen && (isSearching || isDebouncing),
+  };
 }

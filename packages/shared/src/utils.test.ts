@@ -226,6 +226,32 @@ describe('getFuzzySuggestions', () => {
     ]);
   });
 
+  it('does not let a single-letter franchise (K) swallow every "k…" title', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      { name: 'K', franchise: 'K', altNames: ['K', 'K-Project'] },
+      { name: 'K: RETURN OF KINGS', franchise: 'K', altNames: ['K RETURN OF KINGS'] },
+      {
+        name: 'Parasyte',
+        franchise: 'Parasyte',
+        altNames: ['Kiseijuu: Sei no Kakuritsu', 'Parasyte: The Maxim'],
+      },
+      {
+        name: 'Your Lie in April',
+        franchise: 'Your Lie in April',
+        altNames: ['Shigatsu wa Kimi no Uso'],
+      },
+    ];
+
+    // Real titles must resolve to their own franchise, not be relabeled to "K".
+    expect(labels(getFuzzySuggestions(catalogue, 'parasyte', 'franchise'))).toContain('Parasyte');
+    expect(labels(getFuzzySuggestions(catalogue, 'kiseijuu', 'franchise'))).toContain('Parasyte');
+    expect(labels(getFuzzySuggestions(catalogue, 'your lie in april', 'franchise'))).toContain(
+      'Your Lie in April',
+    );
+    // The genuine "K" sequel still bubbles to the K franchise.
+    expect(labels(getFuzzySuggestions(catalogue, 'return of kings', 'franchise'))).toContain('K');
+  });
+
   it('exact mode lists individual anime names in exact mode', () => {
     const res = labels(getFuzzySuggestions(list, 'naru', 'anime'));
     expect(res).toContain('Naruto');
