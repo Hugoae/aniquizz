@@ -82,7 +82,7 @@ export default function Game() {
   );
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
 
-  const suggestions = useAnimeSearch({
+  const { suggestions, isSearching } = useAnimeSearch({
     query: answer,
     precision: normalizePrecision(settings.precision),
     enabled: inputMode === 'typing' && phase === 'guessing' && !submittedAnswer,
@@ -241,7 +241,7 @@ export default function Game() {
     pauseVotes: state.pauseVotes, pauseRequired: state.pauseRequired, resumeCountdown: state.resumeCountdown,
     onVotePause: actions.votePause,
     skipVotes: state.skipVotes, skipRequired: state.skipRequired, onVoteSkip: actions.voteSkip,
-    currentSong, nextVideoKey: state.nextVideoKey, answer, setAnswer, submittedAnswer, suggestions,
+    currentSong, nextVideoKey: state.nextVideoKey, answer, setAnswer, submittedAnswer, suggestions, isSearching,
     onAction: handleAction,
     myProfile, sidebarCollapsed, setSidebarCollapsed,
     onShowLeave: () => setShowLeaveChoice(true),

@@ -2,12 +2,19 @@ import { useEffect, useRef, useState } from 'react';
 import { GAME_CONFIG, normalizePrecision, type AnimeSuggestion, type Precision } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 
-const DEBOUNCE_MS = 120;
+/** Trailing debounce for rapid keystrokes after the leading-edge emit. */
+const DEBOUNCE_MS = 50;
 
 interface UseAnimeSearchArgs {
   query: string;
   precision?: Precision;
   enabled?: boolean;
+}
+
+interface UseAnimeSearchResult {
+  suggestions: AnimeSuggestion[];
+  /** True while a search request is in flight for the current query. */
+  isSearching: boolean;
 }
 
 /**
@@ -22,8 +29,9 @@ export function useAnimeSearch({
   query,
   precision = 'franchise',
   enabled = true,
-}: UseAnimeSearchArgs): AnimeSuggestion[] {
+}: UseAnimeSearchArgs): UseAnimeSearchResult {
   const [suggestions, setSuggestions] = useState<AnimeSuggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const requestIdRef = useRef(0);
   const appliedRequestIdRef = useRef(0);
   const queryRef = useRef(query);
@@ -45,6 +53,7 @@ export function useAnimeSearch({
 
       appliedRequestIdRef.current = payload.requestId;
       setSuggestions(payload.results);
+      setIsSearching(false);
     };
     socket.on('anime:search_results', onResults);
     return () => {
@@ -52,26 +61,46 @@ export function useAnimeSearch({
     };
   }, []);
 
+  // Warm the server-side name cache as soon as typing is allowed (no UI impact).
+  useEffect(() => {
+    if (!enabled) return;
+    const requestId = (requestIdRef.current += 1);
+    sentQueryByRequestIdRef.current.set(requestId, '__warm__');
+    socket.emit('anime:search', {
+      requestId,
+      query: 'aa',
+      precision: normalizePrecision(precision),
+    });
+  }, [enabled, precision]);
+
   useEffect(() => {
     if (!enabled) {
       setSuggestions([]);
+      setIsSearching(false);
       return;
     }
 
     const trimmed = query.trim();
     if (trimmed.length < GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH) {
       setSuggestions([]);
+      setIsSearching(false);
       return;
     }
 
-    const handle = window.setTimeout(() => {
+    const emitSearch = () => {
       const requestId = (requestIdRef.current += 1);
       sentQueryByRequestIdRef.current.set(requestId, trimmed);
+      setIsSearching(true);
       socket.emit('anime:search', { requestId, query: trimmed, precision: normalizePrecision(precision) });
-    }, DEBOUNCE_MS);
+    };
+
+    // Leading edge: first results without waiting for debounce.
+    emitSearch();
+
+    const handle = window.setTimeout(emitSearch, DEBOUNCE_MS);
 
     return () => window.clearTimeout(handle);
   }, [query, precision, enabled]);
 
-  return suggestions;
+  return { suggestions, isSearching };
 }

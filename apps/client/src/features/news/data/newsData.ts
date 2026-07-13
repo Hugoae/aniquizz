@@ -21,6 +21,30 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 4,
+    title: 'Correction v26.2.1 — Gameplay, interface & confort',
+    description:
+      'Timer multijoueur corrigé, polish vidéo et typing, autocomplétion plus rapide, layout solo harmonisé, et bouton retour du lobby solo refait.',
+    content:
+      'Patch cumulatif de corrections après la v26.2 — gameplay, interface et petits irritants du quotidien :\n\n' +
+      '**Multijoueur — timer de guess**\n' +
+      '• La manche ne se coupe plus dès que tout le monde a répondu : le chrono complet s\'écoule, comme en solo.\n' +
+      '• Vous gardez le temps de changer d\'avis jusqu\'à la fin du timer.\n\n' +
+      '**Interface de jeu**\n' +
+      '• Lecteur vidéo calé à **42vh** ; à la révélation, **object-cover** pour éviter les bandes noires sur les côtés.\n' +
+      '• Badge **Pause** repositionné sur le lecteur — visible en permanence pendant la manche.\n' +
+      '• Débordements de layout corrigés sur l\'écran de partie.\n\n' +
+      '**Mode Typing**\n' +
+      '• Plus de menu de suggestions fantôme après validation au clavier.\n' +
+      '• Autocomplétion plus réactive : menu dès 2 caractères, état « Recherche… », requête immédiate et cache serveur pré-chauffé.\n' +
+      '• En solo Typing pur, la barre de réponse est alignée avec le mode Mix (même espacement sous le lecteur).\n\n' +
+      '**Lobby solo**\n' +
+      '• Bouton **Retour aux modes de jeu** avec une zone cliquable complète, cohérente avec le reste de l\'app.\n\n' +
+      'Merci pour vos retours — n\'hésitez pas à continuer à nous signaler ce qui coince en partie !',
+    date: '2026-07-13T10:00:00Z',
+    type: 'fix',
+  },
+  {
     id: 3,
     title: 'Mise à jour v26.2 — Librairie, MyAnimeList & polish jeu',
     description:

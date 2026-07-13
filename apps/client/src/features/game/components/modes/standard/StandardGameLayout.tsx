@@ -48,6 +48,7 @@ interface StandardGameLayoutProps {
   setAnswer: (val: string) => void;
   submittedAnswer: string | null;
   suggestions: AnimeSuggestion[];
+  isSearching?: boolean;
   choices: string[];
   onAction: (val: string) => void;
   onSwitchCarre: () => void;
@@ -72,7 +73,7 @@ export function StandardGameLayout({
   volume, isMuted, onVolumeChange, onToggleMute, videoRef, autoplayBlocked, onSafePlay,
   isGamePaused, isPausePending, resumeCountdown, onVotePause, pauseVotes, pauseRequired, skipVotes, skipRequired, onVoteSkip,
   currentSong, myWatchedIds,
-  inputMode, answer, setAnswer, submittedAnswer, suggestions, choices, onAction, onSwitchCarre, onSwitchDuo,
+  inputMode, answer, setAnswer, submittedAnswer, suggestions, isSearching, choices, onAction, onSwitchCarre, onSwitchDuo,
   myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, showPointsAnimation, pointsEarned,
   currentUserId, gameMode, roomId,
   responseType = 'mix',
@@ -186,6 +187,7 @@ export function StandardGameLayout({
                     setAnswer={setAnswer}
                     submittedAnswer={submittedAnswer}
                     suggestions={suggestions}
+                    isSearching={isSearching}
                     choices={choices}
                     onAction={onAction}
                     onSwitchCarre={onSwitchCarre}

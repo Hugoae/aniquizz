@@ -16,6 +16,7 @@ interface AnswerInputProps {
   setAnswer: (val: string) => void;
   submittedAnswer: string | null;
   suggestions: AnimeSuggestion[];
+  isSearching?: boolean;
   choices: string[];
   onAction: (val: string) => void;
   onSwitchCarre: () => void;
@@ -51,6 +52,7 @@ export function AnswerInput({
   setAnswer,
   submittedAnswer,
   suggestions,
+  isSearching = false,
   choices,
   onAction,
   onSwitchCarre,
@@ -66,13 +68,19 @@ export function AnswerInput({
       return;
     }
     setActiveIndex(0);
-    if (suggestions.length > 0 && !disabled) setPanelOpen(true);
-    if (suggestions.length === 0) setPanelOpen(false);
-  }, [suggestions, disabled, submittedAnswer]);
+  }, [suggestions, submittedAnswer]);
 
   const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
   const showChoices = !showTyping && choices.length > 0;
-  const showPanel = panelOpen && suggestions.length > 0 && !disabled;
+  const queryReady = answer.trim().length >= 2;
+  const showMixSwitchers =
+    responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && !disabled;
+  const showPanel =
+    panelOpen &&
+    queryReady &&
+    !disabled &&
+    !submittedAnswer &&
+    (isSearching || suggestions.length > 0);
 
   const pickSuggestion = (item: AnimeSuggestion) => {
     setAnswer(item.label);
@@ -89,7 +97,7 @@ export function AnswerInput({
         </div>
       )}
 
-      {responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && !disabled && (
+      {showMixSwitchers && (
         <div className="mb-2 flex animate-fade-in items-center gap-4">
           <Button variant="secondary" size="sm" onClick={onSwitchCarre} className="gap-2 hover:bg-primary/20 hover:text-primary">
             <Grid2X2 className="h-4 w-4" /> Carré (2 pts)
@@ -98,6 +106,10 @@ export function AnswerInput({
             <Columns2 className="h-4 w-4" /> Duo (1 pt)
           </Button>
         </div>
+      )}
+
+      {showTyping && !showMixSwitchers && !submittedAnswer && !disabled && (
+        <div className="mb-2 h-9 shrink-0" aria-hidden="true" />
       )}
 
       {showTyping && (
@@ -109,7 +121,10 @@ export function AnswerInput({
               aria-label="Suggestions d'animes"
               className="custom-scrollbar absolute bottom-full left-0 z-50 mb-2 flex max-h-60 w-full flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
             >
-              {suggestions.map((suggestion, idx) => (
+              {isSearching && suggestions.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground">Recherche…</div>
+              ) : (
+                suggestions.map((suggestion, idx) => (
                 <button
                   key={`${suggestion.label}-${idx}`}
                   id={`answer-suggestion-${idx}`}
@@ -131,7 +146,8 @@ export function AnswerInput({
                     </span>
                   )}
                 </button>
-              ))}
+                ))
+              )}
             </div>
           )}
 

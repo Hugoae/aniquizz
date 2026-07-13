@@ -79,15 +79,15 @@ export function SoloReady({
 
         <Button
           variant="ghost"
-          size="icon"
+          size="default"
           onClick={onLeave}
-          aria-label="Retour"
-          className="absolute left-4 top-4 h-9 w-9 rounded-full"
+          className="absolute left-4 top-4 z-10 h-10 gap-2 px-4 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-4 w-4 shrink-0" />
+          Retour
         </Button>
 
-        <div className="relative flex flex-col items-center gap-5 text-center">
+        <div className="relative z-0 flex flex-col items-center gap-5 text-center">
           <div className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 font-black uppercase tracking-wider text-primary-foreground shadow-glow">
             <Trophy className="h-5 w-5 fill-current" aria-hidden="true" />
             Standard, Solo
