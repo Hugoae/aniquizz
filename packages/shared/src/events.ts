@@ -161,6 +161,8 @@ export interface ServerToClientEvents {
   // Data
   /** Ranked autocomplete matches for one `anime:search` request (echoes `requestId`). */
   'anime:search_results': (payload: AnimeSearchResults) => void;
+  /** Full catalogue name list for client-side instant autocomplete (fetched once). */
+  'anime:all_names': (payload: AllAnimeNamesPayload) => void;
   my_watched_list: (ids: number[]) => void;
   /** Size of the caller's AniList list + how many map to playable songs. */
   watched_count: (payload: { listSize: number; playableSongs: number }) => void;
@@ -243,8 +245,10 @@ export interface ClientToServerEvents {
     types?: string[];
     watchedMode?: 'union' | 'intersection';
   }) => void;
-  /** Server-side anime autocomplete search (replaces the full catalogue transport). */
+  /** Server-side anime autocomplete search (legacy per-keystroke path). */
   'anime:search': (payload: AnimeSearchInput) => void;
+  /** Request the full catalogue name list once for client-side matching. */
+  'anime:get_all': () => void;
 
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
@@ -285,6 +289,18 @@ export interface AnimeSearchInput {
 export interface AnimeSearchResults {
   requestId: number;
   results: AnimeSuggestion[];
+}
+
+/** One catalogue entry for client-side fuzzy autocomplete. */
+export interface AnimeNameEntry {
+  name: string;
+  franchise: string | null;
+  altNames: string[];
+}
+
+/** Full catalogue name list, sent once so the client can match locally (instant). */
+export interface AllAnimeNamesPayload {
+  animes: AnimeNameEntry[];
 }
 
 export type { GamePlayer };

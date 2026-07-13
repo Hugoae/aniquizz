@@ -185,6 +185,20 @@ export const registerGameHandlers = (
     }
   };
 
+  // Ship the full catalogue name list once so the client can run the fuzzy match
+  // locally (instant, no per-keystroke round-trip). The list is server-cached.
+  const sendAllAnimeNames = async () => {
+    try {
+      const list = await getAllAnimeNames();
+      socket.emit('anime:all_names', {
+        animes: list.map((a) => ({ name: a.name, franchise: a.franchise, altNames: a.altNames })),
+      });
+    } catch (error) {
+      captureError(error, { context: 'Game', source: 'anime:get_all' });
+      socket.emit('anime:all_names', { animes: [] });
+    }
+  };
+
   socket.on('start_game', requireAuth(socket, startGame));
   socket.on('game:answer', guard(socket, 'game:answer', RATE_LIMITS.answer, submitAnswer));
   socket.on('vote_pause', requireAuth(socket, votePause));
@@ -197,4 +211,5 @@ export const registerGameHandlers = (
   socket.on('get_watched_count', requireAuth(socket, getWatchedCount));
   socket.on('watched:get_pool_stats', requireAuth(socket, getWatchedPoolStats));
   socket.on('anime:search', guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch));
+  socket.on('anime:get_all', guardSilent(socket, 'anime:get_all', RATE_LIMITS.animeCatalogue, sendAllAnimeNames));
 };
