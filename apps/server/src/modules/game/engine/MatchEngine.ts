@@ -267,7 +267,13 @@ export class MatchEngine {
 
     const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
     this.guessStartAt = Date.now();
-    this.clock.start(guessDurationMs, () => this.endRound());
+    this.clock.start(guessDurationMs, () => {
+      try {
+        this.endRound();
+      } catch (error) {
+        logger.error(`[MatchEngine ${this.room.id}] endRound crashed after timer`, 'GameLoop', error);
+      }
+    });
     this.scheduleBotAnswers(item);
     this.isRoundLoading = false;
 
@@ -336,13 +342,20 @@ export class MatchEngine {
 
   private endRound(): void {
     if (this.isRoundLoading || this.isRoundEnded) return;
+
+    const item = this.playlist[this.currentRoundIndex];
+    if (!item) {
+      logger.error(
+        `[MatchEngine ${this.room.id}] endRound called with no playlist item (index=${this.currentRoundIndex}).`,
+        'GameLoop',
+      );
+      return;
+    }
+
     this.isRoundEnded = true;
     this.phase = 'reveal';
     this.clock.clear();
     this.clearBotTimers();
-
-    const item = this.playlist[this.currentRoundIndex];
-    if (!item) return;
 
     const recorded: RecordedRound = { roundNumber: this.currentRoundIndex + 1, songId: item.id, answers: [] };
 

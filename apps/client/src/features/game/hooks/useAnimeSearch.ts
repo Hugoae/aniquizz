@@ -119,12 +119,21 @@ export function useAnimeSearch({
     let cancelled = false;
     const frame = window.requestAnimationFrame(() => {
       const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, debouncedTrimmed);
-      const next = getFuzzySuggestions(
+      let next = getFuzzySuggestions(
         scoped,
         debouncedTrimmed,
         normalizedPrecision,
         franchiseCounts,
       );
+      // Prefix bucket can miss mid-title / alternate-word matches — fall back to full scan.
+      if (next.length === 0 && scoped.length < catalogue.length) {
+        next = getFuzzySuggestions(
+          catalogue,
+          debouncedTrimmed,
+          normalizedPrecision,
+          franchiseCounts,
+        );
+      }
       if (cancelled) return;
       startTransition(() => setSuggestions(next));
     });

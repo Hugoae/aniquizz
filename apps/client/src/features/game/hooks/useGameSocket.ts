@@ -23,7 +23,7 @@ import type {
   GameOverPayload,
   VideoMode,
 } from '@aniquizz/shared';
-import { normalizeVideoMode } from '@aniquizz/shared';
+import { normalizeVideoMode, GAME_CONFIG } from '@aniquizz/shared';
 import {
   createInitialState,
   gameReducer,
@@ -87,6 +87,8 @@ export function useGameSocket({
   const clientVideoModeRef = useRef<VideoMode>(normalizeVideoMode(initialVideoMode));
   clientVideoModeRef.current = normalizeVideoMode(initialVideoMode ?? clientVideoModeRef.current);
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const phaseRef = useRef(state.phase);
+  phaseRef.current = state.phase;
   const onCancelledRef = useRef(onCancelled);
   onCancelledRef.current = onCancelled;
   const onClosedRef = useRef(onClosed);
@@ -132,6 +134,9 @@ export function useGameSocket({
     if (!roomId) return;
 
     socket.emit('get_game_state', { roomId });
+
+    const resync = () => socket.emit('get_game_state', { roomId });
+    socket.on('connect', resync);
 
     const clearResumeTimer = () => {
       if (resumeTimerRef.current) {
@@ -260,6 +265,7 @@ export function useGameSocket({
 
     return () => {
       clearResumeTimer();
+      socket.off('connect', resync);
       socket.off('game_state_sync', handlers.game_state_sync);
       socket.off('game_started', handlers.game_started);
       socket.off('game:ready', handlers['game:ready']);
@@ -279,6 +285,37 @@ export function useGameSocket({
       socket.off('error', handlers.error);
     };
   }, [roomId, currentUserId]);
+
+  // Recover from dropped round_reveal (reconnect, Render restart, etc.).
+  useEffect(() => {
+    if (!roomId || state.phase !== 'guessing' || state.isGamePaused) return;
+
+    const tailMs = GAME_CONFIG.TIMERS.GUESS_START_BUFFER + GAME_CONFIG.TIMERS.GUESS_END_GRACE;
+    const staleAt = state.phaseEndsAt - tailMs + 1500;
+    const delay = staleAt - Date.now();
+
+    const nudgeServer = () => {
+      if (phaseRef.current !== 'guessing') return;
+      socket.emit('get_game_state', { roomId });
+      skipTimer = window.setTimeout(() => {
+        if (phaseRef.current === 'guessing') socket.emit('game:skip_round', { roomId });
+      }, 800);
+    };
+
+    let skipTimer: ReturnType<typeof setTimeout> | undefined;
+    let recoveryTimer: ReturnType<typeof setTimeout>;
+
+    if (delay <= 0) {
+      nudgeServer();
+    } else {
+      recoveryTimer = window.setTimeout(nudgeServer, delay);
+    }
+
+    return () => {
+      window.clearTimeout(recoveryTimer);
+      if (skipTimer) window.clearTimeout(skipTimer);
+    };
+  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused]);
 
   const answer = useCallback(
     (value: string, answerType: AnswerType) => {

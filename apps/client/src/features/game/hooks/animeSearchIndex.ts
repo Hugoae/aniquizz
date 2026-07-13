@@ -1,4 +1,4 @@
-import { normalizeString, type FuzzyAnimeCandidate } from '@aniquizz/shared';
+import { normalizeString, tokenizeWords, type FuzzyAnimeCandidate } from '@aniquizz/shared';
 
 type PrefixIndex = Map<string, FuzzyAnimeCandidate[]>;
 
@@ -14,7 +14,21 @@ function addToIndex(index: PrefixIndex, key: string, anime: FuzzyAnimeCandidate)
   index.set(key, [anime]);
 }
 
-/** Buckets catalogue rows by normalized 1–2 char prefixes (name, franchise, alt names). */
+function registerPrefixKeys(keys: Set<string>, raw: string | undefined) {
+  if (!raw) return;
+
+  const norm = normalizeString(raw);
+  if (norm.length >= 2) keys.add(norm.slice(0, 2));
+  if (norm.length >= 1) keys.add(norm.slice(0, 1));
+
+  // Word-level prefixes mirror getFuzzySuggestions scoring (e.g. "edgerunner" → Cyberpunk).
+  for (const word of tokenizeWords(raw)) {
+    if (word.length >= 2) keys.add(word.slice(0, 2));
+    if (word.length >= 1) keys.add(word.slice(0, 1));
+  }
+}
+
+/** Buckets catalogue rows by normalized 1–2 char prefixes (title start + each word). */
 export function buildCataloguePrefixIndex(catalogue: FuzzyAnimeCandidate[]): PrefixIndex {
   if (cachedIndex?.catalogue === catalogue) return cachedIndex.index;
 
@@ -22,16 +36,9 @@ export function buildCataloguePrefixIndex(catalogue: FuzzyAnimeCandidate[]): Pre
 
   for (const anime of catalogue) {
     const keys = new Set<string>();
-    const register = (raw: string | undefined) => {
-      if (!raw) return;
-      const norm = normalizeString(raw);
-      if (norm.length >= 2) keys.add(norm.slice(0, 2));
-      if (norm.length >= 1) keys.add(norm.slice(0, 1));
-    };
-
-    register(anime.name);
-    register(anime.franchise);
-    for (const alt of anime.altNames ?? []) register(alt);
+    registerPrefixKeys(keys, anime.name);
+    registerPrefixKeys(keys, anime.franchise);
+    for (const alt of anime.altNames ?? []) registerPrefixKeys(keys, alt);
 
     for (const key of keys) addToIndex(index, key, anime);
   }
