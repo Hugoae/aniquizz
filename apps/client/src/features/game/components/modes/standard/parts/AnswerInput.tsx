@@ -123,6 +123,8 @@ export function AnswerInput({
             >
               {isSearching && suggestions.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-muted-foreground">Recherche…</div>
+              ) : suggestions.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
               ) : (
                 suggestions.map((suggestion, idx) => (
                 <button

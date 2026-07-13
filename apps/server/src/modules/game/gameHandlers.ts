@@ -181,6 +181,7 @@ export const registerGameHandlers = (
       socket.emit('anime:search_results', { requestId, results });
     } catch (error) {
       captureError(error, { context: 'Game', source: 'anime:search' });
+      socket.emit('anime:search_results', { requestId, results: [] });
     }
   };
 
