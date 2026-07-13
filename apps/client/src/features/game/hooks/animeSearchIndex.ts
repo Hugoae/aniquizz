@@ -53,14 +53,30 @@ export function narrowCatalogueByPrefix(
   index: PrefixIndex,
   query: string,
 ): FuzzyAnimeCandidate[] {
-  const term = normalizeString(query.trim());
+  const trimmed = query.trim();
+  const term = normalizeString(trimmed);
   if (term.length < 2) return [];
 
-  const bucket =
-    (term.length >= 2 ? index.get(term.slice(0, 2)) : undefined) ??
-    index.get(term.slice(0, 1));
+  const hits = new Map<FuzzyAnimeCandidate, true>();
+  const addBucket = (key?: string) => {
+    if (!key) return;
+    const bucket = index.get(key);
+    if (!bucket) return;
+    for (const anime of bucket) hits.set(anime, true);
+  };
 
-  return bucket ?? catalogue;
+  addBucket(term.length >= 2 ? term.slice(0, 2) : undefined);
+  addBucket(term.slice(0, 1));
+
+  // Multi-word queries (e.g. "lie in april") must union each token's bucket.
+  for (const word of trimmed.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 0)) {
+    const norm = normalizeString(word);
+    if (norm.length >= 2) addBucket(norm.slice(0, 2));
+    if (norm.length >= 1) addBucket(norm.slice(0, 1));
+  }
+
+  if (hits.size === 0) return catalogue;
+  return [...hits.keys()];
 }
 
 /** Test helper — reset module cache between tests. */

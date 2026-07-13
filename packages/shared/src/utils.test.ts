@@ -153,6 +153,36 @@ describe('getFuzzySuggestions', () => {
     expect(labels(getFuzzySuggestions(catalogue, 'black', 'franchise'))).toContain('Black Clover');
   });
 
+  it('matches multi-word English titles like Your Lie in April', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      {
+        name: 'Your Lie in April',
+        franchise: 'Your Lie in April',
+        altNames: ['Shigatsu wa Kimi no Uso', 'Your lie in April'],
+      },
+    ];
+    expect(labels(getFuzzySuggestions(catalogue, 'your lie in april', 'franchise'))).toEqual([
+      'Your Lie in April',
+    ]);
+    expect(labels(getFuzzySuggestions(catalogue, 'lie in april', 'franchise'))).toEqual([
+      'Your Lie in April',
+    ]);
+    expect(labels(getFuzzySuggestions(catalogue, 'april', 'franchise'))).toEqual(['Your Lie in April']);
+  });
+
+  it('matches single-word titles like Parasyte', () => {
+    const catalogue: FuzzyAnimeCandidate[] = [
+      {
+        name: 'Parasyte',
+        franchise: 'Parasyte',
+        altNames: ['Kiseijuu: Sei no Kakuritsu', 'Parasyte: The Maxim', 'Parasyte -the maxim-'],
+      },
+    ];
+    expect(labels(getFuzzySuggestions(catalogue, 'parasyte', 'franchise'))).toEqual(['Parasyte']);
+    expect(labels(getFuzzySuggestions(catalogue, 'paras', 'franchise'))).toEqual(['Parasyte']);
+    expect(labels(getFuzzySuggestions(catalogue, 'kiseijuu', 'franchise'))).toEqual(['Parasyte']);
+  });
+
   it('franchise mode keeps single-anime franchises whose title contains a colon', () => {
     const catalogue: FuzzyAnimeCandidate[] = [
       { name: 'Popular Parent', franchise: 'Popular Parent', altNames: [] },

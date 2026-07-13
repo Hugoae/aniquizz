@@ -68,7 +68,7 @@ function AnswerInputInner({
   const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
   const canType = showTyping && !disabled;
 
-  const { suggestions, isSearching } = useAnimeSearch({
+  const { suggestions, isSearching, isCatalogueLoading } = useAnimeSearch({
     query: draft,
     precision: normalizePrecision(precision),
     enabled: canType,
@@ -107,8 +107,7 @@ function AnswerInputInner({
   const queryReady = draft.trim().length >= 2;
   const showMixSwitchers =
     responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && !disabled;
-  const showPanel =
-    panelOpen && queryReady && canType && (isSearching || suggestions.length > 0);
+  const showPanel = panelOpen && queryReady && canType;
 
   return (
     <div className={cn('relative flex w-full flex-col items-center gap-3', disabled && 'pointer-events-none opacity-60')}>
@@ -143,8 +142,10 @@ function AnswerInputInner({
               aria-label="Suggestions d'animes"
               className="custom-scrollbar absolute bottom-full left-0 z-50 mb-2 flex max-h-60 w-full flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
             >
-              {isSearching && suggestions.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-muted-foreground">Recherche…</div>
+              {isCatalogueLoading || (isSearching && suggestions.length === 0) ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground">
+                  {isCatalogueLoading ? 'Chargement du catalogue…' : 'Recherche…'}
+                </div>
               ) : suggestions.length === 0 ? (
                 <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
               ) : (
@@ -182,6 +183,9 @@ function AnswerInputInner({
               setDraft(next);
               if (next.trim().length >= 2) setPanelOpen(true);
               else setPanelOpen(false);
+            }}
+            onFocus={() => {
+              if (draft.trim().length >= 2) setPanelOpen(true);
             }}
             placeholder={submittedAnswer ? 'Modifier votre réponse…' : 'Nom de l\'anime…'}
             aria-label="Votre réponse"

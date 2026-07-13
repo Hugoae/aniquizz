@@ -26,13 +26,30 @@ interface UseAnimeSearchResult {
   suggestions: AnimeSuggestion[];
   /** True while catalogue loads or debounced query is catching up. */
   isSearching: boolean;
+  /** True when the anime catalogue has not loaded yet. */
+  isCatalogueLoading: boolean;
 }
 
 let cachedCatalogue: FuzzyAnimeCandidate[] | null = null;
 let inflight: Promise<FuzzyAnimeCandidate[]> | null = null;
 
+function isUsableCatalogue(
+  list: FuzzyAnimeCandidate[] | null | undefined,
+): list is FuzzyAnimeCandidate[] {
+  return !!list && list.length > 0;
+}
+
+/** Test helper — reset module cache between tests. */
+export function resetAnimeSearchCache(): void {
+  cachedCatalogue = null;
+  inflight = null;
+}
+
+// Purge a poisoned empty cache from older sessions / failed first loads.
+if (!isUsableCatalogue(cachedCatalogue)) cachedCatalogue = null;
+
 function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
-  if (cachedCatalogue) return Promise.resolve(cachedCatalogue);
+  if (isUsableCatalogue(cachedCatalogue)) return Promise.resolve(cachedCatalogue);
   if (inflight) return inflight;
 
   inflight = new Promise((resolve) => {
@@ -40,11 +57,14 @@ function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
     const retry = setInterval(() => socket.emit('anime:get_all'), RETRY_INTERVAL_MS);
 
     const onAll = (payload: { animes: FuzzyAnimeCandidate[] }) => {
+      const list = payload?.animes ?? [];
+      // Ignore empty payloads — keep retrying until the catalogue actually loads.
+      if (!list.length) return;
       if (settled) return;
       settled = true;
       clearInterval(retry);
       socket.off('anime:all_names', onAll);
-      cachedCatalogue = payload?.animes ?? [];
+      cachedCatalogue = list;
       inflight = null;
       resolve(cachedCatalogue);
     };
@@ -77,20 +97,36 @@ export function useAnimeSearch({
   precision = 'franchise',
   enabled = true,
 }: UseAnimeSearchArgs): UseAnimeSearchResult {
-  const [catalogue, setCatalogue] = useState<FuzzyAnimeCandidate[] | null>(cachedCatalogue);
+  const [catalogue, setCatalogue] = useState<FuzzyAnimeCandidate[] | null>(
+    isUsableCatalogue(cachedCatalogue) ? cachedCatalogue : null,
+  );
   const [suggestions, setSuggestions] = useState<AnimeSuggestion[]>([]);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (catalogue) return;
+    if (isUsableCatalogue(catalogue)) return;
     let active = true;
     loadCatalogue().then((list) => {
-      if (active) setCatalogue(list);
+      if (active && isUsableCatalogue(list)) setCatalogue(list);
     });
     return () => {
       active = false;
     };
   }, [catalogue]);
+
+  useEffect(() => {
+    const reload = () => {
+      if (isUsableCatalogue(cachedCatalogue)) return;
+      resetAnimeSearchCache();
+      loadCatalogue().then((list) => {
+        if (isUsableCatalogue(list)) setCatalogue(list);
+      });
+    };
+    socket.on('connect', reload);
+    return () => {
+      socket.off('connect', reload);
+    };
+  }, []);
 
   const trimmed = query.trim();
   const minLen = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
@@ -125,8 +161,12 @@ export function useAnimeSearch({
         normalizedPrecision,
         franchiseCounts,
       );
-      // Prefix bucket can miss mid-title / alternate-word matches — fall back to full scan.
-      if (next.length === 0 && scoped.length < catalogue.length) {
+      const bestScopedScore = next[0]?.score ?? 0;
+      // Prefix bucket can miss matches or surface weak noise — fall back when unconfident.
+      if (
+        (next.length === 0 || bestScopedScore < 85) &&
+        scoped.length < catalogue.length
+      ) {
         next = getFuzzySuggestions(
           catalogue,
           debouncedTrimmed,
@@ -144,10 +184,11 @@ export function useAnimeSearch({
     };
   }, [enabled, queryReady, catalogue, prefixIndex, debouncedTrimmed, normalizedPrecision, franchiseCounts]);
 
+  const isCatalogueLoading = enabled && !isUsableCatalogue(catalogue);
   const isSearching =
     enabled &&
     trimmed.length >= minLen &&
-    (!catalogue || debouncedTrimmed !== trimmed);
+    (isCatalogueLoading || debouncedTrimmed !== trimmed);
 
-  return { suggestions, isSearching };
+  return { suggestions, isSearching, isCatalogueLoading };
 }

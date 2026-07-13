@@ -110,8 +110,10 @@ export interface AnimeSuggestion {
 }
 
 const SCORE_PREFIX = 100;
+const SCORE_PHRASE = 92;
 const SCORE_WORD_PREFIX = 85;
 const SCORE_ACRONYM = 88;
+const SCORE_CONTAINS = 80;
 
 /** Map a normalized-prefix length back to a slice end index in the original string. */
 function normPrefixEndIndex(raw: string, normPrefixLen: number): number {
@@ -175,16 +177,54 @@ function scoreAcronym(term: string, raw: string): FieldScore | null {
   return null;
 }
 
+/** Ordered multi-word query: each token must prefix-match a title word left-to-right. */
+function scorePhrase(query: string, raw: string): FieldScore | null {
+  const queryWords = tokenizeWords(query)
+    .map(normalizeString)
+    .filter((w) => w.length >= 2);
+  if (queryWords.length < 2) return null;
+
+  const titleWords = tokenizeWords(raw).map(normalizeString);
+  if (titleWords.length === 0) return null;
+
+  let ti = 0;
+  for (const qw of queryWords) {
+    let found = false;
+    while (ti < titleWords.length) {
+      const tw = titleWords[ti];
+      if (tw.startsWith(qw) || (qw.length >= 3 && tw.includes(qw))) {
+        found = true;
+        ti++;
+        break;
+      }
+      ti++;
+    }
+    if (!found) return null;
+  }
+
+  return { score: SCORE_PHRASE, highlightSource: raw };
+}
+
 /** Score how well `term` matches a single display field. */
-function scoreField(term: string, raw: string, allowFuzzy: boolean): FieldScore | null {
+function scoreField(term: string, raw: string, allowFuzzy: boolean, query?: string): FieldScore | null {
   const acronymHit = scoreAcronym(term, raw);
   const norm = normalizeString(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
 
+  if (query) {
+    const phraseHit = scorePhrase(query, raw);
+    if (phraseHit && (!best || phraseHit.score > best.score)) best = phraseHit;
+  }
+
   if (norm.startsWith(term)) {
     const candidate = { score: SCORE_PREFIX, highlightSource: raw };
+    if (!best || candidate.score > best.score) best = candidate;
+  }
+
+  if (query && tokenizeWords(query).length >= 2 && term.length >= 4 && norm.includes(term)) {
+    const candidate = { score: SCORE_CONTAINS, highlightSource: raw };
     if (!best || candidate.score > best.score) best = candidate;
   }
 
@@ -217,12 +257,17 @@ function scoreField(term: string, raw: string, allowFuzzy: boolean): FieldScore 
  * Stricter alt-name matching: full-string prefix / acronym / fuzzy, plus
  * word-prefix on the first few title words only (avoids "2nd Attack" noise).
  */
-function scoreAltField(term: string, raw: string, allowFuzzy: boolean): FieldScore | null {
+function scoreAltField(term: string, raw: string, allowFuzzy: boolean, query?: string): FieldScore | null {
   const acronymHit = scoreAcronym(term, raw);
   const norm = normalizeString(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
+
+  if (query) {
+    const phraseHit = scorePhrase(query, raw);
+    if (phraseHit && (!best || phraseHit.score > best.score)) best = phraseHit;
+  }
 
   if (norm.startsWith(term)) {
     const candidate = { score: SCORE_PREFIX, highlightSource: raw };
@@ -241,6 +286,11 @@ function scoreAltField(term: string, raw: string, allowFuzzy: boolean): FieldSco
   }
 
   if (!allowFuzzy) return best;
+
+  if (query && tokenizeWords(query).length >= 2 && term.length >= 4 && norm.includes(term)) {
+    const candidate = { score: SCORE_CONTAINS, highlightSource: raw };
+    if (!best || candidate.score > best.score) best = candidate;
+  }
 
   const { SUGGESTION_DISTANCE_RATIO } = GAME_CONFIG.FUZZY;
   const allowedErrors = Math.ceil(norm.length * SUGGESTION_DISTANCE_RATIO);
@@ -311,6 +361,7 @@ function bestScoreForCandidate(
   anime: FuzzyAnimeCandidate,
   precisionMode: 'franchise' | 'anime',
   allowFuzzy: boolean,
+  query?: string,
 ): FieldScore | null {
   let best: FieldScore | null = null;
 
@@ -319,14 +370,14 @@ function bestScoreForCandidate(
     if (!best || scored.score > best.score) best = scored;
   };
 
-  consider(scoreField(term, anime.name, allowFuzzy));
+  consider(scoreField(term, anime.name, allowFuzzy, query));
 
   for (const alt of anime.altNames ?? []) {
-    consider(scoreAltField(term, alt, allowFuzzy));
+    consider(scoreAltField(term, alt, allowFuzzy, query));
   }
 
   if (precisionMode === 'franchise' && anime.franchise) {
-    consider(scoreField(term, anime.franchise, allowFuzzy));
+    consider(scoreField(term, anime.franchise, allowFuzzy, query));
   }
 
   return best;
@@ -364,8 +415,8 @@ export function animeMatchesLibrarySearch(candidate: FuzzyAnimeCandidate, query:
   if (term.length < 2) return false;
 
   const allowFuzzy = term.length >= GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_FOR_FUZZY;
-  if (bestScoreForCandidate(term, candidate, 'anime', allowFuzzy)) return true;
-  if (candidate.franchise && scoreField(term, candidate.franchise, allowFuzzy)) return true;
+  if (bestScoreForCandidate(term, candidate, 'anime', allowFuzzy, trimmed)) return true;
+  if (candidate.franchise && scoreField(term, candidate.franchise, allowFuzzy, trimmed)) return true;
   return false;
 }
 
@@ -385,7 +436,8 @@ export const getFuzzySuggestions = (
 
   if (!query || query.trim().length < SUGGESTION_MIN_QUERY_LENGTH) return [];
 
-  const term = normalizeString(query);
+  const trimmed = query.trim();
+  const term = normalizeString(trimmed);
   const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
   const franchiseCounts =
     precisionMode === 'franchise'
@@ -398,10 +450,10 @@ export const getFuzzySuggestions = (
     const label = suggestionLabel(anime, precisionMode, franchiseCounts);
     if (!label) continue;
 
-    const scored = bestScoreForCandidate(term, anime, precisionMode, allowFuzzy);
+    const scored = bestScoreForCandidate(term, anime, precisionMode, allowFuzzy, trimmed);
     if (!scored) continue;
 
-    const highlight = findSuggestionHighlight(label, query);
+    const highlight = findSuggestionHighlight(label, trimmed);
     const entry: AnimeSuggestion = { label, score: scored.score, highlight };
 
     const prev = byLabel.get(label);
