@@ -5,7 +5,7 @@ import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
 import { MatchRepository } from './MatchRepository';
 import { PlaylistBuilder } from './PlaylistBuilder';
-import { standardScoring } from './ScoringStrategy';
+import { scoringForGameType } from './ScoringStrategy';
 import { toPublicPlayer, type AdminMatchProgress, type BotConfig, type RoomPlayer } from './types';
 
 /**
@@ -99,6 +99,8 @@ export class Room {
       roundPoints: 0,
       answerType: null,
       answerTimeMs: null,
+      speedRank: null,
+      speedBonus: 0,
     };
     this.players.set(userId, player);
     this.emitLobbyUpdate();
@@ -139,6 +141,8 @@ export class Room {
       roundPoints: 0,
       answerType: null,
       answerTimeMs: null,
+      speedRank: null,
+      speedBonus: 0,
     };
     this.players.set(profile.id, player);
     logger.info(`[Room ${this.id}] Bot added: ${profile.username}`, 'Dev');
@@ -438,7 +442,7 @@ export class Room {
     const engine = new MatchEngine(this, {
       builder: new PlaylistBuilder(),
       repo: new MatchRepository(),
-      scoring: standardScoring,
+      scoring: scoringForGameType(this.settings.gameType),
     });
     this.engine = engine;
     const started = await engine.start();

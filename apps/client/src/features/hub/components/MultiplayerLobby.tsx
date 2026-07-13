@@ -1,8 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import type { LucideIcon } from 'lucide-react';
 import {
-  Trophy, Check, Settings, ArrowLeft, Copy, Play,
-  Eye, EyeOff, AlertTriangle, Users, Bot, Loader2, Music2,
+  Check, Settings, ArrowLeft, Copy, Play,
+  Eye, EyeOff, Users, Bot, Loader2, Music2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RoomConfig, GameStatus } from '@aniquizz/shared';
@@ -25,26 +24,17 @@ import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { LobbyPlayerCard, type LobbyPlayer } from '@/features/hub/components/LobbyPlayerCard';
 import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
-import { buildRoomSettingBadges, getDifficultyBadge, SETTING_TONE_CLASSES } from '@/features/hub/components/roomSettings';
+import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
+import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
 import { checkWatchedLobby, checkWatchedPoolLaunch, watchedPoolModeLabel, resolveWatchedPoolBanner, watchedPoolBannerVariantClasses } from '@/features/hub/components/config/watchedSource';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
+import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 
 export type { LobbyPlayer };
 
 /** Display order: host first, then other humans, then bots (regardless of join order). */
 const seatRank = (p: LobbyPlayer) => (p.isHost ? 0 : p.isBot ? 2 : 1);
-
-/** A single room-setting chip in the lobby header (design tokens only). */
-function SettingChip({ icon: Icon, label, value, className }: { icon: LucideIcon; label: string; value: string; className: string }) {
-  return (
-    <div className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold', className)}>
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className="uppercase tracking-wide opacity-70">{label}</span>
-      <span className="capitalize">{value}</span>
-    </div>
-  );
-}
 
 interface MultiplayerLobbyProps {
   roomName: string;
@@ -194,7 +184,10 @@ export function MultiplayerLobby({
     }
   };
 
-  const difficultyBadge = getDifficultyBadge(gameSettings?.difficulty || []);
+  const settingChips = useMemo(
+    () => (gameSettings ? buildLobbySettingChips(gameSettings) : []),
+    [gameSettings],
+  );
 
   const seats = useMemo(() => Array.from({ length: freeSlots }), [freeSlots]);
 
@@ -215,10 +208,7 @@ export function MultiplayerLobby({
             </Button>
             <div>
               <div className="mb-1 flex items-center gap-3">
-                <div className="flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 font-black uppercase tracking-wider text-primary-foreground shadow-glow">
-                  <Trophy className="h-5 w-5 fill-current" aria-hidden="true" />
-                  Standard
-                </div>
+                <GameModeBadge gameType={gameSettings?.gameType} />
               </div>
 
               <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black uppercase tracking-tight">
@@ -267,12 +257,11 @@ export function MultiplayerLobby({
         {/* Settings chips */}
         {gameSettings && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
-            <div className="flex flex-wrap gap-2">
-              <SettingChip icon={AlertTriangle} label="Diff" value={difficultyBadge.label} className={difficultyBadge.className} />
-              {buildRoomSettingBadges(gameSettings).map((spec) => (
-                <SettingChip key={spec.key} icon={spec.icon} label={spec.label} value={spec.value} className={SETTING_TONE_CLASSES[spec.tone]} />
+            <SettingChipList>
+              {settingChips.map((spec) => (
+                <SettingChip key={spec.key} {...spec} />
               ))}
-            </div>
+            </SettingChipList>
             <LobbyRulesTrigger
               config={gameSettings}
               context={{

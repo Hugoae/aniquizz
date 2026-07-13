@@ -151,7 +151,8 @@ Vite warns: shell (`index-*.js`) and `Admin-*.js` exceed 500 kB minified.
 | `getChoiceCandidates` | Match start (QCM/duo rooms) | Derived from shared `getAllAnimeNames` cache — **single** `anime` scan, warmed at boot (10.8) |
 | `MatchRepository.finish` | Game over | Parallel `SongHistory` upserts + profile updates (10.6) |
 | `profile:get_stats` | Profile page | **Single** DB round-trip wave (10.8, was two); cached playable-song count (10.6) |
-| `anime:search` | In-game autocomplete | Server-side fuzzy match over cached names; returns ≤5 suggestions, silent rate-limit (10.8) |
+| `anime:get_all` / `anime:all_names` | In-game autocomplete warm-up | One bulk fetch per game session; client caches module-side (26.2.1) |
+| Client fuzzy (`useAnimeSearch`) | Every keystroke during guessing | Local `getFuzzySuggestions` over the cached catalogue — no per-keystroke socket (26.2.1) |
 | `broadcastRoomList` | Lobby/match lifecycle | `rooms_update` to **`lobby:list` subscribers** (debounced 150 ms) |
 | `broadcastPresence` | Connect/disconnect/lobby/game | Debounced 400 ms; duplicate skip; offline immediate |
 | `game_state_sync` | Reconnect / `get_game_state` | Full room state — intentionally debug-only in logs (high volume) |
@@ -169,7 +170,8 @@ Typical JSON sizes at emit time (empty catalogue / 4-player multi / 10 rounds):
 | `game_state_sync` | 5–30 kB | Full sync blob on reconnect |
 | `rooms_update` | 0.3–3 kB | Trimmed settings; scales with public room count; targeted fan-out |
 | `friends:presence` | <0.3 kB | Per friend notification |
-| `anime:search_results` | <0.5 kB | ≤5 ranked matches per keystroke (10.8, replaced full `anime_list`) |
+| `anime:all_names` | 5–50 kB (scales with catalogue) | Full `FuzzyAnimeCandidate[]` once per session; replaces per-keystroke traffic |
+| `anime:search_results` | *(legacy handler, unused by client)* | Server still exposes `anime:search` but the SPA no longer calls it since 26.2.1 |
 
 The full `anime_list` transport (scaled with catalogue size) was removed in 10.8;
 autocomplete now costs one small request/response per keystroke instead of one
@@ -200,11 +202,15 @@ Re-run prod Lighthouse after Vercel deploy to validate LCP improvement.
 
 Catalogue snapshot at measurement: **434 songs (all COMPLETED), 265 animes, 91 franchises** (repopulation in progress).
 
-### Axis 1 — autocomplete (`anime_list` → server-side `anime:search`)
+The full `anime_list` transport (scaled with catalogue size) was removed in 10.8.
+**26.2.1** reverted autocomplete to a **single bulk download + local fuzzy** (see below);
+the per-keystroke `anime:search` path is no longer used by the client.
 
-- **Before:** every game client downloaded the full `anime_list` (name + franchise + altNames for all animes) once per match, then ran the fuzzy match locally (Web Worker above 2000 rows).
-- **After:** the client sends a debounced `anime:search { requestId, query, precision }`; the server runs `getFuzzySuggestions` over its cached name list and returns only ≤5 ranked matches. A monotonic `requestId` drops stale answers; the event is silently rate-limited (`animeSearch`: 30 / 5 s).
-- **Wins:** wire payload no longer scales with catalogue size; no per-client catalogue blob; the Web Worker + `useAnimeSuggestions` hook were removed. The fuzzy logic (`getFuzzySuggestions`) is unchanged and still fully unit-tested in `packages/shared`.
+### Axis 1 — autocomplete (10.8 server search → 26.2.1 client fuzzy)
+
+**10.8 (superseded for in-game UX):** the client sent a debounced `anime:search { requestId, query, precision }`; the server ran `getFuzzySuggestions` over its cached name list and returned ≤5 ranked matches per keystroke.
+
+**26.2.1 (current):** `useAnimeSearch` fetches the catalogue **once** per session via `anime:get_all` → `anime:all_names`, caches it module-side (with retry on reconnect), then runs `getFuzzySuggestions` **locally on every keystroke** — instant suggestions, no per-keystroke network round-trip. The fuzzy logic (`getFuzzySuggestions`) is unchanged and still fully unit-tested in `packages/shared`. The server `anime:search` handler remains for backward compatibility but is not called by the current client.
 
 ### Axis 2 — playlist build
 

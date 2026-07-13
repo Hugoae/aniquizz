@@ -10,9 +10,12 @@ import type { SongStartMode } from './songStartMode';
 export type GameMode = 'solo' | 'multiplayer' | 'competitive';
 export type SoundSelection = 'random' | 'mix' | 'watched' | 'playlist';
 
+/** Match rules variant. Quick Draw = typing-only multi speed mode (26.3). */
+export type GameType = 'standard' | 'sprint';
+
 export interface GameConfig {
   mode: GameMode;
-  gameType: 'standard';
+  gameType: GameType;
   responseType: 'typing' | 'qcm' | 'mix';
   soundCount: number;
   soundTypes: string[];
@@ -71,6 +74,11 @@ export interface GamePlayer extends BasePlayer {
   hasAnswered?: boolean;
   /** How the current-round answer was submitted. */
   answerType?: 'typing' | 'qcm' | 'duo' | null;
+
+  /** Quick Draw: 1-based rank among correct answerers (reveal only). */
+  speedRank?: number | null;
+  /** Quick Draw: speed podium bonus for this round (reveal only). */
+  speedBonus?: number;
 
   matchCorrectCount?: number;
   matchTotalCount?: number;

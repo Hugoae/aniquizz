@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
-import { AnswerType as PrismaAnswerType, Prisma } from '@prisma/client';
+import { AnswerType as PrismaAnswerType, Prisma, StoredPrecision, StoredResponseType, StoredSoloMedal } from '@prisma/client';
 import { prisma, isBotId } from '@aniquizz/database';
 import type { AnswerType } from '@aniquizz/shared';
+import type { MedalTier } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import type { RecordedRound } from './types';
 
@@ -19,6 +20,8 @@ export interface PersistPlayerInput {
   /** New consecutive-win counter (win +1, loss 0). Undefined = don't touch. */
   newWinStreak?: number;
   correctSongIds: number[];
+  /** Solo medal snapshot (null in multiplayer or no medal earned). */
+  soloMedal: MedalTier;
 }
 
 /** Prior XP state read before a match's XP is computed. */
@@ -28,13 +31,49 @@ export interface XpState {
 }
 
 export interface PersistMatchInput {
+  gameType: 'standard' | 'sprint';
   totalRounds: number;
   startedAt: Date;
   endedAt: Date;
+  responseType: 'typing' | 'qcm' | 'mix';
+  precision: 'anime' | 'franchise';
   players: PersistPlayerInput[];
   rounds: RecordedRound[];
   songIds: number[];
 }
+
+const toPrismaGameMode = (gameType: 'standard' | 'sprint') =>
+  gameType === 'sprint' ? 'SPRINT' : 'STANDARD';
+
+const toStoredResponseType = (responseType: 'typing' | 'qcm' | 'mix'): StoredResponseType => {
+  switch (responseType) {
+    case 'typing':
+      return StoredResponseType.TYPING;
+    case 'qcm':
+      return StoredResponseType.QCM;
+    default:
+      return StoredResponseType.MIX;
+  }
+};
+
+const toStoredPrecision = (precision: 'anime' | 'franchise'): StoredPrecision =>
+  precision === 'anime' ? StoredPrecision.ANIME : StoredPrecision.FRANCHISE;
+
+const toStoredSoloMedal = (medal: MedalTier): StoredSoloMedal | null => {
+  if (!medal) return null;
+  switch (medal) {
+    case 'bronze':
+      return StoredSoloMedal.BRONZE;
+    case 'silver':
+      return StoredSoloMedal.SILVER;
+    case 'gold':
+      return StoredSoloMedal.GOLD;
+    case 'platinum':
+      return StoredSoloMedal.PLATINUM;
+    default:
+      return null;
+  }
+};
 
 const toPrismaAnswerType = (t: AnswerType): PrismaAnswerType => {
   switch (t) {
@@ -133,11 +172,13 @@ export class MatchRepository {
         prisma.match.create({
           data: {
             id: matchId,
-            mode: 'STANDARD',
+            mode: toPrismaGameMode(input.gameType),
             status: 'FINISHED',
             totalRounds: input.totalRounds,
             startedAt: input.startedAt,
             endedAt: input.endedAt,
+            responseType: toStoredResponseType(input.responseType),
+            precision: toStoredPrecision(input.precision),
           },
         }),
         prisma.matchPlayer.createMany({
@@ -150,6 +191,7 @@ export class MatchRepository {
             isWinner: p.isWinner,
             correctCount: p.correctCount,
             xpEarned: p.xpEarned,
+            soloMedal: toStoredSoloMedal(p.soloMedal),
           })),
         }),
         prisma.matchRound.createMany({ data: roundRows }),

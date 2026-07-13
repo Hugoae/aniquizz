@@ -265,6 +265,11 @@ function buildFranchiseCounts(list: FuzzyAnimeCandidate[]): Map<string, number> 
   return counts;
 }
 
+/** Precomputed franchise counts — reuse across keystrokes on the same catalogue. */
+export function buildFranchiseCountsMap(list: FuzzyAnimeCandidate[]): Map<string, number> {
+  return buildFranchiseCounts(list);
+}
+
 /** Strip spin-off suffixes to compare against a parent franchise name. */
 function franchiseStem(s: string): string {
   const base = s.split(/[:(]/)[0]?.trim() ?? s;
@@ -373,6 +378,7 @@ export const getFuzzySuggestions = (
   list: FuzzyAnimeCandidate[],
   query: string,
   precisionMode: 'franchise' | 'anime' = 'franchise',
+  franchiseCountsCache?: Map<string, number>,
 ): AnimeSuggestion[] => {
   const { SUGGESTION_MIN_QUERY_LENGTH, SUGGESTION_MIN_QUERY_FOR_FUZZY, SUGGESTION_LIMIT } =
     GAME_CONFIG.FUZZY;
@@ -382,7 +388,9 @@ export const getFuzzySuggestions = (
   const term = normalizeString(query);
   const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
   const franchiseCounts =
-    precisionMode === 'franchise' ? buildFranchiseCounts(list) : new Map<string, number>();
+    precisionMode === 'franchise'
+      ? franchiseCountsCache ?? buildFranchiseCounts(list)
+      : new Map<string, number>();
 
   const byLabel = new Map<string, AnimeSuggestion>();
 

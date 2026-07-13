@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
-import { Trophy, Music, Target } from 'lucide-react';
+import { Gauge, Shuffle, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SETTING_CHIP_NEUTRAL, SettingChip } from '@/features/hub/components/SettingChip';
 
 export interface ConfigBadgesData {
   sourceLabel: string;
@@ -9,16 +10,14 @@ export interface ConfigBadgesData {
   modeLabel: string;
 }
 
-const Chip = ({ icon: Icon, label, tone }: { icon: LucideIcon; label: string; tone: string }) => (
-  <div className="flex items-center gap-2 rounded-md border border-border/60 bg-background/95 px-3 py-1.5 shadow-lg">
-    <Icon className={`h-3 w-3 ${tone}`} aria-hidden="true" />
-    <span className="text-[10px] font-bold uppercase tracking-wider text-foreground">{label}</span>
-  </div>
-);
-
-/** `positionClassName` overrides the default corner offset (e.g. to clear the
- * collapsed roster rail on the right in multiplayer). */
+/** In-game corner badges — same chip system as lobby, value-only for compact overlay. */
 export function ConfigBadges({ data, positionClassName }: { data: ConfigBadgesData; positionClassName?: string }) {
+  const chips: { key: string; icon: LucideIcon; value: string }[] = [
+    { key: 'diff', icon: Gauge, value: data.difficultyLabel },
+    { key: 'source', icon: Shuffle, value: data.sourceLabel },
+    { key: 'precision', icon: Target, value: data.precisionLabel },
+  ];
+
   return (
     <div
       className={cn(
@@ -26,9 +25,15 @@ export function ConfigBadges({ data, positionClassName }: { data: ConfigBadgesDa
         positionClassName ?? 'right-4',
       )}
     >
-      <Chip icon={Trophy} label={data.difficultyLabel} tone="text-primary" />
-      <Chip icon={Music} label={data.sourceLabel} tone="text-aqua" />
-      <Chip icon={Target} label={data.precisionLabel} tone="text-accent" />
+      {chips.map((chip) => (
+        <SettingChip
+          key={chip.key}
+          icon={chip.icon}
+          value={chip.value}
+          className={SETTING_CHIP_NEUTRAL}
+          hideLabel
+        />
+      ))}
     </div>
   );
 }

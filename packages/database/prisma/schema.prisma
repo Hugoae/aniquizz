@@ -36,7 +36,7 @@ enum Difficulty {
 
 enum GameMode {
   STANDARD
-  // SPEED (AMQ-style) added later
+  SPRINT
 }
 
 enum MatchStatus {

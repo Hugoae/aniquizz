@@ -26,6 +26,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "db:generate": "pnpm --filter @aniquizz/database exec prisma generate",
     "db:migrate": "pnpm --filter @aniquizz/database exec prisma migrate dev",
+    "db:migrate:deploy": "pnpm --filter @aniquizz/database exec prisma migrate deploy",
     "db:studio": "pnpm --filter @aniquizz/database exec prisma studio",
     "perf:baseline": "pnpm --filter aniquizz-client build && node scripts/summarize-perf-baseline.mjs"
   },

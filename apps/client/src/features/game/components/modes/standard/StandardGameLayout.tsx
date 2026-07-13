@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, memo } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
-import type { GamePlayer } from '@aniquizz/shared';
+import type { GamePlayer, Precision } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
-import type { AnimeSuggestion } from '@aniquizz/shared';
 import type { CurrentSong } from '@/features/game/state/gameReducer';
 import { activeMatchPlayers } from '../../../utils/ranking';
 
@@ -14,8 +13,10 @@ import { GameTopBar } from './parts/GameTopBar';
 import { VideoStage } from './parts/VideoStage';
 import { AnswerInput } from './parts/AnswerInput';
 import { PlayersFloor } from './parts/PlayersFloor';
+import { SprintLeaderboard } from './parts/SprintLeaderboard';
 import { ConfigBadges, type ConfigBadgesData } from './parts/ConfigBadges';
 import type { GamePhase, InputMode, MyProfile } from './parts/types';
+import type { SprintLeaderboardPayload } from '@aniquizz/shared';
 
 interface StandardGameLayoutProps {
   phase: GamePhase;
@@ -44,15 +45,12 @@ interface StandardGameLayoutProps {
   videoMode: VideoMode;
   myWatchedIds: number[];
   inputMode: InputMode;
-  answer: string;
-  setAnswer: (val: string) => void;
   submittedAnswer: string | null;
-  suggestions: AnimeSuggestion[];
-  isSearching?: boolean;
   choices: string[];
   onAction: (val: string) => void;
   onSwitchCarre: () => void;
   onSwitchDuo: () => void;
+  precision?: Precision;
   myProfile: MyProfile;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (v: boolean) => void;
@@ -66,19 +64,28 @@ interface StandardGameLayoutProps {
   /** Room response mode — carré/duo switches only allowed when `mix`. */
   responseType?: 'typing' | 'qcm' | 'mix';
   configBadges?: ConfigBadgesData;
+  isSprint?: boolean;
+  sprintLeaderboard?: SprintLeaderboardPayload | null;
+  pointsBadge?: string | null;
 }
 
-export function StandardGameLayout({
+export const StandardGameLayout = memo(StandardGameLayoutInner);
+
+function StandardGameLayoutInner({
   phase, players, currentRound, totalRounds, phaseEndsAt, phaseDurationSeconds,
   volume, isMuted, onVolumeChange, onToggleMute, videoRef, autoplayBlocked, onSafePlay,
   isGamePaused, isPausePending, resumeCountdown, onVotePause, pauseVotes, pauseRequired, skipVotes, skipRequired, onVoteSkip,
   currentSong, myWatchedIds,
-  inputMode, answer, setAnswer, submittedAnswer, suggestions, isSearching, choices, onAction, onSwitchCarre, onSwitchDuo,
+  inputMode, submittedAnswer, choices, onAction, onSwitchCarre, onSwitchDuo,
   myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, showPointsAnimation, pointsEarned,
   currentUserId, gameMode, roomId,
   responseType = 'mix',
   configBadges,
   videoMode,
+  precision = 'franchise',
+  isSprint = false,
+  sprintLeaderboard = null,
+  pointsBadge,
 }: StandardGameLayoutProps) {
   const revealSong = phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
@@ -115,6 +122,8 @@ export function StandardGameLayout({
         isWatched: revealSong.animeId ? myWatchedIds.includes(revealSong.animeId) : false,
       }
     : null;
+
+  const showSprintBoard = isSprint && phase === 'revealed' && sprintLeaderboard != null;
 
   return (
     <div className="fixed inset-0 flex h-[100dvh] w-screen flex-col overflow-hidden overscroll-none bg-background">
@@ -183,20 +192,27 @@ export function StandardGameLayout({
                   <AnswerInput
                     responseType={responseType}
                     inputMode={inputMode}
-                    answer={answer}
-                    setAnswer={setAnswer}
                     submittedAnswer={submittedAnswer}
-                    suggestions={suggestions}
-                    isSearching={isSearching}
                     choices={choices}
                     onAction={onAction}
                     onSwitchCarre={onSwitchCarre}
                     onSwitchDuo={onSwitchDuo}
+                    precision={precision}
+                    roundKey={currentRound}
                     disabled={phase === 'ready'}
+                    pointsBadge={pointsBadge}
                   />
                 ) : songInfoProps ? (
-                  <div className="w-full lg:hidden">
+                  <div className="flex w-full flex-col gap-3 lg:hidden">
                     <SongInfoCard variant="band" isRevealed {...songInfoProps} />
+                    {showSprintBoard && sprintLeaderboard && (
+                      <SprintLeaderboard
+                        data={sprintLeaderboard}
+                        currentUserId={currentUserId}
+                        myAvatar={myProfile.avatar}
+                        compact
+                      />
+                    )}
                   </div>
                 ) : (
                   <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
@@ -216,10 +232,20 @@ export function StandardGameLayout({
               />
             </div>
 
-            {/* Right column: song info card, top-aligned with the video. Wider but
-                shorter than the player so titles/tags have room without wrapping. */}
-            <div className="hidden shrink-0 animate-fade-in self-start lg:block lg:h-[34vh] lg:w-[440px] xl:w-[520px]">
-              <SongInfoCard variant="card" isRevealed={phase === 'revealed'} {...(songInfoProps ?? { animeName: '', songTitle: '', artist: '', type: '', difficulty: '' })} />
+            {/* Right column: song info card + Sprint speed board (aligned with player cards). */}
+            <div className="hidden shrink-0 flex-col self-start lg:flex lg:w-[440px] xl:w-[520px]">
+              <div className="h-[34vh] shrink-0">
+                <SongInfoCard variant="card" isRevealed={phase === 'revealed'} {...(songInfoProps ?? { animeName: '', songTitle: '', artist: '', type: '', difficulty: '' })} />
+              </div>
+              {showSprintBoard && sprintLeaderboard && (
+                <div className="mt-[calc(8vh+4.25rem)]">
+                  <SprintLeaderboard
+                    data={sprintLeaderboard}
+                    currentUserId={currentUserId}
+                    myAvatar={myProfile.avatar}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </main>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { BookOpen, type LucideIcon } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
@@ -14,26 +14,7 @@ import {
   buildLobbyRulesSections,
   type LobbyRulesContext,
 } from '@/features/hub/components/lobby/lobbyRulesCopy';
-
-function RulesSettingChip({
-  icon: Icon,
-  label,
-  value,
-  className,
-}: {
-  icon: LucideIcon;
-  label: string;
-  value: string;
-  className: string;
-}) {
-  return (
-    <div className={cn('flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-bold', className)}>
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-      <span className="uppercase tracking-wide opacity-70">{label}</span>
-      <span className="capitalize">{value}</span>
-    </div>
-  );
-}
+import { SettingChip } from '@/features/hub/components/SettingChip';
 
 interface LobbyRulesDialogProps {
   open: boolean;
@@ -87,7 +68,7 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
                 {section.chips && section.chips.length > 0 && (
                   <div className={cn('flex flex-wrap gap-2', section.lines?.length ? 'mt-3' : undefined)}>
                     {section.chips.map((chip) => (
-                      <RulesSettingChip
+                      <SettingChip
                         key={chip.key}
                         icon={chip.icon}
                         label={chip.label}
@@ -110,22 +91,30 @@ interface LobbyRulesTriggerProps {
   config: GameConfig;
   context: LobbyRulesContext;
   className?: string;
+  /** Muted text link style — used on solo pre-game where rules are secondary. */
+  subtle?: boolean;
 }
 
 /** Opens the shared lobby rules modal — visible to host and guests. */
-export function LobbyRulesTrigger({ config, context, className }: LobbyRulesTriggerProps) {
+export function LobbyRulesTrigger({ config, context, className, subtle = false }: LobbyRulesTriggerProps) {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <Button
         type="button"
-        variant="outline"
+        variant={subtle ? 'ghost' : 'outline'}
         size="sm"
-        className={cn('shrink-0 gap-1.5 border-border/60 bg-secondary/20 font-bold', className)}
+        className={cn(
+          'shrink-0 gap-1.5',
+          subtle
+            ? 'h-auto px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-transparent hover:text-foreground'
+            : 'border-border/60 bg-secondary/20 font-bold',
+          className,
+        )}
         onClick={() => setOpen(true)}
       >
-        <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+        <BookOpen className={cn('h-3.5 w-3.5', subtle && 'opacity-70')} aria-hidden="true" />
         Règles
       </Button>
       <LobbyRulesDialog open={open} onOpenChange={setOpen} config={config} context={context} />

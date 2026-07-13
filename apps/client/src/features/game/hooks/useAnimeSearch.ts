@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   GAME_CONFIG,
+  buildFranchiseCountsMap,
   getFuzzySuggestions,
   normalizePrecision,
   type AnimeSuggestion,
@@ -8,9 +9,12 @@ import {
   type Precision,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { buildCataloguePrefixIndex, narrowCatalogueByPrefix } from '@/features/game/hooks/animeSearchIndex';
 
 /** Re-emit the bulk request until the list arrives (covers reconnects / dropped emits). */
 const RETRY_INTERVAL_MS = 2_500;
+const DEBOUNCE_TYPING_MS = 80;
+const DEBOUNCE_DELETING_MS = 200;
 
 interface UseAnimeSearchArgs {
   query: string;
@@ -20,18 +24,9 @@ interface UseAnimeSearchArgs {
 
 interface UseAnimeSearchResult {
   suggestions: AnimeSuggestion[];
-  /** True only while the one-time catalogue fetch is still loading. */
+  /** True while catalogue loads or debounced query is catching up. */
   isSearching: boolean;
 }
-
-/**
- * In-game typing autocomplete.
- *
- * The full catalogue name list is fetched ONCE per session (`anime:get_all`)
- * and cached module-side, then the fuzzy match runs entirely on the client for
- * every keystroke — instant, no per-keystroke network round-trip. Falls back to
- * an empty result set until the (small, cached) list has loaded.
- */
 
 let cachedCatalogue: FuzzyAnimeCandidate[] | null = null;
 let inflight: Promise<FuzzyAnimeCandidate[]> | null = null;
@@ -61,14 +56,31 @@ function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
   return inflight;
 }
 
+/** Longer debounce while backspacing — avoids re-scanning on every delete tick. */
+function useAdaptiveDebouncedValue(value: string): string {
+  const [debounced, setDebounced] = useState(value);
+  const previousRef = useRef(value);
+
+  useEffect(() => {
+    const shrinking = value.length < previousRef.current.length;
+    previousRef.current = value;
+    const delay = shrinking ? DEBOUNCE_DELETING_MS : DEBOUNCE_TYPING_MS;
+    const handle = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(handle);
+  }, [value]);
+
+  return debounced;
+}
+
 export function useAnimeSearch({
   query,
   precision = 'franchise',
   enabled = true,
 }: UseAnimeSearchArgs): UseAnimeSearchResult {
   const [catalogue, setCatalogue] = useState<FuzzyAnimeCandidate[] | null>(cachedCatalogue);
+  const [suggestions, setSuggestions] = useState<AnimeSuggestion[]>([]);
+  const [, startTransition] = useTransition();
 
-  // Warm the list on mount so it is ready before the first guessing phase.
   useEffect(() => {
     if (catalogue) return;
     let active = true;
@@ -81,14 +93,52 @@ export function useAnimeSearch({
   }, [catalogue]);
 
   const trimmed = query.trim();
-  const queryReady = trimmed.length >= GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
+  const minLen = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
+  const debouncedTrimmed = useAdaptiveDebouncedValue(trimmed);
+  const normalizedPrecision = normalizePrecision(precision);
+  const queryReady = debouncedTrimmed.length >= minLen;
 
-  const suggestions = useMemo(() => {
-    if (!enabled || !queryReady || !catalogue) return [];
-    return getFuzzySuggestions(catalogue, trimmed, normalizePrecision(precision));
-  }, [enabled, queryReady, catalogue, trimmed, precision]);
+  const prefixIndex = useMemo(
+    () => (catalogue ? buildCataloguePrefixIndex(catalogue) : null),
+    [catalogue],
+  );
 
-  const isSearching = enabled && queryReady && !catalogue;
+  const franchiseCounts = useMemo(() => {
+    if (!catalogue || normalizedPrecision !== 'franchise') return undefined;
+    return buildFranchiseCountsMap(catalogue);
+  }, [catalogue, normalizedPrecision]);
+
+  // Drop suggestions immediately when the live query is too short (backspace path).
+  useEffect(() => {
+    if (trimmed.length < minLen) setSuggestions([]);
+  }, [trimmed, minLen]);
+
+  useEffect(() => {
+    if (!enabled || !queryReady || !catalogue || !prefixIndex) return;
+
+    let cancelled = false;
+    const frame = window.requestAnimationFrame(() => {
+      const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, debouncedTrimmed);
+      const next = getFuzzySuggestions(
+        scoped,
+        debouncedTrimmed,
+        normalizedPrecision,
+        franchiseCounts,
+      );
+      if (cancelled) return;
+      startTransition(() => setSuggestions(next));
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(frame);
+    };
+  }, [enabled, queryReady, catalogue, prefixIndex, debouncedTrimmed, normalizedPrecision, franchiseCounts]);
+
+  const isSearching =
+    enabled &&
+    trimmed.length >= minLen &&
+    (!catalogue || debouncedTrimmed !== trimmed);
 
   return { suggestions, isSearching };
 }

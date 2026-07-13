@@ -60,12 +60,14 @@ const CLEANUP_GRACE_MS = 15_000;
 const ROOM_LIST_BROADCAST_MS = 150;
 
 const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => ({
+  gameType: settings.gameType,
   soundCount: settings.soundCount,
   difficulty: settings.difficulty,
   guessDuration: settings.guessDuration,
   precision: settings.precision,
   responseType: settings.responseType,
   soundSelection: settings.soundSelection,
+  videoMode: settings.videoMode,
 });
 
 // --- IDLE / STALE ROOM POLICY ---------------------------------------------

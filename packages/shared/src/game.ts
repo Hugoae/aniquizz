@@ -2,7 +2,7 @@
 // Canonical game/match domain types shared by client and server (Standard mode).
 // Player identity is ALWAYS `userId` (Supabase auth). Never socket.id.
 
-import type { GamePlayer, RoomConfig } from './types';
+import type { GamePlayer, GameType, RoomConfig } from './types';
 import type { MedalTier } from './grading';
 import type { UserRole } from './roles';
 import type { Precision } from './precision';
@@ -113,6 +113,26 @@ export interface AnsweredPayload {
   userId: string;
 }
 
+/** One row in the live Sprint speed board (correct answerers only). */
+export interface SprintLeaderboardEntry {
+  userId: string;
+  username: string;
+  avatar: string;
+  timeMs: number;
+}
+
+/** Final Sprint speed board pushed at round reveal (one socket per human player). */
+export interface SprintLeaderboardPayload {
+  /** Top three fastest correct answerers so far this round. */
+  top: SprintLeaderboardEntry[];
+  /** Local player's latest attempt (time + projected total when correct). */
+  you: {
+    timeMs: number | null;
+    isCorrect: boolean | null;
+    projectedPoints: number | null;
+  };
+}
+
 export interface RoundRevealPayload extends PhaseTiming {
   round: number;
   song: RevealSong;
@@ -177,16 +197,31 @@ export interface RoundHistoryEntry {
   myAnswer: string | null;
   /** How the answer was submitted (null when the player did not answer). */
   answerType: AnswerType | null;
+  /** Sprint — final answer time in ms (null if unanswered or wrong). */
+  answerTimeMs?: number | null;
+  /** Sprint — 1-based rank among correct answerers this round. */
+  speedRank?: number | null;
+  /** Sprint — podium bonus points for this round. */
+  speedBonus?: number;
 }
 
 /** Settings strip on the game-over screen — snapshot at match end. */
 export type MatchSettingsSnapshot = Pick<
   RoomSettings,
-  'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection' | 'videoMode' | 'songStartMode'
+  | 'gameType'
+  | 'soundCount'
+  | 'guessDuration'
+  | 'difficulty'
+  | 'precision'
+  | 'responseType'
+  | 'soundSelection'
+  | 'videoMode'
+  | 'songStartMode'
 >;
 
 export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
   return {
+    gameType: settings.gameType,
     soundCount: settings.soundCount,
     guessDuration: settings.guessDuration,
     difficulty: settings.difficulty,
@@ -237,12 +272,14 @@ export interface LobbyJoinedPayload {
 }
 
 export interface RoomListSettingsSummary {
+  gameType?: GameType;
   soundCount: number;
   difficulty: string[];
   guessDuration: number;
   precision: Precision;
   responseType: ResponseType;
   soundSelection: string;
+  videoMode?: VideoMode;
 }
 
 export interface RoomListItem {

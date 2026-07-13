@@ -5,7 +5,7 @@
  * and delegating layout/game-over to StandardGameLayout / StandardGameOver.
  * Player identity is always user.id (JWT), never socket.id.
  */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
@@ -22,9 +22,8 @@ import {
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink } from '@aniquizz/shared';
+import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink, maxSprintPointsPerRound } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
-import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { parseGameNavState } from '@/features/game/gameNavState';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
@@ -69,6 +68,9 @@ export default function Game() {
     },
   });
 
+  const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
+  const isSprint = activeSettings.gameType === 'sprint';
+
   const { phase, players, currentSong } = state;
 
   // Video element lifecycle (load per round, volume, pause, autoplay recovery).
@@ -76,17 +78,10 @@ export default function Game() {
     useVideoPlayback({ currentSong, phase, isGamePaused: state.isGamePaused });
 
   // --- Local UI state ---
-  const [answer, setAnswer] = useState('');
-  const [inputMode, setInputMode] = useState<InputMode>(
-    settings.responseType === 'qcm' ? 'carre' : 'typing',
+  const [inputMode, setInputMode] = useState<InputMode>(() =>
+    settings.gameType === 'sprint' ? 'typing' : settings.responseType === 'qcm' ? 'carre' : 'typing',
   );
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
-
-  const { suggestions, isSearching } = useAnimeSearch({
-    query: answer,
-    precision: normalizePrecision(settings.precision),
-    enabled: inputMode === 'typing' && phase === 'guessing' && !submittedAnswer,
-  });
 
   const [showLeaveChoice, setShowLeaveChoice] = useState(false);
   /** Hard leave (`leave_room`): destination after the user confirms quitting the salon. */
@@ -116,26 +111,38 @@ export default function Game() {
   useEffect(() => {
     if (phase !== 'guessing') return;
     setSubmittedAnswer(null);
-    setAnswer('');
-    setInputMode(settings.responseType === 'qcm' ? 'carre' : 'typing');
-  }, [state.currentRound, phase, settings.responseType]);
+    setInputMode(isSprint ? 'typing' : activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
+  }, [state.currentRound, phase, isSprint, activeSettings.responseType]);
 
   // --- Points animation on reveal (once per round) ---
   const pointsShownForRoundRef = useRef<number>(0);
   useEffect(() => {
     if (phase !== 'revealed') return;
     if (pointsShownForRoundRef.current === state.currentRound) return;
-    pointsShownForRoundRef.current = state.currentRound;
 
     const me = players.find((p) => String(p.id) === currentUserId);
-    const pts = me?.roundPoints || 0;
+    if (!me) return;
+
+    // Wait for the reveal payload before showing points (avoids a stale +0 flash).
+    if (me.hasAnswered && me.isCorrect == null) return;
+
+    pointsShownForRoundRef.current = state.currentRound;
+
+    const pts = me.roundPoints ?? 0;
     if (pts > 0) {
       setPointsEarned(pts);
       setShowPointsAnimation(true);
       const t = setTimeout(() => setShowPointsAnimation(false), 2000);
       return () => clearTimeout(t);
     }
+    setPointsEarned(null);
+    setShowPointsAnimation(false);
   }, [phase, players, currentUserId, state.currentRound]);
+
+  const pointsBadge = useMemo(() => {
+    if (!isSprint || phase !== 'guessing') return undefined;
+    return `Jusqu'à +${maxSprintPointsPerRound()} pts`;
+  }, [isSprint, phase]);
 
   // Hide the points badge as soon as a new guessing round starts.
   useEffect(() => {
@@ -189,12 +196,22 @@ export default function Game() {
     else handleReturnToLobby();
   };
 
-  const handleAction = (val: string) => {
-    if (!val) return;
-    setSubmittedAnswer(val);
-    actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode]);
-    if (inputMode === 'typing') setAnswer('');
-  };
+  const handleAction = useCallback(
+    (val: string) => {
+      if (!val) return;
+      setSubmittedAnswer(val);
+      actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode]);
+    },
+    [actions.answer, inputMode],
+  );
+
+  const handleSwitchCarre = useCallback(() => {
+    if (!isSprint && activeSettings.responseType === 'mix') setInputMode('carre');
+  }, [isSprint, activeSettings.responseType]);
+
+  const handleSwitchDuo = useCallback(() => {
+    if (!isSprint && activeSettings.responseType === 'mix') setInputMode('duo');
+  }, [isSprint, activeSettings.responseType]);
 
   const configBadges = useMemo(() => ({
     sourceLabel: settings.soundSelection === 'watched' ? 'Watched' : 'Aléatoire',
@@ -241,8 +258,9 @@ export default function Game() {
     pauseVotes: state.pauseVotes, pauseRequired: state.pauseRequired, resumeCountdown: state.resumeCountdown,
     onVotePause: actions.votePause,
     skipVotes: state.skipVotes, skipRequired: state.skipRequired, onVoteSkip: actions.voteSkip,
-    currentSong, nextVideoKey: state.nextVideoKey, answer, setAnswer, submittedAnswer, suggestions, isSearching,
+    currentSong, nextVideoKey: state.nextVideoKey, submittedAnswer,
     onAction: handleAction,
+    precision: normalizePrecision(activeSettings.precision),
     myProfile, sidebarCollapsed, setSidebarCollapsed,
     onShowLeave: () => setShowLeaveChoice(true),
     onShowProfile: () => setHardLeavePrompt('profile'),
@@ -307,11 +325,14 @@ export default function Game() {
             myWatchedIds={myWatchedIds}
             inputMode={inputMode}
             choices={choices}
-            onSwitchCarre={() => settings.responseType === 'mix' && setInputMode('carre')}
-            onSwitchDuo={() => settings.responseType === 'mix' && setInputMode('duo')}
-            responseType={settings.responseType}
+            onSwitchCarre={handleSwitchCarre}
+            onSwitchDuo={handleSwitchDuo}
+            responseType={isSprint ? 'typing' : activeSettings.responseType}
             showPointsAnimation={showPointsAnimation}
             pointsEarned={pointsEarned}
+            isSprint={isSprint}
+            sprintLeaderboard={state.sprintLeaderboard}
+            pointsBadge={pointsBadge}
           />
         </DevRenderProfiler>
       )}

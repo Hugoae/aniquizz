@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Users, Search, Lock, ListMusic, AlertTriangle, Clock, Target, Mic2, Shuffle, Play, Trophy, RefreshCw } from 'lucide-react';
+import { Users, Search, Lock, Play, RefreshCw } from 'lucide-react';
 import type { RoomListItem } from '@aniquizz/shared';
-import { getPrecisionChipLabel } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useFriends } from '@/features/friends/FriendsContext';
-import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
+import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
+import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
+import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 
 interface RoomListProps {
   rooms: RoomListItem[];
@@ -23,17 +24,10 @@ const FILTER_BUTTONS: { id: FilterType; label: string }[] = [
   { id: 'friends', label: 'Amis' },
 ];
 
-const ModeBadge = () => (
-  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-wider shadow-sm">
-    <Trophy className="w-3 h-3 fill-current" /> STD
-  </span>
-);
-
 export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const { friends } = useFriends();
 
-  // Rooms currently hosting at least one friend (from live presence).
   const friendRoomIds = useMemo(
     () => new Set(friends.map((f) => f.roomId).filter((id): id is string => !!id)),
     [friends],
@@ -41,7 +35,6 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
 
   const isJoinable = (room: RoomListItem) => room.status === 'waiting' && room.players < room.maxPlayers;
 
-  // Filter, then sort: joinable first, friend rooms bumped up, playing/full last.
   const visibleRooms = useMemo(() => {
     const filtered = rooms.filter((room) => {
       if (filter === 'public') return !room.isPrivate;
@@ -96,7 +89,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
           const isFull = room.players >= room.maxPlayers;
           const isPlaying = room.status === 'playing';
           const s = room.settings;
-          const diffBadge = getDifficultyBadge(s.difficulty || []);
+          const settingChips = buildLobbySettingChips(s);
 
           return (
             <div
@@ -109,57 +102,29 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                 <div className="flex-1 min-w-0 flex flex-col gap-3">
                   <div className="flex items-center justify-between md:justify-start gap-4">
                     <div className="flex items-center gap-2">
-                      <ModeBadge />
+                      <GameModeBadge gameType={s.gameType} compact />
                       <h3 className="font-black text-xl truncate text-foreground group-hover:text-primary transition-colors tracking-tight">
                         {room.name}
                       </h3>
                     </div>
 
                     {room.isPrivate && (
-                      <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wider flex items-center gap-1">
+                      <span className="shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-warning/10 text-warning border border-warning/20 uppercase tracking-wider flex items-center gap-1">
                         <Lock className="w-3 h-3" /> Privé
                       </span>
                     )}
                     {isPlaying && (
-                      <span className="shrink-0 px-2 py-0.5 rounded text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20 uppercase tracking-wider animate-pulse flex items-center gap-1">
+                      <span className="shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-destructive/10 text-destructive border border-destructive/20 uppercase tracking-wider animate-pulse flex items-center gap-1">
                         <Play className="w-3 h-3 fill-current" /> En cours
                       </span>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-border/50 bg-secondary/30 text-xs font-bold text-muted-foreground">
-                      <ListMusic className="w-3.5 h-3.5 text-accent" />
-                      <span className="text-foreground">{s.soundCount || 10}</span>
-                    </div>
-
-                    <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-bold', diffBadge.className)}>
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>{diffBadge.label}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-warning/20 bg-warning/10 text-xs font-bold text-warning">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{s.guessDuration || 15}s</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-accent/20 bg-accent/10 text-xs font-bold text-accent">
-                      <Target className="w-3.5 h-3.5" />
-                      <span className="capitalize">{getPrecisionChipLabel(s.precision)}</span>
-                    </div>
-
-                    <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-primary/20 bg-primary/10 text-xs font-bold text-primary">
-                      <Mic2 className="w-3.5 h-3.5" />
-                      <span className="capitalize">{s.responseType === 'mix' ? 'MIX' : s.responseType}</span>
-                    </div>
-
-                    <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-aqua/20 bg-aqua/10 text-xs font-bold text-aqua">
-                      <Shuffle className="w-3.5 h-3.5" />
-                      <span className="capitalize">
-                        {s.soundSelection === 'watched' ? 'Watched List' : 'Aléatoire'}
-                      </span>
-                    </div>
-                  </div>
+                  <SettingChipList>
+                    {settingChips.map((spec) => (
+                      <SettingChip key={spec.key} {...spec} />
+                    ))}
+                  </SettingChipList>
                 </div>
 
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-border/50 pt-4 md:pt-0">

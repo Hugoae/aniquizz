@@ -48,6 +48,10 @@ export interface RoomPlayer {
   roundPoints: number;
   answerType: AnswerType | null;
   answerTimeMs: number | null;
+
+  /** Quick Draw reveal-only fields (reset each round). */
+  speedRank: number | null;
+  speedBonus: number;
 }
 
 /** A fully-prepared round: song info + pre-generated choices. */
@@ -98,6 +102,8 @@ export interface RecordedAnswer {
   answerType: AnswerType;
   timeMs: number | null;
   pointsAwarded: number;
+  speedRank?: number | null;
+  speedBonus?: number;
 }
 
 export interface RecordedRound {
@@ -140,6 +146,8 @@ export const toPublicPlayer = (
     base.isCorrect = player.isCorrect;
     base.roundPoints = player.roundPoints;
     base.answerType = player.answerType;
+    if (player.speedRank != null) base.speedRank = player.speedRank;
+    if (player.speedBonus > 0) base.speedBonus = player.speedBonus;
   } else {
     base.currentAnswer = null;
     base.isCorrect = null;

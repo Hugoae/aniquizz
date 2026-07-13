@@ -169,7 +169,7 @@ const AppContent = () => {
           <Route path="/legal/mentions" element={<LegalNoticePage />} />
 
           <Route
-            path="/play"
+            path="/play/*"
             element={
               <ProtectedRoute>
                 <GameHub />

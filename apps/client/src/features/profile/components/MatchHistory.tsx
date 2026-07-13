@@ -1,7 +1,7 @@
 import { History, Trophy, Medal, Target, Zap, Users, Clock, X } from 'lucide-react';
 import type { MatchHistoryEntry } from '@aniquizz/shared';
+import { GAME_TYPE_LABELS, gameTypeFromStoredMode } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
-
 const MEDAL_HEX: Record<number, string> = { 1: '#FACC15', 2: '#CBD5E1', 3: '#C67B48' };
 
 function timeAgo(iso: string): string {
@@ -23,10 +23,11 @@ function formatDuration(ms: number | null): string | null {
   return min < 1 ? '<1 min' : `${min} min`;
 }
 
-const modeLabel = (mode: string) => (mode ? mode.charAt(0) + mode.slice(1).toLowerCase() : mode);
+const modeLabel = (mode: string) => GAME_TYPE_LABELS[gameTypeFromStoredMode(mode)];
 
 function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
   const solo = entry.rank == null || entry.playerCount <= 1;
+  const gameType = gameTypeFromStoredMode(entry.mode);
   const topMedal = !solo && entry.rank && entry.rank <= 3 ? MEDAL_HEX[entry.rank] : null;
   const defeat = solo && !entry.isWinner;
 
@@ -59,10 +60,14 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+          <span
+            className={cn(
+              'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+              gameType === 'sprint' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary',
+            )}
+          >
             {modeLabel(entry.mode)}
-          </span>
-          {entry.answerMode && (
+          </span>          {entry.answerMode && (
             <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
               {entry.answerMode}
             </span>

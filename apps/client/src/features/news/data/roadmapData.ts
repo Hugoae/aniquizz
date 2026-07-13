@@ -29,8 +29,16 @@ export const roadmapData: RoadmapItem[] = [
     date: '12 juillet 2026 — avec la v26.2',
   },
   {
-    title: 'Mode Rapidité',
-    description: 'Répondez le plus vite possible : les points dépendent de votre vitesse de réaction.',
+    title: 'Sprint',
+    description:
+      'Mode multijoueur typing-only : bonne réponse + bonus podium selon votre vitesse de réaction.',
+    status: 'done',
+    date: '14 juillet 2026 — avec la v26.3',
+  },
+  {
+    title: 'Graphiques statistiques (profil)',
+    description:
+      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles…) avec filtre par période.',
     status: 'planned',
     date: 'Q3 2026',
   },

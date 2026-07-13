@@ -25,6 +25,28 @@ const ANIME_LIMIT = Math.max(1, Number(process.env.ANILIST_LIMIT ?? 500));
 const ITEMS_PER_PAGE = Math.min(50, Math.max(1, Number(process.env.ANILIST_PER_PAGE ?? 50)));
 const DELAY_MS = Math.max(0, Number(process.env.ANILIST_DELAY_MS ?? 1000));
 
+/**
+ * Optional: run an incremental fetch for a specific list of AniList Media ids.
+ *
+ * Example:
+ *   ANILIST_TARGET_IDS=196935,206914 npx ts-node scripts/1_fetch_anilist.ts
+ *
+ * When set, the script will:
+ * - Fetch only these ids as "seed" nodes
+ * - Expand PREQUEL + SEQUEL chains (unless skipped by env flags)
+ * - Then output the same `data_step1.json` shape as a normal run
+ */
+function parseTargetIds(raw: string | undefined): number[] {
+  if (!raw?.trim()) return [];
+  const ids = raw
+    .split(',')
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return [...new Set(ids)];
+}
+
+const TARGET_IDS = parseTargetIds(process.env.ANILIST_TARGET_IDS);
+
 /** Truthy when env is 1, true, or yes (case-insensitive). */
 function isTruthyEnv(value: string | undefined): boolean {
   if (!value?.trim()) return false;
@@ -235,7 +257,12 @@ function normalizeSeason(s: any) {
 
 async function generateCompleteTree() {
   const started = Date.now();
-  console.log(`🚀 PHASE 1 : Récupération AniList (top ${ANIME_LIMIT} par popularité)...`);
+  if (TARGET_IDS.length > 0) {
+    console.log(`🚀 PHASE 1 : Récupération AniList (ciblée) — ${TARGET_IDS.length} id(s)...`);
+    console.log(`   Seeds: ${TARGET_IDS.join(', ')}`);
+  } else {
+    console.log(`🚀 PHASE 1 : Récupération AniList (top ${ANIME_LIMIT} par popularité)...`);
+  }
   if (SKIP_LOCKED_SEQUELS || SKIP_NEW_SEQUELS) {
     const parts: string[] = [];
     if (SKIP_LOCKED_SEQUELS) parts.push('locked-franchise sequels');
@@ -312,51 +339,82 @@ async function generateCompleteTree() {
     console.log('⏭️  Recherche de suites (franchises verrouillées) ignorée.');
   }
 
-  // 2. Fetch popularity top
-  let allAnimesRaw: any[] = [];
-  let currentPage = 1;
+  const animeMap = new Map<number, any>();
 
-  console.log("📡 Téléchargement du Top Popularité...");
-  while (allAnimesRaw.length < ANIME_LIMIT) {
-    try {
-      process.stdout.write(`   Page ${currentPage}... `);
-      const response = await axios.post('https://graphql.anilist.co', {
-        query: LIST_QUERY,
-        variables: { page: currentPage, perPage: ITEMS_PER_PAGE }
-      });
-      const media = response.data.data.Page.media;
-      if (!media || media.length === 0) break;
-
-      const validMedia = media.filter((m: any) =>
-        isValidStatus(m.status) && !lockedAnimeIds.has(m.id) && !excludedAnimeIds.has(m.id)
-      );
-
-      allAnimesRaw = [...allAnimesRaw, ...validMedia];
-
-      if (allAnimesRaw.length >= ANIME_LIMIT) {
-        allAnimesRaw = allAnimesRaw.slice(0, ANIME_LIMIT);
-        break;
-      }
-
-      if (!response.data.data.Page.pageInfo.hasNextPage) break;
-      console.log("OK");
-      currentPage++;
-      await delay(DELAY_MS);
-    } catch (e: any) {
-      if (e.response && e.response.status === 429) {
-        const wait = parseRetryAfterMs(e.response.headers, 30000);
-        console.log(`\n🛑 Rate Limit. Pause ${formatDuration(wait)}...`);
-        await delay(wait);
+  if (TARGET_IDS.length > 0) {
+    // 2. Fetch targeted seeds
+    console.log('📡 Téléchargement ciblé...');
+    for (const id of TARGET_IDS) {
+      if (lockedAnimeIds.has(id)) {
+        console.log(`   - Skip ${id} (locked)`);
         continue;
       }
-      console.error("\n❌ Erreur:", e.message);
-      break;
-    }
-  }
-  console.log(`\n✅ ${allAnimesRaw.length} NOUVEAUX animes racines récupérés.`);
+      if (excludedAnimeIds.has(id)) {
+        console.log(`   - Skip ${id} (excluded)`);
+        continue;
+      }
 
-  const animeMap = new Map();
-  allAnimesRaw.forEach(a => animeMap.set(a.id, a));
+      process.stdout.write(`   + Seed ${id}... `);
+      await delay(DELAY_MS);
+      const fetched = await fetchWithRetry(id);
+      if (!fetched) {
+        console.log('Stop (Erreur/Non trouvé)');
+        continue;
+      }
+      if (!isValidStatus(fetched.status)) {
+        console.log(`Stop (Statut: ${fetched.status})`);
+        continue;
+      }
+      console.log(`OK (${fetched.title?.romaji ?? 'unknown'})`);
+      animeMap.set(id, fetched);
+    }
+    console.log(`\n✅ ${animeMap.size} seed(s) récupérée(s).`);
+  } else {
+    // 2. Fetch popularity top
+    let allAnimesRaw: any[] = [];
+    let currentPage = 1;
+
+    console.log("📡 Téléchargement du Top Popularité...");
+    while (allAnimesRaw.length < ANIME_LIMIT) {
+      try {
+        process.stdout.write(`   Page ${currentPage}... `);
+        const response = await axios.post('https://graphql.anilist.co', {
+          query: LIST_QUERY,
+          variables: { page: currentPage, perPage: ITEMS_PER_PAGE }
+        });
+        const media = response.data.data.Page.media;
+        if (!media || media.length === 0) break;
+
+        const validMedia = media.filter((m: any) =>
+          isValidStatus(m.status) && !lockedAnimeIds.has(m.id) && !excludedAnimeIds.has(m.id)
+        );
+
+        allAnimesRaw = [...allAnimesRaw, ...validMedia];
+
+        if (allAnimesRaw.length >= ANIME_LIMIT) {
+          allAnimesRaw = allAnimesRaw.slice(0, ANIME_LIMIT);
+          break;
+        }
+
+        if (!response.data.data.Page.pageInfo.hasNextPage) break;
+        console.log("OK");
+        currentPage++;
+        await delay(DELAY_MS);
+      } catch (e: any) {
+        if (e.response && e.response.status === 429) {
+          const wait = parseRetryAfterMs(e.response.headers, 30000);
+          console.log(`\n🛑 Rate Limit. Pause ${formatDuration(wait)}...`);
+          await delay(wait);
+          continue;
+        }
+        console.error("\n❌ Erreur:", e.message);
+        break;
+      }
+    }
+    console.log(`\n✅ ${allAnimesRaw.length} NOUVEAUX animes racines récupérés.`);
+
+    allAnimesRaw.forEach(a => animeMap.set(a.id, a));
+  }
 
   // 2b. Prequel expansion (symmetric to sequel walk): fetch earlier seasons missing
   // from the top list so a franchise is not broken when only season 2+ is popular.

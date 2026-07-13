@@ -17,6 +17,7 @@ import type {
   PreloadVideoPayload,
   RoundRevealPayload,
   RoundStartPayload,
+  SprintLeaderboardPayload,
   VictoryData,
   VoteUpdatePayload,
   GameOverPayload,
@@ -185,6 +186,8 @@ export function useGameSocket({
       round_start: (p: RoundStartPayload) =>
         dispatch({ type: 'ROUND_START', payload: p, clientVideoMode: clientVideoModeRef.current }),
       'game:answered': (p: AnsweredPayload) => dispatch({ type: 'ANSWERED', userId: p.userId }),
+      'sprint:leaderboard': (p: SprintLeaderboardPayload) =>
+        dispatch({ type: 'SPRINT_LEADERBOARD', payload: p }),
       round_reveal: (p: RoundRevealPayload) =>
         dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserId }),
       'game:preload': (p: PreloadVideoPayload) =>
@@ -242,6 +245,7 @@ export function useGameSocket({
     socket.on('game:ready', handlers['game:ready']);
     socket.on('round_start', handlers.round_start);
     socket.on('game:answered', handlers['game:answered']);
+    socket.on('sprint:leaderboard', handlers['sprint:leaderboard']);
     socket.on('round_reveal', handlers.round_reveal);
     socket.on('game:preload', handlers['game:preload']);
     socket.on('update_players', handlers.update_players);
@@ -261,6 +265,7 @@ export function useGameSocket({
       socket.off('game:ready', handlers['game:ready']);
       socket.off('round_start', handlers.round_start);
       socket.off('game:answered', handlers['game:answered']);
+      socket.off('sprint:leaderboard', handlers['sprint:leaderboard']);
       socket.off('round_reveal', handlers.round_reveal);
       socket.off('game:preload', handlers['game:preload']);
       socket.off('update_players', handlers.update_players);

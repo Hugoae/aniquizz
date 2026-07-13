@@ -47,6 +47,8 @@ export function absoluteUrl(path: string): string {
 export const PAGE_TITLES = {
   home: SITE_NAME,
   play: 'Jouer',
+  playCreate: 'Configurer la partie',
+  playJoin: 'Rejoindre un salon',
   game: 'Partie',
   news: 'Actus',
   leaderboard: 'Classement',

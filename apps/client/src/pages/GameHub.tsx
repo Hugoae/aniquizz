@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Route, Routes } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
 import { prefetchGame } from '@/lib/routePrefetch';
@@ -13,34 +14,91 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 
 import { Header } from '@/components/layout/Header';
 import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
-import { GameConfigForm } from '@/features/hub/components/GameConfigForm';
 import { MultiplayerLobby } from '@/features/hub/components/MultiplayerLobby';
 import { SoloReady } from '@/features/hub/components/SoloReady';
 import { ModeSelectView } from '@/features/hub/components/ModeSelectView';
-import { RoomListView } from '@/features/hub/components/RoomListView';
 
-import { useLobbyController, defaultConfig, defaultRoomConfig } from '@/features/hub/hooks/useLobbyController';
-import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
+import { LobbyControllerProvider, useLobbyControllerContext } from '@/features/hub/context/LobbyControllerContext';
+import { PlayConfigPage } from '@/features/hub/pages/PlayConfigPage';
+import { PlayJoinPage } from '@/features/hub/pages/PlayJoinPage';
 
-export default function GameHub() {
+function PlayPasswordDialog() {
+  const {
+    showPasswordModal,
+    setShowPasswordModal,
+    passwordInput,
+    setPasswordInput,
+    submitPassword,
+  } = useLobbyControllerContext();
+
+  return (
+    <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
+      <DialogContent className="sm:max-w-md border-border bg-card">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Lock className="h-5 w-5 text-primary" aria-hidden="true" />
+            Salon privé
+          </DialogTitle>
+          <DialogDescription>Mot de passe</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="room-join-password">Mot de passe</Label>
+            <Input
+              id="room-join-password"
+              name="room-join-password"
+              type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              value={passwordInput}
+              onChange={(e) => setPasswordInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && submitPassword()}
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+            Annuler
+          </Button>
+          <Button variant="glow" onClick={submitPassword} disabled={!passwordInput}>
+            Valider
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PlayHomePage() {
   useEffect(() => {
     prefetchGame();
   }, []);
 
   const {
-    user, profile,
-    view, setView, navigate,
-    lobbyPlayers, currentRoomId, isAmIHost, mySocketId, gameStatus, isLaunchStarting, availableRooms,
+    user,
+    profile,
+    view,
+    navigate,
+    lobbyPlayers,
+    currentRoomId,
+    isAmIHost,
+    mySocketId,
+    gameStatus,
+    isLaunchStarting,
     multiplayerCount,
-    config, setConfig, roomConfig, setRoomConfig,
-    showConfig, setShowConfig,
-    showCreateModal, setShowCreateModal,
-    showPasswordModal, setShowPasswordModal,
-    passwordInput, setPasswordInput,
-    joinCode, setJoinCode,
-    selectMode, openCreateRoom, startSolo, createOrUpdateRoom, patchRoomSettings,
-    startLobbyGame, toggleReady, transferHost, kickPlayer, addBots, joinRoom, submitPassword, goBack, refreshRooms,
-  } = useLobbyController();
+    roomConfig,
+    patchRoomSettings,
+    startLobbyGame,
+    toggleReady,
+    transferHost,
+    kickPlayer,
+    addBots,
+    goBack,
+    openLobbySettings,
+    selectMode,
+  } = useLobbyControllerContext();
 
   const isSoloLobby = roomConfig.maxPlayers === 1;
 
@@ -48,22 +106,6 @@ export default function GameHub() {
     () => lobbyPlayers.filter((p) => !p.isBot).map((p) => String(p.id)).sort().join(','),
     [lobbyPlayers],
   );
-
-  // Settings modal edits a local DRAFT of the room config. Changes are only
-  // committed (to the server AND the live lobby) when the host clicks "Mettre à
-  // jour" — moving a slider no longer mutates the running room.
-  const [draftConfig, setDraftConfig] = useState<RoomConfig | null>(null);
-  const draft = draftConfig ?? roomConfig;
-  const draftSetter: Dispatch<SetStateAction<RoomConfig>> = (action) =>
-    setDraftConfig((prev) => {
-      const base = prev ?? roomConfig;
-      return typeof action === 'function' ? action(base) : action;
-    });
-  const openLobbySettings = () => { setDraftConfig(roomConfig); setShowCreateModal(true); };
-  const handleSettingsOpenChange = (open: boolean) => {
-    setShowCreateModal(open);
-    if (!open) setDraftConfig(null);
-  };
 
   const canAddLobbyBots = import.meta.env.DEV || isAdmin(profile?.role);
 
@@ -94,9 +136,9 @@ export default function GameHub() {
             gameSettings={roomConfig}
             roomCode={currentRoomId}
             gameStatus={gameStatus}
-              isLaunchStarting={isLaunchStarting}
-              canAddBots={canAddLobbyBots}
-              onStartGame={startLobbyGame}
+            isLaunchStarting={isLaunchStarting}
+            canAddBots={canAddLobbyBots}
+            onStartGame={startLobbyGame}
             onToggleReady={toggleReady}
             onLeave={goBack}
             onOpenSettings={openLobbySettings}
@@ -107,30 +149,6 @@ export default function GameHub() {
             onPatchRoomSettings={patchRoomSettings}
           />
         )}
-        <Dialog open={showCreateModal} onOpenChange={handleSettingsOpenChange}>
-          <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <DialogHeader>
-              <DialogTitle className="text-xl flex items-center gap-3">
-                {isSoloLobby ? 'Paramètres de la partie' : 'Paramètres du salon'}
-              </DialogTitle>
-              <DialogDescription>Ajustez les règles puis validez avec « Mettre à jour ».</DialogDescription>
-            </DialogHeader>
-            <GameConfigForm
-              config={draft}
-              setConfig={draftSetter}
-              toggleSoundType={createSoundTypeToggler(draftSetter)}
-              onReset={() => setDraftConfig({ ...defaultRoomConfig })}
-              onSubmit={() => createOrUpdateRoom(draft)}
-              isRoom={true}
-              hideRoomSettings={draft.maxPlayers === 1}
-              currentPlayersCount={lobbyPlayers.length}
-              user={user}
-              profile={profile}
-              roomId={currentRoomId}
-              watchedPlayersKey={watchedPlayersKey}
-            />
-          </DialogContent>
-        </Dialog>
       </>
     );
   }
@@ -145,95 +163,39 @@ export default function GameHub() {
       />
       <div className="min-h-screen bg-background">
         <Header />
-        <main id="main-content" className="container pt-24 pb-12 px-4 md:px-6">
-          <div className="max-w-6xl mx-auto">
-            {view === 'modes' && (
-              <ModeSelectView
-                onSelectMode={selectMode}
-                onBack={() => navigate('/')}
-                multiplayerCount={multiplayerCount}
-                bannedUntil={profile?.bannedUntil}
-              />
-            )}
-            {view === 'roomList' && (
-              <RoomListView
-                rooms={availableRooms}
-                joinCode={joinCode}
-                onJoinCodeChange={setJoinCode}
-                onJoin={joinRoom}
-                onCreate={openCreateRoom}
-                onBack={() => setView('modes')}
-                onRefresh={refreshRooms}
-              />
-            )}
+        <main id="main-content" className="container px-4 pb-12 pt-24 md:px-6">
+          <div className="mx-auto max-w-6xl">
+            <ModeSelectView
+              onSelectMode={selectMode}
+              onBack={() => navigate('/')}
+              multiplayerCount={multiplayerCount}
+              bannedUntil={profile?.bannedUntil}
+            />
           </div>
         </main>
-
-        <Dialog open={showConfig} onOpenChange={setShowConfig}>
-          <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <DialogHeader><DialogTitle>Configuration</DialogTitle><DialogDescription>Mode Solo</DialogDescription></DialogHeader>
-            <GameConfigForm
-              config={config}
-              setConfig={setConfig}
-              toggleSoundType={createSoundTypeToggler(setConfig)}
-              onReset={() => setConfig(defaultConfig)}
-              onSubmit={startSolo}
-              isRoom={false}
-              currentPlayersCount={0}
-              user={user}
-              profile={profile}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-          <DialogContent className="sm:max-w-3xl bg-card border-border" onOpenAutoFocus={(e) => e.preventDefault()}>
-            <DialogHeader><DialogTitle>Créer un salon</DialogTitle><DialogDescription>Invitez vos amis.</DialogDescription></DialogHeader>
-            <GameConfigForm
-              config={roomConfig}
-              setConfig={setRoomConfig}
-              toggleSoundType={createSoundTypeToggler(setRoomConfig)}
-              onReset={() => setRoomConfig(defaultRoomConfig)}
-              onSubmit={() => createOrUpdateRoom()}
-              isRoom={true}
-              currentPlayersCount={0}
-              user={user}
-              profile={profile}
-            />
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
-          <DialogContent className="sm:max-w-md bg-card border-border">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-primary" /> Salon privé</DialogTitle>
-              <DialogDescription>Mot de passe</DialogDescription>
-            </DialogHeader>
-            <div className="py-4 space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="room-join-password">Mot de passe</Label>
-                <Input
-                  id="room-join-password"
-                  name="room-join-password"
-                  type="password"
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitPassword()}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowPasswordModal(false)}>Annuler</Button>
-              <Button variant="glow" onClick={submitPassword} disabled={!passwordInput}>Valider</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
         <FloatingSettingsButton />
       </div>
     </>
+  );
+}
+
+function GameHubRoutes() {
+  return (
+    <>
+      <Routes>
+        <Route index element={<PlayHomePage />} />
+        <Route path="join" element={<PlayJoinPage />} />
+        <Route path="create" element={<PlayConfigPage />} />
+      </Routes>
+      <PlayPasswordDialog />
+    </>
+  );
+}
+
+export default function GameHub() {
+  return (
+    <LobbyControllerProvider>
+      <GameHubRoutes />
+    </LobbyControllerProvider>
   );
 }

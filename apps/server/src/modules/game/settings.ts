@@ -8,7 +8,7 @@ import { GAME_CONFIG, normalizePrecision, type RoomSettings } from '@aniquizz/sh
 const settingsSchema = z
   .object({
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
-    gameType: z.literal('standard').default('standard'),
+    gameType: z.enum(['standard', 'sprint']).default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
     soundCount: z.coerce.number().int().min(5).max(100).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
@@ -32,7 +32,23 @@ const settingsSchema = z
       .default(16),
     roomName: z.string().optional(),
   })
-  .strip();
+  .strip()
+  .superRefine((data, ctx) => {
+    if (data.gameType === 'sprint' && data.maxPlayers < 2) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Sprint requires at least 2 players.',
+        path: ['gameType'],
+      });
+    }
+  });
+
+function applySprintRules<T extends { gameType: string; responseType: string; maxPlayers: number }>(
+  settings: T,
+): T {
+  if (settings.gameType !== 'sprint') return settings;
+  return { ...settings, responseType: 'typing' };
+}
 
 export interface SettingsMeta {
   roomName?: string;
@@ -42,10 +58,11 @@ export interface SettingsMeta {
 
 export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomSettings => {
   const parsed = settingsSchema.parse(input ?? {});
-  const name = (meta.roomName || parsed.roomName || `Salon de ${meta.hostName}`).trim();
+  const withSprint = applySprintRules(parsed);
+  const name = (meta.roomName || withSprint.roomName || `Salon de ${meta.hostName}`).trim();
 
   return {
-    ...parsed,
+    ...withSprint,
     roomName: name,
     name,
     hostName: meta.hostName,

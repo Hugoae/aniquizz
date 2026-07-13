@@ -15,5 +15,6 @@ export * from './moderation';
 export * from './roles';
 export * from './videoMode';
 export * from './songStartMode';
+export * from './sprint';
 export * from './events';
 export * from './library';

@@ -97,7 +97,7 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
               <Shuffle className="h-8 w-8 text-primary" aria-hidden="true" />
             </div>
             <p className="font-bold text-foreground">Mode aléatoire</p>
-            <p className="mt-1 text-xs">Pioche parmi toute la base de données.</p>
+            <p className="mt-1 text-xs">Pioche parmi toute la base de données selon les filtres et contraintes.</p>
           </div>
         )}
 

@@ -115,7 +115,7 @@ export function SoloResult({
               </span>
             </div>
             <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
-              <RoundHistoryList history={history} />
+              <RoundHistoryList history={history} isSprint={settings.gameType === 'sprint'} />
             </div>
           </div>
         </div>

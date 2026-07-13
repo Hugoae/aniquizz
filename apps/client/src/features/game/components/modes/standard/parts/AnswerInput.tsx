@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import { Grid2X2, Columns2, Send } from 'lucide-react';
-import type { AnimeSuggestion } from '@aniquizz/shared';
+import type { Precision } from '@aniquizz/shared';
+import { normalizePrecision } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
+import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
 import type { InputMode } from './types';
 
 const SUGGESTION_LIST_ID = 'answer-suggestions';
@@ -12,17 +14,18 @@ const SUGGESTION_LIST_ID = 'answer-suggestions';
 interface AnswerInputProps {
   responseType: 'typing' | 'qcm' | 'mix';
   inputMode: InputMode;
-  answer: string;
-  setAnswer: (val: string) => void;
   submittedAnswer: string | null;
-  suggestions: AnimeSuggestion[];
-  isSearching?: boolean;
   choices: string[];
   onAction: (val: string) => void;
   onSwitchCarre: () => void;
   onSwitchDuo: () => void;
+  precision?: Precision;
+  /** Bumped each round — clears the local typing draft. */
+  roundKey: number;
   /** Round-1 ready beat: show the field but block interaction until audio starts. */
   disabled?: boolean;
+  /** Custom badge next to send. Undefined = "+5 pts". null = hidden. */
+  pointsBadge?: string | null;
 }
 
 function SuggestionLabel({
@@ -44,49 +47,68 @@ function SuggestionLabel({
   );
 }
 
-/** Guessing-phase answer entry (typing/QCM/duo). Reveal info lives elsewhere. */
-export function AnswerInput({
+/** Guessing-phase answer entry (typing/QCM/duo). Autocomplete is isolated here so keystrokes do not re-render the full game tree. */
+function AnswerInputInner({
   responseType,
   inputMode,
-  answer,
-  setAnswer,
   submittedAnswer,
-  suggestions,
-  isSearching = false,
   choices,
   onAction,
   onSwitchCarre,
   onSwitchDuo,
+  precision = 'franchise',
+  roundKey,
   disabled = false,
+  pointsBadge,
 }: AnswerInputProps) {
+  const [draft, setDraft] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
 
+  const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
+  const canType = showTyping && !disabled;
+
+  const { suggestions, isSearching } = useAnimeSearch({
+    query: draft,
+    precision: normalizePrecision(precision),
+    enabled: canType,
+  });
+
+  const submitAnswer = useCallback(
+    (value: string) => {
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      setDraft('');
+      setPanelOpen(false);
+      setActiveIndex(0);
+      onAction(trimmed);
+    },
+    [onAction],
+  );
+
+  useEffect(() => {
+    setDraft('');
+    setPanelOpen(false);
+    setActiveIndex(0);
+  }, [roundKey]);
+
   useEffect(() => {
     if (submittedAnswer) {
+      setDraft('');
       setPanelOpen(false);
-      return;
     }
-    setActiveIndex(0);
-  }, [suggestions, submittedAnswer]);
+  }, [submittedAnswer]);
 
-  const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [suggestions]);
+
   const showChoices = !showTyping && choices.length > 0;
-  const queryReady = answer.trim().length >= 2;
+  const queryReady = draft.trim().length >= 2;
   const showMixSwitchers =
     responseType === 'mix' && inputMode === 'typing' && !submittedAnswer && !disabled;
   const showPanel =
-    panelOpen &&
-    queryReady &&
-    !disabled &&
-    !submittedAnswer &&
-    (isSearching || suggestions.length > 0);
-
-  const pickSuggestion = (item: AnimeSuggestion) => {
-    setAnswer(item.label);
-    onAction(item.label);
-    setPanelOpen(false);
-  };
+    panelOpen && queryReady && canType && (isSearching || suggestions.length > 0);
 
   return (
     <div className={cn('relative flex w-full flex-col items-center gap-3', disabled && 'pointer-events-none opacity-60')}>
@@ -108,12 +130,12 @@ export function AnswerInput({
         </div>
       )}
 
-      {showTyping && !showMixSwitchers && !submittedAnswer && !disabled && (
+      {canType && !showMixSwitchers && (
         <div className="mb-2 h-9 shrink-0" aria-hidden="true" />
       )}
 
-      {showTyping && (
-        <div className="relative z-50 flex w-full animate-slide-up items-center gap-3">
+      {canType && (
+        <div className="relative z-50 flex w-full items-center gap-3">
           {showPanel && (
             <div
               id={SUGGESTION_LIST_ID}
@@ -127,49 +149,48 @@ export function AnswerInput({
                 <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
               ) : (
                 suggestions.map((suggestion, idx) => (
-                <button
-                  key={`${suggestion.label}-${idx}`}
-                  id={`answer-suggestion-${idx}`}
-                  role="option"
-                  aria-selected={idx === activeIndex}
-                  type="button"
-                  className={cn(
-                    'flex w-full items-center justify-between border-b border-border/50 px-4 py-3 text-left text-sm font-medium transition-colors last:border-0',
-                    idx === activeIndex ? 'border-l-4 border-l-primary bg-primary/20 text-primary' : 'hover:bg-primary/20 hover:text-primary',
-                    FOCUS_RING,
-                  )}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                  onClick={() => pickSuggestion(suggestion)}
-                >
-                  <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
-                  {idx === activeIndex && (
-                    <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
-                      ENTRÉE
-                    </span>
-                  )}
-                </button>
+                  <button
+                    key={`${suggestion.label}-${idx}`}
+                    id={`answer-suggestion-${idx}`}
+                    role="option"
+                    aria-selected={idx === activeIndex}
+                    type="button"
+                    className={cn(
+                      'flex w-full items-center justify-between border-b border-border/50 px-4 py-3 text-left text-sm font-medium transition-colors last:border-0',
+                      idx === activeIndex ? 'border-l-4 border-l-primary bg-primary/20 text-primary' : 'hover:bg-primary/20 hover:text-primary',
+                      FOCUS_RING,
+                    )}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                    onClick={() => submitAnswer(suggestion.label)}
+                  >
+                    <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
+                    {idx === activeIndex && (
+                      <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
+                        ENTRÉE
+                      </span>
+                    )}
+                  </button>
                 ))
               )}
             </div>
           )}
 
           <Input
-            value={answer}
+            value={draft}
             onChange={(e) => {
-              setAnswer(e.target.value);
-              if (e.target.value.trim().length >= 2) setPanelOpen(true);
+              const next = e.target.value;
+              setDraft(next);
+              if (next.trim().length >= 2) setPanelOpen(true);
+              else setPanelOpen(false);
             }}
-            placeholder={disabled ? 'À vous dans un instant…' : submittedAnswer ? 'Changer votre réponse…' : "Nom de l'anime…"}
+            placeholder={submittedAnswer ? 'Modifier votre réponse…' : 'Nom de l\'anime…'}
             aria-label="Votre réponse"
             role="combobox"
             aria-expanded={showPanel}
             aria-controls={SUGGESTION_LIST_ID}
             aria-activedescendant={showPanel ? `answer-suggestion-${activeIndex}` : undefined}
             autoComplete="off"
-            className={cn(
-              'h-14 flex-1 rounded-lg border-primary/20 bg-card/90 pl-4 text-lg focus-visible:ring-primary/50',
-              submittedAnswer && 'border-primary/50 bg-primary/5',
-            )}
+            className="h-14 flex-1 rounded-lg border-primary/20 bg-card/90 pl-4 text-lg focus-visible:ring-primary/50"
             autoFocus={!disabled}
             disabled={disabled}
             onKeyDown={(e) => {
@@ -193,22 +214,25 @@ export function AnswerInput({
               }
               if (e.key === 'Enter') {
                 e.preventDefault();
-                setPanelOpen(false);
                 if (showPanel && suggestions[activeIndex]) {
-                  pickSuggestion(suggestions[activeIndex]);
+                  submitAnswer(suggestions[activeIndex].label);
                 } else {
-                  onAction(answer);
+                  submitAnswer(draft);
                 }
               }
             }}
           />
           <div className="flex items-center gap-2">
-            <span className="rounded-md bg-accent/10 px-2 py-1 text-sm font-bold text-accent">+5 pts</span>
+            {pointsBadge !== null && (
+              <span className="rounded-md bg-accent/10 px-2 py-1 text-sm font-bold text-accent">
+                {pointsBadge ?? '+5 pts'}
+              </span>
+            )}
             <Button
               variant="glow"
               size="lg"
-              onClick={() => onAction(answer)}
-              disabled={disabled || !answer}
+              onClick={() => submitAnswer(draft)}
+              disabled={disabled || !draft.trim()}
               aria-label="Valider la réponse"
               className="h-14 w-14 rounded-lg p-0"
             >
@@ -219,7 +243,7 @@ export function AnswerInput({
       )}
 
       {showChoices && (
-        <div className="grid w-full animate-slide-up grid-cols-2 gap-3">
+        <div className="grid w-full grid-cols-2 gap-3">
           {choices.map((choice) => (
             <Button
               key={choice}
@@ -233,7 +257,7 @@ export function AnswerInput({
                   : 'hover:border-primary/50 hover:bg-primary/10',
               )}
               disabled={disabled}
-              onClick={() => onAction(choice)}
+              onClick={() => submitAnswer(choice)}
             >
               {choice}
             </Button>
@@ -243,3 +267,5 @@ export function AnswerInput({
     </div>
   );
 }
+
+export const AnswerInput = memo(AnswerInputInner);

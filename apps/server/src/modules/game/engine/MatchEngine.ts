@@ -24,6 +24,8 @@ import {
   type MatchSettingsSnapshot,
   pickMatchSettings,
   type PeekWindow,
+  scoreForAnswer,
+  type SprintLeaderboardPayload,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { RoundClock } from './RoundClock';
@@ -231,6 +233,8 @@ export class MatchEngine {
     p.roundPoints = 0;
     p.answerType = null;
     p.answerTimeMs = null;
+    p.speedRank = null;
+    p.speedBonus = 0;
   }
 
   // --- ROUND LOOP -----------------------------------------------------------
@@ -342,7 +346,22 @@ export class MatchEngine {
 
     const recorded: RecordedRound = { roundNumber: this.currentRoundIndex + 1, songId: item.id, answers: [] };
 
+    const rankedCorrect = [...this.room.players.values()]
+      .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
+      .sort((a, b) => (a.answerTimeMs ?? 0) - (b.answerTimeMs ?? 0))
+      .map((p) => ({ userId: p.userId, timeMs: p.answerTimeMs ?? 0 }));
+
+    const roundBonuses = this.deps.scoring.roundBonus(rankedCorrect);
+
     for (const p of this.room.players.values()) {
+      const bonus = roundBonuses.get(p.userId) ?? 0;
+      p.speedBonus = bonus;
+      p.speedRank = rankedCorrect.findIndex((r) => r.userId === p.userId);
+      p.speedRank = p.speedRank >= 0 ? p.speedRank + 1 : null;
+      if (bonus > 0) {
+        p.roundPoints = (p.roundPoints || 0) + bonus;
+      }
+
       p.score += p.roundPoints || 0;
       if (p.isCorrect === true) {
         p.streak += 1;
@@ -362,6 +381,8 @@ export class MatchEngine {
           answerType: p.answerType ?? 'typing',
           timeMs: p.answerTimeMs,
           pointsAwarded: p.roundPoints || 0,
+          speedRank: p.speedRank,
+          speedBonus: p.speedBonus > 0 ? p.speedBonus : undefined,
         });
       }
     }
@@ -378,6 +399,8 @@ export class MatchEngine {
     });
 
     logger.info(`[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1} reveal.`, 'GameLoop');
+
+    this.emitSprintLeaderboard();
 
     const next = this.playlist[this.currentRoundIndex + 1];
     const payload: RoundRevealPayload = {
@@ -474,9 +497,12 @@ export class MatchEngine {
 
     void this.deps.repo
       .persistMatch({
+        gameType: this.room.settings.gameType === 'sprint' ? 'sprint' : 'standard',
         totalRounds: this.playlist.length,
         startedAt: this.startedAt,
         endedAt: new Date(),
+        responseType: (this.room.settings.responseType ?? 'mix') as 'typing' | 'qcm' | 'mix',
+        precision: normalizePrecision(this.room.settings.precision),
         players: [...this.room.players.values()]
           .filter((p) => !p.isBot)
           .map((p) => {
@@ -493,6 +519,7 @@ export class MatchEngine {
             newLevel: outcome?.newLevel,
             newWinStreak: outcome?.newWinStreak,
             correctSongIds: [...p.correctSongIds],
+            soloMedal: this.room.isSolo ? result.soloMedal : null,
           };
         }),
         rounds: this.recordedRounds,
@@ -831,6 +858,10 @@ export class MatchEngine {
           points: answer?.pointsAwarded ?? 0,
           myAnswer: answer?.answer ?? null,
           answerType: answer?.answerType ?? null,
+          answerTimeMs:
+            answer?.isCorrect && answer.timeMs != null ? answer.timeMs : null,
+          speedRank: answer?.speedRank ?? null,
+          speedBonus: answer?.speedBonus ?? 0,
         };
         const list = byUser.get(userId) ?? [];
         list.push(entry);
@@ -844,5 +875,45 @@ export class MatchEngine {
   /** Typed broadcast channel for this room. */
   private get channel() {
     return this.room.io.to(this.room.id);
+  }
+
+  /** Sprint: final top-3 correct times + personalized "you" row (reveal only). */
+  private emitSprintLeaderboard(): void {
+    if (this.room.settings.gameType !== 'sprint') return;
+
+    const rankedCorrect = [...this.room.players.values()]
+      .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
+      .sort((a, b) => (a.answerTimeMs ?? 0) - (b.answerTimeMs ?? 0))
+      .map((p) => ({ userId: p.userId, timeMs: p.answerTimeMs ?? 0 }));
+
+    const top = rankedCorrect.slice(0, 3).map((entry) => {
+      const p = this.room.players.get(entry.userId)!;
+      return {
+        userId: entry.userId,
+        username: p.username,
+        avatar: p.avatar,
+        timeMs: entry.timeMs,
+      };
+    });
+
+    const basePoints = scoreForAnswer('typing');
+    const bonuses = this.deps.scoring.roundBonus(rankedCorrect);
+
+    for (const viewer of this.room.players.values()) {
+      if (viewer.isBot || !viewer.socketId) continue;
+
+      const finalPoints =
+        viewer.isCorrect === true ? basePoints + (bonuses.get(viewer.userId) ?? 0) : viewer.hasAnswered ? 0 : null;
+
+      const payload: SprintLeaderboardPayload = {
+        top,
+        you: {
+          timeMs: viewer.isCorrect === true ? viewer.answerTimeMs : null,
+          isCorrect: viewer.isCorrect,
+          projectedPoints: finalPoints,
+        },
+      };
+      this.room.io.to(viewer.socketId).emit('sprint:leaderboard', payload);
+    }
   }
 }

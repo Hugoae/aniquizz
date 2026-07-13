@@ -14,7 +14,11 @@ interface FiltersSectionProps {
 export function FiltersSection({ config, toggleSoundType, toggleDifficulty }: FiltersSectionProps) {
   return (
     <section className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3 shadow-inner">
-      <SectionHeader icon={SlidersHorizontal} title="Filtres & contraintes" tooltip="Affinez la sélection de musiques piochées." />
+      <SectionHeader
+        icon={SlidersHorizontal}
+        title="Sélection musicale"
+        tooltip="Types de sons et difficulté — appliqués à la source Aléatoire et au tirage du pool."
+      />
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-8">
         <div className="space-y-2">

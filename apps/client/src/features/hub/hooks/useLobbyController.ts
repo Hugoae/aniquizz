@@ -1,7 +1,7 @@
 /**
  * Play hub controller — owns the lobby state machine and all socket wiring for /play.
  *
- * Views: modes → roomList → createModal → lobby (solo skips roomList).
+ * Views: modes → /play/join → /play/create → lobby (solo skips join list).
  * Navigation state (returnToLobby, fromInvite, createSolo) is consumed once on mount
  * then cleared so a refresh does not re-trigger stale joins.
  */
@@ -30,7 +30,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { socket } from '@/lib/socket';
 import { getPlayBannedMessage, isSanctionActive } from '@/lib/suspension';
 
-export type LobbyView = 'modes' | 'roomList' | 'createModal' | 'lobby';
+export type LobbyView = 'modes' | 'lobby';
 
 /** Navigation state used to resume/join a lobby or auto-create a solo game. */
 interface GameHubLocationState {
@@ -78,23 +78,20 @@ const mapServerPlayersToLobby = (
 
 /**
  * Owns the whole Play/lobby state machine: socket lifecycle, lobby state,
- * view transitions, dialogs and the emit actions. Keeps `GameHub` presentational.
+ * view transitions, dialogs and the emit actions. Keeps play routes presentational.
  */
 export function useLobbyController() {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = (location.state ?? null) as GameHubLocationState | null;
   const { user, profile } = useAuth();
+  const pathnameRef = useRef(location.pathname);
+  pathnameRef.current = location.pathname;
 
   const joinedKeyRef = useRef<string | null>(null);
   const hasAutoCreatedRef = useRef(false);
   const silentSettingsPatchRef = useRef(false);
-  // Last known host id — lets us fire the "you are host" toast only on a genuine
-  // promotion (host actually changed to us), never on room creation/join where
-  // being host is self-evident. Also dedupes repeated `update_players` events.
   const prevHostIdRef = useRef<string | null>(null);
-  // Solo rooms are a private, single-player context: lobby toasts ("host", "room
-  // ready") are noise there, so we suppress them based on the room capacity.
   const isSoloRoomRef = useRef(false);
 
   const [view, setView] = useState<LobbyView>(() => {
@@ -102,8 +99,6 @@ export function useLobbyController() {
     return 'modes';
   });
 
-  const [showConfig, setShowConfig] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const [pendingRoomId, setPendingRoomId] = useState('');
@@ -123,7 +118,6 @@ export function useLobbyController() {
   const [availableRooms, setAvailableRooms] = useState<RoomListItem[]>([]);
 
   const [gameStatus, setGameStatus] = useState<GameStatus>('waiting');
-  /** Optimistic latch until the server confirms `starting` (covers socket RTT). */
   const [isLaunchPending, setIsLaunchPending] = useState(false);
 
   const [multiplayerCount, setMultiplayerCount] = useState(0);
@@ -133,8 +127,15 @@ export function useLobbyController() {
     [user, profile],
   );
 
+  const leaveConfigRoute = useCallback(() => {
+    if (pathnameRef.current.includes('/play/create')) {
+      navigate('/play', { replace: true });
+    }
+  }, [navigate]);
+
   useEffect(() => {
-    if (view !== 'roomList') return;
+    const onJoinRoute = location.pathname.endsWith('/join');
+    if (!onJoinRoute) return;
 
     const subscribe = () => {
       socket.emit('lobby:subscribe_list');
@@ -147,9 +148,8 @@ export function useLobbyController() {
       socket.off('connect', subscribe);
       if (socket.connected) socket.emit('lobby:unsubscribe_list');
     };
-  }, [view]);
+  }, [location.pathname]);
 
-  // Live "players in multiplayer rooms" count for the Multiplayer card teaser.
   useEffect(() => {
     const onStats = (s: { inMultiplayer: number }) => setMultiplayerCount(s.inMultiplayer);
     const fetchStats = () => { if (socket.connected) socket.emit('get_home_stats'); };
@@ -194,7 +194,7 @@ export function useLobbyController() {
 
     const onConnect = () => {
       setMySocketId(socket.id || '');
-      if (view === 'roomList') socket.emit('lobby:subscribe_list');
+      if (location.pathname.endsWith('/join')) socket.emit('lobby:subscribe_list');
     };
     const onRoomsUpdate = (rooms: RoomListItem[]) => setAvailableRooms(rooms);
 
@@ -203,7 +203,6 @@ export function useLobbyController() {
     const onRoomCreated = (data: { roomId: string; room: { players?: ServerLobbyPlayer[]; status?: GameStatus; settings?: WireRoomSettings } }) => {
       const isSolo = data.room.settings?.maxPlayers === 1;
       isSoloRoomRef.current = isSolo;
-      // Creating a room makes you the host by definition — no toast needed.
       prevHostIdRef.current = myUserId || null;
 
       setCurrentRoomId(data.roomId);
@@ -215,13 +214,12 @@ export function useLobbyController() {
         setRoomConfig(prev => ({ ...prev, ...data.room.settings, roomName: data.room.settings?.name || prev.roomName }));
       }
 
-      setShowCreateModal(false); setShowConfig(false);
       setView('lobby');
+      leaveConfigRoute();
     };
 
     const onRoomJoined = (data: { roomId: string; players?: ServerLobbyPlayer[]; hostId?: string; settings?: WireRoomSettings; status?: GameStatus }) => {
       isSoloRoomRef.current = data.settings?.maxPlayers === 1;
-      // Record the host at join time so a later change (promotion) can be detected.
       prevHostIdRef.current = data.hostId ? String(data.hostId) : null;
       setCurrentRoomId(data.roomId);
       if (data.hostId && myUserId) setIsAmIHost(String(data.hostId) === String(myUserId));
@@ -240,6 +238,9 @@ export function useLobbyController() {
       if (data.status !== 'waiting') setIsLaunchPending(false);
       setShowPasswordModal(false); setPasswordInput(''); setJoinCode('');
       setView('lobby');
+      if (pathnameRef.current.endsWith('/join')) {
+        navigate('/play', { replace: true });
+      }
     };
 
     const onRoomUpdated = (data: RoomUpdatedPayload) => {
@@ -253,7 +254,7 @@ export function useLobbyController() {
         toast.info('Paramètres mis à jour.');
       }
       silentSettingsPatchRef.current = false;
-      setShowCreateModal(false);
+      leaveConfigRoute();
     };
 
     const onRoomClosed = (payload?: { reason?: string }) => {
@@ -269,7 +270,7 @@ export function useLobbyController() {
         navigate('/', { replace: true });
         return;
       }
-      setView('roomList');
+      navigate('/play/join', { replace: true });
     };
     const onPasswordRequired = (data: { roomId: string }) => { setPendingRoomId(data.roomId); setPasswordInput(''); setShowPasswordModal(true); };
 
@@ -277,9 +278,6 @@ export function useLobbyController() {
       if (data.hostId && myUserId) {
         const newHostId = String(data.hostId);
         const amINewHost = newHostId === String(myUserId);
-        // Only a genuine promotion (host actually changed, from someone else to
-        // us) warrants a toast — and the synchronous ref dedupes bursts of
-        // `update_players` that would otherwise fire it twice.
         if (
           amINewHost &&
           prevHostIdRef.current !== null &&
@@ -325,10 +323,8 @@ export function useLobbyController() {
       const msg = (err.message || '').toLowerCase();
       if (msg.includes('mot de passe')) setPasswordInput('');
       if (msg.includes('introuvable') || msg.includes('fermé') || msg.includes('complet')) {
-        // Wrong/stale code typed on the join screen: just clear the box and stay put.
         setJoinCode('');
-        if (view === 'roomList') return;
-        // A stale rejoin (e.g. after a refresh) targeting a dead room: recover to modes.
+        if (pathnameRef.current.endsWith('/join')) return;
         setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('modes');
         window.history.replaceState({}, document.title);
       }
@@ -340,12 +336,8 @@ export function useLobbyController() {
 
     return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('lobby:joined'); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('game_started', onGameStarted); socket.off('error', onError); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameStatus, view]);
+  }, [gameStatus, view, leaveConfigRoute, navigate, location.pathname]);
 
-  // Join a lobby whenever we arrive with a `fromInvite`/`returnToLobby` navigation.
-  // Keyed on `location.key` so it fires on EVERY navigation — including clicking
-  // "Rejoindre" while already on this page (same route, new history entry), which
-  // the socket-lifecycle effect above (deps: view/gameStatus) would otherwise miss.
   useEffect(() => {
     const st = (location.state ?? null) as GameHubLocationState | null;
     if (!st?.roomId || (!st.fromInvite && !st.returnToLobby)) return;
@@ -362,7 +354,6 @@ export function useLobbyController() {
       socket.connect();
       socket.once('connect', doJoin);
     }
-    // Consume the navigation state so a page refresh doesn't retry a stale join.
     window.history.replaceState({}, document.title);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
@@ -374,11 +365,20 @@ export function useLobbyController() {
       return;
     }
     setConfig(prev => ({ ...prev, mode }));
-    if (mode === 'multiplayer') setView('roomList');
-    else setShowConfig(true);
-  }, [profile?.bannedUntil]);
+    if (mode === 'multiplayer') navigate('/play/join');
+    else navigate('/play/create', { state: { intent: 'solo' } });
+  }, [profile?.bannedUntil, navigate]);
 
-  const openCreateRoom = useCallback(() => { setRoomConfig({ ...defaultRoomConfig }); setShowCreateModal(true); }, []);
+  const openCreateRoom = useCallback(() => {
+    setRoomConfig({ ...defaultRoomConfig });
+    navigate('/play/create', { state: { intent: 'create' } });
+  }, [navigate]);
+
+  const openLobbySettings = useCallback(() => {
+    navigate('/play/create', {
+      state: { intent: 'edit', draft: roomConfigRef.current, returnTo: '/play' },
+    });
+  }, [navigate]);
 
   const emitSolo = useCallback((soloConfig: GameConfig) => {
     const pseudo = profile?.username || 'Joueur';
@@ -401,7 +401,6 @@ export function useLobbyController() {
     }
   }, [view, currentRoomId, roomConfig, getPlayerIdentity]);
 
-  /** Host-only partial settings patch (e.g. auto-clear watched fallback). */
   const patchRoomSettings = useCallback((patch: Partial<RoomConfig>, silent = false) => {
     if (!currentRoomId || !isAmIHost) return;
     silentSettingsPatchRef.current = silent;
@@ -430,29 +429,20 @@ export function useLobbyController() {
       setLobbyPlayers([]);
     }
     setView('modes');
-    // Drop any leftover returnToLobby/roomId so a refresh lands cleanly on modes.
     window.history.replaceState({}, document.title);
-  }, [view, currentRoomId]);
+    navigate('/play', { replace: true });
+  }, [view, currentRoomId, navigate]);
 
   return {
-    // identity
     user, profile,
-    // view / navigation
     view, setView, navigate,
-    // lobby state
     lobbyPlayers, currentRoomId, isAmIHost, mySocketId, gameStatus, isLaunchStarting, availableRooms,
-    // teasers / shortcuts
     multiplayerCount,
-    // configs
     config, setConfig, roomConfig, setRoomConfig,
-    // dialogs
-    showConfig, setShowConfig,
-    showCreateModal, setShowCreateModal,
     showPasswordModal, setShowPasswordModal,
     passwordInput, setPasswordInput,
     joinCode, setJoinCode,
-    // actions
-    selectMode, openCreateRoom, startSolo, createOrUpdateRoom, patchRoomSettings,
+    selectMode, openCreateRoom, openLobbySettings, startSolo, createOrUpdateRoom, patchRoomSettings,
     startLobbyGame, toggleReady, transferHost, kickPlayer, addBots, joinRoom, submitPassword, goBack, refreshRooms,
   };
 }

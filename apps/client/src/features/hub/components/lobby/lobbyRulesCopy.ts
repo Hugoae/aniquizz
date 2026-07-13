@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { AlertTriangle, Eye, Music2 } from 'lucide-react';
+import { Eye, Music2 } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 import {
   GAME_CONFIG,
@@ -11,10 +11,9 @@ import {
   normalizeSongStartMode,
 } from '@aniquizz/shared';
 import {
-  buildRoomSettingBadges,
-  getDifficultyBadge,
-  SETTING_TONE_CLASSES,
+  buildLobbySettingChips,
 } from '@/features/hub/components/roomSettings';
+import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { watchedModeDisplayLabel } from '@/features/hub/components/config/watchedSource';
 
 export type LobbyRulesMode = 'solo' | 'multi';
@@ -47,8 +46,23 @@ export interface LobbyRulesSection {
 const STANDARD_MODE_INTRO =
   'Blindtest anime : écoute un extrait et devine l\'anime avant la fin du chrono.';
 
+const SPRINT_INTRO =
+  'Sprint : typing uniquement en multijoueur — bonus vitesse selon l\'ordre d\'arrivée des bonnes réponses.';
+
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
+
+const sprintScoringLines = (): string[] => {
+  const { SCORING } = GAME_CONFIG;
+  return [
+    `Typing correct : ${SCORING.TYPING} pts de base.`,
+    'Bonus vitesse (parmi les bonnes réponses) : 1 joueur → +0 ; 2 → +2 / +1 ; 3 ou plus → +3 / +2 / +1 (top 3).',
+    'L\'ordre d\'arrivée (1er, 2e, 3e…) est affiché à la révélation.',
+  ];
+};
+
+const scoringLinesForConfig = (config: GameConfig): string[] =>
+  config.gameType === 'sprint' ? sprintScoringLines() : scoringLines(config.responseType);
 
 const scoringLines = (responseType: GameConfig['responseType']): string[] => {
   const { SCORING } = GAME_CONFIG;
@@ -208,37 +222,21 @@ const multiLobbyLines = (): string[] => [
 ];
 
 export function buildLobbyRulesSummaryChips(config: GameConfig): LobbyRulesSummaryChip[] {
-  const difficulty = getDifficultyBadge(config.difficulty ?? []);
-  const badges = buildRoomSettingBadges(config);
-
   return [
-    {
-      key: 'diff',
-      icon: AlertTriangle,
-      label: 'Diff',
-      value: difficulty.label,
-      className: difficulty.className,
-    },
-    ...badges.map((spec) => ({
-      key: spec.key,
-      icon: spec.icon,
-      label: spec.label,
-      value: spec.value,
-      className: SETTING_TONE_CLASSES[spec.tone],
-    })),
+    ...buildLobbySettingChips(config),
     {
       key: 'video',
       icon: Eye,
       label: 'Vidéo',
       value: VIDEO_MODE_LABELS[normalizeVideoMode(config.videoMode)],
-      className: SETTING_TONE_CLASSES.neutral,
+      className: SETTING_CHIP_NEUTRAL,
     },
     {
       key: 'songStart',
       icon: Music2,
       label: 'Départ',
       value: SONG_START_MODE_LABELS[normalizeSongStartMode(config.songStartMode)],
-      className: SETTING_TONE_CLASSES.neutral,
+      className: SETTING_CHIP_NEUTRAL,
     },
   ];
 }
@@ -254,7 +252,7 @@ export function buildLobbyRulesSections(
     {
       id: 'summary',
       title: 'Résumé de la partie',
-      intro: STANDARD_MODE_INTRO,
+      intro: config.gameType === 'sprint' ? SPRINT_INTRO : STANDARD_MODE_INTRO,
       chips: buildLobbyRulesSummaryChips(config),
     },
     {
@@ -270,7 +268,7 @@ export function buildLobbyRulesSections(
     {
       id: 'scoring',
       title: 'Points par réponse',
-      lines: scoringLines(config.responseType),
+      lines: scoringLinesForConfig(config),
     },
     {
       id: 'source',

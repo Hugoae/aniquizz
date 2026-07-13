@@ -1,83 +1,62 @@
-import { AlertTriangle, Clock, ListMusic, Mic2, Shuffle, Target, Trophy } from 'lucide-react';
-import type { GameConfig } from '@aniquizz/shared';
-import { getPrecisionChipLabel } from '@aniquizz/shared';
+import { Trophy, Zap } from 'lucide-react';
+import type { GameConfig, GameType } from '@aniquizz/shared';
+import { GAME_TYPE_LABELS } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
-import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
+import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
+import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
+
+const COMPACT_MODE_LABELS: Record<GameType, string> = {
+  standard: 'STD',
+  sprint: 'SPR',
+};
 
 interface MatchConfigHeaderProps {
   settings: Partial<
-    Pick<GameConfig, 'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection'>
+    Pick<
+      GameConfig,
+      'gameType' | 'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection'
+    >
   >;
   className?: string;
 }
 
-function responseTypeLabel(responseType?: GameConfig['responseType']): string {
-  if (responseType === 'mix') return 'MIX';
-  if (responseType === 'qcm') return 'QCM';
-  return 'Typing';
-}
-
 /** Game-over settings strip — same chips as the room list / lobby (solo + multi). */
 export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProps) {
-  const diffBadge = getDifficultyBadge(settings.difficulty || []);
-  const soundCount = settings.soundCount ?? 10;
-  const guessDuration = settings.guessDuration ?? 15;
+  const gameType = settings.gameType ?? 'standard';
+  const isSprint = gameType === 'sprint';
+  const ModeIcon = isSprint ? Zap : Trophy;
+
+  const chips = buildLobbySettingChips({
+    soundCount: settings.soundCount ?? 10,
+    guessDuration: settings.guessDuration ?? 15,
+    difficulty: settings.difficulty ?? [],
+    precision: settings.precision ?? 'franchise',
+    responseType: settings.responseType ?? 'typing',
+    soundSelection: settings.soundSelection ?? 'random',
+  });
 
   return (
     <div
       className={cn(
-        'flex w-full overflow-hidden rounded-md border border-border/60 bg-secondary/20',
+        'flex w-full overflow-hidden rounded-lg border border-border/60 bg-secondary/20',
         className,
       )}
     >
       <div
         className="flex shrink-0 flex-col items-center justify-center gap-0.5 self-stretch bg-primary px-3 text-primary-foreground shadow-sm"
-        aria-label="Mode Standard"
+        aria-label={`Mode ${GAME_TYPE_LABELS[gameType]}`}
       >
-        <Trophy className="h-4 w-4 fill-current" aria-hidden />
-        <span className="text-[10px] font-black uppercase tracking-wider">STD</span>
+        <ModeIcon className={cn('h-4 w-4', !isSprint && 'fill-current')} aria-hidden />
+        <span className="text-[10px] font-black uppercase tracking-wider">{COMPACT_MODE_LABELS[gameType]}</span>
       </div>
-
-      <div className="flex flex-1 flex-wrap items-center gap-2 px-4 py-3">
-        <div className="flex items-center gap-1.5 rounded-full border border-border/50 bg-secondary/30 px-2.5 py-1 text-xs font-bold text-muted-foreground">
-          <ListMusic className="h-3.5 w-3.5 text-accent" aria-hidden />
-          <span className="text-foreground">{soundCount}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 rounded-full border border-warning/20 bg-warning/10 px-2.5 py-1 text-xs font-bold text-warning">
-          <Clock className="h-3.5 w-3.5" aria-hidden />
-          <span>{guessDuration}s</span>
-        </div>
-
-        <div
-          className={cn(
-            'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold',
-            diffBadge.className,
-          )}
-        >
-          <AlertTriangle className="h-3.5 w-3.5" aria-hidden />
-          <span>{diffBadge.label}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
-          <Mic2 className="h-3.5 w-3.5" aria-hidden />
-          <span>{responseTypeLabel(settings.responseType)}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 rounded-full border border-accent/20 bg-accent/10 px-2.5 py-1 text-xs font-bold text-accent">
-          <Target className="h-3.5 w-3.5" aria-hidden />
-          <span>{getPrecisionChipLabel(settings.precision)}</span>
-        </div>
-
-        <div className="flex items-center gap-1.5 rounded-full border border-aqua/20 bg-aqua/10 px-2.5 py-1 text-xs font-bold text-aqua">
-          <Shuffle className="h-3.5 w-3.5" aria-hidden />
-          <span>{settings.soundSelection === 'watched' ? 'Ma liste' : 'Aléatoire'}</span>
-        </div>
-      </div>
+      <SettingChipList className="flex-1 px-4 py-3">
+        {chips.map((spec) => (
+          <SettingChip key={spec.key} {...spec} />
+        ))}
+      </SettingChipList>
     </div>
   );
 }
 
 /** @deprecated Use `MatchConfigHeader`. */
 export const SoloConfigHeader = MatchConfigHeader;
-

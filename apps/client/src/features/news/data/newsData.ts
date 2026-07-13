@@ -21,6 +21,37 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 5,
+    title: 'Mise à jour v26.3 — Sprint, config plein écran & polish',
+    description:
+      'Nouveau mode multijoueur Sprint (course à la vitesse), configuration de partie en plein écran, recap lobby solo, chips de réglages unifiés, et autocomplétion typing plus fluide.',
+    content:
+      "**Mode Sprint (multijoueur)**\n" +
+      "• Nouveau mode **Sprint** : typing uniquement, **2 joueurs minimum** — la course à la vitesse !\n" +
+      "• Chaque bonne réponse rapporte **5 pts** + un **bonus podium** selon votre rang parmi les corrects (jusqu'à **+3 pts** pour le plus rapide).\n" +
+      "• Vous pouvez **modifier votre réponse** jusqu'à la fin du chrono ; le classement vitesse n'apparaît qu'à la **révélation** (suspense garanti).\n" +
+      "• Badge **Jusqu'à +8 pts** pendant la manche · panel top 3 + votre ligne · historique de partie détaillé (temps, rang, breakdown des points).\n" +
+      "• Les parties Sprint sont enregistrées dans l'historique profil avec le badge dédié.\n\n" +
+      "**Configuration de partie — plein écran**\n" +
+      "• Fini la modale étriquée\n" +
+      "• Sélecteur de mode en haut : **Standard** ou **Sprint** · navigation **Général** · **Source** · **Avancée** (vidéo + départ du son).\n" +
+      "• Paramètres salon (nom, privé, mot de passe, joueurs max) regroupés en sidebar multi\n\n" +
+      "**Lobby & réglages**\n" +
+      "• Recap solo avant lancement : résumé lisible (Partie, Réponse, Musique, Vidéo) avec badge de mode dynamique.\n" +
+      "• Chips de réglages unifiés partout (lobby, liste des salons, modal Règles, game-over, in-game) — difficulté en dégradé sémantique, icônes cohérentes.\n" +
+      "• Badges **STD** / **SPR** sur les salons et l'historique.\n\n" +
+      "**Fluidité en partie (typing)**\n" +
+      "• Autocomplétion découplée du reste de l'écran : plus de lag à chaque frappe, debounce adaptatif, index local.\n" +
+      "• La barre de réponse **reste active** après envoi — changer d'avis sans quitter le clavier (solo, multi et Sprint).\n\n" +
+      "**Sous le capot**\n" +
+      "• Tests unitaires **MatchEngine** (scoring Standard + Sprint, anti-triche, timer multi) pour sécuriser les prochains modes.\n" +
+      "• Snapshots de partie persistés en base (`mode de réponse`, `précision`, `médaille solo`) — préparation des futures stats profil.\n\n" +
+      "Prochaine étape annoncée : **graphiques de stats sur le profil**, puis **Playlists thématiques** (voir la Roadmap).\n\n" +
+      "Merci de continuer à jouer et de nous remonter vos retours !",
+    date: '2026-07-14T12:00:00Z',
+    type: 'update',
+  },
+  {
     id: 4,
     title: 'Correction v26.2.1 — Gameplay, interface & confort',
     description:
