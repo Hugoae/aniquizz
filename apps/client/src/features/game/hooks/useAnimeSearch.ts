@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   GAME_CONFIG,
-  buildFranchiseCountsMap,
   getFuzzySuggestions,
   normalizePrecision,
   type AnimeSuggestion,
@@ -9,10 +8,15 @@ import {
   type Precision,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
-import { buildCataloguePrefixIndex, narrowCatalogueByPrefix } from '@/features/game/hooks/animeSearchIndex';
+import {
+  buildCataloguePrefixIndex,
+  getCatalogueFranchiseCounts,
+  narrowCatalogueByPrefix,
+  resetCataloguePrefixIndexCache,
+} from '@/features/game/hooks/animeSearchIndex';
 
 const RETRY_INTERVAL_MS = 2_500;
-const DEBOUNCE_TYPING_MS = 80;
+const DEBOUNCE_TYPING_MS = 35;
 const DEBOUNCE_DELETING_MS = 200;
 const SEARCH_TIMEOUT_MS = 4_000;
 const LOCAL_CONFIDENT_SCORE = 85;
@@ -40,6 +44,7 @@ function isUsableCatalogue(
 export function resetAnimeSearchCache(): void {
   cachedCatalogue = null;
   inflightCatalogue = null;
+  resetCataloguePrefixIndexCache();
 }
 
 if (!isUsableCatalogue(cachedCatalogue)) cachedCatalogue = null;
@@ -95,7 +100,7 @@ function runLocalSearch(
 ): AnimeSuggestion[] {
   const prefixIndex = buildCataloguePrefixIndex(catalogue);
   const franchiseCounts =
-    precision === 'franchise' ? buildFranchiseCountsMap(catalogue) : undefined;
+    precision === 'franchise' ? getCatalogueFranchiseCounts(catalogue) : undefined;
   const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, query);
   let next = getFuzzySuggestions(scoped, query, precision, franchiseCounts);
   const bestScopedScore = next[0]?.score ?? 0;

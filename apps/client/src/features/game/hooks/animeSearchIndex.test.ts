@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import type { FuzzyAnimeCandidate } from '@aniquizz/shared';
 import {
   buildCataloguePrefixIndex,
+  getCatalogueFranchiseCounts,
   narrowCatalogueByPrefix,
   resetCataloguePrefixIndexCache,
 } from './animeSearchIndex';
@@ -37,5 +38,12 @@ describe('animeSearchIndex', () => {
 
     const brotherhood = narrowCatalogueByPrefix(catalogue, index, 'brother');
     expect(brotherhood.map((a) => a.name)).toContain('Fullmetal Alchemist: Brotherhood');
+  });
+
+  it('memoizes franchise counts per catalogue reference', () => {
+    const first = getCatalogueFranchiseCounts(catalogue);
+    const second = getCatalogueFranchiseCounts(catalogue);
+    expect(second).toBe(first);
+    expect(first.get('Naruto')).toBe(1);
   });
 });

@@ -1,8 +1,15 @@
-import { normalizeString, tokenizeWords, type FuzzyAnimeCandidate } from '@aniquizz/shared';
+import {
+  buildFranchiseCountsMap,
+  normalizeString,
+  tokenizeWords,
+  type FuzzyAnimeCandidate,
+} from '@aniquizz/shared';
 
 type PrefixIndex = Map<string, FuzzyAnimeCandidate[]>;
 
 let cachedIndex: { catalogue: FuzzyAnimeCandidate[]; index: PrefixIndex } | null = null;
+let cachedFranchiseCounts: { catalogue: FuzzyAnimeCandidate[]; counts: Map<string, number> } | null =
+  null;
 
 function addToIndex(index: PrefixIndex, key: string, anime: FuzzyAnimeCandidate) {
   if (!key) return;
@@ -47,6 +54,14 @@ export function buildCataloguePrefixIndex(catalogue: FuzzyAnimeCandidate[]): Pre
   return index;
 }
 
+/** Memoized franchise counts — reused across keystrokes on the same catalogue. */
+export function getCatalogueFranchiseCounts(catalogue: FuzzyAnimeCandidate[]): Map<string, number> {
+  if (cachedFranchiseCounts?.catalogue === catalogue) return cachedFranchiseCounts.counts;
+  const counts = buildFranchiseCountsMap(catalogue);
+  cachedFranchiseCounts = { catalogue, counts };
+  return counts;
+}
+
 /** Shrinks the fuzzy scan to prefix-matching rows — critical for backspace responsiveness. */
 export function narrowCatalogueByPrefix(
   catalogue: FuzzyAnimeCandidate[],
@@ -79,7 +94,8 @@ export function narrowCatalogueByPrefix(
   return [...hits.keys()];
 }
 
-/** Test helper — reset module cache between tests. */
+/** Test helper — reset module caches between tests. */
 export function resetCataloguePrefixIndexCache(): void {
   cachedIndex = null;
+  cachedFranchiseCounts = null;
 }

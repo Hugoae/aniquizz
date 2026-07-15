@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildFranchiseCountsMap, getFuzzySuggestions } from '@aniquizz/shared';
-import { buildCataloguePrefixIndex, narrowCatalogueByPrefix } from './animeSearchIndex';
+import { getFuzzySuggestions } from '@aniquizz/shared';
+import {
+  buildCataloguePrefixIndex,
+  getCatalogueFranchiseCounts,
+  narrowCatalogueByPrefix,
+} from './animeSearchIndex';
 
 const ylia = {
   name: 'Your Lie in April',
@@ -11,7 +15,7 @@ const ylia = {
 function searchPipeline(catalogue: typeof ylia[], query: string) {
   const index = buildCataloguePrefixIndex(catalogue);
   const scoped = narrowCatalogueByPrefix(catalogue, index, query);
-  const franchiseCounts = buildFranchiseCountsMap(catalogue);
+  const franchiseCounts = getCatalogueFranchiseCounts(catalogue);
   let next = getFuzzySuggestions(scoped, query, 'franchise', franchiseCounts);
   if (next.length === 0 && scoped.length < catalogue.length) {
     next = getFuzzySuggestions(catalogue, query, 'franchise', franchiseCounts);
