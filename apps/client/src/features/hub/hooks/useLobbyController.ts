@@ -93,6 +93,10 @@ export function useLobbyController() {
   const silentSettingsPatchRef = useRef(false);
   const prevHostIdRef = useRef<string | null>(null);
   const isSoloRoomRef = useRef(false);
+  /** Keep room identity across socket replace so reconnect can re-join the IO channel. */
+  const currentRoomIdRef = useRef('');
+  const gameStatusRef = useRef<GameStatus>('waiting');
+  const identityRef = useRef({ userId: user?.id as string | undefined, username: 'Invité', avatar: 'player1' });
 
   const [view, setView] = useState<LobbyView>(() => {
     if (locationState?.returnToLobby && locationState?.roomId) return 'lobby';
@@ -126,6 +130,9 @@ export function useLobbyController() {
     () => ({ userId: user?.id, username: profile?.username || 'Invité', avatar: profile?.avatar || 'player1' }),
     [user, profile],
   );
+  currentRoomIdRef.current = currentRoomId;
+  gameStatusRef.current = gameStatus;
+  identityRef.current = getPlayerIdentity();
 
   const leaveConfigRoute = useCallback(() => {
     if (pathnameRef.current.includes('/play/create')) {
@@ -194,7 +201,14 @@ export function useLobbyController() {
 
     const onConnect = () => {
       setMySocketId(socket.id || '');
-      if (location.pathname.endsWith('/join')) socket.emit('lobby:subscribe_list');
+      if (pathnameRef.current.endsWith('/join')) socket.emit('lobby:subscribe_list');
+      // After server namespace disconnect / session replace, the new socket is not
+      // in the Socket.IO room channel until lobby:join. Settings updates still
+      // work (roomId lookup), but room_updated never reaches the host.
+      const roomId = currentRoomIdRef.current;
+      if (roomId && gameStatusRef.current === 'waiting') {
+        socket.emit('lobby:join', { roomId, ...identityRef.current });
+      }
     };
     const onRoomsUpdate = (rooms: RoomListItem[]) => setAvailableRooms(rooms);
 
@@ -331,7 +345,16 @@ export function useLobbyController() {
     };
 
     socket.on('connect', onConnect); socket.on('rooms_update', onRoomsUpdate);
-    socket.on('lobby:joined', (data) => { if (data.isHost) { onRoomCreated({ roomId: data.roomId, room: { players: [], ...data } }); } else { onRoomJoined(data); } });
+    // Host create → onRoomCreated (leaves /play/create). Host reconnect to the
+    // same roomId → onRoomJoined so mid-edit does not get force-kicked to lobby.
+    socket.on('lobby:joined', (data) => {
+      const isSameRoom = currentRoomIdRef.current === data.roomId;
+      if (data.isHost && !isSameRoom) {
+        onRoomCreated({ roomId: data.roomId, room: { players: [], ...data } });
+      } else {
+        onRoomJoined(data);
+      }
+    });
     socket.on('room_updated', onRoomUpdated); socket.on('room_closed', onRoomClosed); socket.on('password_required', onPasswordRequired); socket.on('update_players', onUpdatePlayers); socket.on('game_started', onGameStarted); socket.on('error', onError);
 
     return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('lobby:joined'); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('game_started', onGameStarted); socket.off('error', onError); };
@@ -395,11 +418,14 @@ export function useLobbyController() {
     const cfg = override ?? roomConfig;
     if (view === 'lobby' && currentRoomId) {
       socket.emit('update_room_settings', { roomId: currentRoomId, settings: cfg });
+      // Don't wait for room_updated — host may be off the Socket.IO channel after
+      // a session replace; settings still apply server-side via roomId lookup.
+      leaveConfigRoute();
     } else {
       const payload = { roomName: cfg.roomName?.trim() || '', ...getPlayerIdentity(), settings: cfg };
       socket.emit('lobby:create', payload);
     }
-  }, [view, currentRoomId, roomConfig, getPlayerIdentity]);
+  }, [view, currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute]);
 
   const patchRoomSettings = useCallback((patch: Partial<RoomConfig>, silent = false) => {
     if (!currentRoomId || !isAmIHost) return;
