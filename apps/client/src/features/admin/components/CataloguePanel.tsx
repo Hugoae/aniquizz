@@ -59,6 +59,8 @@ type Confirm =
 export function CataloguePanel({ canManage }: { canManage: boolean }) {
   const [tree, setTree] = useState<CatalogueTree | null>(null);
   const [loading, setLoading] = useState(false);
+  const loadAbortRef = useRef<AbortController | null>(null);
+  const loadRef = useRef<() => Promise<void>>(async () => {});
 
   const [rawQuery, setRawQuery] = useState("");
   const [query, setQuery] = useState("");
@@ -90,16 +92,22 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
   const [preview, setPreview] = useState<CatalogueSong | null>(null);
   const [confirm, setConfirm] = useState<Confirm>(null);
 
-  // Debounce search input.
+  // Debounce search input — only bump page when the committed query actually changes.
   useEffect(() => {
     const t = setTimeout(() => {
-      setQuery(rawQuery.trim());
-      setPage(1);
+      const next = rawQuery.trim();
+      setQuery((prev) => {
+        if (prev !== next) setPage(1);
+        return next;
+      });
     }, 300);
     return () => clearTimeout(t);
   }, [rawQuery]);
 
   const load = useCallback(async () => {
+    loadAbortRef.current?.abort();
+    const ac = new AbortController();
+    loadAbortRef.current = ac;
     setLoading(true);
     try {
       const data = await adminApi.catalogueTree({
@@ -108,17 +116,31 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
         difficulty: difficulty || undefined,
         locked: locked === "" ? undefined : locked === "true",
         page,
+        signal: ac.signal,
       });
+      if (ac.signal.aborted) return;
       setTree(data);
     } catch (e) {
+      if (
+        ac.signal.aborted ||
+        (e instanceof DOMException && e.name === "AbortError") ||
+        (e instanceof Error && e.name === "AbortError")
+      ) {
+        return;
+      }
       toast.error(errMsg(e));
     } finally {
-      setLoading(false);
+      if (!ac.signal.aborted) setLoading(false);
     }
   }, [query, status, difficulty, locked, page]);
 
+  loadRef.current = load;
+
   useEffect(() => {
     void load();
+    return () => {
+      loadAbortRef.current?.abort();
+    };
   }, [load]);
 
   const searching = query.length > 0;
@@ -166,9 +188,9 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
       await adminApi.updateSong(song.id, partial);
     } catch (e) {
       toast.error(errMsg(e));
-      void load();
+      void loadRef.current();
     }
-  }, [load]);
+  }, []);
 
   const handleToggleSelect = useCallback((id: number) => {
     setSelected((prev) => {
@@ -347,10 +369,16 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
       {/* Tree */}
       <div ref={topRef} className="scroll-mt-24" />
       {loading && !tree && <p className="text-sm text-muted-foreground">Chargement…</p>}
-      {tree && !tree.groups.length && (
+      {tree && !tree.groups.length && !loading && (
         <p className="p-6 text-center text-sm text-muted-foreground">Aucun résultat.</p>
       )}
 
+      <div className={loading && tree ? "relative opacity-60 pointer-events-none" : undefined}>
+        {loading && tree && (
+          <p className="absolute inset-x-0 top-2 z-10 text-center text-xs text-muted-foreground">
+            Actualisation…
+          </p>
+        )}
       <div className="space-y-2">
         {tree?.groups.map((g) => (
           <div key={groupKey(g)} className="glass-card overflow-hidden">
@@ -499,9 +527,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           </div>
         ))}
       </div>
+      </div>
 
       {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && (
+      {pagination && pagination.totalPages > 1 && !loading && (
         <div className="flex items-center justify-center gap-2 pt-2">
           <Button
             size="sm"

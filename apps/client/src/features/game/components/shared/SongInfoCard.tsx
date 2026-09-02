@@ -1,5 +1,6 @@
 import { ExternalLink, Calendar, Music2, User, Star, Check, HelpCircle, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import {
   formatRevealEpisodeRange,
   formatRevealFormat,
@@ -35,6 +36,9 @@ interface SongInfoCardProps {
   isRevealed: boolean;
   tags?: string[];
   isWatched?: boolean;
+  /** Catalogue song id — enables the like button at reveal. */
+  songId?: number;
+  showLikeButton?: boolean;
   /** `card` = tall side panel; `band` = compact horizontal strip under the video. */
   variant?: 'card' | 'band';
 }
@@ -101,6 +105,8 @@ export function SongInfoCard({
   isRevealed,
   tags,
   isWatched,
+  songId,
+  showLikeButton = false,
   variant = 'card',
 }: SongInfoCardProps) {
   if (!isRevealed) {
@@ -147,7 +153,7 @@ export function SongInfoCard({
   if (variant === 'band') {
     return (
       <div
-        className="group flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card shadow-xl transition-all duration-300 hover:border-primary/30"
+        className="group relative flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card shadow-xl transition-all duration-300 hover:border-primary/30"
         style={accentStyle}
       >
         {coverImage && (
@@ -158,6 +164,11 @@ export function SongInfoCard({
               <div className="absolute left-1 top-1 z-20 flex items-center gap-1 rounded bg-success px-1.5 py-0.5 text-success-foreground shadow">
                 <Check className="h-3 w-3 stroke-[4]" />
                 <span className="text-[9px] font-black leading-none">VU</span>
+              </div>
+            )}
+            {showLikeButton && songId != null && (
+              <div className="absolute bottom-1.5 right-1.5 z-30">
+                <SongLikeButton songId={songId} size="md" className="shadow-lg" />
               </div>
             )}
           </div>
@@ -204,7 +215,7 @@ export function SongInfoCard({
 
   return (
     <div
-      className="group flex h-full min-h-[200px] w-full max-w-[640px] animate-in slide-in-from-right-4 overflow-hidden rounded-xl border border-border bg-card shadow-2xl transition-all duration-500 hover:border-primary/30"
+      className="group relative flex h-full min-h-[200px] w-full max-w-[640px] animate-in slide-in-from-right-4 overflow-hidden rounded-xl border border-border bg-card shadow-2xl transition-all duration-500 hover:border-primary/30"
       style={accentStyle}
     >
       <div className="relative flex min-w-0 flex-1 flex-col p-4">
@@ -268,6 +279,12 @@ export function SongInfoCard({
           <div className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-md border border-success/60 bg-success px-2 py-1 text-success-foreground shadow-lg">
             <Check className="h-3 w-3 stroke-[4]" />
             <span className="text-[10px] font-black leading-none">VU</span>
+          </div>
+        )}
+
+        {showLikeButton && songId != null && (
+          <div className="absolute bottom-2 right-2 z-30">
+            <SongLikeButton songId={songId} size="lg" className="shadow-lg" />
           </div>
         )}
       </div>

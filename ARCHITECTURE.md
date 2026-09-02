@@ -37,8 +37,8 @@ React SPA deployed to Vercel (`apps/client` as project root).
 
 | Area | Purpose |
 | ---- | ------- |
-| `src/pages/` | Routed views — Home, GameHub, Game, Profile, Admin, **Library**, legal pages |
-| `src/features/` | Feature modules — auth, game, hub, friends, profile, admin, settings, **library** |
+| `src/pages/` | Routed views — Home, GameHub, Game, Profile, Admin, Library, Leaderboard, legal pages |
+| `src/features/` | Feature modules — auth, game, hub, friends, profile, admin, settings, library, leaderboard, suggestions |
 | `src/components/ui/` | shadcn/ui primitives |
 | `src/lib/` | Supabase, socket, admin API, env, route prefetch |
 | `vercel.json` | SPA rewrite, apex redirects, immutable asset cache |
@@ -56,14 +56,14 @@ Express + Socket.io on Render (Starter, Frankfurt). Binds `0.0.0.0:$PORT`.
 | `src/modules/game/` | `GameManager`, `gameHandlers`, `gameService`, **engine/** (`MatchEngine`, `PlaylistBuilder`, `RoundClock`, …) |
 | `src/modules/lobby/` | Room create/join, settings, room list fan-out |
 | `src/modules/chat/` | In-game chat (respects mute sanctions) |
-| `src/modules/profile/` | Stats, public profiles, leaderboard stub |
+| `src/modules/profile/` | Stats, public profiles, five-metric community leaderboard |
 | `src/modules/friends/` | Friend graph, presence, invites |
 | `src/modules/admin/` | REST `/admin/*` — users, rooms, catalogue, stats, dev tools |
 | `src/modules/anilist/` | Watched-list resolution for AniList mode |
 | `src/modules/mal/` | MyAnimeList public API — username verify, animelist fetch, `idMal` catalogue mapping |
 | `src/modules/lists/` | `listResolver` + `watchedPoolResolve` — one list provider per profile (AniList **or** MAL), cross-player union/intersection |
 | `src/modules/catalogue/` | `libraryService` — browse meta, franchise tree, song search/detail |
-| `src/routes/` | `/health`, `/library/*`, leaderboard HTTP stub |
+| `src/routes/` | `/health`, `/library/*`, `/leaderboard`, `/suggestions` |
 
 Catalogue caches (`getAllAnimeNames`, choice candidates) warm at boot to reduce
 cold-start latency on Render.

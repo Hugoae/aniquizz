@@ -76,11 +76,15 @@ const ROUTES = {
   '/news': { title: `Actus | ${SITE}`, body: newsBody() },
   '/leaderboard': {
     title: `Classement | ${SITE}`,
-    body: comingSoonBody('Classement global', 'Classements par niveau, victoires et précision.'),
+    body: '<p>Classement AniQuizz : XP, victoires, parties jouées, Pokédex musical et précision.</p>',
   },
   '/library': {
     title: `Librairie | ${SITE}`,
     body: comingSoonBody('Librairie musicale', 'Catalogue des openings et endings.'),
+  },
+  '/suggestions': {
+    title: `Boîte à idées | ${SITE}`,
+    body: '<p>Proposez et soutenez les prochaines améliorations, chansons et corrections du catalogue AniQuizz.</p>',
   },
   '/legal/confidentialite': {
     title: `Confidentialité | ${SITE}`,

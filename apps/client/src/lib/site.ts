@@ -53,6 +53,7 @@ export const PAGE_TITLES = {
   news: 'Actus',
   leaderboard: 'Classement',
   library: 'Librairie',
+  suggestions: 'Boîte à idées',
   profile: 'Profil',
   admin: 'Admin',
   resetPassword: 'Mot de passe',

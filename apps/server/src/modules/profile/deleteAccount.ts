@@ -3,6 +3,7 @@ import { logger } from '../../utils/logger';
 import { supabaseAdmin } from '../../lib/supabase';
 import type { TypedServer } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
+import { prepareSuggestionsForAccountDeletion } from '../feedback/suggestionService';
 
 export class DeleteAccountError extends Error {
   constructor(
@@ -67,6 +68,7 @@ export const deleteUserAccount = async (opts: {
 
   gameManager.ejectUserFromAllRooms(userId, 'Compte supprimé.');
 
+  await prepareSuggestionsForAccountDeletion(userId);
   await prisma.profile.delete({ where: { id: userId } });
 
   await removeCustomAvatar(userId, profile.avatar);

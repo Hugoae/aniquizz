@@ -40,10 +40,6 @@ export function libraryDifficultyClass(difficulty: LibraryDifficulty): string {
   }
 }
 
-export function librarySongTypeLabel(type: string, sequence: number): string {
-  return `${type}${sequence}`;
-}
-
 export const filterSelectClass = cn(
   'h-9 rounded-lg border border-border bg-card/80 px-3 text-sm text-foreground',
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',

@@ -24,11 +24,11 @@ src/
 │   ├── game/             GameManager, handlers, engine/ (MatchEngine, PlaylistBuilder)
 │   ├── lobby/            Rooms, join/create, settings
 │   ├── chat/             In-game messages
-│   ├── profile/          Stats, public profile
+│   ├── profile/          Stats, public profile, leaderboard
 │   ├── friends/          Friend graph + presence
 │   ├── admin/            REST /admin/* (users, rooms, catalogue, stats)
 │   └── anilist/          Watched-list resolution
-├── routes/               /health, leaderboard stub
+├── routes/               /health, /leaderboard, /library, /suggestions
 ├── integration/          Vitest integration tests (real DB + socket)
 └── config/               CORS, env validation
 ```
@@ -38,7 +38,7 @@ src/
 | Route | Purpose |
 | ----- | ------- |
 | `GET /health` | Render health check + live stats |
-| `GET /leaderboard` | Stub (full leaderboard planned) |
+| `GET /leaderboard` | Public five-metric rankings (`xp`, `victories`, `games`, `discoveries`, `accuracy`) |
 | `/admin/*` | Admin API (Bearer JWT, role-gated) |
 
 All game logic runs over **Socket.io** — see `packages/shared/src/events.ts` for the typed contract.

@@ -76,6 +76,27 @@ enum StoredSoloMedal {
   PLATINUM
 }
 
+enum SuggestionCategory {
+  IMPROVEMENT
+  SONG_REQUEST
+  CORRECTION
+  OTHER
+}
+
+enum SuggestionStatus {
+  OPEN
+  PLANNED
+  DONE
+  REJECTED
+}
+
+enum SuggestionCorrectionField {
+  TITLE
+  ARTIST
+  DIFFICULTY
+  OTHER
+}
+
 // --- IDENTITY ---
 model Profile {
   // = auth.users.id — populated by the Supabase `handle_new_user()` trigger.
@@ -100,6 +121,8 @@ model Profile {
   lastSeenAt  DateTime?
   // Friends privacy (Phase 7): when false, the user refuses all incoming friend requests.
   allowFriendRequests Boolean @default(true)
+  // When false, the favorites section is hidden on the public profile.
+  showFavoriteSongs    Boolean @default(true)
 
   gamesPlayed    Int @default(0)
   gamesWon       Int @default(0)
@@ -114,6 +137,9 @@ model Profile {
 
   matchPlayers MatchPlayer[]
   history      SongHistory[]
+  songLikes    SongLike[]
+  suggestions  Suggestion[]
+  suggestionVotes SuggestionVote[]
   myList       PlayerAnimeList[]
   // Social (Phase 7). Friendship rows where this profile is the requester / addressee.
   sentRequests     Friendship[] @relation("SentRequests")
@@ -121,6 +147,8 @@ model Profile {
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
+  @@index([gamesPlayed(sort: Desc)])
+  // Accuracy ranking uses a partial expression index (numeric ratio); see migrations.
   @@index([lastSeenAt])
 }
 
@@ -284,11 +312,15 @@ model Song {
   isLocked       Boolean        @default(false)
   downloadStatus DownloadStatus @default(PENDING)
   errorLog       String?
+  /** Denormalized count of SongLike rows; maintained on like/unlike. */
+  likeCount      Int            @default(0)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
   anime   Anime         @relation(fields: [animeId], references: [id], onDelete: Cascade)
   history SongHistory[]
+  likes   SongLike[]
+  suggestions Suggestion[]
   rounds  MatchRound[]
 
   @@index([animeId])
@@ -311,6 +343,75 @@ model SongHistory {
 
   @@unique([profileId, songId])
   @@index([songId])
+}
+
+/// User-curated favorite songs (explicit like — distinct from SongHistory "heard").
+model SongLike {
+  id        String   @id @default(uuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  songId    Int
+  song      Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  likedAt   DateTime @default(now())
+  /** 1–5 when pinned for public profile showcase; null = not showcased. */
+  pinOrder  Int?
+
+  @@unique([profileId, songId])
+  @@unique([profileId, pinOrder])
+  @@index([profileId, likedAt(sort: Desc)])
+  @@index([profileId, pinOrder])
+  @@index([songId])
+}
+
+model Suggestion {
+  id              String                     @id @default(uuid())
+  authorId        String?
+  author          Profile?                   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  category        SuggestionCategory
+  status          SuggestionStatus           @default(OPEN)
+  statusRank      Int                        @default(0)
+  title           String
+  body            String
+  songId          Int?
+  song            Song?                      @relation(fields: [songId], references: [id], onDelete: SetNull)
+  correctionField SuggestionCorrectionField?
+  proposedValue   String?
+  voteCount       Int                        @default(0)
+  adminReply      String?
+  adminRepliedAt  DateTime?
+  staffTreatedAt  DateTime?
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  votes           SuggestionVote[]
+
+  @@index([statusRank, voteCount(sort: Desc), createdAt(sort: Desc)])
+  @@index([category, status])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([songId])
+  @@index([staffTreatedAt])
+}
+
+model SuggestionVote {
+  id           String     @id @default(uuid())
+  suggestionId String
+  suggestion   Suggestion @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  profileId    String
+  profile      Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+
+  @@unique([suggestionId, profileId])
+  @@index([profileId, createdAt(sort: Desc)])
+}
+
+/// Server-only sliding window used by HTTP rate limits (survives restarts).
+model HttpRateLimitBucket {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime
+  expiresAt   DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([expiresAt])
 }
 
 model PlayerAnimeList {

@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileStatsSection } from '@/features/profile/components/ProfileStatsSection';
+import { ProfileFavoriteSongsSection } from '@/features/profile/components/ProfileFavoriteSongsSection';
 import { AvatarCropDialog } from '@/features/profile/components/AvatarCropDialog';
 import { WatchlistLinkDialog } from '@/features/profile/components/WatchlistLinkDialog';
 import { PasswordDialog } from '@/features/profile/components/PasswordDialog';
@@ -35,6 +36,11 @@ import { supabase } from '@/lib/supabase';
 import { socket } from '@/lib/socket';
 import { getCroppedImg } from '@/lib/canvasUtils';
 import { getProfileFromAdminState } from '@/features/admin/adminNavigation';
+import {
+  getLeaderboardReturnMetric,
+  leaderboardPath,
+} from '@/features/leaderboard/lib/leaderboardNavigation';
+import { LEADERBOARD_COPY } from '@/features/leaderboard/copy/leaderboardCopy';
 
 /** Self-only stats payload from `profile:get_stats`. */
 interface StatsData {
@@ -94,8 +100,13 @@ export default function Profile() {
 
   const isOwn = !userId || (!!user && userId === user.id);
   const fromAdmin = getProfileFromAdminState(location.state);
+  const leaderboardMetric = getLeaderboardReturnMetric(location.state, location.search);
 
   const handleBack = () => {
+    if (leaderboardMetric) {
+      navigate(leaderboardPath(leaderboardMetric), { replace: true });
+      return;
+    }
     if (!isOwn && fromAdmin) {
       navigate('/admin', { state: fromAdmin.admin });
       return;
@@ -396,7 +407,13 @@ export default function Profile() {
             className="gap-2 mb-2 text-muted-foreground hover:text-foreground pl-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            {isOwn ? "Retour à l'accueil" : fromAdmin ? "Retour à l'administration" : 'Retour à mon profil'}
+            {leaderboardMetric
+              ? LEADERBOARD_COPY.backToBoard
+              : isOwn
+                ? "Retour à l'accueil"
+                : fromAdmin
+                  ? "Retour à l'administration"
+                  : 'Retour à mon profil'}
           </Button>
 
           <ProfileHeader
@@ -428,6 +445,12 @@ export default function Profile() {
             <div className="col-span-12 lg:col-span-9 space-y-8">
 
               <ProfileStatsSection vm={vm} />
+
+              <ProfileFavoriteSongsSection
+                profileId={vm.id}
+                isOwn={isOwn}
+                username={vm.username}
+              />
 
               {/* POKÉDEX */}
               <section className="space-y-4 animate-fade-in" style={{ animationDelay: '160ms' }}>

@@ -1,3 +1,4 @@
+import { isTrustedSupabaseAvatarUrl } from '@aniquizz/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
@@ -12,10 +13,9 @@ interface UserAvatarProps {
 
 export function UserAvatar({ avatar, username, className, fallbackClassName, loading = 'lazy' }: UserAvatarProps) {
   const initials = username ? username.substring(0, 2).toUpperCase() : '??';
-
-  // Only uploaded images (Supabase URLs) are shown; otherwise we fall back to
-  // the user's initials on a dark background (no generated character).
-  const uploadedSrc = avatar?.startsWith('http') ? avatar : undefined;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+  const uploadedSrc =
+    avatar && supabaseUrl && isTrustedSupabaseAvatarUrl(avatar, supabaseUrl) ? avatar : undefined;
 
   return (
     <Avatar className={cn("border border-primary/20", className)}>

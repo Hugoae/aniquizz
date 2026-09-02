@@ -22,6 +22,7 @@ export type Profile = {
   anilistUsername?: string | null;
   malUsername?: string | null;
   lastListSync?: string | null;
+  showFavoriteSongs?: boolean;
   totalGuesses?: number;
   correctGuesses?: number;
   history?: { count: number }[];

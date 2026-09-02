@@ -1,5 +1,5 @@
-import { ExternalLink, Play, Check } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { ExternalLink, Check } from 'lucide-react';
 import type { LibrarySong } from '@aniquizz/shared';
 import { formatSongTypeLabel } from '@aniquizz/shared';
 import {
@@ -11,18 +11,60 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { SongInfoCard } from '@/features/game/components/shared/SongInfoCard';
+import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
-import { prefetchGameHub } from '@/lib/routePrefetch';
 
 interface LibrarySongDrawerProps {
   song: LibrarySong | null;
   onOpenChange: (open: boolean) => void;
+  /** Seek position (seconds) when opening after an inline preview handoff. */
+  resumeAt?: number | null;
+  /** Autoplay after seek when the inline preview was playing. */
+  autoPlay?: boolean;
 }
 
-export function LibrarySongDrawer({ song, onOpenChange }: LibrarySongDrawerProps) {
-  const navigate = useNavigate();
-  const videoUrl = song ? getVideoUrl(song.videoKey) : '';
+export function LibrarySongDrawer({
+  song,
+  onOpenChange,
+  resumeAt = null,
+  autoPlay = false,
+}: LibrarySongDrawerProps) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const baseUrl = song ? getVideoUrl(song.videoKey) : '';
+  // Media Fragments (`#t=`) help the browser start near the handoff timestamp.
+  const videoUrl =
+    baseUrl && resumeAt != null && resumeAt > 0
+      ? `${baseUrl}#t=${resumeAt.toFixed(2)}`
+      : baseUrl;
+
+  useEffect(() => {
+    if (!song || !baseUrl) return;
+    const el = videoRef.current;
+    if (!el) return;
+
+    const target = resumeAt != null && resumeAt > 0 ? resumeAt : 0;
+    const shouldPlay = autoPlay;
+
+    const apply = () => {
+      try {
+        if (target > 0 && Math.abs(el.currentTime - target) > 0.35) {
+          el.currentTime = target;
+        }
+        if (shouldPlay) void el.play().catch(() => {});
+      } catch {
+        /* Ignore seek/play errors (media not ready yet / autoplay policy). */
+      }
+    };
+
+    if (el.readyState >= 1) {
+      apply();
+      return;
+    }
+
+    el.addEventListener('loadedmetadata', apply, { once: true });
+    return () => el.removeEventListener('loadedmetadata', apply);
+  }, [song?.id, baseUrl, resumeAt, autoPlay, song]);
 
   if (!song) return null;
 
@@ -34,11 +76,13 @@ export function LibrarySongDrawer({ song, onOpenChange }: LibrarySongDrawerProps
         <div className="border-b border-border/60 bg-black">
           {videoUrl ? (
             <video
-              key={song.id}
+              key={`${song.id}-${resumeAt?.toFixed(1) ?? '0'}-${autoPlay ? '1' : '0'}`}
+              ref={videoRef}
               src={videoUrl}
               controls
+              autoPlay={autoPlay}
               playsInline
-              preload="metadata"
+              preload="auto"
               className="aspect-video w-full bg-black"
               aria-label={`${LIBRARY_COPY.playPreview} — ${song.title}`}
             />
@@ -83,7 +127,8 @@ export function LibrarySongDrawer({ song, onOpenChange }: LibrarySongDrawerProps
             variant="band"
           />
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <SongLikeButton songId={song.id} initialLiked={song.liked} size="md" />
             {song.anime.siteUrl && (
               <Button variant="outline" className="gap-2" asChild>
                 <a href={song.anime.siteUrl} target="_blank" rel="noopener noreferrer">
@@ -92,21 +137,7 @@ export function LibrarySongDrawer({ song, onOpenChange }: LibrarySongDrawerProps
                 </a>
               </Button>
             )}
-            <Button
-              variant="glow"
-              className="gap-2"
-              onMouseEnter={prefetchGameHub}
-              onFocus={prefetchGameHub}
-              onClick={() => {
-                onOpenChange(false);
-                navigate('/play');
-              }}
-            >
-              <Play className="h-4 w-4 fill-current" aria-hidden="true" />
-              {LIBRARY_COPY.playCta}
-            </Button>
           </div>
-          <p className="text-xs text-muted-foreground">{LIBRARY_COPY.playCtaHint}</p>
         </div>
       </DialogContent>
     </Dialog>

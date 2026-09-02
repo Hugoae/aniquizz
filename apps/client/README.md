@@ -40,7 +40,9 @@ src/
 | `/profile`, `/profile/:userId` | Profile | ✓ |
 | `/admin` | Admin panel | ✓ (MODERATOR+) |
 | `/library` | Music catalogue browse | prefetch |
-| `/news`, `/leaderboard` | Content / coming soon | — |
+| `/news` | News & roadmap | — |
+| `/leaderboard` | Community rankings (XP, victories, games, Pokédex, accuracy) | — |
+| `/suggestions` | Community ideas board | — |
 | `/legal/*` | CGU, privacy, mentions | — |
 
 ## Scripts

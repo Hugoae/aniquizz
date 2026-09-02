@@ -9,6 +9,8 @@ const importers = {
   profile: () => import('@/pages/Profile'),
   admin: () => import('@/pages/Admin'),
   library: () => import('@/pages/Library'),
+  suggestions: () => import('@/features/suggestions/pages/Suggestions'),
+  leaderboard: () => import('@/pages/Leaderboard'),
 } as const;
 
 type RouteKey = keyof typeof importers;

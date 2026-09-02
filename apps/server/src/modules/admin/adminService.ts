@@ -630,6 +630,11 @@ const animeSelect = {
   isLocked: true,
 } satisfies Prisma.AnimeSelect;
 
+type CatalogueSongRow = Prisma.SongGetPayload<{ select: typeof songSelect }>;
+type CatalogueAnimeRow = Prisma.AnimeGetPayload<{ select: typeof animeSelect }> & {
+  songs: CatalogueSongRow[];
+};
+
 export interface CatalogueTreeOpts {
   query?: string;
   page?: number;
@@ -640,22 +645,89 @@ export interface CatalogueTreeOpts {
   locked?: boolean;
 }
 
-const loadAnimesWithSongs = async (
+const escapeIlike = (raw: string): string => raw.replace(/[%_\\]/g, '\\$&');
+
+/** Prisma has no case-insensitive `contains` on String[]; use unnest + ILIKE. */
+const animeIdsMatchingAltNames = async (q: string): Promise<number[]> => {
+  const pattern = `%${escapeIlike(q)}%`;
+  const rows = await prisma.$queryRaw<{ id: number }[]>`
+    SELECT DISTINCT a.id
+    FROM "Anime" a
+    WHERE EXISTS (
+      SELECT 1 FROM unnest(a."altNames") AS t(alt)
+      WHERE t.alt ILIKE ${pattern}
+    )
+  `;
+  return rows.map((r) => r.id);
+};
+
+const songTextMatch = (q: string): Prisma.SongWhereInput => ({
+  OR: [
+    { title: { contains: q, mode: 'insensitive' } },
+    { artist: { contains: q, mode: 'insensitive' } },
+  ],
+});
+
+/** Anime matches search by own name, franchise, altNames, or owned song title/artist. */
+const buildAnimeTextFilter = (
+  q: string,
+  altNameIds: number[],
+): Prisma.AnimeWhereInput => {
+  const or: Prisma.AnimeWhereInput[] = [
+    { name: { contains: q, mode: 'insensitive' } },
+    { franchise: { name: { contains: q, mode: 'insensitive' } } },
+    { songs: { some: songTextMatch(q) } },
+  ];
+  if (altNameIds.length) or.push({ id: { in: altNameIds } });
+  return { OR: or };
+};
+
+/**
+ * Songs shown under a matched anime:
+ * - identity hit (name / franchise / altNames) → all songs (status/difficulty filters only)
+ * - song-title/artist hit only → only matching songs
+ */
+const buildSongFilter = (
+  q: string | undefined,
+  status: DownloadStatus | undefined,
+  difficulty: Difficulty | undefined,
+  altNameIds: number[],
+): Prisma.SongWhereInput => {
+  const base: Prisma.SongWhereInput = {
+    ...(status ? { downloadStatus: status } : {}),
+    ...(difficulty ? { difficulty } : {}),
+  };
+  if (!q) return base;
+
+  const or: Prisma.SongWhereInput[] = [
+    { title: { contains: q, mode: 'insensitive' } },
+    { artist: { contains: q, mode: 'insensitive' } },
+    { anime: { name: { contains: q, mode: 'insensitive' } } },
+    { anime: { franchise: { name: { contains: q, mode: 'insensitive' } } } },
+  ];
+  if (altNameIds.length) or.push({ animeId: { in: altNameIds } });
+  return { ...base, OR: or };
+};
+
+/** One anime query + one song query for the whole page (no per-franchise N+1). */
+const batchLoadAnimesWithSongs = async (
   animeWhere: Prisma.AnimeWhereInput,
   songFilter: Prisma.SongWhereInput,
-) => {
+): Promise<CatalogueAnimeRow[]> => {
   const animes = await prisma.anime.findMany({
     where: animeWhere,
     orderBy: { name: 'asc' },
     select: animeSelect,
   });
   if (!animes.length) return [];
+
   const songs = await prisma.song.findMany({
     where: { animeId: { in: animes.map((a) => a.id) }, ...songFilter },
     orderBy: [{ songType: 'asc' }, { sequence: 'asc' }],
     select: songSelect,
   });
-  const byAnime = new Map<number, typeof songs>();
+
+  const byAnime = new Map<number, CatalogueSongRow[]>();
   for (const s of songs) {
     const list = byAnime.get(s.animeId) ?? [];
     list.push(s);
@@ -667,32 +739,11 @@ const loadAnimesWithSongs = async (
 export const catalogueTree = async (opts: CatalogueTreeOpts) => {
   const page = Math.max(1, Math.floor(opts.page ?? 1));
   const pageSize = Math.min(Math.max(1, Math.floor(opts.pageSize ?? CATALOGUE_PAGE_SIZE)), 100);
-  const q = opts.query?.trim();
+  const q = opts.query?.trim() || undefined;
+  const altNameIds = q ? await animeIdsMatchingAltNames(q) : [];
 
-  const songFilter: Prisma.SongWhereInput = {};
-  if (opts.status) songFilter.downloadStatus = opts.status;
-  if (opts.difficulty) songFilter.difficulty = opts.difficulty;
-
-  // An anime is relevant when its name matches, its franchise name matches, or
-  // it owns a song matching the text. (altNames partial search unsupported.)
-  const animeTextFilter: Prisma.AnimeWhereInput | undefined = q
-    ? {
-        OR: [
-          { name: { contains: q, mode: 'insensitive' } },
-          { franchise: { name: { contains: q, mode: 'insensitive' } } },
-          {
-            songs: {
-              some: {
-                OR: [
-                  { title: { contains: q, mode: 'insensitive' } },
-                  { artist: { contains: q, mode: 'insensitive' } },
-                ],
-              },
-            },
-          },
-        ],
-      }
-    : undefined;
+  const animeTextFilter = q ? buildAnimeTextFilter(q, altNameIds) : undefined;
+  const songFilter = buildSongFilter(q, opts.status, opts.difficulty, altNameIds);
 
   const franchiseWhere: Prisma.FranchiseWhereInput = {
     animes: { some: animeTextFilter ?? {} },
@@ -700,23 +751,7 @@ export const catalogueTree = async (opts: CatalogueTreeOpts) => {
   };
   const orphanAnimeWhere: Prisma.AnimeWhereInput = {
     franchiseId: null,
-    ...(q
-      ? {
-          OR: [
-            { name: { contains: q, mode: 'insensitive' } },
-            {
-              songs: {
-                some: {
-                  OR: [
-                    { title: { contains: q, mode: 'insensitive' } },
-                    { artist: { contains: q, mode: 'insensitive' } },
-                  ],
-                },
-              },
-            },
-          ],
-        }
-      : {}),
+    ...(animeTextFilter ?? {}),
   };
 
   const [orphanCountRaw, franchiseTotal] = await Promise.all([
@@ -736,21 +771,16 @@ export const catalogueTree = async (opts: CatalogueTreeOpts) => {
     name: string;
     genres: string[];
     isLocked: boolean;
-    animes: Awaited<ReturnType<typeof loadAnimesWithSongs>>;
+    animes: CatalogueAnimeRow[];
   }> = [];
 
   let franchiseSkip = start;
   let franchiseTake = pageSize;
+  let includeOrphan = false;
 
   if (hasOrphan) {
     if (start === 0) {
-      groups.push({
-        id: null,
-        name: 'Sans franchise',
-        genres: [],
-        isLocked: false,
-        animes: await loadAnimesWithSongs(orphanAnimeWhere, songFilter),
-      });
+      includeOrphan = true;
       franchiseSkip = 0;
       franchiseTake = pageSize - 1;
     } else {
@@ -758,26 +788,52 @@ export const catalogueTree = async (opts: CatalogueTreeOpts) => {
     }
   }
 
-  if (franchiseTake > 0) {
-    const franchises = await prisma.franchise.findMany({
-      where: franchiseWhere,
-      orderBy: { name: 'asc' },
-      skip: franchiseSkip,
-      take: franchiseTake,
-      select: { id: true, name: true, genres: true, isLocked: true },
-    });
-    for (const fr of franchises) {
-      groups.push({
-        id: fr.id,
-        name: fr.name,
-        genres: fr.genres,
-        isLocked: fr.isLocked,
-        animes: await loadAnimesWithSongs(
-          { franchiseId: fr.id, ...(animeTextFilter ?? {}) },
-          songFilter,
-        ),
-      });
+  const franchises =
+    franchiseTake > 0
+      ? await prisma.franchise.findMany({
+          where: franchiseWhere,
+          orderBy: { name: 'asc' },
+          skip: franchiseSkip,
+          take: franchiseTake,
+          select: { id: true, name: true, genres: true, isLocked: true },
+        })
+      : [];
+
+  const franchiseIds = franchises.map((f) => f.id);
+  const animeClauses: Prisma.AnimeWhereInput[] = [];
+  if (includeOrphan) animeClauses.push(orphanAnimeWhere);
+  if (franchiseIds.length) {
+    animeClauses.push({ franchiseId: { in: franchiseIds }, ...(animeTextFilter ?? {}) });
+  }
+
+  const animesByFranchise = new Map<number | null, CatalogueAnimeRow[]>();
+  if (animeClauses.length) {
+    const loaded = await batchLoadAnimesWithSongs({ OR: animeClauses }, songFilter);
+    for (const anime of loaded) {
+      const key = anime.franchiseId;
+      const list = animesByFranchise.get(key) ?? [];
+      list.push(anime);
+      animesByFranchise.set(key, list);
     }
+  }
+
+  if (includeOrphan) {
+    groups.push({
+      id: null,
+      name: 'Sans franchise',
+      genres: [],
+      isLocked: false,
+      animes: animesByFranchise.get(null) ?? [],
+    });
+  }
+  for (const fr of franchises) {
+    groups.push({
+      id: fr.id,
+      name: fr.name,
+      genres: fr.genres,
+      isLocked: fr.isLocked,
+      animes: animesByFranchise.get(fr.id) ?? [],
+    });
   }
 
   const [totalFranchises, totalAnimes, totalSongs, completedSongs] = await Promise.all([

@@ -261,6 +261,7 @@ export interface ClientToServerEvents {
     avatarUrl?: string;
     anilistUsername?: string | null;
     malUsername?: string | null;
+    showFavoriteSongs?: boolean;
   }) => void;
   'profile:delete_account': (payload: DeleteAccountInput) => void;
   get_home_stats: () => void;

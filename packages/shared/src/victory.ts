@@ -65,6 +65,7 @@ const soloDifficultyLabel = (difficulties: string[]): string => {
  * - Multi: rank 1 when the lobby is below PODIUM_THRESHOLD, otherwise everyone
  *   at or above the competition rank of the 3rd sorted player (ties on that
  *   line included), excluding score 0. No per-player medals.
+ * Callers must pass human competitors only — bots must not inflate lobby size.
  */
 export const computeVictory = (input: VictoryInput): VictoryResult => {
   const bestPerRound = maxPointsPerRound(input.responseType);

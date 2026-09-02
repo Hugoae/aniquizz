@@ -176,6 +176,27 @@ describe('computeVictory - multiplayer (no medals)', () => {
     expect(res.winnerIds).toEqual([]);
   });
 
+  it('uses only the competitors it is given — callers must omit bots', () => {
+    const withBotsCounted = computeVictory({
+      ...base,
+      players: [
+        player('human-a', 40),
+        player('human-b', 30),
+        player('bot-0001', 20),
+        player('bot-0002', 10),
+        player('bot-0003', 5),
+      ],
+    });
+    expect(withBotsCounted.multiWinnerCount).toBe(3);
+
+    const humansOnly = computeVictory({
+      ...base,
+      players: [player('human-a', 40), player('human-b', 30)],
+    });
+    expect(humansOnly.multiWinnerCount).toBe(1);
+    expect(humansOnly.winnerIds).toEqual(['human-a']);
+  });
+
   it('leaves soloMedal null in multiplayer', () => {
     const res = computeVictory({
       ...base,

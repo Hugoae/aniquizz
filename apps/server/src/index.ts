@@ -8,6 +8,7 @@ import { registerShutdownHandlers } from './core/shutdown';
 import { registerHealthRoute } from './routes/health';
 import { registerLeaderboardRoute } from './routes/leaderboard';
 import { registerLibraryRoutes } from './routes/library';
+import { registerSuggestionRoutes } from './routes/suggestions';
 import { registerAdminRoutes } from './modules/admin/adminRoutes';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
@@ -29,6 +30,7 @@ async function main() {
     registerHealthRoute(app, io, () => gameManager);
     registerLeaderboardRoute(app);
     registerLibraryRoutes(app);
+    registerSuggestionRoutes(app);
     registerAdminRoutes(app, io, gameManager);
 
     // 3. Socket manager wires all feature handlers.

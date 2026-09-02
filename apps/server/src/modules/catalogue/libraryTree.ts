@@ -1,260 +1,32 @@
 import { prisma, type Prisma } from '@aniquizz/database';
 import type {
-  LibraryBrowseParams,
-  LibraryDifficulty,
-  LibraryMetaResponse,
-  LibrarySong,
-  LibrarySongType,
-  LibrarySort,
-  LibrarySongsResponse,
-  LibraryTreeResponse,
-  LibraryFranchiseGroup,
   LibraryAnimeGroup,
+  LibraryBrowseParams,
+  LibraryFranchiseGroup,
+  LibrarySong,
+  LibrarySort,
+  LibraryTreeResponse,
 } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
-import { resolveMatchingAnimeIdsForQuery } from './librarySearch';
+import { browseSongsByLikedRecent } from './libraryBrowse';
+import {
+  MAX_PAGE_SIZE,
+  animeOrderBy,
+  applyDiscoveredToGroups,
+  applyLikedToGroups,
+  buildSongFilter,
+  mapLibrarySong,
+  mapRowsWithUserFlags,
+  orderByForSort,
+  resolveUserSongFlags,
+  songSelect,
+} from './librarySongQuery';
 
-const META_TTL_MS = 10 * 60 * 1000;
-const DEFAULT_PAGE_SIZE = 24;
-const MAX_PAGE_SIZE = 48;
 const TREE_PAGE_SIZE = 20;
 const SEARCH_PAGE_SIZE = 24;
 const ORPHAN_FRANCHISE_LABEL = 'Sans franchise';
 
-let metaCache: { data: LibraryMetaResponse; at: number } | null = null;
-
 type FranchiseRow = { id: number; name: string; genres: string[] };
-
-/** Playable = same rule as gameService and profile stats: COMPLETED videos only. */
-export const buildLibrarySongWhere = (
-  opts: LibraryBrowseParams,
-  matchingAnimeIds?: number[],
-  userId?: string | null,
-): Prisma.SongWhereInput => {
-  const q = opts.q?.trim();
-  const andClauses: Prisma.SongWhereInput[] = [];
-
-  const base: Prisma.SongWhereInput = {
-    downloadStatus: 'COMPLETED',
-    ...(opts.animeId !== undefined ? { animeId: opts.animeId } : {}),
-    ...(opts.franchiseId !== undefined
-      ? { anime: { franchiseId: opts.franchiseId } }
-      : {}),
-    ...(opts.songType?.length ? { songType: { in: opts.songType } } : {}),
-    ...(opts.difficulty?.length ? { difficulty: { in: opts.difficulty } } : {}),
-  };
-
-  if (opts.discovered === 'heard' && userId) {
-    andClauses.push({ history: { some: { profileId: userId } } });
-  } else if (opts.discovered === 'unheard' && userId) {
-    andClauses.push({ history: { none: { profileId: userId } } });
-  }
-
-  if (q) {
-    const textOr: Prisma.SongWhereInput[] = [
-      { title: { contains: q, mode: 'insensitive' } },
-      { artist: { contains: q, mode: 'insensitive' } },
-      { anime: { name: { contains: q, mode: 'insensitive' } } },
-      { anime: { franchise: { name: { contains: q, mode: 'insensitive' } } } },
-    ];
-    if (matchingAnimeIds?.length) {
-      textOr.push({ animeId: { in: matchingAnimeIds } });
-    }
-    andClauses.push({ OR: textOr });
-  }
-
-  if (!andClauses.length) return base;
-  return { ...base, AND: andClauses };
-};
-
-const orderByForSort = (sort: LibrarySort): Prisma.SongOrderByWithRelationInput[] => {
-  switch (sort) {
-    case 'anime':
-      return [{ anime: { name: 'asc' } }, { songType: 'asc' }, { sequence: 'asc' }];
-    case 'title':
-      return [{ title: 'asc' }];
-    case 'popularity':
-      return [{ anime: { popularity: 'desc' } }, { songType: 'asc' }, { sequence: 'asc' }];
-    case 'franchise_desc':
-      return [
-        { anime: { franchise: { name: 'desc' } } },
-        { anime: { name: 'asc' } },
-        { songType: 'asc' },
-        { sequence: 'asc' },
-      ];
-    case 'franchise':
-    default:
-      return [
-        { anime: { franchise: { name: 'asc' } } },
-        { anime: { name: 'asc' } },
-        { songType: 'asc' },
-        { sequence: 'asc' },
-      ];
-  }
-};
-
-const songSelect = {
-  id: true,
-  title: true,
-  artist: true,
-  songType: true,
-  sequence: true,
-  videoKey: true,
-  difficulty: true,
-  episodeRange: true,
-  duration: true,
-  tags: true,
-  anime: {
-    select: {
-      id: true,
-      name: true,
-      coverImage: true,
-      coverColor: true,
-      seasonYear: true,
-      format: true,
-      siteUrl: true,
-      franchiseId: true,
-      franchise: { select: { id: true, name: true, genres: true } },
-    },
-  },
-} satisfies Prisma.SongSelect;
-
-type RawSong = Prisma.SongGetPayload<{ select: typeof songSelect }>;
-
-export const mapLibrarySong = (row: RawSong, discovered = false): LibrarySong => ({
-  id: row.id,
-  title: row.title,
-  artist: row.artist,
-  songType: row.songType as LibrarySongType,
-  sequence: row.sequence,
-  videoKey: row.videoKey,
-  difficulty: row.difficulty as LibraryDifficulty,
-  episodeRange: row.episodeRange,
-  duration: row.duration,
-  tags: row.tags,
-  anime: {
-    id: row.anime.id,
-    name: row.anime.name,
-    coverImage: row.anime.coverImage,
-    coverColor: row.anime.coverColor,
-    seasonYear: row.anime.seasonYear,
-    format: row.anime.format,
-    siteUrl: row.anime.siteUrl,
-  },
-  franchise: row.anime.franchise
-    ? {
-        id: row.anime.franchise.id,
-        name: row.anime.franchise.name,
-        genres: row.anime.franchise.genres,
-      }
-    : null,
-  ...(discovered ? { discovered: true } : {}),
-});
-
-const resolveDiscoveredIds = async (userId: string, songIds: number[]): Promise<Set<number>> => {
-  if (!songIds.length) return new Set();
-  const rows = await prisma.songHistory.findMany({
-    where: { profileId: userId, songId: { in: songIds } },
-    select: { songId: true },
-  });
-  return new Set(rows.map((r) => r.songId));
-};
-
-const applyDiscoveredToGroups = (
-  groups: LibraryFranchiseGroup[],
-  discovered: Set<number>,
-): void => {
-  for (const group of groups) {
-    for (const anime of group.animes) {
-      anime.songs = anime.songs.map((s) =>
-        discovered.has(s.id) ? { ...s, discovered: true } : s,
-      );
-    }
-  }
-};
-
-const buildSongFilter = async (
-  opts: LibraryBrowseParams,
-  userId?: string | null,
-): Promise<Prisma.SongWhereInput> => {
-  const matchingAnimeIds = opts.q?.trim()
-    ? await resolveMatchingAnimeIdsForQuery(opts.q)
-    : undefined;
-  return buildLibrarySongWhere(opts, matchingAnimeIds, userId);
-};
-
-export const getLibrarySongById = async (
-  songId: number,
-  userId?: string | null,
-): Promise<LibrarySong | null> => {
-  const row = await prisma.song.findFirst({
-    where: { id: songId, downloadStatus: 'COMPLETED' },
-    select: songSelect,
-  });
-  if (!row) return null;
-
-  let discovered = false;
-  if (userId) {
-    try {
-      discovered = (await resolveDiscoveredIds(userId, [songId])).has(songId);
-    } catch (e) {
-      logger.warn('[Library] Failed to resolve discovered for song', 'Library', e);
-    }
-  }
-
-  return mapLibrarySong(row, discovered);
-};
-
-export const browseLibrarySongs = async (
-  opts: LibraryBrowseParams,
-  userId?: string | null,
-): Promise<LibrarySongsResponse> => {
-  const page = Math.max(1, Math.floor(opts.page ?? 1));
-  const pageSize = Math.min(
-    Math.max(1, Math.floor(opts.pageSize ?? DEFAULT_PAGE_SIZE)),
-    MAX_PAGE_SIZE,
-  );
-  const sort = opts.sort ?? 'franchise';
-  const where = await buildSongFilter(opts, userId);
-
-  const [totalItems, rows] = await Promise.all([
-    prisma.song.count({ where }),
-    prisma.song.findMany({
-      where,
-      orderBy: orderByForSort(sort),
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: songSelect,
-    }),
-  ]);
-
-  let discovered = new Set<number>();
-  if (userId && rows.length) {
-    try {
-      discovered = await resolveDiscoveredIds(
-        userId,
-        rows.map((r) => r.id),
-      );
-    } catch (e) {
-      logger.warn('[Library] Failed to resolve discovered songs', 'Library', e);
-    }
-  }
-
-  return {
-    songs: rows.map((row) => mapLibrarySong(row, discovered.has(row.id))),
-    pagination: {
-      page,
-      pageSize,
-      totalItems,
-      totalPages: Math.max(1, Math.ceil(totalItems / pageSize)),
-    },
-  };
-};
-
-const animeOrderBy = (sort: LibrarySort): Prisma.AnimeOrderByWithRelationInput[] => {
-  if (sort === 'popularity') return [{ popularity: 'desc' }, { name: 'asc' }];
-  return [{ name: 'asc' }];
-};
 
 const countSongsInGroup = (group: LibraryFranchiseGroup): number =>
   group.animes.reduce((sum, a) => sum + a.songs.length, 0);
@@ -286,6 +58,7 @@ const groupSongsIntoTree = (songs: LibrarySong[]): LibraryFranchiseGroup[] => {
         seasonYear: song.anime.seasonYear,
         format: song.anime.format,
         siteUrl: song.anime.siteUrl,
+        popularity: song.anime.popularity,
         songs: [],
       };
       group.animes.push(animeGroup);
@@ -309,6 +82,25 @@ const browseLibrarySearchTree = async (
     MAX_PAGE_SIZE,
   );
   const sort = opts.sort ?? 'franchise';
+
+  if (sort === 'liked_recent') {
+    if (!userId) {
+      return {
+        groups: [],
+        pagination: { page, pageSize, totalItems: 0, totalPages: 1 },
+        totalSongs: 0,
+        view: 'search',
+      };
+    }
+    const flat = await browseSongsByLikedRecent(opts, userId, page, pageSize);
+    return {
+      groups: groupSongsIntoTree(flat.songs),
+      pagination: flat.pagination,
+      totalSongs: flat.pagination.totalItems,
+      view: 'search',
+    };
+  }
+
   const where = await buildSongFilter(opts, userId);
 
   const [totalSongs, rows] = await Promise.all([
@@ -323,20 +115,21 @@ const browseLibrarySearchTree = async (
   ]);
 
   let discovered = new Set<number>();
+  let liked = new Set<number>();
   if (userId && rows.length) {
     try {
-      discovered = await resolveDiscoveredIds(
+      const flags = await resolveUserSongFlags(
         userId,
         rows.map((r) => r.id),
       );
+      discovered = flags.discovered;
+      liked = flags.liked;
     } catch (e) {
-      logger.warn('[Library] Failed to resolve discovered songs for search tree', 'Library', e);
+      logger.warn('[Library] Failed to resolve user song flags for search tree', 'Library', e);
     }
   }
 
-  const groups = groupSongsIntoTree(
-    rows.map((row) => mapLibrarySong(row, discovered.has(row.id))),
-  );
+  const groups = groupSongsIntoTree(mapRowsWithUserFlags(rows, discovered, liked));
 
   return {
     groups,
@@ -476,6 +269,7 @@ const buildFranchiseGroupsBatch = async (
       seasonYear: true,
       format: true,
       siteUrl: true,
+      popularity: true,
       franchiseId: true,
     },
   });
@@ -508,6 +302,7 @@ const buildFranchiseGroupsBatch = async (
       seasonYear: anime.seasonYear,
       format: anime.format,
       siteUrl: anime.siteUrl,
+      popularity: anime.popularity,
       songs: animeSongs,
     };
     const list = animesByFranchise.get(key) ?? [];
@@ -617,10 +412,11 @@ export const browseLibraryTree = async (
   if (userId && groups.length) {
     try {
       const songIds = groups.flatMap((g) => g.animes.flatMap((a) => a.songs.map((s) => s.id)));
-      const discovered = await resolveDiscoveredIds(userId, songIds);
-      applyDiscoveredToGroups(groups, discovered);
+      const flags = await resolveUserSongFlags(userId, songIds);
+      applyDiscoveredToGroups(groups, flags.discovered);
+      applyLikedToGroups(groups, flags.liked);
     } catch (e) {
-      logger.warn('[Library] Failed to resolve discovered songs for tree', 'Library', e);
+      logger.warn('[Library] Failed to resolve user song flags for tree', 'Library', e);
     }
   }
 
@@ -635,55 +431,4 @@ export const browseLibraryTree = async (
     },
     totalSongs,
   };
-};
-
-const playableSongWhere = (): Prisma.SongWhereInput => buildLibrarySongWhere({});
-
-export const getLibraryMeta = async (): Promise<LibraryMetaResponse> => {
-  const now = Date.now();
-  if (metaCache && now - metaCache.at < META_TTL_MS) {
-    return metaCache.data;
-  }
-
-  const where = playableSongWhere();
-  const [totalSongs, songGroups, totalAnimes, totalFranchises] = await Promise.all([
-    prisma.song.count({ where }),
-    prisma.song.groupBy({
-      by: ['songType', 'difficulty'],
-      where,
-      _count: { _all: true },
-    }),
-    prisma.anime.count({
-      where: { songs: { some: where } },
-    }),
-    prisma.franchise.count({
-      where: {
-        animes: { some: { songs: { some: where } } },
-      },
-    }),
-  ]);
-
-  const byType: LibraryMetaResponse['byType'] = { OP: 0, ED: 0, INSERT: 0 };
-  const byDifficulty: LibraryMetaResponse['byDifficulty'] = { EASY: 0, MEDIUM: 0, HARD: 0 };
-
-  for (const row of songGroups) {
-    byType[row.songType as LibrarySongType] += row._count._all;
-    byDifficulty[row.difficulty as LibraryDifficulty] += row._count._all;
-  }
-
-  const data: LibraryMetaResponse = {
-    totalSongs,
-    totalAnimes,
-    totalFranchises,
-    byType,
-    byDifficulty,
-  };
-
-  metaCache = { data, at: now };
-  return data;
-};
-
-/** Test hook — clears the meta cache between cases. */
-export const clearLibraryMetaCache = (): void => {
-  metaCache = null;
 };

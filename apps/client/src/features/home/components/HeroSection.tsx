@@ -1,5 +1,5 @@
 import { startTransition } from 'react';
-import { Play, Music, Trophy } from 'lucide-react';
+import { Lightbulb, Music, Play, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { prefetchGameHub, prefetchRoute } from '@/lib/routePrefetch';
@@ -79,10 +79,23 @@ export function HeroSection() {
                 variant="glass"
                 size="lg"
                 onClick={() => navigate('/leaderboard')}
+                onMouseEnter={() => prefetchRoute('leaderboard')}
+                onFocus={() => prefetchRoute('leaderboard')}
                 className="hover-lift gap-2"
               >
                 <Trophy className="h-5 w-5" />
                 Classement
+              </Button>
+              <Button
+                variant="glass"
+                size="lg"
+                onClick={() => navigate('/suggestions')}
+                onMouseEnter={() => prefetchRoute('suggestions')}
+                onFocus={() => prefetchRoute('suggestions')}
+                className="hover-lift gap-2"
+              >
+                <Lightbulb className="h-5 w-5" />
+                Idées
               </Button>
             </div>
           </div>

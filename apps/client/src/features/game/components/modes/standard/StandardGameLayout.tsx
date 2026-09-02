@@ -120,6 +120,8 @@ function StandardGameLayoutInner({
         siteUrl: revealSong.siteUrl,
         tags: revealSong.tags,
         isWatched: revealSong.animeId ? myWatchedIds.includes(revealSong.animeId) : false,
+        songId: revealSong.id,
+        showLikeButton: phase === 'revealed',
       }
     : null;
 

@@ -2,6 +2,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import { env } from '../config/env';
+import { configureTrustedProxy } from './httpClientIp';
 import { securityConfig } from '../config/security';
 import type {
   ClientToServerEvents,
@@ -10,6 +12,7 @@ import type {
 } from '@aniquizz/shared';
 
 export const app = express();
+configureTrustedProxy(app, env.NODE_ENV);
 
 app.use(cors(securityConfig));
 app.use(express.json());

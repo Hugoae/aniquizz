@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
-import { clearLibraryMetaCache } from '../modules/catalogue/libraryService';
+import { clearLibraryMetaCache } from '../modules/catalogue/libraryMeta';
 import { clearLibrarySearchCache } from '../modules/catalogue/librarySearch';
 
 describe.skipIf(!hasIntegrationEnv)('library integration', () => {
@@ -108,11 +108,51 @@ describe.skipIf(!hasIntegrationEnv)('library integration', () => {
 
     const res = await fetch(`${bundle.url}/library/song/${songId}`);
     expect(res.status).toBe(200);
-    const song = (await res.json()) as { id: number; videoKey: string };
+    const song = (await res.json()) as {
+      id: number;
+      videoKey: string;
+      likeCount: number;
+      anime: { popularity: number };
+    };
     expect(song.id).toBe(songId);
     expect(song.videoKey).toBeTruthy();
+    expect(typeof song.likeCount).toBe('number');
+    expect(typeof song.anime.popularity).toBe('number');
 
     const missing = await fetch(`${bundle.url}/library/song/999999999`);
     expect(missing.status).toBe(404);
+  });
+
+  it('GET /library/songs?sort=likes returns songs ordered by likeCount desc', async () => {
+    const res = await fetch(`${bundle.url}/library/songs?sort=likes&pageSize=10`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      songs: Array<{ likeCount: number; anime: { popularity: number } }>;
+      pagination: { totalItems: number };
+    };
+    expect(body.songs.length).toBeGreaterThan(0);
+    expect(typeof body.songs[0]?.anime.popularity).toBe('number');
+    for (let i = 1; i < body.songs.length; i += 1) {
+      expect(body.songs[i - 1]!.likeCount).toBeGreaterThanOrEqual(body.songs[i]!.likeCount);
+    }
+  });
+
+  it('GET /library/animes paginates by anime with nested songs and popularity', async () => {
+    const res = await fetch(`${bundle.url}/library/animes?pageSize=5`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      animes: Array<{
+        name: string;
+        popularity: number;
+        songs: Array<{ id: number; likeCount: number }>;
+      }>;
+      pagination: { totalItems: number; pageSize: number };
+      totalSongs: number;
+    };
+    expect(body.animes.length).toBeGreaterThan(0);
+    expect(body.animes.length).toBeLessThanOrEqual(5);
+    expect(typeof body.animes[0]?.popularity).toBe('number');
+    expect(body.animes[0]?.songs.length).toBeGreaterThan(0);
+    expect(body.totalSongs).toBeGreaterThan(0);
   });
 });

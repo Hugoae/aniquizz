@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Check, ChevronDown, ChevronRight, Pause, Play, X } from 'lucide-react';
 
-import type { LibraryFranchiseGroup, LibrarySong } from '@aniquizz/shared';
+import {
+  formatSongTypeLabel,
+  type LibraryFranchiseGroup,
+  type LibrarySong,
+} from '@aniquizz/shared';
 
 import { cn } from '@/lib/utils';
 
@@ -11,39 +15,28 @@ import { Button } from '@/components/ui/button';
 import { getVideoUrl } from '@/lib/video';
 
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 
 import {
-
   libraryDifficultyClass,
-
   libraryDifficultyLabel,
-
-  librarySongTypeLabel,
-
 } from '@/features/library/lib/libraryStyles';
 
 import {
-
   loadExpandedAnimes,
-
   loadExpandedFranchises,
-
   saveExpandedAnimes,
-
   saveExpandedFranchises,
-
 } from '@/features/library/lib/libraryStorage';
-
-
+import {
+  useInlineLibraryPreview,
+  type LibrarySongSelectOptions,
+} from '@/features/library/hooks/useInlineLibraryPreview';
 
 interface LibraryTreeViewProps {
-
   groups: LibraryFranchiseGroup[];
-
-  onSelectSong: (song: LibrarySong) => void;
-
+  onSelectSong: (song: LibrarySong, options?: LibrarySongSelectOptions) => void;
   focusSongId?: number | null;
-
 }
 
 
@@ -58,7 +51,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
   const [expandedAnimes, setExpandedAnimes] = useState<Set<number>>(() => loadExpandedAnimes());
 
-  const [inlinePlayingId, setInlinePlayingId] = useState<number | null>(null);
+  const { playingId, toggle, stop, stopAndCapture, videoRef } = useInlineLibraryPreview();
 
 
 
@@ -135,14 +128,6 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
       return next;
 
     });
-
-  }, []);
-
-
-
-  const toggleInlinePlay = useCallback((songId: number) => {
-
-    setInlinePlayingId((prev) => (prev === songId ? null : songId));
 
   }, []);
 
@@ -302,7 +287,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
                           {anime.songs.map((song) => {
 
-                            const isInlinePlaying = inlinePlayingId === song.id;
+                            const isInlinePlaying = playingId === song.id;
 
                             const videoUrl = getVideoUrl(song.videoKey);
 
@@ -326,7 +311,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
                                     type="button"
 
-                                    onClick={() => toggleInlinePlay(song.id)}
+                                    onClick={() => toggle(song.id)}
 
                                     aria-label={isInlinePlaying ? 'Pause' : LIBRARY_COPY.playPreview}
 
@@ -360,7 +345,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
                                     type="button"
 
-                                    onClick={() => onSelectSong(song)}
+                                    onClick={() => onSelectSong(song, stopAndCapture(song.id))}
 
                                     className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
 
@@ -370,7 +355,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
                                       <span className="rounded border border-border/60 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide text-foreground">
 
-                                        {librarySongTypeLabel(song.songType, song.sequence)}
+                                        {formatSongTypeLabel(song.songType, song.sequence)}
 
                                       </span>
 
@@ -387,6 +372,13 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                                   </button>
 
                                   <div className="flex shrink-0 items-center gap-2">
+
+                                    <SongLikeButton
+                                      songId={song.id}
+                                      initialLiked={song.liked}
+                                      size="sm"
+                                      stopPropagation
+                                    />
 
                                     {song.discovered && (
 
@@ -434,7 +426,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                                       size="icon"
                                       className="absolute right-3 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
                                       aria-label="Fermer l'aperçu"
-                                      onClick={() => setInlinePlayingId(null)}
+                                      onClick={stop}
                                     >
                                       <X className="h-4 w-4" aria-hidden="true" />
                                     </Button>
@@ -442,6 +434,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                                       {videoUrl ? (
                                         <video
                                           key={song.id}
+                                          ref={videoRef}
                                           src={videoUrl}
                                           controls
                                           autoPlay

@@ -439,8 +439,9 @@ export class MatchEngine {
 
     const songDifficulties = this.playlist.map((s) => MatchEngine.normalizeDifficulty(s.difficulty));
 
+    const competitors = [...this.room.players.values()].filter((p) => !p.isBot);
     const result = computeVictory({
-      players: [...this.room.players.values()].map((p) => ({
+      players: competitors.map((p) => ({
         userId: p.userId,
         score: p.score,
         correctCount: p.matchCorrectCount,

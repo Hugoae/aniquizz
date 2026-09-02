@@ -37,6 +37,13 @@ export function LibraryHero({ meta }: LibraryHeroProps) {
             <StatPill value={meta.totalSongs} label={LIBRARY_COPY.statSongs} accent="text-primary" />
             <StatPill value={meta.totalAnimes} label={LIBRARY_COPY.statAnimes} accent="text-aqua" />
             <StatPill value={meta.totalFranchises} label={LIBRARY_COPY.statFranchises} accent="text-accent" />
+            {meta.likedCount != null && (
+              <div className="col-span-3">
+                <p className="text-center text-xs font-semibold text-muted-foreground">
+                  {LIBRARY_COPY.statLiked(meta.likedCount)}
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

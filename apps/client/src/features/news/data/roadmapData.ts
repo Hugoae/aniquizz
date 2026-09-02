@@ -5,40 +5,61 @@ export interface RoadmapItem {
   date: string;
 }
 
-// Flagship milestones only — ordered chronologically (shipped → next → later).
+// Flagship milestones only, ordered chronologically (shipped, then next, then later).
 export const roadmapData: RoadmapItem[] = [
   {
     title: 'Lancement v26.0',
     description:
-      'Blindtest anime solo & multijoueur, AniList, amis, XP, médailles et catalogue de openings/endings.',
+      'Blindtest anime solo et multijoueur, AniList, amis, XP, médailles et catalogue de openings/endings.',
     status: 'done',
     date: 'Juillet 2026',
   },
   {
     title: 'Librairie musicale',
     description:
-      'Parcourez tout le catalogue, filtrez par anime, type de son ou difficulté, et découvrez de nouvelles pépites.',
+      'Parcourez le catalogue en vues Franchise, Anime ou Sons. Filtrez par type, difficulté ou favoris.',
     status: 'done',
-    date: '12 juillet 2026 — avec la v26.2',
+    date: '12 juillet 2026, v26.2',
   },
   {
     title: 'MyAnimeList',
     description:
       "Liez votre compte MAL pour jouer avec votre liste d'animes regardés, en alternative à AniList.",
     status: 'done',
-    date: '12 juillet 2026 — avec la v26.2',
+    date: '12 juillet 2026, v26.2',
   },
   {
     title: 'Sprint',
     description:
-      'Mode multijoueur typing-only : bonne réponse + bonus podium selon votre vitesse de réaction.',
+      'Mode multijoueur typing-only : bonne réponse plus un bonus podium selon votre vitesse de réaction.',
     status: 'done',
-    date: '14 juillet 2026 — avec la v26.3',
+    date: '14 juillet 2026, v26.3',
+  },
+  {
+    title: 'Titres favoris',
+    description:
+      'Likez un son à la révélation, retrouvez vos favoris dans la Librairie et épinglez-en 5 sur votre profil.',
+    status: 'done',
+    date: '15 juillet 2026, v26.4',
+  },
+  {
+    title: 'Boîte à idées',
+    description:
+      'Board public : proposez, votez, suivez En cours / Prévue / Réalisée / Refusée, et lisez les réponses de l’équipe.',
+    status: 'done',
+    date: '15 juillet 2026, v26.4',
+  },
+  {
+    title: 'Classement global',
+    description:
+      'Cinq classements à vie : XP, victoires, parties, Pokédex musical et précision. Top 25 plus votre rang.',
+    status: 'done',
+    date: '2 septembre 2026, v26.4',
   },
   {
     title: 'Graphiques statistiques (profil)',
     description:
-      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles…) avec filtre par période.',
+      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles) avec filtre par période.',
     status: 'planned',
     date: 'Q3 2026',
   },
@@ -56,13 +77,6 @@ export const roadmapData: RoadmapItem[] = [
     date: 'Q4 2026',
   },
   {
-    title: 'Classement global',
-    description:
-      'Leaderboards par XP, victoires, séries et précision — comparez-vous à toute la communauté.',
-    status: 'planned',
-    date: 'Q4 2026',
-  },
-  {
     title: 'Succès & collection',
     description: 'Badges de progression, objectifs à débloquer et suivi de vos exploits en jeu.',
     status: 'planned',
@@ -70,7 +84,7 @@ export const roadmapData: RoadmapItem[] = [
   },
   {
     title: 'Mode Compétitif',
-    description: 'Parties classées avec ladder et saisons — montez en grade et affrontez les meilleurs.',
+    description: 'Parties classées avec ladder et saisons : montez en grade et affrontez les meilleurs.',
     status: 'planned',
     date: 'Q2 2027',
   },

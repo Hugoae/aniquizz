@@ -1,10 +1,22 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Search } from 'lucide-react';
-import type { LibraryDifficulty, LibraryDiscoveredFilter, LibrarySort, LibrarySongType } from '@aniquizz/shared';
+import type {
+  LibraryBrowseView,
+  LibraryDifficulty,
+  LibraryDiscoveredFilter,
+  LibraryLikedFilter,
+  LibrarySort,
+  LibrarySongType,
+} from '@aniquizz/shared';
+import { LIBRARY_SORTS_BY_VIEW } from '@aniquizz/shared';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { LIBRARY_COPY, LIBRARY_SORT_OPTIONS } from '@/features/library/copy/libraryCopy';
+import {
+  LIBRARY_COPY,
+  LIBRARY_SORT_OPTIONS,
+  LIBRARY_VIEW_OPTIONS,
+} from '@/features/library/copy/libraryCopy';
 import {
   filterSelectClass,
   libraryDifficultyFilterClass,
@@ -23,6 +35,12 @@ const DISCOVERED_OPTIONS: Array<{ value: LibraryDiscoveredFilter | ''; label: st
   { value: '', label: LIBRARY_COPY.filterDiscoveredAll },
   { value: 'heard', label: LIBRARY_COPY.filterDiscoveredHeard },
   { value: 'unheard', label: LIBRARY_COPY.filterDiscoveredUnheard },
+];
+
+const LIKED_OPTIONS: Array<{ value: LibraryLikedFilter | ''; label: string }> = [
+  { value: '', label: LIBRARY_COPY.filterLikedAll },
+  { value: 'liked', label: LIBRARY_COPY.filterLikedOnly },
+  { value: 'unliked', label: LIBRARY_COPY.filterLikedExclude },
 ];
 
 function FilterSection({
@@ -51,7 +69,11 @@ interface LibraryFiltersProps {
   onToggleDifficulty: (d: LibraryDifficulty) => void;
   discovered: LibraryDiscoveredFilter | '';
   onDiscoveredChange: (d: LibraryDiscoveredFilter | '') => void;
+  liked: LibraryLikedFilter | '';
+  onLikedChange: (d: LibraryLikedFilter | '') => void;
   isAuthenticated: boolean;
+  view: LibraryBrowseView;
+  onViewChange: (v: LibraryBrowseView) => void;
   sort: LibrarySort;
   onSortChange: (s: LibrarySort) => void;
   resultCount: number | null;
@@ -67,7 +89,11 @@ export function LibraryFilters({
   onToggleDifficulty,
   discovered,
   onDiscoveredChange,
+  liked,
+  onLikedChange,
   isAuthenticated,
+  view,
+  onViewChange,
   sort,
   onSortChange,
   resultCount,
@@ -79,6 +105,8 @@ export function LibraryFilters({
     songTypes.length > 0 ||
     difficulties.length > 0 ||
     discovered !== '' ||
+    liked !== '' ||
+    view !== 'franchise' ||
     sort !== 'franchise';
 
   return (
@@ -131,66 +159,49 @@ export function LibraryFilters({
         </div>
       </div>
 
+      <FilterSection title={LIBRARY_COPY.filterSectionView}>
+        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={LIBRARY_COPY.filterSectionView}>
+          {LIBRARY_VIEW_OPTIONS.map((opt) => {
+            const active = view === opt.value;
+            return (
+              <Button
+                key={opt.value}
+                type="button"
+                size="sm"
+                variant={active ? 'default' : 'outline'}
+                className={cn('h-9 px-3 text-xs font-semibold', !active && 'bg-card/60')}
+                aria-pressed={active}
+                onClick={() => onViewChange(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            );
+          })}
+        </div>
+      </FilterSection>
+
       {filtersOpen ? (
-      <div id="library-filter-panel" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 animate-fade-in">
-        <FilterSection title={LIBRARY_COPY.filterSectionTypes}>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label={LIBRARY_COPY.filterSectionTypes}>
-            {TYPE_OPTIONS.map((opt) => {
-              const active = songTypes.includes(opt.value);
-              return (
-                <Button
-                  key={opt.value}
-                  type="button"
-                  size="sm"
-                  variant={active ? 'default' : 'outline'}
-                  className={cn('h-9 px-3 text-xs font-semibold', !active && 'bg-card/60')}
-                  aria-pressed={active}
-                  onClick={() => onToggleSongType(opt.value)}
-                >
-                  {opt.label}
-                </Button>
-              );
-            })}
-          </div>
-        </FilterSection>
-
-        <FilterSection title={LIBRARY_COPY.filterSectionDifficulty}>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label={LIBRARY_COPY.filterSectionDifficulty}>
-            {DIFFICULTY_OPTIONS.map((diff) => {
-              const active = difficulties.includes(diff);
-              return (
-                <button
-                  key={diff}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onToggleDifficulty(diff)}
-                  className={cn(
-                    'h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-wide transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-                    libraryDifficultyFilterClass(diff, active),
-                  )}
-                >
-                  {libraryDifficultyLabel(diff)}
-                </button>
-              );
-            })}
-          </div>
-        </FilterSection>
-
-        {isAuthenticated ? (
-          <FilterSection title={LIBRARY_COPY.filterSectionDiscovered}>
-            <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={LIBRARY_COPY.filterSectionDiscovered}>
-              {DISCOVERED_OPTIONS.map((opt) => {
-                const active = discovered === opt.value;
+        <div
+          id="library-filter-panel"
+          className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5 animate-fade-in"
+        >
+          <FilterSection title={LIBRARY_COPY.filterSectionTypes}>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label={LIBRARY_COPY.filterSectionTypes}
+            >
+              {TYPE_OPTIONS.map((opt) => {
+                const active = songTypes.includes(opt.value);
                 return (
                   <Button
-                    key={opt.value || 'all'}
+                    key={opt.value}
                     type="button"
                     size="sm"
-                    variant={active ? 'secondary' : 'outline'}
+                    variant={active ? 'default' : 'outline'}
                     className={cn('h-9 px-3 text-xs font-semibold', !active && 'bg-card/60')}
                     aria-pressed={active}
-                    onClick={() => onDiscoveredChange(opt.value)}
+                    onClick={() => onToggleSongType(opt.value)}
                   >
                     {opt.label}
                   </Button>
@@ -198,38 +209,131 @@ export function LibraryFilters({
               })}
             </div>
           </FilterSection>
-        ) : null}
 
-        <FilterSection
-          title={LIBRARY_COPY.filterSectionSort}
-          className={isAuthenticated ? undefined : 'sm:col-span-2 xl:col-span-1'}
-        >
-          <select
-            id="library-sort"
-            className={cn(filterSelectClass, 'h-9 w-full min-w-0')}
-            value={sort}
-            onChange={(e) => onSortChange(e.target.value as LibrarySort)}
-            aria-label={LIBRARY_COPY.filterSectionSort}
+          <FilterSection title={LIBRARY_COPY.filterSectionDifficulty}>
+            <div
+              className="flex flex-wrap gap-1.5"
+              role="group"
+              aria-label={LIBRARY_COPY.filterSectionDifficulty}
+            >
+              {DIFFICULTY_OPTIONS.map((diff) => {
+                const active = difficulties.includes(diff);
+                return (
+                  <button
+                    key={diff}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => onToggleDifficulty(diff)}
+                    className={cn(
+                      'h-9 rounded-lg border px-3 text-xs font-bold uppercase tracking-wide transition-colors',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                      libraryDifficultyFilterClass(diff, active),
+                    )}
+                  >
+                    {libraryDifficultyLabel(diff)}
+                  </button>
+                );
+              })}
+            </div>
+          </FilterSection>
+
+          {isAuthenticated ? (
+            <FilterSection title={LIBRARY_COPY.filterSectionDiscovered}>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="radiogroup"
+                aria-label={LIBRARY_COPY.filterSectionDiscovered}
+              >
+                {DISCOVERED_OPTIONS.map((opt) => {
+                  const active = discovered === opt.value;
+                  return (
+                    <Button
+                      key={opt.value || 'all'}
+                      type="button"
+                      size="sm"
+                      variant={active ? 'secondary' : 'outline'}
+                      className={cn('h-9 px-3 text-xs font-semibold', !active && 'bg-card/60')}
+                      aria-pressed={active}
+                      onClick={() => onDiscoveredChange(opt.value)}
+                    >
+                      {opt.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </FilterSection>
+          ) : null}
+
+          {isAuthenticated ? (
+            <FilterSection title={LIBRARY_COPY.filterSectionLiked}>
+              <div
+                className="flex flex-wrap gap-1.5"
+                role="radiogroup"
+                aria-label={LIBRARY_COPY.filterSectionLiked}
+              >
+                {LIKED_OPTIONS.map((opt) => {
+                  const active = liked === opt.value;
+                  return (
+                    <Button
+                      key={opt.value || 'liked-all'}
+                      type="button"
+                      size="sm"
+                      variant={active ? 'secondary' : 'outline'}
+                      className={cn('h-9 px-3 text-xs font-semibold', !active && 'bg-card/60')}
+                      aria-pressed={active}
+                      onClick={() => onLikedChange(opt.value)}
+                    >
+                      {opt.label}
+                    </Button>
+                  );
+                })}
+              </div>
+            </FilterSection>
+          ) : null}
+
+          <FilterSection
+            title={LIBRARY_COPY.filterSectionSort}
+            className={isAuthenticated ? undefined : 'sm:col-span-2 xl:col-span-1'}
           >
-            {LIBRARY_SORT_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </FilterSection>
-      </div>
+            <select
+              id="library-sort"
+              className={cn(filterSelectClass, 'h-9 w-full min-w-0')}
+              value={sort}
+              onChange={(e) => onSortChange(e.target.value as LibrarySort)}
+              aria-label={LIBRARY_COPY.filterSectionSort}
+            >
+              {LIBRARY_SORT_OPTIONS.map((opt) => {
+                const allowedByView = LIBRARY_SORTS_BY_VIEW[view].includes(opt.value);
+                const needsAuth = opt.value === 'liked_recent' && !isAuthenticated;
+                const disabled = !allowedByView || needsAuth;
+                return (
+                  <option key={opt.value} value={opt.value} disabled={disabled}>
+                    {opt.label}
+                    {disabled ? ' —' : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </FilterSection>
+        </div>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 pt-3">
         {resultCount !== null && (
-          <p className="text-xs font-medium text-muted-foreground">{LIBRARY_COPY.resultsCount(resultCount)}</p>
+          <p className="text-xs font-medium text-muted-foreground">
+            {LIBRARY_COPY.resultsCount(resultCount)}
+          </p>
         )}
         {searchMode && (
           <p className="text-xs text-muted-foreground">{LIBRARY_COPY.searchModeHint}</p>
         )}
+        {view === 'songs' && !searchMode && (
+          <p className="text-xs text-muted-foreground">{LIBRARY_COPY.songsViewHint}</p>
+        )}
         {!isAuthenticated && (
-          <p className="text-xs text-muted-foreground">{LIBRARY_COPY.filterDiscoveredLoginHint}</p>
+          <p className="text-xs text-muted-foreground">
+            {LIBRARY_COPY.filterDiscoveredLoginHint} {LIBRARY_COPY.filterLikedLoginHint}
+          </p>
         )}
       </div>
     </section>

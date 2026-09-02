@@ -4,6 +4,8 @@ import { getProfileStats } from './profileService';
 import { verifyAnilistUser } from '../anilist/anilistService';
 import { verifyMalUser } from '../mal/malService';
 import { prisma } from '@aniquizz/database';
+import { isTrustedSupabaseAvatarUrl } from '@aniquizz/shared';
+import { env } from '../../config/env';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { GameManager } from '../game/gameManager';
 import { DeleteAccountError, deleteUserAccount } from './deleteAccount';
@@ -28,13 +30,20 @@ export const registerProfileHandlers = (
     avatarUrl?: string;
     anilistUsername?: string | null;
     malUsername?: string | null;
+    showFavoriteSongs?: boolean;
   }) => {
     const userId = socket.data.userId as string;
 
     try {
       const updateData: Record<string, unknown> = {};
       if (payload.username) updateData.username = payload.username;
-      if (payload.avatarUrl) updateData.avatar = payload.avatarUrl;
+      if (payload.avatarUrl) {
+        if (!isTrustedSupabaseAvatarUrl(payload.avatarUrl, env.SUPABASE_URL, userId)) {
+          socket.emit('error', { message: "URL d'avatar invalide." });
+          return;
+        }
+        updateData.avatar = payload.avatarUrl;
+      }
 
       if (payload.anilistUsername !== undefined) {
         const trimmed = typeof payload.anilistUsername === 'string' ? payload.anilistUsername.trim() : null;
@@ -66,6 +75,10 @@ export const registerProfileHandlers = (
         } else {
           updateData.malUsername = null;
         }
+      }
+
+      if (payload.showFavoriteSongs !== undefined) {
+        updateData.showFavoriteSongs = Boolean(payload.showFavoriteSongs);
       }
 
       await prisma.profile.update({

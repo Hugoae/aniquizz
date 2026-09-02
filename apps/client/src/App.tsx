@@ -13,6 +13,7 @@ import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthMod
 import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
+import { SongLikesProvider } from '@/features/likes/context/SongLikesContext';
 
 import Home from '@/pages/Home';
 const GameHub = lazy(() => import('@/pages/GameHub'));
@@ -21,6 +22,7 @@ const Profile = lazy(() => import('@/pages/Profile'));
 const News = lazy(() => import('@/pages/News'));
 const Leaderboard = lazy(() => import('@/pages/Leaderboard'));
 const Library = lazy(() => import('@/pages/Library'));
+const Suggestions = lazy(() => import('@/features/suggestions/pages/Suggestions'));
 const Admin = lazy(() => import('@/pages/Admin'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
@@ -190,6 +192,7 @@ const AppContent = () => {
           <Route path="/news" element={<News />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/suggestions" element={<Suggestions />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
           <Route
@@ -240,9 +243,11 @@ function App() {
       <CookieConsentProvider>
         <AuthModalProvider>
           <AuthProvider>
-            <SessionFriendsProvider>
-              <AppContent />
-            </SessionFriendsProvider>
+            <SongLikesProvider>
+              <SessionFriendsProvider>
+                <AppContent />
+              </SessionFriendsProvider>
+            </SongLikesProvider>
           </AuthProvider>
         </AuthModalProvider>
       </CookieConsentProvider>

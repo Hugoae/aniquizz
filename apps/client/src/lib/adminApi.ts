@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { env } from "./env";
+import type { SuggestionAdminUpdateInput, SuggestionItem } from "@aniquizz/shared";
 
 /**
  * Thin client for the server-side admin REST API. Every call attaches the
@@ -419,6 +420,7 @@ export const adminApi = {
       locked?: boolean;
       page?: number;
       pageSize?: number;
+      signal?: AbortSignal;
     } = {},
   ) => {
     const params = new URLSearchParams();
@@ -429,7 +431,9 @@ export const adminApi = {
     if (opts.page) params.set("page", String(opts.page));
     if (opts.pageSize) params.set("pageSize", String(opts.pageSize));
     const qs = params.toString();
-    return request<CatalogueTree>(`/catalogue/tree${qs ? `?${qs}` : ""}`);
+    return request<CatalogueTree>(`/catalogue/tree${qs ? `?${qs}` : ""}`, {
+      signal: opts.signal,
+    });
   },
   updateSong: (id: number, data: SongWrite) =>
     request<CatalogueSong>(`/catalogue/songs/${id}`, {
@@ -473,6 +477,15 @@ export const adminApi = {
       matchPlayers: number;
       songHistory: number;
     }>("/stats/reset-activity", { method: "POST" }),
+
+  // Suggestions
+  updateSuggestion: (id: string, data: SuggestionAdminUpdateInput) =>
+    request<SuggestionItem>(`/suggestions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteSuggestion: (id: string) =>
+    request<void>(`/suggestions/${id}`, { method: "DELETE" }),
 
   // Dev tooling
   addBots: (roomId: string, count: number, config?: BotConfig) =>
