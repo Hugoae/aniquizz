@@ -1,11 +1,13 @@
 import { startTransition } from 'react';
 import { Lightbulb, Music, Play, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { HOME_COPY } from '@/features/home/copy/homeCopy';
 import { useNavigate } from 'react-router-dom';
 import { prefetchGameHub, prefetchRoute } from '@/lib/routePrefetch';
 import { isFirstLandingPaint } from '@/lib/initialPaint';
 import { cn } from '@/lib/utils';
 
+import { HomeNewBadge } from './HomeNewBadge';
 import { NewsSection } from './NewsSection';
 
 export function HeroSection() {
@@ -63,7 +65,7 @@ export function HeroSection() {
             </Button>
 
             {/* Secondary Buttons */}
-            <div className="flex flex-wrap justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3 pt-1">
               <Button
                 variant="glass"
                 size="lg"
@@ -81,10 +83,12 @@ export function HeroSection() {
                 onClick={() => navigate('/leaderboard')}
                 onMouseEnter={() => prefetchRoute('leaderboard')}
                 onFocus={() => prefetchRoute('leaderboard')}
-                className="hover-lift gap-2"
+                className="hover-lift relative gap-2 overflow-visible"
+                aria-label={`Classement, ${HOME_COPY.newBadgeAria}`}
               >
                 <Trophy className="h-5 w-5" />
                 Classement
+                <HomeNewBadge delayMs={120} />
               </Button>
               <Button
                 variant="glass"
@@ -92,10 +96,12 @@ export function HeroSection() {
                 onClick={() => navigate('/suggestions')}
                 onMouseEnter={() => prefetchRoute('suggestions')}
                 onFocus={() => prefetchRoute('suggestions')}
-                className="hover-lift gap-2"
+                className="hover-lift relative gap-2 overflow-visible"
+                aria-label={`Idées, ${HOME_COPY.newBadgeAria}`}
               >
                 <Lightbulb className="h-5 w-5" />
                 Idées
+                <HomeNewBadge delayMs={220} />
               </Button>
             </div>
           </div>

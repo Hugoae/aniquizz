@@ -22,7 +22,7 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 export const allNews: NewsItem[] = [
   {
     id: 6,
-    title: 'Mise à jour v26.4 - Classement, favoris, idées et nouvelle Librairie',
+    title: 'Mise à jour v26.4 - Classement, sons favoris, suggestions et Update Librairie',
     description:
       'Cinq classements à vie, titres favoris, boîte à idées communautaire, et une Librairie en trois vues.',
     content:
@@ -55,8 +55,7 @@ export const allNews: NewsItem[] = [
       '**Correctifs**\n' +
       '• Admin : la recherche du catalogue est fiable, avec les **titres alternatifs**, sans résultats périmés, et nettement plus rapide.\n' +
       '• Lobby : le retour aux paramètres de salon fonctionne à nouveau après une reconnexion.\n\n' +
-      'Prochaine étape annoncée : **graphiques de stats sur le profil**, puis **Playlists thématiques** (voir la Roadmap).\n\n' +
-      'Bon jeu, bonne chasse aux pépites, et merci d’avance pour vos idées !',
+      'Bon jeu, et merci d’avance pour vos idées !',
     date: '2026-09-02T12:00:00Z',
     type: 'update',
   },

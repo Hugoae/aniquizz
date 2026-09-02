@@ -348,6 +348,66 @@
   animation: rank-flash 0.9s ease-out;
 }
 
+/* Home "New" chips on freshly shipped CTAs (Idées / Classement). */
+.home-new-badge-wrap {
+  --home-new-delay: 0ms;
+  position: absolute;
+  top: -0.5rem;
+  right: -0.45rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.home-new-badge-ping {
+  grid-area: 1 / 1;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: hsl(var(--primary) / 0.42);
+  animation: home-new-ping 1.9s ease-out calc(var(--home-new-delay) + 0.5s) infinite;
+}
+
+.home-new-badge {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.14rem 0.42rem;
+  border-radius: 999px;
+  background: hsl(var(--primary));
+  color: hsl(0 0% 100%);
+  font-family: var(--font-display);
+  font-size: 0.5625rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1.15;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 14px hsl(var(--primary) / 0.55);
+  animation:
+    home-new-in 0.55s cubic-bezier(0.22, 1.35, 0.36, 1) var(--home-new-delay) both,
+    home-new-bob 2.5s ease-in-out calc(var(--home-new-delay) + 0.55s) infinite;
+}
+
+@keyframes home-new-in {
+  0% { opacity: 0; transform: scale(0.35); }
+  72% { opacity: 1; transform: scale(1.14); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes home-new-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+@keyframes home-new-ping {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
 /* Legal / policy pages — readable long-form without @tailwindcss/typography plugin */
 .legal-prose {
   @apply text-foreground;

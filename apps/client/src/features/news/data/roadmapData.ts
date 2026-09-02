@@ -40,14 +40,14 @@ export const roadmapData: RoadmapItem[] = [
     description:
       'Likez un son à la révélation, retrouvez vos favoris dans la Librairie et épinglez-en 5 sur votre profil.',
     status: 'done',
-    date: '15 juillet 2026, v26.4',
+    date: '2 septembre 2026, v26.4',
   },
   {
     title: 'Boîte à idées',
     description:
       'Board public : proposez, votez, suivez En cours / Prévue / Réalisée / Refusée, et lisez les réponses de l’équipe.',
     status: 'done',
-    date: '15 juillet 2026, v26.4',
+    date: '2 septembre 2026, v26.4',
   },
   {
     title: 'Classement global',
