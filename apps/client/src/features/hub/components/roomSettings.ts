@@ -22,12 +22,16 @@ function responseTypeLabel(responseType: GameConfig['responseType']): string {
   return 'Typing';
 }
 
-function sourceLabel(selection: GameConfig['soundSelection']): string {
+/** French source chip value. Playlist names come from published packs (genre ∩ decade). */
+export function sourceChipValue(
+  selection: GameConfig['soundSelection'] | string | undefined,
+  playlistName?: string | null,
+): string {
   switch (selection) {
     case 'watched':
       return 'Ma liste';
     case 'playlist':
-      return 'Playlists';
+      return playlistName?.trim() || 'Playlists';
     case 'mix':
       return 'Mix';
     default:
@@ -84,10 +88,13 @@ export function getDifficultyBadge(diffs: string[] = []): { label: string; class
   return { label: 'Mixte', className: SETTING_CHIP_NEUTRAL };
 }
 
+type SourceChipSettings = Pick<
+  GameConfig,
+  'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection'
+> & { playlistName?: string | null };
+
 /** Core room settings (excluding difficulty) — neutral styling, consistent icons. */
-export function buildRoomSettingBadges(
-  s: Pick<GameConfig, 'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection'>,
-): SettingChipSpec[] {
+export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[] {
   return [
     {
       key: 'sounds',
@@ -121,7 +128,7 @@ export function buildRoomSettingBadges(
       key: 'source',
       icon: Shuffle,
       label: 'Source',
-      value: sourceLabel(s.soundSelection),
+      value: sourceChipValue(s.soundSelection, s.playlistName),
       className: SETTING_CHIP_NEUTRAL,
     },
   ];
@@ -138,7 +145,7 @@ export function buildLobbySettingChips(
     | 'soundSelection'
     | 'difficulty'
     | 'videoMode'
-  >,
+  > & { playlistName?: string | null },
 ): SettingChipSpec[] {
   const difficulty = getDifficultyBadge(config.difficulty ?? []);
   const videoMode = normalizeVideoMode(config.videoMode);

@@ -11,8 +11,19 @@ export interface WatchedPoolStats {
   soundCount: number;
   /** True when playableSongs < soundCount (host may opt in to random completion). */
   insufficient: boolean;
+  /** Distinct choice names in the playable Watched pool (QCM gate). */
+  distinctNames?: number;
   watchedMode?: 'union' | 'intersection';
+  /**
+   * AniList GraphQL failed (5xx, 403/429, timeout, backoff).
+   * Ids may still be a last-success cache (`stale`); the UI must warn, not stay silent.
+   */
+  listError?: 'anilist_blocked';
 }
+
+/** Shown when Watched pool is empty because AniList's API is down, not the player's list. */
+export const ANILIST_API_DOWN_MESSAGE =
+  "L'API AniList est down. Réessaie plus tard.";
 
 export const isWatchedPoolInsufficient = (playableSongs: number, soundCount: number): boolean =>
   playableSongs < soundCount;

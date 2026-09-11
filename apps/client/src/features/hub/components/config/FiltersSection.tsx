@@ -1,4 +1,4 @@
-import { SlidersHorizontal, Lock } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -24,18 +24,16 @@ export function FiltersSection({ config, toggleSoundType, toggleDifficulty }: Fi
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase text-muted-foreground">Types</Label>
           <div className="flex flex-wrap gap-2">
-            {SOUND_TYPES.map(({ id, label, icon: Icon, disabled }) => (
+            {SOUND_TYPES.map(({ id, label, icon: Icon }) => (
               <OptionButton
                 key={id}
                 active={config.soundTypes.includes(id)}
-                disabled={disabled}
                 activeClassName="border-primary bg-primary text-primary-foreground"
-                onClick={() => !disabled && toggleSoundType(id)}
-                aria-label={disabled ? `${label} (bientôt disponible)` : label}
+                onClick={() => toggleSoundType(id)}
+                aria-label={label}
                 className="flex items-center gap-2 px-3 py-1.5 text-[11px] font-bold"
               >
                 <Icon className="h-4 w-4" aria-hidden="true" /> {label}
-                {disabled && <Lock className="ml-0.5 h-3 w-3 opacity-60" aria-hidden="true" />}
               </OptionButton>
             ))}
           </div>

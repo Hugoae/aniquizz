@@ -4,6 +4,7 @@ import {
   checkWatchedPoolLaunch,
   isWatchedSourceBlocked,
   resolveWatchedPoolBanner,
+  showWatchedFusionMode,
   watchedPoolBannerVariantClasses,
   watchedPoolModeLabel,
   WATCHED_SOURCE_BLOCK_MESSAGE,
@@ -84,6 +85,22 @@ describe('checkWatchedLobby', () => {
   });
 });
 
+describe('showWatchedFusionMode', () => {
+  it('is hidden in solo even with several local seats', () => {
+    expect(showWatchedFusionMode(false, 0)).toBe(false);
+    expect(showWatchedFusionMode(false, 4)).toBe(false);
+  });
+
+  it('is hidden while creating or sitting alone in a salon', () => {
+    expect(showWatchedFusionMode(true, 0)).toBe(false);
+    expect(showWatchedFusionMode(true, 1)).toBe(false);
+  });
+
+  it('is shown in a salon once two humans can contribute a list', () => {
+    expect(showWatchedFusionMode(true, 2)).toBe(true);
+  });
+});
+
 describe('watchedPoolModeLabel', () => {
   it('labels union mode', () => {
     expect(watchedPoolModeLabel('union')).toMatch(/union des listes/);
@@ -115,6 +132,29 @@ describe('checkWatchedPoolLaunch', () => {
     expect(result.reason).toMatch(/Commun/i);
   });
 
+  it('blocks when AniList is down and no stale list is available', () => {
+    const result = checkWatchedPoolLaunch('watched', {
+      playableSongs: 0,
+      soundCount: 20,
+      insufficient: true,
+      animeCount: 0,
+      listError: 'anilist_blocked',
+    });
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toMatch(/API AniList est down/i);
+  });
+
+  it('blocks when the linked list could not be loaded', () => {
+    const result = checkWatchedPoolLaunch('watched', {
+      playableSongs: 0,
+      soundCount: 20,
+      insufficient: true,
+      animeCount: 0,
+    });
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toMatch(/privée|inaccessible/i);
+  });
+
   it('blocks when insufficient and fallback not opted in', () => {
     const result = checkWatchedPoolLaunch(
       'watched',
@@ -139,6 +179,38 @@ describe('checkWatchedPoolLaunch', () => {
       playableSongs: 0,
       soundCount: 20,
       insufficient: true,
+    });
+    expect(result.blocked).toBe(false);
+  });
+
+  it('blocks QCM/mix when distinct choice names are below 4', () => {
+    const result = checkWatchedPoolLaunch(
+      'watched',
+      { playableSongs: 20, soundCount: 10, insufficient: false, distinctNames: 3 },
+      false,
+      'mix',
+    );
+    expect(result.blocked).toBe(true);
+    expect(result.reason).toMatch(/QCM/i);
+  });
+
+  it('allows typing when distinct names are below 4', () => {
+    const result = checkWatchedPoolLaunch(
+      'watched',
+      { playableSongs: 20, soundCount: 10, insufficient: false, distinctNames: 2 },
+      false,
+      'typing',
+    );
+    expect(result.blocked).toBe(false);
+  });
+
+  it('does not block a playable stale AniList cache', () => {
+    const result = checkWatchedPoolLaunch('watched', {
+      playableSongs: 12,
+      soundCount: 10,
+      insufficient: false,
+      distinctNames: 8,
+      listError: 'anilist_blocked',
     });
     expect(result.blocked).toBe(false);
   });

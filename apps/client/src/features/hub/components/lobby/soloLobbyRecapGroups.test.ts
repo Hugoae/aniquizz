@@ -55,6 +55,14 @@ describe('buildSoloLobbyRecapGroups', () => {
     const groups = buildSoloLobbyRecapGroups({ ...baseConfig, gameType: 'sprint', responseType: 'typing' });
     expect(groups[1]?.chips.find((c) => c.key === 'response-type')?.value).toBe('Typing');
   });
+
+  it('shows combined playlist names on the source chip', () => {
+    const groups = buildSoloLobbyRecapGroups(
+      { ...baseConfig, soundSelection: 'playlist' },
+      'Shonen ∩ Années 2010',
+    );
+    expect(groups[2]?.chips.find((c) => c.key === 'source')?.value).toBe('Shonen ∩ Années 2010');
+  });
 });
 
 describe('soloLobbyModeBadge', () => {

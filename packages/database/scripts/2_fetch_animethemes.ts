@@ -4,19 +4,38 @@ import path from "path";
 import dotenv from "dotenv";
 import { formatDuration, parseRetryAfterMs, Progress, Tally } from "./lib/progress";
 import { buildVideoKey } from "./lib/song-helpers";
+import {
+  difficultyToPipelineJson,
+  openingsFromSongs,
+  resolveEndingDifficulty,
+} from "./lib/ending-difficulty";
 import { isSongExcluded, loadAllPipelineExclusions } from "./lib/load-pipeline-exclusions";
+import {
+  parseAnimeThemesSelectionConfig,
+  resolveAnimeThemeSelection,
+  type SelectableAnime,
+} from "./lib/animethemes-selection";
+import { fetchLiveTopAniListIds } from "./lib/anilist-ranking";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
 // --- CONFIGURATION ---
-const INPUT_FILE = path.join(__dirname, "../data/data_step1.json");
-const OUTPUT_FILE = path.join(__dirname, "../data/data_step2.json");
 const DATA_DIR = path.join(__dirname, "../data");
+// Targeted backfills can use the current DB snapshot directly:
+// `ANIMETHEMES_INPUT_FILE=manual_edits.json`. Relative paths resolve in data/.
+const INPUT_SETTING = process.env.ANIMETHEMES_INPUT_FILE?.trim() || "data_step1.json";
+const INPUT_FILE = path.isAbsolute(INPUT_SETTING)
+  ? INPUT_SETTING
+  : path.join(DATA_DIR, INPUT_SETTING);
+const OUTPUT_FILE = path.join(DATA_DIR, "data_step2.json");
 const CACHE_FILE = path.join(DATA_DIR, "animethemes_cache.json");
 
 const DELAY_MS = Math.max(0, Number(process.env.ANIMETHEMES_DELAY_MS ?? 200));
 const ANIMETHEMES_API = "https://api.animethemes.moe/anime";
 const ANIMETHEMES_BASE = "https://animethemes.moe";
+const DRY_RUN = ["1", "true", "yes"].includes(
+  process.env.ANIMETHEMES_DRY_RUN?.trim().toLowerCase() ?? "",
+);
 
 // Which theme types to import. Default OP-only; extend later with e.g.
 // `SONG_TYPES=OP,ED`. Values map to Song.songType (OP / ED / INSERT). The
@@ -24,11 +43,24 @@ const ANIMETHEMES_BASE = "https://animethemes.moe";
 // later just re-parses the cache without any re-fetch.
 const VALID_SONG_TYPES = ["OP", "ED", "INSERT"] as const;
 type SongTypeValue = (typeof VALID_SONG_TYPES)[number];
-const SONG_TYPES: SongTypeValue[] = (process.env.SONG_TYPES ?? "OP")
+const requestedSongTypes = (process.env.SONG_TYPES ?? "OP")
   .split(",")
   .map((s) => s.trim().toUpperCase())
-  .filter((s): s is SongTypeValue => (VALID_SONG_TYPES as readonly string[]).includes(s));
-const songTypeSet = new Set<string>(SONG_TYPES.length ? SONG_TYPES : ["OP"]);
+  .filter(Boolean);
+const invalidSongTypes = requestedSongTypes.filter(
+  (s) => !(VALID_SONG_TYPES as readonly string[]).includes(s),
+);
+if (invalidSongTypes.length > 0) {
+  throw new Error(
+    `Invalid SONG_TYPES value(s): ${invalidSongTypes.join(", ")}. Expected OP, ED, or INSERT.`,
+  );
+}
+const SONG_TYPES = [...new Set(requestedSongTypes)] as SongTypeValue[];
+if (SONG_TYPES.length === 0) {
+  throw new Error("SONG_TYPES must contain at least one of OP, ED, or INSERT.");
+}
+const songTypeSet = new Set<string>(SONG_TYPES);
+const selectionConfig = parseAnimeThemesSelectionConfig(process.env);
 
 // --- UTILS ---
 
@@ -198,10 +230,55 @@ async function fetchByAniListId(anilistId: number) {
 
 async function enrichData() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!fs.existsSync(INPUT_FILE)) {
+    throw new Error(
+      `AnimeThemes input not found: ${INPUT_FILE}. Run step 1 or set ANIMETHEMES_INPUT_FILE=manual_edits.json.`,
+    );
+  }
 
   const franchises = JSON.parse(fs.readFileSync(INPUT_FILE, "utf-8"));
   const cache = loadCache();
   const pipelineExclusions = loadAllPipelineExclusions(DATA_DIR);
+  const selectableAnime: SelectableAnime[] = franchises.flatMap((franchise: any) =>
+    (franchise.animes ?? []).map((anime: any) => ({
+      id: anime.id,
+      name: anime.name ?? String(anime.id),
+      popularity: anime.popularity ?? null,
+      isLocked: anime.isLocked === true,
+    })),
+  );
+  const liveTop =
+    selectionConfig.mode === "top"
+      ? await fetchLiveTopAniListIds(
+          selectionConfig.topLimit,
+          new Set(selectableAnime.map((anime) => anime.id)),
+          DELAY_MS,
+        )
+      : undefined;
+  const liveTopIds = liveTop?.selectedIds;
+  const selection = resolveAnimeThemeSelection(selectableAnime, selectionConfig, liveTopIds);
+
+  if (selection.missingIds.length > 0) {
+    throw new Error(
+      `Selected AniList ids are missing from ${path.basename(INPUT_FILE)}: ` +
+        `${selection.missingIds.join(", ")}. Refresh/import the catalogue before this backfill.`,
+    );
+  }
+
+  const selectedIdSet = new Set(selection.selectedIds);
+  console.log(`📄 Input: ${INPUT_FILE}`);
+  console.log(`🎯 Scope: ${selectionConfig.mode} (${selectedIdSet.size} anime selected)`);
+  if (liveTop?.skippedIds.length) {
+    console.log(
+      `⏭️  ${liveTop.skippedIds.length} higher-ranked AniList id(s) absent/excluded from the input: ` +
+        liveTop.skippedIds.join(", "),
+    );
+  }
+  if (DRY_RUN) {
+    console.log(`🔎 Dry run — selected AniList ids: ${selection.selectedIds.join(", ")}`);
+    console.log("✨ No AnimeThemes request, cache update, or data_step2.json write was performed.");
+    return;
+  }
 
   if (pipelineExclusions.songIds.size > 0 || pipelineExclusions.videoKeys.size > 0) {
     console.log(
@@ -213,7 +290,8 @@ async function enrichData() {
   const tally = new Tally();
 
   const totalAnimes: number = franchises.reduce(
-    (n: number, f: any) => n + (f.animes?.filter((a: any) => !a.isLocked).length ?? 0),
+    (n: number, f: any) =>
+      n + (f.animes?.filter((a: any) => selectedIdSet.has(a.id)).length ?? 0),
     0,
   );
 
@@ -224,18 +302,17 @@ async function enrichData() {
   const progress = new Progress(totalAnimes);
 
   for (const franchise of franchises) {
-    // A locked franchise freezes its existing seasons, but newly-added
-    // (non-locked) seasons must still be enriched. Only skip entirely when
-    // every season is locked.
-    const hasProcessable = franchise.animes?.some((a: any) => !a.isLocked);
+    // Explicit top/id/all scopes may enrich locked anime without changing their
+    // lock flag. Step 3 still protects anime metadata and existing locked songs.
+    const hasProcessable = franchise.animes?.some((a: any) => selectedIdSet.has(a.id));
     if (franchise.isLocked && !hasProcessable) {
       tally.add("Franchises verrouillées (skip)");
       continue;
     }
 
     for (const anime of franchise.animes) {
-      if (anime.isLocked) {
-        tally.add("Animes verrouillés (skip)");
+      if (!selectedIdSet.has(anime.id)) {
+        tally.add("Animes hors périmètre (skip)");
         continue;
       }
 
@@ -276,6 +353,11 @@ async function enrichData() {
         const vb = Number.isFinite(sb) ? sb : 9999;
         return va - vb;
       });
+
+      const inputAnimeOpenings = openingsFromSongs(anime.songs);
+      const franchiseOpenings = (franchise.animes ?? []).flatMap((row: any) =>
+        openingsFromSongs(row.songs),
+      );
 
       const songsForThisAnime: any[] = [];
       const fallbackSeq: Record<string, number> = { OP: 0, ED: 0, INSERT: 0 };
@@ -322,6 +404,18 @@ async function enrichData() {
           difficulty: anime.difficulty ?? 'easy',
           tags: franchise.tags ?? [],
         });
+      }
+
+      const batchOpenings = openingsFromSongs(songsForThisAnime);
+      const sameAnimeOpenings = inputAnimeOpenings.length ? inputAnimeOpenings : batchOpenings;
+      for (const song of songsForThisAnime) {
+        if (song.songType !== "ED") continue;
+        const resolved = resolveEndingDifficulty({
+          sequence: song.sequence,
+          sameAnimeOpenings,
+          franchiseOpenings,
+        });
+        if (resolved) song.difficulty = difficultyToPipelineJson(resolved);
       }
 
       if (songsForThisAnime.length === 0) {

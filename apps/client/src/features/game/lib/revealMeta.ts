@@ -1,5 +1,15 @@
 import type { CSSProperties } from 'react';
 
+/** Decorative genre/tag chips cycle through the token palette (no raw colors). */
+export const REVEAL_TAG_TONES = [
+  'bg-primary/10 text-primary border-primary/20',
+  'bg-accent/10 text-accent border-accent/20',
+  'bg-aqua/10 text-aqua border-aqua/20',
+  'bg-info/10 text-info border-info/20',
+  'bg-success/10 text-success border-success/20',
+  'bg-warning/10 text-warning border-warning/20',
+] as const;
+
 const SEASON_LABELS: Record<string, string> = {
   WINTER: 'Hiver',
   SPRING: 'Printemps',

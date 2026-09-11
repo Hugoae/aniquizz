@@ -1,5 +1,7 @@
 import { logger } from '../utils/logger';
+import { env } from '../config/env';
 import type { TypedSocket } from './socketTypes';
+import { handshakeClientIp } from './httpClientIp';
 
 /**
  * Handler guards for socket events: authentication + in-memory rate limiting.
@@ -19,6 +21,11 @@ interface RateLimitRule {
 
 // Per-socket, per-key timestamps of recent calls.
 const buckets = new WeakMap<TypedSocket, Map<string, number[]>>();
+/** Survives socket reconnect; keyed by event + client IP. */
+const ipBuckets = new Map<string, number[]>();
+
+const pruneHits = (hits: number[], now: number, durationMs: number): number[] =>
+  hits.filter((ts) => ts > now - durationMs);
 
 const isRateLimited = (socket: TypedSocket, key: string, rule: RateLimitRule): boolean => {
   let socketBucket = buckets.get(socket);
@@ -28,8 +35,7 @@ const isRateLimited = (socket: TypedSocket, key: string, rule: RateLimitRule): b
   }
 
   const now = Date.now();
-  const windowStart = now - rule.durationMs;
-  const hits = (socketBucket.get(key) ?? []).filter((ts) => ts > windowStart);
+  const hits = pruneHits(socketBucket.get(key) ?? [], now, rule.durationMs);
 
   if (hits.length >= rule.points) {
     socketBucket.set(key, hits);
@@ -39,6 +45,24 @@ const isRateLimited = (socket: TypedSocket, key: string, rule: RateLimitRule): b
   hits.push(now);
   socketBucket.set(key, hits);
   return false;
+};
+
+/** Sliding-window IP limit (reconnect does not reset). Returns true when the call should drop. */
+export const consumeIpRateLimit = (ip: string, key: string, rule: RateLimitRule): boolean => {
+  const mapKey = `${key}:${ip}`;
+  const now = Date.now();
+  const hits = pruneHits(ipBuckets.get(mapKey) ?? [], now, rule.durationMs);
+  if (hits.length >= rule.points) {
+    ipBuckets.set(mapKey, hits);
+    return true;
+  }
+  hits.push(now);
+  ipBuckets.set(mapKey, hits);
+  return false;
+};
+
+export const resetIpRateLimitForTests = (): void => {
+  ipBuckets.clear();
 };
 
 /** Wrap a handler so it only runs for authenticated sockets. */
@@ -66,6 +90,7 @@ export const guard = <A extends unknown[]>(
   key: string,
   rule: RateLimitRule,
   handler: Listener<A>,
+  options?: { byIp?: boolean },
 ): Listener<A> => {
   return requireAuth<A>(socket, (...args: A) => {
     if (isRateLimited(socket, key, rule)) {
@@ -73,6 +98,15 @@ export const guard = <A extends unknown[]>(
       logger.warn(`Rate limit hit on "${key}" by ${data.username} (${data.userId})`, 'Socket');
       socket.emit('error', { message: 'Trop de requêtes, veuillez patienter un instant.' });
       return;
+    }
+    if (options?.byIp) {
+      const ip = handshakeClientIp(socket.handshake, env.NODE_ENV);
+      if (consumeIpRateLimit(ip, key, rule)) {
+        const data = socket.data;
+        logger.warn(`IP rate limit hit on "${key}" by ${data.username} (${data.userId})`, 'Socket');
+        socket.emit('error', { message: 'Trop de requêtes, veuillez patienter un instant.' });
+        return;
+      }
     }
     handler(...args);
   });
@@ -100,9 +134,13 @@ export const RATE_LIMITS = {
   answer: { points: 10, durationMs: 5_000 },
   chat: { points: 5, durationMs: 3_000 },
   createLobby: { points: 3, durationMs: 10_000 },
+  /** Private-room password guesses + join spam. Per-socket and per-IP (reconnect does not reset IP). */
+  joinLobby: { points: 8, durationMs: 60_000 },
   friends: { points: 15, durationMs: 10_000 },
   /** Autocomplete: client debounces (~10/s worst case); drop silently past this. */
   animeSearch: { points: 30, durationMs: 5_000 },
+  /** Playlist/catalogue pool preview. Client debounces; drop silently past this. */
+  poolStats: { points: 20, durationMs: 10_000 },
   /** Full catalogue fetch: once per session; allow a few retries on reconnect. */
   animeCatalogue: { points: 8, durationMs: 10_000 },
   /** Account deletion: strict cap to slow abuse / accidental double-submit. */

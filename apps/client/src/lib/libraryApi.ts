@@ -10,12 +10,9 @@ import type {
   ProfilePinnedSongsResponse,
 } from '@aniquizz/shared';
 import { supabase } from './supabase';
-import { env } from './env';
+import { serverApiBase } from './env';
 
-const IS_PROD = import.meta.env.MODE === 'production';
-const API_BASE = IS_PROD
-  ? env.VITE_SERVER_URL || 'https://aniquizz-server.onrender.com'
-  : 'http://localhost:3001';
+const API_BASE = serverApiBase();
 
 export class LibraryApiError extends Error {
   status: number;

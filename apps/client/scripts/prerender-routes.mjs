@@ -14,7 +14,7 @@ const INDEX = path.join(DIST, 'index.html');
 const SITE = 'AniQuizz';
 const HOME_TITLE = "AniQuizz - Le Blindtest d'Anime";
 const HOME_DESC =
-  "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.";
+  "Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis.";
 
 function escapeHtml(s) {
   return s
@@ -49,7 +49,7 @@ function shell(title, body) {
 
 function homeBody() {
   return `<p>${escapeHtml(HOME_DESC)}</p>
-<p>AniQuizz est un blindtest d'anime gratuit : devine l'opening ou l'ending, joue solo ou en multijoueur, filtre les sons selon ta liste AniList.</p>`;
+<p>AniQuizz est un blindtest d'anime gratuit : openings et endings, solo ou multijoueur, listes AniList / MyAnimeList, et playlists thématiques.</p>`;
 }
 
 function newsBody() {
@@ -61,10 +61,6 @@ function newsBody() {
     )
     .join('');
   return `<p>Actualités et feuille de route ${SITE}.</p>${list || ''}`;
-}
-
-function comingSoonBody(label, blurb) {
-  return `<p>${escapeHtml(blurb)}</p><p>${escapeHtml(label)} — bientôt disponible sur ${SITE}.</p>`;
 }
 
 function legalBody(intro) {
@@ -80,7 +76,7 @@ const ROUTES = {
   },
   '/library': {
     title: `Librairie | ${SITE}`,
-    body: comingSoonBody('Librairie musicale', 'Catalogue des openings et endings.'),
+    body: '<p>Parcourez le catalogue AniQuizz : openings et endings. Écoutez les extraits et retrouvez vos découvertes en partie.</p>',
   },
   '/suggestions': {
     title: `Boîte à idées | ${SITE}`,

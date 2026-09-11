@@ -1,4 +1,5 @@
 import type { GamePlayer, GameStatus, GameSyncState, RoomSettings, UserRole } from '@aniquizz/shared';
+import { toClientRoomSettings } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
 import type { TypedServer } from '../../../core/socketTypes';
@@ -29,6 +30,14 @@ export class Room {
   public readonly returnedPlayers = new Set<string>();
 
   private engine: MatchEngine | null = null;
+
+  /**
+   * Bind the live match engine. Production uses `startMatch`; the unit harness
+   * attaches a pre-built engine so Room methods (skip, sync, disconnect) work.
+   */
+  attachEngine(engine: MatchEngine): void {
+    this.engine = engine;
+  }
 
   /**
    * Cumulative song ids from every prior match in this lobby session.
@@ -169,6 +178,7 @@ export class Room {
 
   /** Explicit leave. Returns true if the room is now empty. */
   removePlayer(userId: string): boolean {
+    this.engine?.clearPlayerVotes(userId);
     if (!this.players.delete(userId)) return this.humanCount === 0;
     this.returnedPlayers.delete(userId);
 
@@ -190,6 +200,7 @@ export class Room {
     const player = [...this.players.values()].find((p) => p.socketId === socketId);
     if (!player) return null;
     player.isConnected = false;
+    this.engine?.clearPlayerVotes(player.userId);
     this.settleLifecycle();
     this.emitLobbyUpdate();
     return player;
@@ -298,9 +309,12 @@ export class Room {
 
   applySettings(userId: string, next: RoomSettings): boolean {
     if (userId !== this.hostId) return false;
+    // Freeze once start validation/build has begun so a late settings patch
+    // cannot swap the pool after `validateMusicSourceStart` / PlaylistBuilder.
+    if (this.status === 'starting') return false;
     this.settings = next;
     this.io.to(this.id).emit('room_updated', {
-      roomSettings: this.settings,
+      roomSettings: toClientRoomSettings(this.settings),
       roomName: this.settings.name,
       players: this.toPublicPlayers(),
     });
@@ -412,6 +426,14 @@ export class Room {
     if (!this.isSolo && connected.length < 2) {
       return { ok: false, reason: 'En attente de joueurs (2 minimum).' };
     }
+    if (!this.isSolo) {
+      const unready = [...this.players.values()].filter(
+        (p) => p.isConnected && !p.isBot && !p.isReady,
+      );
+      if (unready.length > 0) {
+        return { ok: false, reason: 'Tous les joueurs doivent être prêts.' };
+      }
+    }
     return { ok: true };
   }
 
@@ -468,7 +490,9 @@ export class Room {
     this.engine?.voteSkip(userId);
   }
 
-  forceEndRound(): void {
+  forceEndRound(userId: string): void {
+    if (!this.players.has(userId)) return;
+    if (!this.isSolo) return;
     this.engine?.forceEndRound();
   }
 
@@ -521,7 +545,13 @@ export class Room {
   }
 
   getSyncState(): GameSyncState {
-    if (this.engine && (this.status === 'playing' || this.status === 'paused')) {
+    if (
+      this.engine &&
+      (this.status === 'playing' ||
+        this.status === 'paused' ||
+        this.status === 'finished' ||
+        this.status === 'starting')
+    ) {
       return this.engine.getSyncState();
     }
     return {

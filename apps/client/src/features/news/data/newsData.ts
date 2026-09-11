@@ -21,6 +21,35 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 7,
+    title: 'Mise à jour v26.5 - Endings & Playlists',
+    description:
+      'Plus de 1800 endings ajoutés, playlists thématiques (shonen, seinen, décennies…)',
+    content:
+      'Grosse mise à jour d\'AniQuizz : le catalogue double de volume, et une nouvelle source de musiques arrive en partie.\n\n' +
+      '**Plus de 1800 endings**\n' +
+      '• Le catalogue compte désormais **plus de 1800 endings** jouables, aux côtés des openings déjà présents.\n' +
+      '• Au total : **3000 sons** — openings et endings réunis.\n' +
+      '**Openings, endings, ou les deux**\n' +
+      '• En configuration de partie, le filtre **Openings / Endings** est actif.\n' +
+      '• Enchaînez uniquement des openings, uniquement des endings, ou mélangez les deux.\n' +
+      '• Le résumé des règles du lobby suit votre choix.\n\n' +
+      '**Playlists thématiques**\n' +
+      '• Nouvel onglet **Playlists** — packs figés, pas un nouveau mode de jeu.\n' +
+      '• Packs : **Shonen**, **Seinen**, **Tranches de vie**, **Mecha**, **Fantasy**, **Romance**, **Surnaturel**, **Science-fiction**, **Sports**, **Isekai**.\n' +
+      '• Overlay **Décennie** (années 1990 à 2020), combinable avec un autre pack, par exemple Shonen et Années 2010.\n' +
+      '• Option **Limiter aux animes vus**   intersection de la playlist et de vos listes AniList / MyAnimeList.\n' +
+      '• Un pack trop petit pour le nombre de manches bloque le lancement (pas de remplissage hors pack).\n\n' +
+      '**Artistes corrigés**\n' +
+      '• Les crédits **artiste inconnu** ont été repris un par un (titres, orthographes déjà en catalogue).\n' +
+      '• Les doublons du type même groupe écrit deux façons ont été unifiés.\n' +
+      '• Les fiches de révélation et la Librairie affichent enfin le bon nom, presque partout.\n\n' +
+      'Prochaine étape annoncée : Il faut que je travaille sur le **Quiz du jour**.\n\n' +
+      'Bon jeu et amusez vous bien sur les endings !',
+    date: '2026-09-11T17:00:00Z',
+    type: 'update',
+  },
+  {
     id: 6,
     title: 'Mise à jour v26.4 - Classement, sons favoris, suggestions et Update Librairie',
     description:

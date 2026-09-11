@@ -63,7 +63,7 @@ const mapServerPlayersToLobby = (
 ): LobbyPlayer[] => {
   if (!Array.isArray(serverPlayers)) return [];
   return serverPlayers.map((p) => ({
-    id: p.id ?? p.socketId ?? '',
+    id: p.id != null ? String(p.id) : '',
     name: p.username || p.name || `Joueur ${String(p.id).substring(0, 4)}`,
     avatar: p.avatar || 'player1',
     isReady: p.isReady || false,
@@ -117,7 +117,6 @@ export function useLobbyController() {
   const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
   const [currentRoomId, setCurrentRoomId] = useState<string>(locationState?.roomId || '');
   const [isAmIHost, setIsAmIHost] = useState(false);
-  const [mySocketId, setMySocketId] = useState<string>(socket.id || '');
   const [joinCode, setJoinCode] = useState('');
   const [availableRooms, setAvailableRooms] = useState<RoomListItem[]>([]);
 
@@ -197,10 +196,8 @@ export function useLobbyController() {
 
   useEffect(() => {
     if (!socket.connected) socket.connect();
-    if (socket.connected) setMySocketId(socket.id || '');
 
     const onConnect = () => {
-      setMySocketId(socket.id || '');
       if (pathnameRef.current.endsWith('/join')) socket.emit('lobby:subscribe_list');
       // After server namespace disconnect / session replace, the new socket is not
       // in the Socket.IO room channel until lobby:join. Settings updates still
@@ -225,7 +222,15 @@ export function useLobbyController() {
       if (data.room.status) setGameStatus(data.room.status);
 
       if (data.room.settings) {
-        setRoomConfig(prev => ({ ...prev, ...data.room.settings, roomName: data.room.settings?.name || prev.roomName }));
+        setRoomConfig(prev => ({
+          ...prev,
+          ...data.room.settings,
+          roomName: data.room.settings?.name || prev.roomName,
+          password:
+            data.room.settings?.isPrivate === false
+              ? ''
+              : data.room.settings?.password || prev.password,
+        }));
       }
 
       setView('lobby');
@@ -244,7 +249,8 @@ export function useLobbyController() {
           ...prev,
           ...data.settings,
           roomName: data.settings?.name || prev.roomName,
-          password: data.settings?.password || prev.password,
+          password:
+            data.settings?.isPrivate === false ? '' : data.settings?.password || prev.password,
         }));
       }
 
@@ -262,6 +268,10 @@ export function useLobbyController() {
         ...prev,
         ...data.roomSettings,
         roomName: data.roomName,
+        password:
+          data.roomSettings?.isPrivate === false
+            ? ''
+            : data.roomSettings?.password || prev.password,
       }));
       setLobbyPlayers(mapServerPlayersToLobby(data.players, undefined));
       if (!silentSettingsPatchRef.current) {
@@ -462,7 +472,7 @@ export function useLobbyController() {
   return {
     user, profile,
     view, setView, navigate,
-    lobbyPlayers, currentRoomId, isAmIHost, mySocketId, gameStatus, isLaunchStarting, availableRooms,
+    lobbyPlayers, currentRoomId, isAmIHost, gameStatus, isLaunchStarting, availableRooms,
     multiplayerCount,
     config, setConfig, roomConfig, setRoomConfig,
     showPasswordModal, setShowPasswordModal,

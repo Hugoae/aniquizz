@@ -19,7 +19,7 @@ open or deferred.
 | `Anime`, `Song`, `Franchise` | ON | SELECT only | INSERT/UPDATE/DELETE/TRUNCATE revoked on client roles |
 | `Friendship` | ON | Deny-by-default | All friendship writes via server (Prisma service role) |
 | `Match`, `MatchPlayer`, `MatchRound`, `RoundAnswer` | ON | Deny-by-default | Match history writes server-only |
-| `SongHistory` | ON | SELECT own rows (Phase 2) | Writes server-only |
+| `SongHistory` | ON | SELECT own rows | Writes server-only (`20260910194500_songhistory_server_writes`) |
 | `_prisma_migrations` | ON | No client policies | INFO advisor only — expected |
 | Storage `avatars` | Policies on `storage.objects` | Public read, owner write | WARN: bucket listing — deferred tighten |
 
@@ -35,8 +35,7 @@ open or deferred.
 | Item | Risk | Plan |
 |------|------|------|
 | Avatars bucket public listing | Low — filenames are UUID-scoped | Tighten SELECT policy to object-level only |
-| Leaked-password (HIBP) | Low — Supabase Pro feature | Enable manually in dashboard |
-| `mix` response mode honor-system | Low for casual play | Revisit for Compétitif mode |
+| Leaked-password (HIBP) | Low — Supabase Pro+ (`password_hibp_enabled`) | Enable in Auth settings or Management API `PATCH /v1/projects/{ref}/config/auth`. Docs: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection |
 | Automated RLS regression in CI | Medium | Future: SQL policy snapshot test against staging |
 
 ## Verification commands
@@ -56,3 +55,5 @@ node scripts/check-english-code.mjs
 
 - **2026-07-09 (9.1)**: Enable RLS deny-by-default on server-only match/social tables; revoke catalogue writes from client roles.
 - **2026-07-09 (9.2)**: Document posture; add socket integration tests for ban/mute/anti-cheat/watched abort paths.
+- **2026-09-10**: Dropped `SongHistory` `"Add to history"` INSERT policy; revoked INSERT/UPDATE/DELETE/TRUNCATE on `SongHistory` and TRUNCATE on `Profile` from `anon`/`authenticated`. Client SELECT of own history remains.
+- **2026-09-10 (HIBP)**: Advisor `auth_leaked_password_protection` still WARN on project `qjnfdhmvvledhtwwfrzb`. Enabling `password_hibp_enabled` needs a Management API token (or Dashboard → Authentication → Attack protection) and a Pro+ plan. No access token was available in this environment.

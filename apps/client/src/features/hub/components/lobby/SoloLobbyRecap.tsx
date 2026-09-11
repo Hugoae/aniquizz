@@ -10,6 +10,8 @@ interface SoloLobbyRecapProps {
 
   config: GameConfig;
 
+  playlistName?: string | null;
+
 }
 
 
@@ -58,9 +60,9 @@ function RecapRow({
 
 /** Grouped settings recap for the solo pre-game screen (Option A). */
 
-export function SoloLobbyRecap({ config }: SoloLobbyRecapProps) {
+export function SoloLobbyRecap({ config, playlistName }: SoloLobbyRecapProps) {
 
-  const groups = buildSoloLobbyRecapGroups(config);
+  const groups = buildSoloLobbyRecapGroups(config, playlistName);
 
 
 

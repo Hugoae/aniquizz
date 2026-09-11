@@ -43,7 +43,12 @@ export function SettingChip({
       {label && !hideLabel && (
         <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</span>
       )}
-      <span className={cn('truncate capitalize', hideLabel && semantic && 'text-inherit')}>{value}</span>
+      <span
+        className={cn('truncate capitalize', hideLabel && semantic && 'text-inherit')}
+        title={value}
+      >
+        {value}
+      </span>
     </div>
   );
 }

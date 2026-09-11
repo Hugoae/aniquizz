@@ -41,6 +41,8 @@ interface UseGameSocketOptions {
   initialVideoMode?: VideoMode;
   /** When true, fetches the player's AniList/MAL watched ids for in-game hints. */
   watchedListLinked?: boolean;
+  /** Solo skip-round recovery must never run in multiplayer. */
+  isSolo?: boolean;
   onCancelled?: () => void;
   onClosed?: (reason?: string) => void;
 }
@@ -69,6 +71,7 @@ export function useGameSocket({
   initialFirstVideo = null,
   initialVideoMode,
   watchedListLinked,
+  isSolo = false,
   onCancelled,
   onClosed,
 }: UseGameSocketOptions): UseGameSocketResult {
@@ -298,7 +301,7 @@ export function useGameSocket({
       if (phaseRef.current !== 'guessing') return;
       socket.emit('get_game_state', { roomId });
       skipTimer = window.setTimeout(() => {
-        if (phaseRef.current === 'guessing') socket.emit('game:skip_round', { roomId });
+        if (phaseRef.current === 'guessing' && isSolo) socket.emit('game:skip_round', { roomId });
       }, 800);
     };
 
@@ -315,7 +318,7 @@ export function useGameSocket({
       window.clearTimeout(recoveryTimer);
       if (skipTimer) window.clearTimeout(skipTimer);
     };
-  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused]);
+  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, isSolo]);
 
   const answer = useCallback(
     (value: string, answerType: AnswerType) => {

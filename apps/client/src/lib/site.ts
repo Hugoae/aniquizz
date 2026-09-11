@@ -13,12 +13,12 @@ export const SITE_TAGLINE = "Le Blindtest d'Anime";
 export const DEFAULT_OG_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
 
 /**
- * Home meta description (search snippets + OG). Ends at « vous êtes le meilleur. » —
- * no trailing nav labels (Jouer, Librairie…) which Google was picking from the
- * static app-shell HTML.
+ * Home meta description (search snippets + OG). Natural sentences only —
+ * no trailing nav labels (Jouer, Librairie…) which Google was picking from
+ * the static app-shell HTML, and no keyword lists.
  */
 export const HOME_DESCRIPTION =
-  'Blindtest anime en ligne. Testez votre culture anime. Devinez l\'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.';
+  'Blindtest anime en ligne. Devinez l\'opening ou l\'ending. Testez votre culture anime, solo ou entre amis.';
 
 /** Default meta description for inner pages. Keep under ~160 chars. */
 export const DEFAULT_DESCRIPTION = HOME_DESCRIPTION;

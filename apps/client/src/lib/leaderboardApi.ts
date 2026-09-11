@@ -1,11 +1,8 @@
 import type { LeaderboardBrowseParams, LeaderboardResponse } from '@aniquizz/shared';
 import { supabase } from './supabase';
-import { env } from './env';
+import { serverApiBase } from './env';
 
-const API_BASE =
-  import.meta.env.MODE === 'production'
-    ? env.VITE_SERVER_URL || 'https://aniquizz-server.onrender.com'
-    : 'http://localhost:3001';
+const API_BASE = serverApiBase();
 
 export class LeaderboardApiError extends Error {
   constructor(

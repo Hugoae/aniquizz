@@ -80,14 +80,17 @@ export function narrowCatalogueByPrefix(
     for (const anime of bucket) hits.set(anime, true);
   };
 
-  addBucket(term.length >= 2 ? term.slice(0, 2) : undefined);
-  addBucket(term.slice(0, 1));
+  const addTokenBuckets = (raw: string) => {
+    const norm = normalizeString(raw);
+    if (norm.length >= 2) addBucket(norm.slice(0, 2));
+    else if (norm.length === 1) addBucket(norm);
+  };
+
+  addTokenBuckets(trimmed);
 
   // Multi-word queries (e.g. "lie in april") must union each token's bucket.
   for (const word of trimmed.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 0)) {
-    const norm = normalizeString(word);
-    if (norm.length >= 2) addBucket(norm.slice(0, 2));
-    if (norm.length >= 1) addBucket(norm.slice(0, 1));
+    addTokenBuckets(word);
   }
 
   if (hits.size === 0) return catalogue;

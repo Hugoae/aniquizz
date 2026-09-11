@@ -102,6 +102,38 @@ export interface FuzzyAnimeCandidate {
   altNames?: string[];
 }
 
+/** Precomputed tokens for one display field — built once per catalogue load. */
+export interface PreparedSearchField {
+  raw: string;
+  norm: string;
+  words: string[];
+  acronym: string;
+}
+
+/** Catalogue row with search fields and franchise dropdown label precomputed. */
+export interface PreparedFuzzyCandidate extends FuzzyAnimeCandidate {
+  searchName: PreparedSearchField;
+  searchAlts: PreparedSearchField[];
+  searchFranchise: PreparedSearchField | null;
+  suggestionLabelFranchise: string | null;
+}
+
+export function isPreparedFuzzyCandidate(
+  anime: FuzzyAnimeCandidate,
+): anime is PreparedFuzzyCandidate {
+  return typeof (anime as PreparedFuzzyCandidate).searchName?.norm === 'string';
+}
+
+export function prepareSearchField(raw: string): PreparedSearchField {
+  const words = tokenizeWords(raw);
+  return {
+    raw,
+    norm: normalizeString(raw),
+    words,
+    acronym: words.length < 2 ? '' : words.map((word) => word[0]).join(''),
+  };
+}
+
 export interface AnimeSuggestion {
   label: string;
   score: number;
@@ -169,8 +201,7 @@ function titleAcronym(raw: string): string {
   return normalizeString(parts.map((p) => p[0]).join(''));
 }
 
-function scoreAcronym(term: string, raw: string): FieldScore | null {
-  const acronym = titleAcronym(raw);
+function scoreAcronym(term: string, raw: string, acronym = titleAcronym(raw)): FieldScore | null {
   if (!acronym) return null;
   if (acronym === term) return { score: SCORE_ACRONYM, highlightSource: raw };
   if (acronym.startsWith(term)) return { score: SCORE_WORD_PREFIX, highlightSource: raw };
@@ -178,20 +209,20 @@ function scoreAcronym(term: string, raw: string): FieldScore | null {
 }
 
 /** Ordered multi-word query: each token must prefix-match a title word left-to-right. */
-function scorePhrase(query: string, raw: string): FieldScore | null {
+function scorePhrase(query: string, raw: string, titleWords?: string[]): FieldScore | null {
   const queryWords = tokenizeWords(query)
     .map(normalizeString)
     .filter((w) => w.length >= 2 && w !== 'of' && w !== 'the' && w !== 'no');
   if (queryWords.length < 2) return null;
 
-  const titleWords = tokenizeWords(raw).map(normalizeString);
-  if (titleWords.length === 0) return null;
+  const words = titleWords ?? tokenizeWords(raw);
+  if (words.length === 0) return null;
 
   let ti = 0;
   for (const qw of queryWords) {
     let found = false;
-    while (ti < titleWords.length) {
-      const tw = titleWords[ti];
+    while (ti < words.length) {
+      const tw = words[ti];
       if (tw.startsWith(qw) || (qw.length >= 3 && tw.length >= 2 && tw.includes(qw))) {
         found = true;
         ti++;
@@ -206,15 +237,21 @@ function scorePhrase(query: string, raw: string): FieldScore | null {
 }
 
 /** Score how well `term` matches a single display field. */
-function scoreField(term: string, raw: string, allowFuzzy: boolean, query?: string): FieldScore | null {
-  const acronymHit = scoreAcronym(term, raw);
-  const norm = normalizeString(raw);
+function scoreField(
+  term: string,
+  raw: string,
+  allowFuzzy: boolean,
+  query?: string,
+  pre?: PreparedSearchField,
+): FieldScore | null {
+  const acronymHit = scoreAcronym(term, raw, pre?.acronym);
+  const norm = pre?.norm ?? normalizeString(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
 
   if (query) {
-    const phraseHit = scorePhrase(query, raw);
+    const phraseHit = scorePhrase(query, raw, pre?.words);
     if (phraseHit && (!best || phraseHit.score > best.score)) best = phraseHit;
   }
 
@@ -228,7 +265,7 @@ function scoreField(term: string, raw: string, allowFuzzy: boolean, query?: stri
     if (!best || candidate.score > best.score) best = candidate;
   }
 
-  const words = tokenizeWords(raw);
+  const words = pre?.words ?? tokenizeWords(raw);
 
   for (const wordNorm of words) {
     if (wordNorm.startsWith(term)) {
@@ -257,15 +294,21 @@ function scoreField(term: string, raw: string, allowFuzzy: boolean, query?: stri
  * Stricter alt-name matching: full-string prefix / acronym / fuzzy, plus
  * word-prefix on the first few title words only (avoids "2nd Attack" noise).
  */
-function scoreAltField(term: string, raw: string, allowFuzzy: boolean, query?: string): FieldScore | null {
-  const acronymHit = scoreAcronym(term, raw);
-  const norm = normalizeString(raw);
+function scoreAltField(
+  term: string,
+  raw: string,
+  allowFuzzy: boolean,
+  query?: string,
+  pre?: PreparedSearchField,
+): FieldScore | null {
+  const acronymHit = scoreAcronym(term, raw, pre?.acronym);
+  const norm = pre?.norm ?? normalizeString(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
 
   if (query) {
-    const phraseHit = scorePhrase(query, raw);
+    const phraseHit = scorePhrase(query, raw, pre?.words);
     if (phraseHit && (!best || phraseHit.score > best.score)) best = phraseHit;
   }
 
@@ -274,14 +317,25 @@ function scoreAltField(term: string, raw: string, allowFuzzy: boolean, query?: s
     if (!best || candidate.score > best.score) best = candidate;
   }
 
-  const words = raw.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 0);
-  for (let i = 0; i < Math.min(words.length, 3); i++) {
-    const word = words[i];
-    if (/^\d/.test(word)) continue;
-    const wordNorm = normalizeString(word);
-    if (wordNorm.startsWith(term)) {
-      const candidate = { score: SCORE_WORD_PREFIX, highlightSource: raw };
-      if (!best || candidate.score > best.score) best = candidate;
+  if (pre) {
+    for (let i = 0; i < Math.min(pre.words.length, 3); i++) {
+      const wordNorm = pre.words[i];
+      if (/^\d/.test(wordNorm)) continue;
+      if (wordNorm.startsWith(term)) {
+        const candidate = { score: SCORE_WORD_PREFIX, highlightSource: raw };
+        if (!best || candidate.score > best.score) best = candidate;
+      }
+    }
+  } else {
+    const words = raw.split(/[^a-zA-Z0-9\u00C0-\u024F]+/).filter((w) => w.length > 0);
+    for (let i = 0; i < Math.min(words.length, 3); i++) {
+      const word = words[i];
+      if (/^\d/.test(word)) continue;
+      const wordNorm = normalizeString(word);
+      if (wordNorm.startsWith(term)) {
+        const candidate = { score: SCORE_WORD_PREFIX, highlightSource: raw };
+        if (!best || candidate.score > best.score) best = candidate;
+      }
     }
   }
 
@@ -335,6 +389,18 @@ function wordsStartWith(words: string[], prefix: string[]): boolean {
   return true;
 }
 
+const popularFranchiseCache = new WeakMap<Map<string, number>, Array<[string, number]>>();
+
+function getPopularFranchises(franchiseCounts: Map<string, number>): Array<[string, number]> {
+  const cached = popularFranchiseCache.get(franchiseCounts);
+  if (cached) return cached;
+  const popular = [...franchiseCounts.entries()]
+    .filter(([, count]) => count >= 2)
+    .sort((a, b) => b[1] - a[1]);
+  popularFranchiseCache.set(franchiseCounts, popular);
+  return popular;
+}
+
 /**
  * Spin-offs often have their own Franchise row in the DB (OVA, Gaiden…). When
  * their alt names reference a larger series ("Attack on Titan: No Regrets"),
@@ -348,9 +414,7 @@ function findParentFranchise(
   anime: FuzzyAnimeCandidate,
   franchiseCounts: Map<string, number>,
 ): string | null {
-  const popular = [...franchiseCounts.entries()]
-    .filter(([, count]) => count >= 2)
-    .sort((a, b) => b[1] - a[1]);
+  const popular = getPopularFranchises(franchiseCounts);
 
   const haystacks = [...(anime.altNames ?? []), anime.name];
   for (const [parentName] of popular) {
@@ -386,20 +450,29 @@ function bestScoreForCandidate(
   query?: string,
 ): FieldScore | null {
   let best: FieldScore | null = null;
+  const prepared = isPreparedFuzzyCandidate(anime) ? anime : null;
 
   const consider = (scored: FieldScore | null) => {
     if (!scored) return;
     if (!best || scored.score > best.score) best = scored;
   };
 
-  consider(scoreField(term, anime.name, allowFuzzy, query));
+  consider(scoreField(term, anime.name, allowFuzzy, query, prepared?.searchName));
 
-  for (const alt of anime.altNames ?? []) {
-    consider(scoreAltField(term, alt, allowFuzzy, query));
+  if (prepared) {
+    for (const alt of prepared.searchAlts) {
+      consider(scoreAltField(term, alt.raw, allowFuzzy, query, alt));
+    }
+  } else {
+    for (const alt of anime.altNames ?? []) {
+      consider(scoreAltField(term, alt, allowFuzzy, query));
+    }
   }
 
   if (precisionMode === 'franchise' && anime.franchise) {
-    consider(scoreField(term, anime.franchise, allowFuzzy, query));
+    consider(
+      scoreField(term, anime.franchise, allowFuzzy, query, prepared?.searchFranchise ?? undefined),
+    );
   }
 
   return best;
@@ -412,6 +485,7 @@ function suggestionLabel(
   franchiseCounts: Map<string, number>,
 ): string | null {
   if (precisionMode === 'franchise') {
+    if (isPreparedFuzzyCandidate(anime)) return anime.suggestionLabelFranchise;
     if (!anime.franchise) return null;
 
     const count = franchiseCounts.get(anime.franchise) ?? 0;
@@ -423,6 +497,21 @@ function suggestionLabel(
     return anime.franchise;
   }
   return anime.name;
+}
+
+/**
+ * Precompute normalized fields and franchise dropdown labels once per catalogue
+ * load so each keystroke skips normalize/tokenize/parent-franchise work.
+ */
+export function prepareFuzzyCatalogue(list: FuzzyAnimeCandidate[]): PreparedFuzzyCandidate[] {
+  const franchiseCounts = buildFranchiseCountsMap(list);
+  return list.map((anime) => ({
+    ...anime,
+    searchName: prepareSearchField(anime.name),
+    searchAlts: (anime.altNames ?? []).map(prepareSearchField),
+    searchFranchise: anime.franchise ? prepareSearchField(anime.franchise) : null,
+    suggestionLabelFranchise: suggestionLabel(anime, 'franchise', franchiseCounts),
+  }));
 }
 
 /**
@@ -463,7 +552,10 @@ export const getFuzzySuggestions = (
   const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
   const franchiseCounts =
     precisionMode === 'franchise'
-      ? franchiseCountsCache ?? buildFranchiseCounts(list)
+      ? franchiseCountsCache ??
+        (list[0] && isPreparedFuzzyCandidate(list[0])
+          ? new Map<string, number>()
+          : buildFranchiseCounts(list))
       : new Map<string, number>();
 
   const byLabel = new Map<string, AnimeSuggestion>();

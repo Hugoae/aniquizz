@@ -1,9 +1,10 @@
 import { Trophy, Zap } from 'lucide-react';
 import type { GameConfig, GameType } from '@aniquizz/shared';
-import { GAME_TYPE_LABELS } from '@aniquizz/shared';
+import { GAME_TYPE_LABELS, playlistSourceDisplayName } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
 const COMPACT_MODE_LABELS: Record<GameType, string> = {
   standard: 'STD',
@@ -14,7 +15,15 @@ interface MatchConfigHeaderProps {
   settings: Partial<
     Pick<
       GameConfig,
-      'gameType' | 'soundCount' | 'guessDuration' | 'difficulty' | 'precision' | 'responseType' | 'soundSelection'
+      | 'gameType'
+      | 'soundCount'
+      | 'guessDuration'
+      | 'difficulty'
+      | 'precision'
+      | 'responseType'
+      | 'soundSelection'
+      | 'playlistId'
+      | 'decadePlaylistId'
     >
   >;
   className?: string;
@@ -25,6 +34,9 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
   const gameType = settings.gameType ?? 'standard';
   const isSprint = gameType === 'sprint';
   const ModeIcon = isSprint ? Zap : Trophy;
+  const isPlaylist = settings.soundSelection === 'playlist';
+  const { playlists } = usePublishedPlaylists(isPlaylist);
+  const playlistName = isPlaylist ? playlistSourceDisplayName(playlists, settings) : undefined;
 
   const chips = buildLobbySettingChips({
     soundCount: settings.soundCount ?? 10,
@@ -33,6 +45,7 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
     precision: settings.precision ?? 'franchise',
     responseType: settings.responseType ?? 'typing',
     soundSelection: settings.soundSelection ?? 'random',
+    playlistName,
   });
 
   return (

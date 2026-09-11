@@ -115,7 +115,7 @@ describe('buildLobbyRulesSections', () => {
         watchedMode: 'union',
         watchedAllowFallback: true,
       },
-      { lobbyMode: 'solo' },
+      { lobbyMode: 'multi' },
     );
     const source = sections.find((s) => s.id === 'source');
     expect(source?.lines?.some((l) => l.includes('Union'))).toBe(true);
@@ -124,6 +124,39 @@ describe('buildLobbyRulesSections', () => {
     expect(source?.lines?.some((l) => l.match(/\d+\s+son/))).toBe(false);
     expect(source?.lines?.some((l) => l.toLowerCase().includes('bot'))).toBe(false);
     expect(source?.lines?.some((l) => l.includes('Intersection'))).toBe(false);
+  });
+
+  it('omits Union/Commun copy in solo Watched rules', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        soundSelection: 'watched',
+        watchedMode: 'union',
+        watchedAllowFallback: true,
+      },
+      { lobbyMode: 'solo' },
+    );
+    const source = sections.find((s) => s.id === 'source');
+    expect(source?.lines?.some((l) => l.includes('Ma liste anime'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Union'))).toBe(false);
+    expect(source?.lines?.some((l) => l.includes('Commun'))).toBe(false);
+    expect(source?.lines?.some((l) => l.includes('au moins un joueur'))).toBe(false);
+  });
+
+  it('describes the selected ending filter in Watched mode', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        soundTypes: ['ending'],
+        soundSelection: 'watched',
+        watchedMode: 'union',
+      },
+      { lobbyMode: 'solo' },
+    );
+    const source = sections.find((s) => s.id === 'source');
+
+    expect(source?.lines?.some((line) => line.includes('endings du catalogue'))).toBe(true);
+    expect(source?.lines?.some((line) => line.includes('openings du catalogue'))).toBe(false);
   });
 
   it('uses Commun label and omits fallback line when opt-in is off', () => {
@@ -191,5 +224,54 @@ describe('buildLobbyRulesSections', () => {
     );
     const victory = sections.find((s) => s.id === 'victory');
     expect(victory?.lines?.some((l) => l.includes('Seuil Bronze (Moyen) : 45 %'))).toBe(true);
+  });
+
+  it('describes a staff playlist pack and Watched overlay', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        soundSelection: 'playlist',
+        playlistWatched: true,
+        watchedAllowFallback: true,
+        watchedMode: 'intersection',
+      },
+      { lobbyMode: 'multi', playlistName: 'Shonen' },
+    );
+    const source = sections.find((s) => s.id === 'source');
+    expect(source?.lines?.some((l) => l.includes('Shonen'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Limiter aux animes vus'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Compléter avec le pack'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Mode Commun'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('bientôt disponible'))).toBe(false);
+  });
+
+  it('omits fusion copy on solo playlist overlay rules', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        soundSelection: 'playlist',
+        playlistWatched: true,
+        watchedAllowFallback: true,
+        watchedMode: 'intersection',
+      },
+      { lobbyMode: 'solo', playlistName: 'Shonen' },
+    );
+    const source = sections.find((s) => s.id === 'source');
+    expect(source?.lines?.some((l) => l.includes('Limiter aux animes vus'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Union'))).toBe(false);
+    expect(source?.lines?.some((l) => l.includes('Commun'))).toBe(false);
+  });
+
+  it('describes a genre pack combined with a decade overlay', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, soundSelection: 'playlist' },
+      { lobbyMode: 'solo', playlistName: 'Shonen ∩ Années 2010' },
+    );
+    const source = sections.find((s) => s.id === 'source');
+    expect(source?.lines?.[0]).toContain('Shonen');
+    expect(source?.lines?.[0]).toContain('Années 2010');
+    expect(source?.lines?.[0]).toContain('intersection');
+    const summary = sections.find((s) => s.id === 'summary');
+    expect(summary?.chips?.find((c) => c.key === 'source')?.value).toBe('Shonen ∩ Années 2010');
   });
 });

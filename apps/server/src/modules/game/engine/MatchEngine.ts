@@ -8,6 +8,8 @@ import {
   generatePeekWindow,
   normalizeVideoMode,
   normalizePrecision,
+  resolveEffectiveAnswerType,
+  toClientRoomSettings,
   type AnswerType,
   type CorrectByDifficulty,
   type GamePlayer,
@@ -23,6 +25,7 @@ import {
   type GameOverPayload,
   type MatchSettingsSnapshot,
   pickMatchSettings,
+  matchPlaylistPersistence,
   type PeekWindow,
   scoreForAnswer,
   type SprintLeaderboardPayload,
@@ -102,7 +105,7 @@ export class MatchEngine {
     // here (unused for preload; the client loads the clip at `round_start`).
     this.channel.emit('game_started', {
       roomId: this.room.id,
-      settings: this.room.settings,
+      settings: toClientRoomSettings(this.room.settings),
       players: this.room.toPublicPlayers(),
       introDuration: GAME_CONFIG.TIMERS.INTRO_DELAY,
       firstVideo: null,
@@ -128,6 +131,8 @@ export class MatchEngine {
           settings.watchedMode === 'intersection'
             ? 'Mode Commun impossible : au moins un joueur n\'a pas de liste AniList utilisable.'
             : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
+      } else if (built.abortReason === 'playlist_missing' || built.abortReason === 'playlist_empty') {
+        message = 'Cette playlist n\'est plus disponible ou n\'a aucun son jouable.';
       }
       logger.error(`[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`, 'Game');
       return this.abortStart(message);
@@ -155,9 +160,20 @@ export class MatchEngine {
     if (built.fallbackUsed) {
       setTimeout(() => {
         const message =
-          'Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l\'avez autorisé).';
+          this.room.settings.soundSelection === 'playlist'
+            ? 'Liste insuffisante : des sons du pack complètent la partie (vous l\'avez autorisé).'
+            : 'Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l\'avez autorisé).';
         this.channel.emit('game:fallback_notification', { message });
       }, 1000);
+    }
+
+    if (built.difficultyRelaxed) {
+      setTimeout(() => {
+        this.channel.emit('game:fallback_notification', {
+          message:
+            'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
+        });
+      }, built.fallbackUsed ? 2500 : 1000);
     }
 
     // Start round 1 once the intro has visibly elapsed AND the playlist is ready.
@@ -265,6 +281,9 @@ export class MatchEngine {
     this.channel.emit('vote_update', { type: 'skip', count: 0, required });
     this.channel.emit('vote_update', { type: 'pause', count: 0, required, isPending: false });
 
+    const videoMode = normalizeVideoMode(this.room.settings.videoMode);
+    this.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
+
     const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
     this.guessStartAt = Date.now();
     this.clock.start(guessDurationMs, () => {
@@ -288,7 +307,6 @@ export class MatchEngine {
 
   private buildRoundStartPayload(item: PlaylistItem): RoundStartPayload {
     const videoMode = normalizeVideoMode(this.room.settings.videoMode);
-    this.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
 
     return {
       round: this.currentRoundIndex + 1,
@@ -318,7 +336,7 @@ export class MatchEngine {
     // Anti-cheat: never trust the client's claimed answer type — clamp it to what
     // the room's response mode actually allows so points can't be inflated
     // (e.g. picking from QCM choices but claiming a "typing" answer for 5 pts).
-    const effectiveType = this.effectiveAnswerType(answerType);
+    const effectiveType = this.effectiveAnswerType(answerType, answer, item);
 
     const timeMs = Math.max(0, Date.now() - this.guessStartAt);
     const isCorrect = isAnswerCorrect(answer, item.validAnswers);
@@ -538,6 +556,7 @@ export class MatchEngine {
         }),
         rounds: this.recordedRounds,
         songIds: this.playlist.map((s) => s.id),
+        ...matchPlaylistPersistence(this.room.settings),
       })
       .catch((e) => logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e));
   }
@@ -629,6 +648,7 @@ export class MatchEngine {
   votePause(userId: string): void {
     if (this.isRoundLoading) return;
     if (this.room.status !== 'playing' && this.room.status !== 'paused') return;
+    if (!this.canVote(userId)) return;
     if (this.room.status === 'paused') {
       this.resume();
       return;
@@ -637,10 +657,11 @@ export class MatchEngine {
     else this.pauseVotes.add(userId);
 
     const required = this.requiredVotes();
-    this.isPausePending = this.pauseVotes.size >= required;
+    const count = this.countActiveVotes(this.pauseVotes);
+    this.isPausePending = count >= required;
     this.channel.emit('vote_update', {
       type: 'pause',
-      count: this.pauseVotes.size,
+      count,
       required,
       isPending: this.isPausePending,
     });
@@ -648,17 +669,45 @@ export class MatchEngine {
 
   voteSkip(userId: string): void {
     if (this.room.status !== 'playing' || this.isRoundLoading) return;
+    if (!this.canVote(userId)) return;
     this.skipVotes.add(userId);
     const required = this.requiredVotes();
-    this.channel.emit('vote_update', { type: 'skip', count: this.skipVotes.size, required });
+    const count = this.countActiveVotes(this.skipVotes);
+    this.channel.emit('vote_update', { type: 'skip', count, required });
 
-    if (this.skipVotes.size < required) return;
+    if (count < required) return;
     this.clock.clear();
     if (this.isRoundEnded) {
       if (this.isPausePending) this.pause();
       else this.startRound();
     } else {
       this.endRound();
+    }
+  }
+
+  /** Drop this player's skip/pause votes on disconnect or leave. */
+  clearPlayerVotes(userId: string): void {
+    const hadSkip = this.skipVotes.delete(userId);
+    const hadPause = this.pauseVotes.delete(userId);
+    if (!hadSkip && !hadPause) return;
+
+    const required = this.requiredVotes();
+    if (hadSkip) {
+      this.channel.emit('vote_update', {
+        type: 'skip',
+        count: this.countActiveVotes(this.skipVotes),
+        required,
+      });
+    }
+    if (hadPause) {
+      const count = this.countActiveVotes(this.pauseVotes);
+      this.isPausePending = count >= required;
+      this.channel.emit('vote_update', {
+        type: 'pause',
+        count,
+        required,
+        isPending: this.isPausePending,
+      });
     }
   }
 
@@ -815,17 +864,28 @@ export class MatchEngine {
     return Math.max(1, Math.ceil(this.humanVoters().length / 2));
   }
 
+  private canVote(userId: string): boolean {
+    const player = this.room.players.get(userId);
+    return Boolean(player && player.isConnected && !player.isBot);
+  }
+
+  private countActiveVotes(votes: Set<string>): number {
+    let count = 0;
+    for (const id of votes) {
+      if (this.canVote(id)) count += 1;
+    }
+    return count;
+  }
+
   /**
    * Clamp a client-claimed answer type to what the room's response mode permits.
-   * - `typing` room  → always `typing` (no choices exist).
-   * - `qcm` room     → `duo` (lifeline) or `qcm`; never `typing`.
-   * - `mix` room     → the player's genuine choice (choices are legitimately available).
+   * Mix typing is only honoured when the string is not an offered QCM/Duo label.
    */
-  private effectiveAnswerType(claimed: AnswerType): AnswerType {
-    const responseType = (this.room.settings.responseType ?? 'mix') as ResponseType;
-    if (responseType === 'typing') return 'typing';
-    if (responseType === 'qcm') return claimed === 'duo' ? 'duo' : 'qcm';
-    return claimed;
+  private effectiveAnswerType(claimed: AnswerType, answer: string, item: PlaylistItem): AnswerType {
+    return resolveEffectiveAnswerType(claimed, this.room.settings.responseType, answer, {
+      choices: item.choices,
+      duo: item.duo,
+    });
   }
 
   private toRevealSong(item: PlaylistItem): RevealSong {

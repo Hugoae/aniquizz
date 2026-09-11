@@ -39,6 +39,8 @@ Precision (`anime` vs `franchise`, legacy wire value `exact` → `anime`) applie
 
 Choices are pre-generated at playlist build time (one set per round) and sent on `round_start` — the client never builds distractors.
 
+Thematic playlists (v26.5) use the same helper with **snapshot anime ids** (optionally intersected with Watched). See `docs/game/thematic-playlists.md`.
+
 ## Caching behaviour
 
 - **Random mode:** `getChoiceCandidates(precision)` — cached per precision (10 min TTL), same as before.
@@ -48,8 +50,8 @@ Choices are pre-generated at playlist build time (one set per round) and sent on
 
 | Case | Current behaviour | Future (chantier 26.1 #2) |
 |------|-------------------|---------------------------|
-| List has &lt; 4 distinct names (QCM) | `buildChoices` pads with `???` | Lobby should block start or warn (min intersection threshold) |
-| List has &lt; 2 distinct names (Duo) | `buildDuo` may use `???` | Same guard |
+| List has &lt; 4 distinct names (QCM / Mix) | Lobby + `validateWatchedStart` block via `hasEnoughQcmNames` (same gate as playlists). Typing-only rooms skip the gate. | — |
+| List has &lt; 2 distinct names (Duo) | Duo still pads with `???` if Mix/QCM somehow starts; Mix/QCM is already blocked at 4 names | Optional Duo-only threshold |
 | Anime on AniList but no song in catalogue | Excluded from both song and choice pools (no row in cache) | — |
 | Typing-only room | No choices built or sent | — |
 

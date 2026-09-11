@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RoomConfig, GameStatus } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount } from '@aniquizz/shared';
+import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasPlaylistSource, playlistSourceDisplayName, toWatchedPoolStatsView } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -26,8 +26,11 @@ import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
-import { checkWatchedLobby, checkWatchedPoolLaunch, watchedPoolModeLabel, resolveWatchedPoolBanner, watchedPoolBannerVariantClasses } from '@/features/hub/components/config/watchedSource';
+import { checkWatchedLobby, checkWatchedPoolLaunch, watchedPoolModeLabel, resolveWatchedPoolBanner, watchedPoolBannerVariantClasses, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE } from '@/features/hub/components/config/watchedSource';
+import { checkPlaylistPoolLaunch } from '@/features/hub/components/config/playlistSource';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 
@@ -103,6 +106,7 @@ export function MultiplayerLobby({
     gameSettings?.soundSelection ?? 'random',
     gameSettings?.watchedMode ?? 'union',
     players,
+    gameSettings?.playlistWatched,
   );
   const { stats: watchedStatsRaw, loading: watchedStatsLoading } = useWatchedPoolStats({
     roomId: roomCode,
@@ -110,6 +114,7 @@ export function MultiplayerLobby({
     difficulty: gameSettings?.difficulty,
     types: gameSettings?.soundTypes,
     watchedMode: gameSettings?.watchedMode,
+    precision: gameSettings?.precision,
     enabled: isHost && gameSettings?.soundSelection === 'watched',
     refreshKey: watchedPlayersKey,
   });
@@ -118,10 +123,38 @@ export function MultiplayerLobby({
     gameSettings?.soundSelection ?? 'random',
     watchedStats,
     gameSettings?.watchedAllowFallback,
+    gameSettings?.responseType,
   );
-  const watchedBlocked = isHost && (watchedCheck.blocked || poolCheck.blocked);
-  const watchedBlockReason = watchedCheck.blocked ? watchedCheck.reason : poolCheck.reason;
-  const canStart = isHost && hasEnoughPlayers && allGuestsReady && !isGameRunning && !watchedBlocked;
+  const { playlists } = usePublishedPlaylists(gameSettings?.soundSelection === 'playlist');
+  const playlistName = playlistSourceDisplayName(playlists, gameSettings ?? {});
+  const { stats: playlistStatsRaw, loading: playlistStatsLoading } = usePlaylistPoolStats({
+    playlistId: gameSettings?.playlistId,
+    decadePlaylistId: gameSettings?.decadePlaylistId,
+    roomId: roomCode,
+    soundCount: gameSettings?.soundCount,
+    difficulty: gameSettings?.difficulty,
+    types: gameSettings?.soundTypes,
+    playlistWatched: gameSettings?.playlistWatched,
+    watchedMode: gameSettings?.watchedMode,
+    precision: gameSettings?.precision,
+    allowFallback: gameSettings?.watchedAllowFallback,
+    enabled: isHost && gameSettings?.soundSelection === 'playlist' && hasPlaylistSource(gameSettings ?? {}),
+    refreshKey: watchedPlayersKey,
+  });
+  const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
+  const playlistPoolCheck = checkPlaylistPoolLaunch(
+    gameSettings?.soundSelection ?? 'random',
+    gameSettings?.responseType ?? 'mix',
+    playlistStats,
+    gameSettings?.watchedAllowFallback,
+  );
+  const sourceBlocked = isHost && (watchedCheck.blocked || poolCheck.blocked || playlistPoolCheck.blocked);
+  const watchedBlockReason = watchedCheck.blocked
+    ? watchedCheck.reason
+    : poolCheck.blocked
+      ? poolCheck.reason
+      : playlistPoolCheck.reason;
+  const canStart = isHost && hasEnoughPlayers && allGuestsReady && !isGameRunning && !sourceBlocked;
 
   const prevPoolInsufficientRef = useRef<boolean | null>(null);
   useEffect(() => {
@@ -143,14 +176,23 @@ export function MultiplayerLobby({
     onPatchRoomSettings,
   ]);
 
+  const playlistOverlayOn =
+    gameSettings?.soundSelection === 'playlist' && Boolean(gameSettings.playlistWatched);
+  const overlayWatchedStats = playlistOverlayOn && playlistStats ? toWatchedPoolStatsView(playlistStats) : null;
   const showWatchedPoolBanner =
-    isHost && gameSettings?.soundSelection === 'watched' && !watchedCheck.blocked;
+    isHost &&
+    !watchedCheck.blocked &&
+    (gameSettings?.soundSelection === 'watched' || playlistOverlayOn);
   const watchedModeLabel = watchedPoolModeLabel(
-    watchedStats?.watchedMode ?? gameSettings?.watchedMode,
+    (gameSettings?.soundSelection === 'watched' ? watchedStats?.watchedMode : overlayWatchedStats?.watchedMode) ??
+      gameSettings?.watchedMode,
   );
+  const bannerWatchedStats = gameSettings?.soundSelection === 'watched' ? watchedStats : overlayWatchedStats;
+  const bannerWatchedLoading =
+    gameSettings?.soundSelection === 'watched' ? watchedStatsLoading : playlistStatsLoading;
   const watchedPoolBanner = resolveWatchedPoolBanner(
-    watchedStats,
-    watchedStatsLoading,
+    bannerWatchedStats,
+    bannerWatchedLoading,
     watchedModeLabel,
     gameSettings?.watchedAllowFallback,
   );
@@ -185,8 +227,8 @@ export function MultiplayerLobby({
   };
 
   const settingChips = useMemo(
-    () => (gameSettings ? buildLobbySettingChips(gameSettings) : []),
-    [gameSettings],
+    () => (gameSettings ? buildLobbySettingChips({ ...gameSettings, playlistName }) : []),
+    [gameSettings, playlistName],
   );
 
   const seats = useMemo(() => Array.from({ length: freeSlots }), [freeSlots]);
@@ -267,6 +309,7 @@ export function MultiplayerLobby({
               context={{
                 lobbyMode: 'multi',
                 playerCount: humanCount,
+                playlistName,
               }}
               className="ml-auto"
             />
@@ -284,11 +327,14 @@ export function MultiplayerLobby({
           aria-live="polite"
         >
           <Music2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <div className="min-w-0 space-y-1">
           {watchedPoolBanner.variant === 'loading' ? (
             <span>Analyse du pool AniList…</span>
           ) : watchedPoolBanner.variant === 'empty' ? (
             <span>
-              Aucun son jouable ({watchedPoolBanner.modeLabel}) pour ces filtres.
+              {bannerWatchedStats?.listError === 'anilist_blocked'
+                ? WATCHED_ANILIST_BLOCKED_MESSAGE
+                : `Aucun son jouable (${watchedPoolBanner.modeLabel}) pour ces filtres.`}
             </span>
           ) : watchedPoolBanner.variant === 'fallback' ? (
             <span>
@@ -308,6 +354,10 @@ export function MultiplayerLobby({
               {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) — <b>Suffisant</b>
             </span>
           )}
+          {bannerWatchedStats?.listError === 'anilist_blocked' && (bannerWatchedStats.playableSongs ?? 0) > 0 && (
+            <span className="block text-warning">{WATCHED_ANILIST_STALE_MESSAGE}</span>
+          )}
+          </div>
         </div>
       )}
 
@@ -400,12 +450,12 @@ export function MultiplayerLobby({
                 La partie démarre…
               </p>
             )}
-            {watchedBlocked && !isStarting && watchedBlockReason && (
+            {sourceBlocked && !isStarting && watchedBlockReason && (
               <p className="max-w-md text-center text-sm font-medium text-destructive" role="alert">
                 {watchedBlockReason}
               </p>
             )}
-            {!isStarting && !watchedBlocked && guests.length > 0 && !isGameRunning && (
+            {!isStarting && !sourceBlocked && guests.length > 0 && !isGameRunning && (
               <span
                 aria-live="polite"
                 className={cn('text-xs font-medium', allGuestsReady ? 'text-success' : 'text-muted-foreground')}

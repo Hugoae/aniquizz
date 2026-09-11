@@ -22,3 +22,24 @@ export const clientIp = (
   const raw = req.ip?.trim() || req.socket?.remoteAddress?.trim() || 'unknown';
   return raw.replace(IPV4_MAPPED_PREFIX, '');
 };
+
+/**
+ * Socket.io handshake IP. Trusts `X-Forwarded-For` first hop only in production
+ * (same rule as Express `trust proxy` 1).
+ */
+export const handshakeClientIp = (
+  handshake: {
+    address?: string;
+    headers?: Record<string, string | string[] | undefined>;
+  },
+  nodeEnv: string,
+): string => {
+  const remote = handshake.address?.trim() || 'unknown';
+  if (nodeEnv === 'production') {
+    const forwarded = handshake.headers?.['x-forwarded-for'];
+    const header = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+    const firstHop = header?.split(',')[0]?.trim();
+    if (firstHop) return firstHop.replace(IPV4_MAPPED_PREFIX, '');
+  }
+  return remote.replace(IPV4_MAPPED_PREFIX, '');
+};

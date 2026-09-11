@@ -18,7 +18,7 @@ import type {
   PeekWindow,
   VideoMode,
 } from '@aniquizz/shared';
-import { generatePeekWindow, normalizeVideoMode } from '@aniquizz/shared';
+import { normalizeVideoMode } from '@aniquizz/shared';
 export type { RoundHistoryEntry };
 export type GamePhase = 'loading' | 'ready' | 'guessing' | 'revealed' | 'ended';
 /** Minimal shape the layout needs during guessing (no answer leaks). */
@@ -94,9 +94,13 @@ function resolveVideoMode(payloadMode: unknown, fallback: VideoMode): VideoMode 
   return normalizeVideoMode(fallback);
 }
 
-function resolvePeekWindow(mode: VideoMode, peekWindow?: PeekWindow): PeekWindow | undefined {
+function resolvePeekWindow(
+  mode: VideoMode,
+  peekWindow?: PeekWindow,
+  existing?: PeekWindow,
+): PeekWindow | undefined {
   if (mode !== 'peek') return undefined;
-  return peekWindow ?? generatePeekWindow();
+  return peekWindow ?? existing;
 }
 
 export function createInitialState(totalRounds: number, players: GamePlayer[] = []): GameState {
@@ -314,10 +318,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         phase = 'guessing';
         currentRound = s.currentRound;
         const syncMode = resolveVideoMode(s.round.videoMode, state.videoMode);
+        const existingPeek =
+          state.currentSong && 'peekWindow' in state.currentSong
+            ? state.currentSong.peekWindow
+            : undefined;
         currentSong = {
           videoKey: s.round.videoKey,
           videoStartTime: s.round.videoStartTime,
-          peekWindow: resolvePeekWindow(syncMode, s.round.peekWindow),
+          peekWindow: resolvePeekWindow(syncMode, s.round.peekWindow, existingPeek),
         };
         nextVideoKey = null;
         qcmChoices = s.round.choices ?? [];

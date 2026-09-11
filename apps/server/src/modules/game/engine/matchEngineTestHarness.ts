@@ -32,7 +32,7 @@ export function makeSettings(overrides: Partial<RoomSettings> = {}): RoomSetting
     gameType: 'standard',
     responseType: 'mix',
     soundCount: 2,
-    soundTypes: ['OP', 'ED'],
+    soundTypes: ['opening', 'ending'],
     difficulty: ['easy', 'medium', 'hard'],
     guessDuration: 10,
     soundSelection: 'random',
@@ -117,6 +117,7 @@ export function createEngineHarness(opts: {
     repo,
     scoring: opts.scoring ?? standardScoring,
   });
+  room.attachEngine(engine);
 
   return { room, engine, emitted, builder, repo };
 }

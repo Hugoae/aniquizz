@@ -16,8 +16,9 @@ See [`README.md`](./README.md) for the module table and build commands.
 | **Medal** | Solo grade Bronze → Platine. `computeMedal(score, maxScore, difficulties, precision)` compares the earned integer score against rounded tier thresholds. | `grading.ts` |
 | **Mastery ratio** | Earned / max score, blended across selected difficulties then offset by precision (`MEDALS.PRECISION_OFFSET`). | `grading.ts`, `constants.ts` |
 | **Victory** | Game-over result: solo medal or multiplayer podium. `computeVictory(input)` takes `precision`. | `victory.ts` |
-| **Fuzzy suggestions** | Ranked autocomplete matches for a typed title, capped at `FUZZY.SUGGESTION_LIMIT`. | `utils.ts`, `constants.ts` |
-| **Choice candidate pool** | The set of animes used to build QCM distractors; `buildChoiceCandidatePool(rows, precision, watchedIds?)` filters + dedupes. | `selection.ts` |
+| **Fuzzy suggestions** | Ranked autocomplete matches for a typed title, capped at `FUZZY.SUGGESTION_LIMIT`. Prepare once with `prepareFuzzyCatalogue`. | `utils.ts`, `constants.ts` |
+| **Choice candidate pool** | The set of animes used to build QCM distractors; `buildChoiceCandidatePool(rows, precision, allowedAnimeIds?)` filters + dedupes. Empty `[]` is a closed universe (not global). | `selection.ts` |
+| **Thematic playlist recipe** | Staff pack membership: genres/tags/year/formats + include/exclude. Year is the song anime's `seasonYear`. | `playlist.ts` |
 
 ## Known pitfalls
 
@@ -25,7 +26,7 @@ See [`README.md`](./README.md) for the module table and build commands.
   run `pnpm --filter @aniquizz/shared build` before restarting the server or you get
   stale-type errors (e.g. `TS2353` on a new field). Nodemon does **not** rebuild this.
 - **Every pure function ships with a `*.test.ts` in this package.** Grading, victory,
-  scoring, selection, watched pool, and fuzzy match are all unit-tested here — update
+  scoring, selection, watched pool, playlist membership, and fuzzy match are all unit-tested here — update
   the tests in the same change (TDD-friendly).
 - **Integer medal thresholds, not float ratios.** `medalMarkerScores()` is the single
   source of truth so the game-over medal matches the mastery-bar label (float compares

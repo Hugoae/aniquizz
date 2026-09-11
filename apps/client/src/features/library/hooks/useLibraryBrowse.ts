@@ -19,7 +19,7 @@ import { libraryApi, LibraryApiError } from '@/lib/libraryApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 
 const DEBOUNCE_MS = 300;
-const SONG_TYPES: LibrarySongType[] = ['OP', 'ED', 'INSERT'];
+const SONG_TYPES: LibrarySongType[] = ['OP', 'ED'];
 const DIFFICULTIES: LibraryDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 
 const parseSort = (raw: string | null): LibrarySort | undefined => {

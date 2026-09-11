@@ -41,7 +41,7 @@ packages/database/data/data_step1.json
 packages/database/data/data_step2.json
 packages/database/data/animethemes_cache.json
 packages/database/data/r2-integrity-report.json
-packages/database/data/manual_edits.json
+packages/database/data/manual_edits*.json
 packages/database/data/pipeline_exclusions.json
 packages/database/data/tmp/
 

@@ -31,10 +31,19 @@ describe('MatchEngine', () => {
     it('awards typing points for a correct typing answer in mix mode', async () => {
       const { room, engine } = createEngineHarness({
         settings: { responseType: 'mix' },
+        playlist: [
+          makePlaylistItem({
+            anime: 'Cowboy Bebop',
+            validAnswers: ['Cowboy Bebop'],
+            choices: ['Bleach', 'One Piece', 'Dragon Ball', 'Death Note'],
+            duo: ['Bleach', 'One Piece'],
+          }),
+          makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'] }),
+        ],
       });
       await advanceToGuessing(engine);
 
-      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.handleAnswer('player-1', 'Cowboy Bebop', 'typing');
       engine.forceEndRound();
 
       const player = getPlayer(room, 'player-1');
@@ -135,13 +144,35 @@ describe('MatchEngine', () => {
       expect(player.roundPoints).toBe(GAME_CONFIG.SCORING.DUO);
     });
 
-    it('preserves the claimed answer type in mix mode', async () => {
+    it('clamps claimed typing to qcm in mix when the answer matches a choice', async () => {
       const { room, engine } = createEngineHarness({
         settings: { responseType: 'mix' },
       });
       await advanceToGuessing(engine);
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.forceEndRound();
+
+      expect(getPlayer(room, 'player-1').answerType).toBe('qcm');
+      expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.QCM);
+    });
+
+    it('keeps mix typing when the title is not an offered choice', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'mix' },
+        playlist: [
+          makePlaylistItem({
+            anime: 'Cowboy Bebop',
+            validAnswers: ['Cowboy Bebop'],
+            choices: ['Bleach', 'One Piece', 'Dragon Ball', 'Death Note'],
+            duo: ['Bleach', 'One Piece'],
+          }),
+          makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'] }),
+        ],
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Cowboy Bebop', 'typing');
       engine.forceEndRound();
 
       expect(getPlayer(room, 'player-1').answerType).toBe('typing');
@@ -378,6 +409,117 @@ describe('MatchEngine', () => {
       const fast = players.find((p) => String(p.id) === 'player-1');
       expect(fast?.speedRank).toBe(1);
       expect(fast?.speedBonus).toBe(2);
+    });
+  });
+
+  describe('votes — membership and disconnect', () => {
+    it('ignores skip votes from users who are not in the room', async () => {
+      const { engine } = createEngineHarness({
+        playerIds: ['player-1', 'player-2'],
+      });
+      await advanceToGuessing(engine);
+
+      engine.voteSkip('outsider');
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+    });
+
+    it('drops a skip vote when that player disconnects', async () => {
+      const { room, engine, emitted } = createEngineHarness({
+        playerIds: ['player-1', 'player-2', 'player-3'],
+      });
+      await advanceToGuessing(engine);
+
+      engine.voteSkip('player-2');
+      room.markDisconnected('socket-1');
+
+      const skipUpdates = emitted.filter(
+        (e) => e.event === 'vote_update' && (e.payload as { type?: string }).type === 'skip',
+      );
+      const last = skipUpdates[skipUpdates.length - 1]?.payload as { count: number };
+      expect(last.count).toBe(0);
+      expect(engine.getSyncState().phase).toBe('guessing');
+    });
+  });
+
+  describe('Room.forceEndRound', () => {
+    it('ignores skip in multiplayer even from a member', async () => {
+      const { room, engine } = createEngineHarness();
+      await advanceToGuessing(engine);
+
+      room.forceEndRound('player-1');
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+    });
+
+    it('lets a solo member skip the current round', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { maxPlayers: 1, mode: 'solo' },
+        playerIds: ['player-1'],
+      });
+      await advanceToGuessing(engine);
+
+      room.forceEndRound('outsider');
+      expect(engine.getSyncState().phase).toBe('guessing');
+
+      room.forceEndRound('player-1');
+      expect(engine.getSyncState().phase).toBe('reveal');
+    });
+  });
+
+  describe('sync', () => {
+    it('reuses the same peek window across guessing syncs', async () => {
+      const { engine } = createEngineHarness({
+        settings: { videoMode: 'peek' },
+      });
+      await advanceToGuessing(engine);
+
+      const first = engine.getSyncState().round?.peekWindow;
+      const second = engine.getSyncState().round?.peekWindow;
+      expect(first).toBeDefined();
+      expect(second).toEqual(first);
+    });
+
+    it('includes victory data when a finished match is synced', async () => {
+      const { room, engine } = createEngineHarness({
+        playlist: [makePlaylistItem({ id: 1 })],
+        playerIds: ['player-1'],
+        settings: { maxPlayers: 1, mode: 'solo', soundCount: 1 },
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Naruto', 'qcm');
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(room.status).toBe('finished');
+      const sync = room.getSyncState();
+      expect(sync.status).toBe('finished');
+      expect(sync.victoryData).toBeDefined();
+    });
+  });
+
+  describe('fallback notifications', () => {
+    it('emits a toast when the difficulty cascade relaxed the pool', async () => {
+      const { engine, emitted, builder } = createEngineHarness();
+      vi.mocked(builder.build).mockResolvedValue({
+        playlist: [makePlaylistItem({ id: 1 }), makePlaylistItem({ id: 2 })],
+        fallbackUsed: false,
+        difficultyRelaxed: true,
+      });
+
+      await engine.start();
+      await vi.advanceTimersByTimeAsync(1000);
+
+      expect(
+        emitted.some(
+          (e) =>
+            e.event === 'game:fallback_notification' &&
+            String((e.payload as { message: string }).message).includes('difficult'),
+        ),
+      ).toBe(true);
     });
   });
 });

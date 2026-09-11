@@ -4,11 +4,12 @@ import { supabaseAdmin } from '../../lib/supabase';
 import type { TypedServer } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
 import { prepareSuggestionsForAccountDeletion } from '../feedback/suggestionService';
+import { isFreshReauth } from './deleteAccountReauth';
 
 export class DeleteAccountError extends Error {
   constructor(
     message: string,
-    readonly code: 'INVALID_CONFIRMATION' | 'NOT_FOUND' | 'BOT' | 'FAILED',
+    readonly code: 'INVALID_CONFIRMATION' | 'NOT_FOUND' | 'BOT' | 'FAILED' | 'REAUTH_REQUIRED',
   ) {
     super(message);
     this.name = 'DeleteAccountError';
@@ -64,6 +65,17 @@ export const deleteUserAccount = async (opts: {
 
   if (confirmUsername.trim() !== profile.username) {
     throw new DeleteAccountError('Le pseudo de confirmation ne correspond pas.', 'INVALID_CONFIRMATION');
+  }
+
+  const { data: authUser, error: authLookupError } = await supabaseAdmin.auth.admin.getUserById(userId);
+  if (authLookupError || !authUser.user) {
+    throw new DeleteAccountError('Impossible de vérifier la session. Réessaie.', 'FAILED');
+  }
+  if (!isFreshReauth(authUser.user.last_sign_in_at)) {
+    throw new DeleteAccountError(
+      'Veuillez ressaisir votre mot de passe pour confirmer.',
+      'REAUTH_REQUIRED',
+    );
   }
 
   gameManager.ejectUserFromAllRooms(userId, 'Compte supprimé.');

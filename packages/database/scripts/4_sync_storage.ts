@@ -25,6 +25,7 @@ const HARD_TIMEOUT = Number(process.env.WORKER_DOWNLOAD_TIMEOUT_MS ?? 60_000);
 const COMPRESS_TIMEOUT = Number(process.env.WORKER_COMPRESS_TIMEOUT_MS ?? 120_000);
 const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 3);
 const RESET_ERRORS_ON_START = process.env.RESET_ERRORS_ON_START === "true";
+const RETRY_SKIPPED_ON_START = process.env.RETRY_SKIPPED_ON_START === "true";
 // Download retry tuning (AnimeThemes' CDN 503s on bursts — retry with backoff).
 const DOWNLOAD_RETRIES = Number(process.env.WORKER_DOWNLOAD_RETRIES ?? 4);
 const RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? 2000);
@@ -34,6 +35,9 @@ const RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? 2000);
 const SOURCE_INCLUDE = process.env.WORKER_SOURCE_INCLUDE?.trim() || null;
 // Comma-separated videoKeys to mark SKIPPED before processing (e.g. broken encodes).
 const SKIP_VIDEO_KEYS = parseSkipVideoKeys(process.env.WORKER_SKIP_VIDEO_KEYS);
+// Explicit retry escape hatch for automatically skipped files. Exact keys may
+// also retry a file that was previously skipped through WORKER_SKIP_VIDEO_KEYS.
+const RETRY_VIDEO_KEYS = parseSkipVideoKeys(process.env.WORKER_RETRY_VIDEO_KEYS);
 
 const pendingWhere: Prisma.SongWhereInput = {
   downloadStatus: "PENDING",
@@ -209,6 +213,30 @@ async function main() {
 
   installSignalHandler();
   await reclaimStale();
+
+  if (RETRY_SKIPPED_ON_START || RETRY_VIDEO_KEYS.size > 0) {
+    const retryScopes: Prisma.SongWhereInput[] = [];
+    if (RETRY_SKIPPED_ON_START) {
+      // Preserve deliberate operator exclusions during a bulk retry. Target one
+      // of those explicitly with WORKER_RETRY_VIDEO_KEYS when needed.
+      retryScopes.push({
+        errorLog: { not: "Skipped via WORKER_SKIP_VIDEO_KEYS" },
+      });
+    }
+    if (RETRY_VIDEO_KEYS.size > 0) {
+      retryScopes.push({ videoKey: { in: [...RETRY_VIDEO_KEYS] } });
+    }
+
+    const retried = await prisma.song.updateMany({
+      where: {
+        downloadStatus: "SKIPPED",
+        ...(SOURCE_INCLUDE ? { sourceUrl: { contains: SOURCE_INCLUDE } } : {}),
+        OR: retryScopes,
+      },
+      data: { downloadStatus: "PENDING", errorLog: null },
+    });
+    console.log(`♻️  Reset ${retried.count} SKIPPED song(s) -> PENDING for an explicit retry.`);
+  }
 
   if (RESET_ERRORS_ON_START) {
     const errors = await prisma.song.findMany({

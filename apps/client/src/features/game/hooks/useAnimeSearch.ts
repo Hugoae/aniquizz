@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 import {
   GAME_CONFIG,
   getFuzzySuggestions,
+  prepareFuzzyCatalogue,
   normalizePrecision,
   type AnimeSuggestion,
   type FuzzyAnimeCandidate,
@@ -19,7 +20,6 @@ const RETRY_INTERVAL_MS = 2_500;
 const DEBOUNCE_TYPING_MS = 35;
 const DEBOUNCE_DELETING_MS = 200;
 const SEARCH_TIMEOUT_MS = 4_000;
-const LOCAL_CONFIDENT_SCORE = 85;
 
 interface UseAnimeSearchArgs {
   query: string;
@@ -66,9 +66,12 @@ function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
       settled = true;
       clearInterval(retry);
       socket.off('anime:all_names', onAll);
-      cachedCatalogue = list;
+      const prepared = prepareFuzzyCatalogue(list);
+      cachedCatalogue = prepared;
+      buildCataloguePrefixIndex(prepared);
+      getCatalogueFranchiseCounts(prepared);
       inflightCatalogue = null;
-      resolve(list);
+      resolve(prepared);
     };
 
     socket.on('anime:all_names', onAll);
@@ -103,19 +106,15 @@ function runLocalSearch(
     precision === 'franchise' ? getCatalogueFranchiseCounts(catalogue) : undefined;
   const scoped = narrowCatalogueByPrefix(catalogue, prefixIndex, query);
   let next = getFuzzySuggestions(scoped, query, precision, franchiseCounts);
-  const bestScopedScore = next[0]?.score ?? 0;
-  if (
-    (next.length === 0 || bestScopedScore < LOCAL_CONFIDENT_SCORE) &&
-    scoped.length < catalogue.length
-  ) {
+  if (next.length === 0 && scoped.length < catalogue.length) {
     next = getFuzzySuggestions(catalogue, query, precision, franchiseCounts);
   }
   return next;
 }
 
 /**
- * Hybrid autocomplete: instant local fuzzy when the catalogue is cached, with a
- * server `anime:search` fallback until warm-up completes or local results are empty.
+ * Hybrid autocomplete: local fuzzy once the catalogue is cached. Server
+ * `anime:search` is only used while `anime:get_all` is still warming up.
  */
 export function useAnimeSearch({
   query,
@@ -216,14 +215,11 @@ export function useAnimeSearch({
     const frame = window.requestAnimationFrame(() => {
       if (isUsableCatalogue(catalogue)) {
         const local = runLocalSearch(catalogue, debouncedTrimmed, normalizedPrecision);
-        const bestLocalScore = local[0]?.score ?? 0;
-        if (local.length > 0) {
-          startTransition(() => {
-            setSuggestions(local);
-            if (bestLocalScore >= LOCAL_CONFIDENT_SCORE) setIsSearching(false);
-          });
-          if (bestLocalScore >= LOCAL_CONFIDENT_SCORE) return;
-        }
+        startTransition(() => {
+          setSuggestions(local);
+          setIsSearching(false);
+        });
+        return;
       }
 
       if (!socket.connected) {

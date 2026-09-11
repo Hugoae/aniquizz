@@ -57,16 +57,23 @@ export const roadmapData: RoadmapItem[] = [
     date: '2 septembre 2026, v26.4',
   },
   {
-    title: 'Graphiques statistiques (profil)',
+    title: 'Endings',
     description:
-      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles) avec filtre par période.',
-    status: 'planned',
-    date: 'Q3 2026',
+      'Plus de 1800 endings dans le catalogue, 3000 sons au total, et filtre Openings / Endings en partie.',
+    status: 'done',
+    date: '5 septembre 2026, v26.5',
   },
   {
     title: 'Playlists thématiques',
     description:
-      'Sources de sons curated (genres, décennies, packs thématiques) pour varier vos parties.',
+      'Packs staff (shonen, seinen, décennies…) combinables, avec option de limiter aux animes vus.',
+    status: 'done',
+    date: '11 septembre 2026, v26.5',
+  },
+  {
+    title: 'Graphiques statistiques (profil)',
+    description:
+      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles) avec filtre par période.',
     status: 'planned',
     date: 'Q3 2026',
   },

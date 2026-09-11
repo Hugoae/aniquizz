@@ -18,8 +18,12 @@ const settingsSchema = z
     precision: z.preprocess(
       (val) => normalizePrecision(val),
       z.enum(['anime', 'franchise']).default('franchise'),
-    ),    watchedMode: z.enum(['union', 'intersection']).optional(),
+    ),
+    watchedMode: z.enum(['union', 'intersection']).optional(),
     watchedAllowFallback: z.boolean().default(false),
+    playlistId: z.string().uuid().nullable().optional(),
+    decadePlaylistId: z.string().uuid().nullable().optional(),
+    playlistWatched: z.boolean().default(false),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -39,6 +43,13 @@ const settingsSchema = z
         code: z.ZodIssueCode.custom,
         message: 'Sprint requires at least 2 players.',
         path: ['gameType'],
+      });
+    }
+    if (data.soundSelection === 'playlist' && !data.playlistId && !data.decadePlaylistId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'A playlist is required.',
+        path: ['playlistId'],
       });
     }
   });
@@ -63,12 +74,18 @@ export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomS
 
   return {
     ...withSprint,
+    playlistId: withSprint.playlistId ?? undefined,
+    decadePlaylistId: withSprint.decadePlaylistId ?? undefined,
     roomName: name,
     name,
     hostName: meta.hostName,
     hostAvatar: meta.hostAvatar,
   };
 };
+
+const usesWatchedFallback = (settings: RoomSettings): boolean =>
+  settings.soundSelection === 'watched' ||
+  (settings.soundSelection === 'playlist' && Boolean(settings.playlistWatched));
 
 /** Merge a settings patch onto existing settings (host edits), re-validated. */
 export const mergeRoomSettings = (
@@ -81,8 +98,13 @@ export const mergeRoomSettings = (
     hostName: current.hostName ?? 'Hôte',
     hostAvatar: current.hostAvatar ?? 'player1',
   });
-  if (next.soundSelection !== 'watched') {
+  if (!usesWatchedFallback(next)) {
     next.watchedAllowFallback = false;
+  }
+  if (next.soundSelection !== 'playlist') {
+    next.playlistId = undefined;
+    next.decadePlaylistId = undefined;
+    next.playlistWatched = false;
   }
   return next;
 };

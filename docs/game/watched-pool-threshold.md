@@ -21,6 +21,6 @@
 ## Client — multi lobby live updates
 
 - `watchedPlayersKey` (sorted human player ids, bots excluded) is derived from `lobbyPlayers` on every `update_players`.
-- Passed as `refreshKey` to `useWatchedPoolStats` in `MultiplayerLobby`, `GameConfigForm`, and `SourceSection`.
+- Passed as `refreshKey` to `useWatchedPoolStats` in `MultiplayerLobby` and `GameConfigForm` (SourceSection receives those stats as props — one fetch).
 - Host banner under lobby header: playable count + fusion mode + suffisant/insuffisant.
 - On insufficient → sufficient: success toast + silent `patchRoomSettings({ watchedAllowFallback: false })` via `useLobbyController`.

@@ -40,6 +40,8 @@ export interface PersistMatchInput {
   players: PersistPlayerInput[];
   rounds: RecordedRound[];
   songIds: number[];
+  playlistId?: string | null;
+  decadePlaylistId?: string | null;
 }
 
 const toPrismaGameMode = (gameType: 'standard' | 'sprint') =>
@@ -179,6 +181,8 @@ export class MatchRepository {
             endedAt: input.endedAt,
             responseType: toStoredResponseType(input.responseType),
             precision: toStoredPrecision(input.precision),
+            playlistId: input.playlistId ?? undefined,
+            decadePlaylistId: input.decadePlaylistId ?? undefined,
           },
         }),
         prisma.matchPlayer.createMany({

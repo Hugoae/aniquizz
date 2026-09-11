@@ -17,6 +17,7 @@ import { registerLibraryRoutes } from '../routes/library';
 import { registerSuggestionRoutes } from '../routes/suggestions';
 import { registerLeaderboardRoute } from '../routes/leaderboard';
 import { registerAdminRoutes } from '../modules/admin/adminRoutes';
+import { registerPlaylistRoutes } from '../routes/playlists';
 
 export interface ServerBundle {
   app: express.Application;
@@ -50,6 +51,7 @@ export async function createServerBundle(): Promise<ServerBundle> {
   registerHealthRoute(app, io, () => gameManager);
   registerLibraryRoutes(app);
   registerSuggestionRoutes(app);
+  registerPlaylistRoutes(app);
   registerLeaderboardRoute(app);
   registerAdminRoutes(app, io, gameManager);
 

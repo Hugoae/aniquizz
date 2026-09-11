@@ -5,6 +5,12 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { formatDuration, parseRetryAfterMs } from './lib/progress';
 import {
+  createCachedFetcher,
+  expandLockedFranchiseSequels,
+  findSequelEdge,
+  isReleasedAniListStatus,
+} from './lib/anilist-sequel-walk';
+import {
   defaultManualEditsPath,
   franchiseDisplayName,
   loadPipelineLocks,
@@ -128,97 +134,64 @@ function getDifficulty(popularity: number): string {
 }
 
 function isValidStatus(status: string): boolean {
-  return ['FINISHED', 'RELEASING'].includes(status);
+  return isReleasedAniListStatus(status);
 }
 
 async function delay(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function findSequelEdge(media: any) {
-  return media.relations?.edges?.find(
-    (e: any) => e.relationType === 'SEQUEL' && e.node.type === 'ANIME',
-  );
-}
-
-/**
- * Walk SEQUEL edges forward from each seed id (not only the latest by year).
- * Fixes franchises where a movie/OVA after a TV season blocks the main TV chain.
- */
-async function expandLockedFranchiseSequels(
-  franchise: { franchiseName: string; animes: any[] },
-  excludedAnimeIds: Set<number>,
-  lockedAnimeIds: Set<number>,
-): Promise<number> {
-  let newlyAdded = 0;
-
-  for (const seed of franchise.animes) {
-    await delay(DELAY_MS);
-    let current = await fetchWithRetry(seed.id);
-    if (!current) continue;
-
-    let depth = 0;
-    while (current && depth < 15) {
-      depth++;
-      const sequelEdge = findSequelEdge(current);
-      if (!sequelEdge) break;
-
-      const sequelId = sequelEdge.node.id;
-      if (excludedAnimeIds.has(sequelId)) break;
-
-      if (franchise.animes.find((a: any) => a.id === sequelId)) {
-        await delay(DELAY_MS);
-        current = await fetchWithRetry(sequelId);
-        continue;
-      }
-
-      if (lockedAnimeIds.has(sequelId)) {
-        await delay(DELAY_MS);
-        current = await fetchWithRetry(sequelId);
-        continue;
-      }
-
-      process.stdout.write(`   + Nouvelle saison de "${franchise.franchiseName}"... `);
-      await delay(DELAY_MS);
-      const newSeason = await fetchWithRetry(sequelId);
-
-      if (!newSeason) {
-        console.log('Stop (Erreur/Non trouvé)');
-        break;
-      }
-      if (!isValidStatus(newSeason.status)) {
-        console.log(`Stop (Statut: ${newSeason.status})`);
-        break;
-      }
-
-      console.log(`OK (${newSeason.title.romaji})`);
-      franchise.animes.push(normalizeSeason(newSeason));
-      lockedAnimeIds.add(sequelId);
-      newlyAdded++;
-      current = newSeason;
-    }
-  }
-
-  return newlyAdded;
-}
+const ANILIST_TIMEOUT_MS = 20_000;
 
 async function fetchWithRetry(id: number, retries = 3): Promise<any> {
   try {
-    const response = await axios.post('https://graphql.anilist.co', {
-      query: SINGLE_ANIME_QUERY,
-      variables: { id }
-    });
+    const response = await axios.post(
+      'https://graphql.anilist.co',
+      {
+        query: SINGLE_ANIME_QUERY,
+        variables: { id },
+      },
+      { timeout: ANILIST_TIMEOUT_MS },
+    );
     return response.data.data.Media;
   } catch (e: any) {
-    if (e.response && e.response.status === 429 && retries > 0) {
-      const wait = parseRetryAfterMs(e.response.headers, 30000);
-      console.log(`\n🛑 Rate Limit AniList. Pause ${formatDuration(wait)}...`);
+    const status: number | undefined = e.response?.status;
+    // Transient: timeout, DNS/socket error (no HTTP response), or 5xx.
+    const isTransient =
+      e.code === 'ECONNABORTED' || !e.response || (status !== undefined && status >= 500);
+
+    if ((status === 429 || status === 403 || isTransient) && retries > 0) {
+      let wait: number;
+      let label: string;
+      if (status === 429) {
+        wait = parseRetryAfterMs(e.response.headers, 30000);
+        label = 'HTTP 429 (rate limit)';
+      } else if (status === 403) {
+        wait = 15_000;
+        label = 'HTTP 403 (blocked?)';
+      } else {
+        wait = 5_000;
+        label = e.code === 'ECONNABORTED' ? `timeout ${ANILIST_TIMEOUT_MS / 1000}s` : `${status ?? e.code ?? 'network error'}`;
+      }
+      console.log(`\n🛑 AniList ${label} (id=${id}). Retry dans ${formatDuration(wait)}...`);
       await delay(wait);
       return fetchWithRetry(id, retries - 1);
     }
+    if (status === 403) {
+      throw new Error(
+        `AniList HTTP 403 after retries (id=${id}). IP is likely blocked — wait before retrying step 1.`,
+      );
+    }
+    console.warn(`\n⚠️  AniList abandon (id=${id}): ${status ?? e.code ?? 'error'} — ${e.message}`);
     return null;
   }
 }
+
+/** Delay + HTTP only on cache miss — locked sequel walks used to re-fetch every season from every seed. */
+const fetchAniListMedia = createCachedFetcher(async (id: number) => {
+  await delay(DELAY_MS);
+  return fetchWithRetry(id);
+});
 
 /**
  * Converts a raw AniList Media object into the normalized season shape stored
@@ -324,13 +297,20 @@ async function generateCompleteTree() {
   if (lockedFranchises.length > 0 && !SKIP_LOCKED_SEQUELS) {
     console.log("🔓 Recherche de nouvelles saisons pour les franchises verrouillées...");
     let newlyAdded = 0;
+    const lockedTotal = lockedFranchises.length;
 
-    for (const franchise of lockedFranchises) {
+    for (let i = 0; i < lockedTotal; i++) {
+      const franchise = lockedFranchises[i];
       if (!franchise.animes?.length) continue;
+      // Newline logs only: PowerShell treats stdout/stderr as one cursor, so \\r
+      // heartbeats erase "Nouvelle saison / NOT_YET_RELEASED" lines.
+      console.log(`   [${String(i + 1).padStart(3)}/${lockedTotal}] ${franchise.franchiseName}`);
       newlyAdded += await expandLockedFranchiseSequels(
         franchise,
         excludedAnimeIds,
         lockedAnimeIds,
+        fetchAniListMedia,
+        normalizeSeason,
       );
     }
 
@@ -355,8 +335,7 @@ async function generateCompleteTree() {
       }
 
       process.stdout.write(`   + Seed ${id}... `);
-      await delay(DELAY_MS);
-      const fetched = await fetchWithRetry(id);
+      const fetched = await fetchAniListMedia(id);
       if (!fetched) {
         console.log('Stop (Erreur/Non trouvé)');
         continue;
@@ -378,10 +357,14 @@ async function generateCompleteTree() {
     while (allAnimesRaw.length < ANIME_LIMIT) {
       try {
         process.stdout.write(`   Page ${currentPage}... `);
-        const response = await axios.post('https://graphql.anilist.co', {
-          query: LIST_QUERY,
-          variables: { page: currentPage, perPage: ITEMS_PER_PAGE }
-        });
+        const response = await axios.post(
+          'https://graphql.anilist.co',
+          {
+            query: LIST_QUERY,
+            variables: { page: currentPage, perPage: ITEMS_PER_PAGE },
+          },
+          { timeout: ANILIST_TIMEOUT_MS },
+        );
         const media = response.data.data.Page.media;
         if (!media || media.length === 0) break;
 
@@ -434,8 +417,7 @@ async function generateCompleteTree() {
       let prequel = animeMap.get(prequelId);
       if (!prequel) {
         process.stdout.write(`   + Préquelle de ${current.title.romaji}... `);
-        await delay(DELAY_MS);
-        const fetched = await fetchWithRetry(prequelId);
+        const fetched = await fetchAniListMedia(prequelId);
         if (fetched && isValidStatus(fetched.status)) {
           console.log(`OK (${fetched.title.romaji})`);
           prequel = fetched;
@@ -511,8 +493,7 @@ async function generateCompleteTree() {
           }
 
           process.stdout.write(`   + Suite de ${fName}... `);
-          await delay(DELAY_MS);
-          const newAnime = await fetchWithRetry(sequelId);
+          const newAnime = await fetchAniListMedia(sequelId);
 
           if (newAnime && isValidStatus(newAnime.status)) {
             console.log(`OK (${newAnime.title.romaji})`);

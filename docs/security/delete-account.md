@@ -8,6 +8,7 @@ Self-service **right to erasure** for authenticated users. Available from the ow
 2. **Socket** — `profile:delete_account` `{ confirmUsername }` (rate-limited: 3/hour per socket).
 3. **Server** — `deleteUserAccount()` in order:
    - Validate username confirmation (case-sensitive, trimmed)
+   - Require a fresh Supabase sign-in (`last_sign_in_at` within 10 minutes)
    - `gameManager.ejectUserFromAllRooms()` — leave every live lobby/match
    - `prisma.profile.delete` — cascades `Friendship`, `MatchPlayer` → `RoundAnswer`, `SongHistory`, `PlayerAnimeList`
    - Supabase Storage — remove `{userId}/avatar.jpg` if custom upload (best-effort)
@@ -19,7 +20,7 @@ Self-service **right to erasure** for authenticated users. Available from the ow
 | Control | Implementation |
 |---------|----------------|
 | Identity | JWT `userId` from socket auth only — never accept a target id from client |
-| Re-auth | Password verified via Supabase before socket emit |
+| Re-auth | Client `signInWithPassword`, then server checks `last_sign_in_at` within 10 minutes (`isFreshReauth`) |
 | Confirmation | `confirmUsername` must match DB `Profile.username` exactly |
 | Rate limit | `RATE_LIMITS.deleteAccount` (3 attempts / hour / socket) |
 | Bots | `isBotId()` rejected |

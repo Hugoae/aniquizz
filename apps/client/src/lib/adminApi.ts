@@ -1,5 +1,5 @@
 import { supabase } from "./supabase";
-import { env } from "./env";
+import { serverApiBase } from "./env";
 import type { SuggestionAdminUpdateInput, SuggestionItem } from "@aniquizz/shared";
 
 /**
@@ -7,10 +7,7 @@ import type { SuggestionAdminUpdateInput, SuggestionItem } from "@aniquizz/share
  * Supabase access token as a Bearer header; the server enforces roles.
  */
 
-const IS_PROD = import.meta.env.MODE === "production";
-const API_BASE = IS_PROD
-  ? env.VITE_SERVER_URL || "https://aniquizz-server.onrender.com"
-  : "http://localhost:3001";
+const API_BASE = serverApiBase();
 
 async function authHeaders(): Promise<Record<string, string>> {
   const { data } = await supabase.auth.getSession();
@@ -363,6 +360,34 @@ export interface StatsOverview {
   };
 }
 
+export interface AdminThematicPlaylist {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  recipe: unknown;
+  isPublished: boolean;
+  snapshotAt: string | null;
+  snapshotCount: number;
+  sortOrder: number;
+}
+
+export interface PlaylistRecipePreview {
+  songCount: number;
+  yearBreakdown: Array<{ year: number; count: number }>;
+  typeBreakdown: { OP: number; ED: number };
+}
+
+export interface PlaylistUpsertInput {
+  slug: string;
+  name: string;
+  description: string;
+  category: string;
+  sortOrder: number;
+  recipe: unknown;
+}
+
 // --- ENDPOINTS --------------------------------------------------------------
 
 export const adminApi = {
@@ -464,6 +489,32 @@ export const adminApi = {
   createFranchise: (data: FranchiseWrite & { name: string }) =>
     request(`/catalogue/franchises`, { method: "POST", body: JSON.stringify(data) }),
   deleteFranchise: (id: number) => request(`/catalogue/franchises/${id}`, { method: "DELETE" }),
+
+  listPlaylists: () => request<{ playlists: AdminThematicPlaylist[] }>("/playlists"),
+  previewPlaylistRecipe: (recipe: unknown) =>
+    request<PlaylistRecipePreview>("/playlists/preview", {
+      method: "POST",
+      body: JSON.stringify({ recipe }),
+    }),
+  seedPlaylists: (publish = true) =>
+    request<{ seeded: Array<{ slug: string; id: string; snapshotCount: number }> }>("/playlists/seed", {
+      method: "POST",
+      body: JSON.stringify({ publish }),
+    }),
+  createPlaylist: (data: PlaylistUpsertInput) =>
+    request<AdminThematicPlaylist>("/playlists", { method: "POST", body: JSON.stringify(data) }),
+  updatePlaylist: (id: string, data: PlaylistUpsertInput) =>
+    request<AdminThematicPlaylist>(`/playlists/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  publishPlaylist: (id: string) =>
+    request<{ snapshotCount: number; isPublished: boolean }>(`/playlists/${id}/publish`, {
+      method: "POST",
+    }),
+  refreshPlaylist: (id: string) =>
+    request<{ snapshotCount: number }>(`/playlists/${id}/refresh`, { method: "POST" }),
+  deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: "DELETE" }),
 
   // Stats
   stats: () => request<AdminStats>("/stats"),

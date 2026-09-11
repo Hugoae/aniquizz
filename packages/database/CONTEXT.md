@@ -18,6 +18,7 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
 | **status** | Song lifecycle: `PENDING` (metadata only) → `COMPLETED` (media on R2). | schema, step 4 |
 | **`isLocked`** | Freeze flag on Franchise/Anime/Song — preserves manual edits (titles, difficulty) across re-fetches. | schema, `manual_edits.json` |
 | **manual_edits.json** | Source of truth for manual titles/tags/locks; exported from and imported back to the DB. | `data/` |
+| **Thematic playlist** | Staff music pack: JSON recipe resolved into a frozen `ThematicPlaylistSong` snapshot on publish (v26.5). | schema, `scripts/seed_thematic_playlists.ts` |
 | **pipeline_exclusions.json** | Permanent blocklist of anime ids / song ids / videoKeys to never re-add. | `data/` |
 | **Pipeline steps 1–4** | metadata → AnimeThemes match → upsert (PENDING) → download/compress/upload to R2 (COMPLETED). | `scripts/` |
 

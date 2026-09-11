@@ -7,6 +7,7 @@ import { LOBBY_LIST_ROOM } from '../lobby/lobbyRooms';
 import { Room } from './engine/Room';
 import type { BotConfig } from './engine/types';
 import { normalizeRoomSettings } from './settings';
+import { assertPublishedPlaylistSource } from './playlistRecipeService';
 
 /** Detailed live-room projection for the admin panel. */
 export interface AdminRoomProgress {
@@ -68,6 +69,8 @@ const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => 
   responseType: settings.responseType,
   soundSelection: settings.soundSelection,
   videoMode: settings.videoMode,
+  playlistId: settings.playlistId ?? undefined,
+  decadePlaylistId: settings.decadePlaylistId ?? undefined,
 });
 
 // --- IDLE / STALE ROOM POLICY ---------------------------------------------
@@ -468,6 +471,10 @@ export class GameManager {
         hostAvatar: humanHost?.avatar ?? hostBot.avatar,
       },
     );
+    const sourceCheck = await assertPublishedPlaylistSource(settings);
+    if (!sourceCheck.ok) {
+      throw new Error(sourceCheck.reason);
+    }
 
     const room = this.createRoom(humanHost ? humanHost.userId : hostBot.id, settings);
     const botsAdded = this.addBotsToRoom(room.id, opts.botCount, opts.config);

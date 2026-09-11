@@ -7,8 +7,8 @@ export default function Library() {
     <>
       <SeoHead
         title={PAGE_TITLES.library}
-        description="Parcourez le catalogue AniQuizz : openings, endings et inserts. Écoutez les extraits et retrouvez vos découvertes en partie."
-        canonicalPath="/library"
+        description="Parcourez le catalogue AniQuizz : openings et endings. Écoutez les extraits et retrouvez vos découvertes en partie."
+        path="/library"
       />
       <LibraryPageContent />
     </>

@@ -1,51 +1,90 @@
-import { useEffect } from 'react';
-import { Eye, Link2, Shuffle, Lock, Music2, AlertTriangle } from 'lucide-react';
-import type { RoomConfig } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount } from '@aniquizz/shared';
+import { useEffect, useState } from 'react';
+import { Eye, Link2, Shuffle, Music2, AlertTriangle } from 'lucide-react';
+import type { RoomConfig, PlaylistPoolStats, WatchedPoolStats } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
-import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
-import { watchedPoolModeLabel } from './watchedSource';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
+import { watchedPoolModeLabel, showWatchedFusionMode, WATCHED_LIST_UNAVAILABLE, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE, WATCHED_SERVER_OFFLINE } from './watchedSource';
+import { PlaylistPicker } from './PlaylistPicker';
+import { PLAYLISTS_COPY } from './playlistsCopy';
 
 type Source = RoomConfig['soundSelection'];
+type SourceTab = 'random' | 'watched' | 'playlist';
 
 interface SourceSectionProps {
   config: RoomConfig;
   update: (patch: Partial<RoomConfig>) => void;
   isRoom: boolean;
   watchedListLinked?: boolean;
-  /** When set, pool stats resolve the lobby union/intersection instead of solo list. */
-  roomId?: string;
-  /** Lobby roster key — refetches pool stats on join/leave/kick. */
-  watchedPlayersKey?: string;
+  /** Live Watched pool from the parent form (single socket fetch). */
+  watchedPoolStats?: WatchedPoolStats | null;
+  watchedPoolLoading?: boolean;
+  watchedPoolOffline?: boolean;
+  /** Live playlist pool from the parent form (single socket fetch). */
+  playlistPoolStats?: PlaylistPoolStats | null;
+  /** Humans currently in the salon — fusion modes need 2+ lists. */
+  currentPlayersCount?: number;
 }
 
-export function SourceSection({ config, update, isRoom, watchedListLinked = false, roomId, watchedPlayersKey }: SourceSectionProps) {
+export function SourceSection({
+  config,
+  update,
+  isRoom,
+  watchedListLinked = false,
+  watchedPoolStats = null,
+  watchedPoolLoading = false,
+  watchedPoolOffline = false,
+  playlistPoolStats = null,
+  currentPlayersCount = 0,
+}: SourceSectionProps) {
   const source = config.soundSelection;
+  const [tab, setTab] = useState<SourceTab>(source === 'playlist' ? 'playlist' : source === 'watched' ? 'watched' : 'random');
+
+  useEffect(() => {
+    if (source === 'playlist') setTab('playlist');
+    else if (source === 'watched') setTab('watched');
+    else setTab('random');
+  }, [source]);
 
   const setSource = (next: Source) => {
     const patch: Partial<RoomConfig> = { soundSelection: next };
-    if (next !== 'watched') patch.watchedAllowFallback = false;
+    if (next !== 'watched' && !(next === 'playlist' && config.playlistWatched)) {
+      patch.watchedAllowFallback = false;
+    }
+    if (next !== 'playlist') {
+      patch.playlistId = undefined;
+      patch.decadePlaylistId = undefined;
+      patch.playlistWatched = false;
+    }
     update(patch);
+    setTab(next === 'mix' ? 'random' : next);
   };
 
   const watchedEnabled = source === 'watched' && (isRoom || watchedListLinked);
-  const { stats: statsRaw, loading } = useWatchedPoolStats({
-    roomId: isRoom ? roomId : undefined,
-    soundCount: config.soundCount,
-    difficulty: config.difficulty,
-    types: config.soundTypes,
-    watchedMode: config.watchedMode,
-    enabled: watchedEnabled,
-    refreshKey: isRoom ? watchedPlayersKey : undefined,
-  });
-  const stats = withWatchedPoolSoundCount(statsRaw, config.soundCount);
+  const stats = watchedPoolStats;
+  const loading = watchedPoolLoading;
+
+  const playlistTab = tab === 'playlist';
+  const {
+    playlists,
+    loading: playlistsLoading,
+    error: playlistsError,
+    retry: retryPlaylists,
+  } = usePublishedPlaylists(playlistTab);
+  const playlistStats = playlistPoolStats;
 
   useEffect(() => {
     if (!stats || stats.insufficient || !config.watchedAllowFallback) return;
+    if (source !== 'watched') return;
     update({ watchedAllowFallback: false });
-  }, [stats?.insufficient, config.watchedAllowFallback]);
+  }, [stats?.insufficient, config.watchedAllowFallback, source]);
+
+  useEffect(() => {
+    if (!playlistStats || playlistStats.insufficient || !config.watchedAllowFallback) return;
+    if (source !== 'playlist' || !config.playlistWatched) return;
+    update({ watchedAllowFallback: false });
+  }, [playlistStats?.insufficient, config.watchedAllowFallback, source, config.playlistWatched]);
 
   const tabClass = (active: boolean) =>
     cn(
@@ -54,7 +93,8 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
       FOCUS_RING,
     );
 
-  const modeLabel = isRoom
+  const showFusion = showWatchedFusionMode(isRoom, currentPlayersCount);
+  const modeLabel = showFusion
     ? watchedPoolModeLabel(stats?.watchedMode ?? config.watchedMode)
     : 'votre liste';
 
@@ -63,36 +103,40 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
       <SectionHeader
         icon={Eye}
         title="Source des musiques"
-        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (Completed, Watching, On-Hold)."
+        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (Completed, Watching, On-Hold). Playlists = packs staff figés."
       />
 
-      <div role="tablist" aria-label="Source des musiques" className="flex gap-1 rounded-lg bg-secondary/30 p-1">
-        <button type="button" role="tab" aria-selected={source === 'random'} onClick={() => setSource('random')} className={tabClass(source === 'random')}>
+      <div
+        role="tablist"
+        aria-label="Source des musiques"
+        className="flex shrink-0 gap-1 rounded-lg bg-secondary/30 p-1"
+      >
+        <button type="button" role="tab" aria-selected={tab === 'random'} onClick={() => setSource('random')} className={tabClass(tab === 'random')}>
           Aléatoire
         </button>
         <button
           type="button"
           role="tab"
-          aria-selected={source === 'watched'}
+          aria-selected={tab === 'watched'}
           onClick={() => setSource('watched')}
-          className={tabClass(source === 'watched')}
+          className={tabClass(tab === 'watched')}
         >
           Watched
         </button>
         <button
           type="button"
-          disabled
-          aria-disabled="true"
-          className={cn(tabClass(false), 'flex cursor-not-allowed items-center justify-center gap-1.5 opacity-50 hover:text-muted-foreground')}
-          title="Bientôt disponible"
+          role="tab"
+          aria-selected={tab === 'playlist'}
+          onClick={() => setTab('playlist')}
+          className={tabClass(tab === 'playlist')}
         >
-          Playlists <Lock className="h-3 w-3" aria-hidden="true" />
+          {PLAYLISTS_COPY.tab}
         </button>
       </div>
 
-      <div className="min-h-[180px] rounded-xl border border-border/60 bg-card/40 p-2">
-        {source === 'random' && (
-          <div className="flex h-full min-h-[160px] animate-in fade-in zoom-in flex-col items-center justify-center p-4 text-center text-muted-foreground duration-300">
+      <div className="flex h-[22rem] shrink-0 flex-col overflow-hidden rounded-xl border border-border/60 bg-card/40 p-2">
+        {tab === 'random' && (
+          <div className="flex h-full min-h-0 animate-in fade-in zoom-in flex-col items-center justify-center p-4 text-center text-muted-foreground duration-300">
             <div className="mb-3 rounded-full bg-primary/10 p-4">
               <Shuffle className="h-8 w-8 text-primary" aria-hidden="true" />
             </div>
@@ -101,8 +145,8 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
           </div>
         )}
 
-        {source === 'watched' && (
-          <div className="animate-in fade-in zoom-in space-y-4 p-2 duration-300">
+        {tab === 'watched' && (
+          <div className="custom-scrollbar h-full min-h-0 animate-in fade-in zoom-in space-y-4 overflow-y-auto p-2 duration-300">
             <div className="rounded-xl border border-info/20 bg-info/10 p-3 text-xs text-muted-foreground">
               <p className="mb-1 flex items-center gap-2 font-bold text-info">
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste anime
@@ -115,23 +159,32 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
             {watchedEnabled && (
               <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
                 <Music2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
-                {loading || !stats ? (
+                {watchedPoolOffline ? (
+                  <span className="text-destructive">{WATCHED_SERVER_OFFLINE}</span>
+                ) : loading || !stats ? (
                   <span className="text-muted-foreground">Analyse du pool…</span>
                 ) : stats.playableSongs === 0 ? (
                   <span className="text-warning">
-                    Aucun son jouable dans la {modeLabel} pour ces filtres.
+                    {stats.listError === 'anilist_blocked'
+                      ? WATCHED_ANILIST_BLOCKED_MESSAGE
+                      : stats.animeCount === 0
+                        ? WATCHED_LIST_UNAVAILABLE
+                        : `Aucun son jouable dans la ${modeLabel} pour ces filtres.`}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">
                     <b className="text-foreground">{stats.playableSongs}</b> son
                     {stats.playableSongs > 1 ? 's' : ''} jouable{stats.playableSongs > 1 ? 's' : ''}
-                    {isRoom ? ` (${modeLabel})` : ''}
+                    {showFusion ? ` (${modeLabel})` : ''}
                     <span className="text-muted-foreground/70"> — {stats.animeCount} anime{stats.animeCount > 1 ? 's' : ''}</span>
                     {stats.insufficient && !config.watchedAllowFallback && (
                       <span className="text-warning"> — insuffisant pour {stats.soundCount} sons</span>
                     )}
                     {stats.insufficient && config.watchedAllowFallback && (
                       <span className="text-info"> — complétion aléatoire activée</span>
+                    )}
+                    {stats.listError === 'anilist_blocked' && (
+                      <span className="text-warning"> — {WATCHED_ANILIST_STALE_MESSAGE}</span>
                     )}
                   </span>
                 )}
@@ -157,7 +210,7 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
               </div>
             )}
 
-            {isRoom && (
+            {showFusion && (
               <div className="space-y-2">
                 <Label className="text-xs uppercase">Mode de fusion</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -180,6 +233,24 @@ export function SourceSection({ config, update, isRoom, watchedListLinked = fals
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {tab === 'playlist' && (
+          <div className="flex h-full min-h-0 flex-1 flex-col">
+            <PlaylistPicker
+              config={config}
+              update={update}
+              playlists={playlists}
+              loading={playlistsLoading}
+              loadError={Boolean(playlistsError)}
+              loadErrorOffline={playlistsError === 'offline'}
+              onRetry={retryPlaylists}
+              stats={playlistStats}
+              isRoom={isRoom}
+              currentPlayersCount={currentPlayersCount}
+              watchedListLinked={watchedListLinked}
+            />
           </div>
         )}
       </div>

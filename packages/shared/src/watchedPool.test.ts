@@ -22,8 +22,18 @@ describe('withWatchedPoolSoundCount', () => {
     expect(adjusted?.insufficient).toBe(false);
   });
 
-  it('returns stats unchanged when sound count matches', () => {
-    const stats = { animeCount: 10, playableSongs: 6, soundCount: 5, insufficient: false };
-    expect(withWatchedPoolSoundCount(stats, 5)).toBe(stats);
+  it('keeps AniList block metadata when the round count changes', () => {
+    const adjusted = withWatchedPoolSoundCount(
+      {
+        animeCount: 0,
+        playableSongs: 0,
+        soundCount: 20,
+        insufficient: true,
+        listError: 'anilist_blocked',
+      },
+      10,
+    );
+    expect(adjusted?.listError).toBe('anilist_blocked');
+    expect(adjusted?.soundCount).toBe(10);
   });
 });

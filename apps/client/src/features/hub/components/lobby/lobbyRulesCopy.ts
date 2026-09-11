@@ -14,6 +14,7 @@ import {
   buildLobbySettingChips,
 } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
+import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
 import { watchedModeDisplayLabel } from '@/features/hub/components/config/watchedSource';
 
 export type LobbyRulesMode = 'solo' | 'multi';
@@ -22,6 +23,8 @@ export interface LobbyRulesContext {
   lobbyMode: LobbyRulesMode;
   /** Humans in the lobby (multi) — used for vote threshold copy. */
   playerCount?: number;
+  /** Display name of the selected staff playlist, if any. */
+  playlistName?: string;
 }
 
 export interface LobbyRulesSummaryChip {
@@ -127,14 +130,27 @@ const watchedModeExplain = (mode: GameConfig['watchedMode']): string => {
   return `Mode Union : un anime est éligible dès qu'il figure sur la liste liée d'au moins un joueur du salon (${WATCHED_LIST_STATUSES}).`;
 };
 
-const sourceLines = (config: GameConfig, _context: LobbyRulesContext): string[] => {
+const selectedSoundTypesLabel = (types: string[] | undefined): string => {
+  const openings = types?.includes('opening') ?? false;
+  const endings = types?.includes('ending') ?? false;
+  if (openings && endings) return 'openings et endings';
+  if (endings) return 'endings';
+  return 'openings';
+};
+
+const sourceLines = (config: GameConfig, context: LobbyRulesContext): string[] => {
+  const showFusion = context.lobbyMode === 'multi';
+
   if (config.soundSelection === 'watched') {
-    const mode = watchedModeDisplayLabel(config.watchedMode);
-    const lines = [
-      `Source : Ma liste anime (${mode}) — AniList ou MyAnimeList.`,
-      watchedModeExplain(config.watchedMode),
-      'Seuls les openings du catalogue qui correspondent à ces anime peuvent être tirés.',
-    ];
+    const lines = showFusion
+      ? [
+          `Source : Ma liste anime (${watchedModeDisplayLabel(config.watchedMode)}) — AniList ou MyAnimeList.`,
+          watchedModeExplain(config.watchedMode),
+        ]
+      : ['Source : Ma liste anime — AniList ou MyAnimeList.'];
+    lines.push(
+      `Seuls les ${selectedSoundTypesLabel(config.soundTypes)} du catalogue qui correspondent à ces anime peuvent être tirés.`,
+    );
     if (config.watchedAllowFallback) {
       lines.push(
         'Compléter avec l\'aléatoire est activé : si le pool Watched est insuffisant, des sons du catalogue global complètent la playlist (notification en partie).',
@@ -144,7 +160,24 @@ const sourceLines = (config: GameConfig, _context: LobbyRulesContext): string[] 
   }
 
   if (config.soundSelection === 'playlist') {
-    return ['Source : Playlist (bientôt disponible dans une prochaine mise à jour).'];
+    const combined = context.playlistName?.split(' ∩ ').map((part) => part.trim()).filter(Boolean);
+    const sourceLine =
+      combined && combined.length >= 2
+        ? PLAYLISTS_COPY.sourceRulesCombine(combined[0], combined[1])
+        : context.playlistName
+          ? PLAYLISTS_COPY.sourceRules(context.playlistName)
+          : PLAYLISTS_COPY.sourceRulesGeneric;
+    const lines = [
+      sourceLine,
+      `Seuls les ${selectedSoundTypesLabel(config.soundTypes)} du pack (après filtres de difficulté) peuvent être tirés.`,
+      PLAYLISTS_COPY.noOutsideFill,
+    ];
+    if (config.playlistWatched) {
+      lines.push(PLAYLISTS_COPY.overlayRules);
+      if (showFusion) lines.push(watchedModeExplain(config.watchedMode));
+      if (config.watchedAllowFallback) lines.push(PLAYLISTS_COPY.fallbackRules);
+    }
+    return lines;
   }
 
   return [
@@ -221,9 +254,12 @@ const multiLobbyLines = (): string[] => [
   'Vote Suivant : passe à la manche suivante pendant la révélation si une majorité le demande.',
 ];
 
-export function buildLobbyRulesSummaryChips(config: GameConfig): LobbyRulesSummaryChip[] {
+export function buildLobbyRulesSummaryChips(
+  config: GameConfig,
+  playlistName?: string,
+): LobbyRulesSummaryChip[] {
   return [
-    ...buildLobbySettingChips(config),
+    ...buildLobbySettingChips({ ...config, playlistName }),
     {
       key: 'video',
       icon: Eye,
@@ -253,7 +289,7 @@ export function buildLobbyRulesSections(
       id: 'summary',
       title: 'Résumé de la partie',
       intro: config.gameType === 'sprint' ? SPRINT_INTRO : STANDARD_MODE_INTRO,
-      chips: buildLobbyRulesSummaryChips(config),
+      chips: buildLobbyRulesSummaryChips(config, context.playlistName),
     },
     {
       id: 'flow',

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   shuffleArray,
   getFuzzySuggestions,
+  prepareFuzzyCatalogue,
   animeMatchesLibrarySearch,
   isAnswerCorrect,
   getLevenshteinDistance,
@@ -340,6 +341,31 @@ describe('getFuzzySuggestions', () => {
       altNames: [],
     }));
     expect(getFuzzySuggestions(big, 'test', 'anime').length).toBe(20);
+  });
+
+  it('prepared catalogue yields the same ranked labels as the raw path', () => {
+    const prepared = prepareFuzzyCatalogue(list);
+    expect(labels(getFuzzySuggestions(prepared, 'naru', 'franchise'))).toEqual(
+      labels(getFuzzySuggestions(list, 'naru', 'franchise')),
+    );
+    expect(labels(getFuzzySuggestions(prepared, 'blea', 'anime'))).toEqual(
+      labels(getFuzzySuggestions(list, 'blea', 'anime')),
+    );
+    expect(labels(getFuzzySuggestions(prepared, 'ga', 'anime'))).toEqual(
+      labels(getFuzzySuggestions(list, 'ga', 'anime')),
+    );
+    const snk: FuzzyAnimeCandidate[] = [
+      { name: 'Attack on Titan', franchise: 'Attack on Titan', altNames: ['SnK', 'AoT'] },
+      { name: 'Attack on Titan Season 2', franchise: 'Attack on Titan', altNames: ['SnK 2'] },
+      {
+        name: 'Shingeki no Kyojin Gaiden: Kuinaki Sentaku',
+        franchise: 'Shingeki no Kyojin Gaiden: Kuinaki Sentaku',
+        altNames: ['Attack on Titan: No Regrets'],
+      },
+    ];
+    expect(labels(getFuzzySuggestions(prepareFuzzyCatalogue(snk), 'attack', 'franchise'))).toEqual(
+      labels(getFuzzySuggestions(snk, 'attack', 'franchise')),
+    );
   });
 });
 

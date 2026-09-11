@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Users, Search, Lock, Play, RefreshCw } from 'lucide-react';
 import type { RoomListItem } from '@aniquizz/shared';
+import { playlistSourceDisplayName } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -8,6 +9,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
 interface RoomListProps {
   rooms: RoomListItem[];
@@ -27,6 +29,7 @@ const FILTER_BUTTONS: { id: FilterType; label: string }[] = [
 export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
   const [filter, setFilter] = useState<FilterType>('all');
   const { friends } = useFriends();
+  const { playlists } = usePublishedPlaylists(true);
 
   const friendRoomIds = useMemo(
     () => new Set(friends.map((f) => f.roomId).filter((id): id is string => !!id)),
@@ -89,7 +92,11 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
           const isFull = room.players >= room.maxPlayers;
           const isPlaying = room.status === 'playing';
           const s = room.settings;
-          const settingChips = buildLobbySettingChips(s);
+          const settingChips = buildLobbySettingChips({
+            ...s,
+            soundSelection: s.soundSelection as 'random' | 'mix' | 'watched' | 'playlist',
+            playlistName: playlistSourceDisplayName(playlists, s),
+          });
 
           return (
             <div

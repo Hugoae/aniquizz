@@ -15,11 +15,14 @@ async function main() {
   const manualEditsPath = defaultManualEditsPath(__dirname);
 
   try {
-    const [franchises, animes, songs, completed] = await Promise.all([
+    const [franchises, animes, songs, completed, skipped, errors, pending] = await Promise.all([
       prisma.franchise.count(),
       prisma.anime.count(),
       prisma.song.count(),
       prisma.song.count({ where: { downloadStatus: 'COMPLETED' } }),
+      prisma.song.findMany({ where: { downloadStatus: 'SKIPPED' }, select: { videoKey: true, errorLog: true }, orderBy: { videoKey: 'asc' } }),
+      prisma.song.findMany({ where: { downloadStatus: 'ERROR' }, select: { videoKey: true, errorLog: true }, orderBy: { videoKey: 'asc' } }),
+      prisma.song.count({ where: { downloadStatus: 'PENDING' } }),
     ]);
 
     const result = await loadPipelineLocks({ manualEditsPath, prisma });
@@ -27,7 +30,7 @@ async function main() {
 
     console.log('Pipeline lock check');
     console.log('====================');
-    console.log(`Catalogue in DB   : ${franchises} franchise(s), ${animes} anime(s), ${songs} song(s) (${completed} playable)`);
+    console.log(`Catalogue in DB   : ${franchises} franchise(s), ${animes} anime(s), ${songs} song(s) (${completed} COMPLETED, ${pending} PENDING, ${skipped.length} SKIPPED, ${errors.length} ERROR)`);
     console.log(`manual_edits.json : ${manualEditsPath}`);
     console.log(`Lock source       : ${result.source}`);
     console.log(`Locked franchises : ${result.lockedFranchises.length}`);
@@ -54,6 +57,20 @@ async function main() {
       console.log('\nPermanently excluded videoKeys (steps 2–3 will never re-add):');
       for (const key of [...exclusions.videoKeys].sort()) {
         console.log(`  - ${key}`);
+      }
+    }
+
+    if (skipped.length > 0) {
+      console.log(`\nSKIPPED songs (${skipped.length}) — use WORKER_RETRY_VIDEO_KEYS or RETRY_SKIPPED_ON_START=true to retry:`);
+      for (const s of skipped) {
+        console.log(`  - ${s.videoKey}  |  ${(s.errorLog ?? '').slice(0, 90)}`);
+      }
+    }
+
+    if (errors.length > 0) {
+      console.log(`\nERROR songs (${errors.length}) — will be retried on next run with RESET_ERRORS_ON_START=true:`);
+      for (const s of errors) {
+        console.log(`  - ${s.videoKey}  |  ${(s.errorLog ?? '').slice(0, 90)}`);
       }
     }
 

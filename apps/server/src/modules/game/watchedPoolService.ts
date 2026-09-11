@@ -1,6 +1,21 @@
-import { countPlayableWatchedSongs, type SongFilters } from './gameService';
+import {
+  ANILIST_API_DOWN_MESSAGE,
+  hasEnoughQcmNames,
+  normalizePrecision,
+  resolvePoolQueryFilters,
+} from '@aniquizz/shared';
+import {
+  countDistinctChoiceNames,
+  countPlayableWatchedSongs,
+  listPlayableAnimeIds,
+  type SongFilters,
+} from './gameService';
 import type { Room } from './engine/Room';
-import { resolveWatchedIds, type WatchedPoolPlayerInput } from '../lists/watchedPoolResolve';
+import { resolveWatchedPool, type WatchedPoolPlayerInput } from '../lists/watchedPoolResolve';
+
+const QCM_TOO_SMALL_REASON =
+  'Pas assez d\'animes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
+  'Passez en Typing ou élargissez les filtres.';
 
 export type WatchedPoolPlayer = WatchedPoolPlayerInput;
 export { resolveWatchedIds } from '../lists/watchedPoolResolve';
@@ -10,15 +25,27 @@ export const getWatchedPoolStatsForPlayers = async (
   players: WatchedPoolPlayer[],
   songFilters: Pick<SongFilters, 'difficulty' | 'types'>,
   soundCount: number,
+  precision?: string,
 ) => {
-  const watchedIds = await resolveWatchedIds(watchedMode, players);
-  const playableSongs = await countPlayableWatchedSongs(watchedIds, songFilters);
+  const { ids: watchedIds, listError } = await resolveWatchedPool(watchedMode, players);
+  const resolvedFilters = resolvePoolQueryFilters(songFilters);
+  const playableSongs = await countPlayableWatchedSongs(watchedIds, resolvedFilters);
+  const playableAnimeIds = await listPlayableAnimeIds({
+    ...resolvedFilters,
+    watchedIds,
+  });
+  const distinctNames = await countDistinctChoiceNames(
+    normalizePrecision(precision),
+    playableAnimeIds,
+  );
   return {
     animeCount: watchedIds.length,
     playableSongs,
     soundCount,
     insufficient: playableSongs < soundCount,
+    distinctNames,
     watchedMode,
+    listError,
   };
 };
 
@@ -41,15 +68,18 @@ export const validateWatchedStart = async (
     players,
     { difficulty: settings.difficulty, types: settings.soundTypes },
     settings.soundCount,
+    settings.precision,
   );
 
   if (stats.playableSongs === 0) {
     return {
       ok: false,
       reason:
-        settings.watchedMode === 'intersection'
-          ? 'Aucun son jouable en mode Commun pour ces filtres.'
-          : 'Aucun son jouable dans votre liste pour ces filtres. Liez AniList ou MyAnimeList, ou changez la source.',
+        stats.listError === 'anilist_blocked'
+          ? ANILIST_API_DOWN_MESSAGE
+          : settings.watchedMode === 'intersection'
+            ? 'Aucun son jouable en mode Commun pour ces filtres.'
+            : 'Aucun son jouable dans votre liste pour ces filtres. Liez AniList ou MyAnimeList, ou changez la source.',
     };
   }
 
@@ -64,6 +94,10 @@ export const validateWatchedStart = async (
         `Seulement ${stats.playableSongs} son${stats.playableSongs > 1 ? 's' : ''} jouable${stats.playableSongs > 1 ? 's' : ''}${modeHint} pour ${stats.soundCount} demandé${stats.soundCount > 1 ? 's' : ''}. ` +
         'Activez « Compléter avec l\'aléatoire » ou réduisez le nombre de sons.',
     };
+  }
+
+  if (!hasEnoughQcmNames(stats.distinctNames, settings.responseType ?? 'mix')) {
+    return { ok: false, reason: QCM_TOO_SMALL_REASON };
   }
 
   return { ok: true };

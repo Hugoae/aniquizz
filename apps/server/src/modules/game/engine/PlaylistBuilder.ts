@@ -5,28 +5,32 @@ import {
   formatSongTypeLabel,
   normalizePrecision,
   normalizeSongStartMode,
+  playlistSourceIds,
   type Precision,
   type RoomSettings,
   type SongStartMode,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
-import { getChoiceCandidates, getRandomSongs, type SelectedSong, type SongFilters } from '../gameService';
+import { getChoiceCandidates, getRandomSongs, listPlayableAnimeIds, type SelectedSong, type SongFilters } from '../gameService';
+import { loadPlaylistPoolScope } from '../playlistRecipeService';
 import { resolveWatchedIds } from '../watchedPoolService';
 import type { PlaylistItem, RoomPlayer } from './types';
 
-export type PlaylistAbortReason = 'watched_empty' | 'no_songs';
+export type PlaylistAbortReason = 'watched_empty' | 'no_songs' | 'playlist_empty' | 'playlist_missing';
 
 export interface BuiltPlaylist {
   playlist: PlaylistItem[];
   fallbackUsed: boolean;
+  /** True when fetchWithFallback had to climb past the host's difficulty filter. */
+  difficultyRelaxed?: boolean;
   /** Set when the build failed for a known reason (empty playlist). */
   abortReason?: PlaylistAbortReason;
 }
 
 /**
  * Builds the full playlist for a match at start time:
- * resolves the Watched pool, selects songs, and pre-generates every round's
- * QCM/duo choices so the round loop never touches the DB.
+ * resolves the Watched pool / thematic snapshot, selects songs, and pre-generates
+ * every round's QCM/duo choices so the round loop never touches the DB.
  */
 export class PlaylistBuilder {
   async build(
@@ -34,9 +38,26 @@ export class PlaylistBuilder {
     players: RoomPlayer[],
     options?: { excludePriorMatchSongIds?: number[] },
   ): Promise<BuiltPlaylist> {
-    const isWatchedMode = settings.soundSelection === 'watched';
-    let watchedIds: number[] | undefined;
+    const isPlaylist = settings.soundSelection === 'playlist';
+    const playlistWatched = isPlaylist && Boolean(settings.playlistWatched);
+    const isWatchedMode = settings.soundSelection === 'watched' || playlistWatched;
 
+    let playlistIds: string[] | undefined;
+    let snapshotAnimeIds: number[] | undefined;
+
+    if (isPlaylist) {
+      const ids = playlistSourceIds(settings);
+      if (!ids.length) {
+        return { playlist: [], fallbackUsed: false, abortReason: 'playlist_missing' };
+      }
+      const scope = await loadPlaylistPoolScope(ids);
+      if (!scope || !scope.isPublished || scope.liveCount === 0) {
+        return { playlist: [], fallbackUsed: false, abortReason: 'playlist_empty' };
+      }
+      playlistIds = scope.playlistIds;
+    }
+
+    let watchedIds: number[] | undefined;
     if (isWatchedMode) {
       watchedIds = await resolveWatchedIds(
         settings.watchedMode ?? 'union',
@@ -47,15 +68,17 @@ export class PlaylistBuilder {
           malUsername: p.malUsername,
         })),
       );
-      if (!watchedIds.length) {
+      if (!watchedIds.length && !(playlistWatched && settings.watchedAllowFallback)) {
         return { playlist: [], fallbackUsed: false, abortReason: 'watched_empty' };
       }
+      if (!watchedIds.length) watchedIds = undefined;
     }
 
     const filters: SongFilters = {
       difficulty: settings.difficulty,
       types: settings.soundTypes,
       watchedIds,
+      playlistIds,
       allowWatchedFallback: settings.watchedAllowFallback ?? false,
       excludePriorMatchSongIds: options?.excludePriorMatchSongIds,
     };
@@ -64,16 +87,34 @@ export class PlaylistBuilder {
     const needsChoices = (settings.responseType ?? 'mix') !== 'typing';
 
     const startedAt = Date.now();
+    const overlayRestrictsChoices = playlistWatched && Boolean(watchedIds?.length) && !settings.watchedAllowFallback;
     const [songsResult, candidatePool] = await Promise.all([
       getRandomSongs(settings.soundCount || 10, filters),
       needsChoices
-        ? getChoiceCandidates(precision, isWatchedMode ? watchedIds : undefined)
+        ? (async () => {
+            if (playlistIds) {
+              snapshotAnimeIds = await listPlayableAnimeIds({
+                playlistIds,
+                ...(overlayRestrictsChoices ? { watchedIds } : {}),
+              });
+            }
+            return getChoiceCandidates(
+              precision,
+              this.choiceAnimeIds(
+                isWatchedMode,
+                watchedIds,
+                snapshotAnimeIds,
+                playlistWatched,
+                settings.watchedAllowFallback,
+              ),
+            );
+          })()
         : Promise.resolve<string[]>([]),
     ]);
-    const { songs, fallbackUsed, priorMatchReuse } = songsResult;
+    const { songs, fallbackUsed, priorMatchReuse, difficultyRelaxed } = songsResult;
 
     if (!songs.length) {
-      return { playlist: [], fallbackUsed, abortReason: 'no_songs' };
+      return { playlist: [], fallbackUsed, difficultyRelaxed, abortReason: 'no_songs' };
     }
 
     const guessDuration = settings.guessDuration || 20;
@@ -84,11 +125,29 @@ export class PlaylistBuilder {
 
     logger.info(
       `[PlaylistBuilder] Built ${playlist.length} rounds in ${Date.now() - startedAt}ms ` +
-        `(precision=${precision}, choices=${needsChoices}, watched=${isWatchedMode}, fallback=${fallbackUsed}, priorReuse=${priorMatchReuse}, songStart=${songStartMode}).`,
+        `(precision=${precision}, choices=${needsChoices}, watched=${isWatchedMode}, playlist=${isPlaylist}, fallback=${fallbackUsed}, difficultyRelaxed=${difficultyRelaxed}, priorReuse=${priorMatchReuse}, songStart=${songStartMode}).`,
       'Playlist',
     );
 
-    return { playlist, fallbackUsed };
+    return { playlist, fallbackUsed, difficultyRelaxed };
+  }
+
+  private choiceAnimeIds(
+    isWatchedMode: boolean,
+    watchedIds: number[] | undefined,
+    snapshotAnimeIds: number[] | undefined,
+    playlistWatched: boolean,
+    allowFallback: boolean | undefined,
+  ): number[] | undefined {
+    if (snapshotAnimeIds) {
+      if (playlistWatched && watchedIds?.length && !allowFallback) {
+        const watched = new Set(watchedIds);
+        return snapshotAnimeIds.filter((id) => watched.has(id));
+      }
+      return snapshotAnimeIds;
+    }
+    if (isWatchedMode) return watchedIds;
+    return undefined;
   }
 
   private toPlaylistItem(

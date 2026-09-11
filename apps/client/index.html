@@ -7,7 +7,7 @@
     <meta name="color-scheme" content="dark" />
 
     <title>AniQuizz - Le Blindtest d'Anime</title>
-    <meta name="description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
+    <meta name="description" content="Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis." />
     <meta name="author" content="AniQuizz" />
     <meta name="application-name" content="AniQuizz" />
     <meta name="apple-mobile-web-app-title" content="AniQuizz" />
@@ -34,7 +34,7 @@
     <link rel="icon" href="/favicon.ico" />
 
     <meta property="og:title" content="AniQuizz - Le Blindtest d'Anime" />
-    <meta property="og:description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
+    <meta property="og:description" content="Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis." />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:site_name" content="AniQuizz" />
@@ -43,10 +43,10 @@
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="AniQuizz - Le Blindtest d'Anime" />
-    <meta name="twitter:description" content="Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur." />
+    <meta name="twitter:description" content="Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis." />
     <meta name="twitter:image" content="https://aniquizz.com/android-chrome-512x512.png" />
 
-    <!-- Static JSON-LD for crawlers (React Helmet duplicates at runtime). -->
+    <!-- Static JSON-LD for crawlers (React Helmet duplicates at runtime). Keep in sync with homeJsonLd(). -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -55,7 +55,8 @@
             "@type": "Organization",
             "@id": "https://aniquizz.com/#organization",
             "name": "AniQuizz",
-            "url": "https://aniquizz.com/",
+            "alternateName": "AniQuiz",
+            "url": "https://aniquizz.com",
             "logo": {
               "@type": "ImageObject",
               "url": "https://aniquizz.com/android-chrome-512x512.png",
@@ -67,20 +68,32 @@
             "@type": "WebSite",
             "@id": "https://aniquizz.com/#website",
             "name": "AniQuizz",
-            "alternateName": ["Blindtest anime", "Blindtest d'anime"],
-            "url": "https://aniquizz.com/",
-            "description": "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.",
+            "alternateName": ["AniQuiz", "Blindtest anime", "Blindtest d'anime", "aniquizz.com"],
+            "url": "https://aniquizz.com",
+            "description": "Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis.",
             "publisher": { "@id": "https://aniquizz.com/#organization" },
-            "inLanguage": "fr-FR"
+            "inLanguage": "fr-FR",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://aniquizz.com/library?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
           },
           {
             "@type": "VideoGame",
             "name": "AniQuizz",
-            "url": "https://aniquizz.com/",
-            "description": "Blindtest anime en ligne. Testez votre culture anime. Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.",
+            "alternateName": "AniQuiz",
+            "url": "https://aniquizz.com",
+            "description": "Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis.",
             "applicationCategory": "Game",
+            "genre": ["Quiz", "Music"],
+            "playMode": ["SinglePlayer", "MultiPlayer"],
             "operatingSystem": "Web browser",
             "inLanguage": "fr-FR",
+            "isAccessibleForFree": true,
             "offers": {
               "@type": "Offer",
               "price": "0",
@@ -118,11 +131,11 @@
               <div class="app-shell-hero-inner">
                 <div class="app-shell-eyebrow">
                   <span class="app-shell-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                  <span>Devine l'anime rien qu'à sa musique</span>
+                  <span>+ de 3&nbsp;000 sons jouables</span>
                 </div>
                 <h1 class="app-shell-title">Testez votre <span>culture anime</span></h1>
                 <p class="app-shell-sub">
-                  Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
+                  Devinez l'opening ou l'ending. Solo ou multijoueur.
                 </p>
                 <div class="app-shell-ctas" aria-hidden="true">
                   <div class="app-shell-cta-primary">Jouer</div>
@@ -153,10 +166,10 @@
                     </div>
                     <div class="app-shell-news-card-body">
                       <div class="app-shell-news-card-top">
-                        <h3>Mise à jour v26.4 - Classement, favoris, idées et nouvelle Librairie</h3>
-                        <span class="app-shell-news-card-date">2 sept.</span>
+                        <h3>Mise à jour v26.5 - Endings, playlists thématiques et 3000 sons</h3>
+                        <span class="app-shell-news-card-date">11 sept.</span>
                       </div>
-                      <p class="app-shell-news-card-desc">Cinq classements à vie, titres favoris, boîte à idées communautaire, et une Librairie en trois vues.</p>
+                      <p class="app-shell-news-card-desc">Plus de 1800 endings, packs thématiques (shonen, seinen, décennies…), overlay Watched, et filtre Openings / Endings.</p>
                     </div>
                       <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                   </article>
@@ -166,10 +179,10 @@
                     </div>
                     <div class="app-shell-news-card-body">
                       <div class="app-shell-news-card-top">
-                        <h3>Mise à jour v26.3 - Sprint, config plein écran et polish</h3>
-                        <span class="app-shell-news-card-date">14 juil.</span>
+                        <h3>Mise à jour v26.4 - Classement, sons favoris, suggestions et Update Librairie</h3>
+                        <span class="app-shell-news-card-date">2 sept.</span>
                       </div>
-                      <p class="app-shell-news-card-desc">Nouveau mode multijoueur Sprint (course à la vitesse), configuration de partie en plein écran, recap lobby solo, chips de réglages unifiés, et autocomplétion typing plus fluide.</p>
+                      <p class="app-shell-news-card-desc">Cinq classements à vie, titres favoris, boîte à idées communautaire, et une Librairie en trois vues.</p>
                     </div>
                       <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
                   </article>
@@ -179,7 +192,7 @@
           </div>
         </main>
 
-        <div class="app-shell-version">v26.4</div>
+        <div class="app-shell-version">v26.5</div>
       </div>
     </div>
 

@@ -6,15 +6,21 @@ import { cn } from '@/lib/utils';
 
 import type { User } from '@supabase/supabase-js';
 import type { GameConfig, RoomConfig } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount, hasWatchedListLink } from '@aniquizz/shared';
+import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasWatchedListLink, hasPlaylistSource } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 import { RoomSettingsSection } from './config/RoomSettingsSection';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { AdvancedSection } from './config/AdvancedSection';
-import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
+import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE, WATCHED_SERVER_OFFLINE } from './config/watchedSource';
+import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playlistSource';
+import { PLAYLISTS_COPY } from './config/playlistsCopy';
+import { ConfigPoolCard } from './config/ConfigPoolCard';
+import { resolveConfigPoolPreview } from './config/configPoolPreview';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
+import { useCataloguePoolStats } from '@/features/hub/hooks/useCataloguePoolStats';
 import {
   buildConfigSections,
   defaultSectionId,
@@ -77,19 +83,69 @@ export function GameConfigForm<T extends GameConfig>({
 
   const noTypes = (cfg.soundTypes?.length ?? 0) === 0;
   const missingPassword = showRoomSettings && cfg.isPrivate && !cfg.password;
-  const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile);
-  const { stats: watchedStatsRaw } = useWatchedPoolStats({
+  const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile, cfg.playlistWatched);
+  const playlistBlocked = isPlaylistSourceBlocked(cfg.soundSelection, cfg.playlistId, cfg.decadePlaylistId);
+  const { stats: watchedStatsRaw, loading: watchedLoading, offline: watchedOffline } = useWatchedPoolStats({
     roomId,
     soundCount: cfg.soundCount,
     difficulty: cfg.difficulty,
     types: cfg.soundTypes,
     watchedMode: cfg.watchedMode,
+    precision: cfg.precision,
     enabled: cfg.soundSelection === 'watched' && (isRoom || hasWatchedListLink(profile ?? {})),
     refreshKey: isRoom ? watchedPlayersKey : undefined,
   });
   const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, cfg.soundCount);
-  const watchedPoolCheck = checkWatchedPoolLaunch(cfg.soundSelection, watchedStats, cfg.watchedAllowFallback);
-  const submitDisabled = noTypes || missingPassword || watchedBlocked || watchedPoolCheck.blocked;
+  const watchedPoolCheck = checkWatchedPoolLaunch(
+    cfg.soundSelection,
+    watchedStats,
+    cfg.watchedAllowFallback,
+    cfg.responseType,
+  );
+  const { stats: catalogueStats, loading: catalogueLoading } = useCataloguePoolStats({
+    soundCount: cfg.soundCount,
+    difficulty: cfg.difficulty,
+    types: cfg.soundTypes,
+    enabled: cfg.soundSelection === 'random' || cfg.soundSelection === 'mix',
+  });
+  const { stats: playlistStatsRaw, loading: playlistLoading } = usePlaylistPoolStats({
+    playlistId: cfg.playlistId,
+    decadePlaylistId: cfg.decadePlaylistId,
+    roomId,
+    soundCount: cfg.soundCount,
+    difficulty: cfg.difficulty,
+    types: cfg.soundTypes,
+    playlistWatched: cfg.playlistWatched,
+    watchedMode: cfg.watchedMode,
+    precision: cfg.precision,
+    allowFallback: cfg.watchedAllowFallback,
+    enabled: cfg.soundSelection === 'playlist' && hasPlaylistSource(cfg),
+    refreshKey: isRoom ? watchedPlayersKey : `${cfg.playlistId ?? ''}:${cfg.decadePlaylistId ?? ''}`,
+  });
+  const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, cfg.soundCount) ?? null;
+  const playlistPoolCheck = checkPlaylistPoolLaunch(
+    cfg.soundSelection,
+    cfg.responseType,
+    playlistStats,
+    cfg.watchedAllowFallback,
+  );
+  const poolPreview = resolveConfigPoolPreview({
+    soundSelection: cfg.soundSelection,
+    catalogue: catalogueStats,
+    catalogueLoading,
+    watched: watchedStats ?? null,
+    watchedLoading,
+    playlist: playlistStats,
+    playlistLoading,
+  });
+  const submitDisabled =
+    noTypes ||
+    missingPassword ||
+    watchedBlocked ||
+    playlistBlocked ||
+    watchedPoolCheck.blocked ||
+    playlistPoolCheck.blocked ||
+    (cfg.soundSelection === 'watched' && watchedOffline);
 
   const submitLabel = isRoom ? (currentPlayersCount > 0 ? 'Mettre à jour' : 'Créer le salon') : 'Lancer la partie';
 
@@ -132,6 +188,8 @@ export function GameConfigForm<T extends GameConfig>({
             );
           })}
         </nav>
+
+        <ConfigPoolCard preview={poolPreview} />
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -155,8 +213,11 @@ export function GameConfigForm<T extends GameConfig>({
               update={update}
               isRoom={isRoom}
               watchedListLinked={hasWatchedListLink(profile ?? {})}
-              roomId={roomId}
-              watchedPlayersKey={watchedPlayersKey}
+              watchedPoolStats={watchedStats ?? null}
+              watchedPoolLoading={watchedLoading}
+              watchedPoolOffline={watchedOffline}
+              playlistPoolStats={playlistStats}
+              currentPlayersCount={currentPlayersCount}
             />
           )}
           {safeActiveSection === 'advanced' && <AdvancedSection config={cfg} update={update} />}
@@ -182,9 +243,24 @@ export function GameConfigForm<T extends GameConfig>({
               {WATCHED_SOURCE_BLOCK_MESSAGE}
             </p>
           )}
-          {!watchedBlocked && watchedPoolCheck.blocked && watchedPoolCheck.reason && (
+          {playlistBlocked && !watchedBlocked && (
+            <p className="text-center text-sm font-medium text-destructive" role="alert">
+              {PLAYLISTS_COPY.choosePack}
+            </p>
+          )}
+          {cfg.soundSelection === 'watched' && watchedOffline && !watchedBlocked && (
+            <p className="text-center text-sm font-medium text-destructive" role="alert">
+              {WATCHED_SERVER_OFFLINE}
+            </p>
+          )}
+          {!watchedBlocked && !playlistBlocked && !watchedOffline && watchedPoolCheck.blocked && watchedPoolCheck.reason && (
             <p className="text-center text-sm font-medium text-destructive" role="alert">
               {watchedPoolCheck.reason}
+            </p>
+          )}
+          {!watchedBlocked && !playlistBlocked && playlistPoolCheck.blocked && playlistPoolCheck.reason && (
+            <p className="text-center text-sm font-medium text-destructive" role="alert">
+              {playlistPoolCheck.reason}
             </p>
           )}
         </div>

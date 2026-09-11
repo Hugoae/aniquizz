@@ -1,6 +1,6 @@
 import { Trophy, Zap, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
-import { withWatchedPoolSoundCount, hasWatchedListLink } from '@aniquizz/shared';
+import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasWatchedListLink, hasPlaylistSource, playlistSourceDisplayName } from '@aniquizz/shared';
 
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,11 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/features/auth/context/AuthContext';
 import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE } from '@/features/hub/components/config/watchedSource';
+import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from '@/features/hub/components/config/playlistSource';
+import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
+import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
 import { SoloLobbyRecap } from '@/features/hub/components/lobby/SoloLobbyRecap';
 import { soloLobbyModeBadge } from '@/features/hub/components/lobby/soloLobbyRecapGroups';
@@ -43,13 +47,24 @@ export function SoloReady({
   onLeave,
   onOpenSettings,
 }: SoloReadyProps) {
-  const watchedBlocked = isWatchedSourceBlocked(gameSettings?.soundSelection ?? 'random', user, profile);
+  const watchedBlocked = isWatchedSourceBlocked(
+    gameSettings?.soundSelection ?? 'random',
+    user,
+    profile,
+    gameSettings?.playlistWatched,
+  );
+  const playlistBlocked = isPlaylistSourceBlocked(
+    gameSettings?.soundSelection ?? 'random',
+    gameSettings?.playlistId,
+    gameSettings?.decadePlaylistId,
+  );
   const { stats: watchedStatsRaw } = useWatchedPoolStats({
     roomId,
     soundCount: gameSettings?.soundCount,
     difficulty: gameSettings?.difficulty,
     types: gameSettings?.soundTypes,
     watchedMode: gameSettings?.watchedMode,
+    precision: gameSettings?.precision,
     enabled: gameSettings?.soundSelection === 'watched' && hasWatchedListLink(profile ?? {}),
   });
   const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, gameSettings?.soundCount);
@@ -57,8 +72,32 @@ export function SoloReady({
     gameSettings?.soundSelection ?? 'random',
     watchedStats,
     gameSettings?.watchedAllowFallback,
+    gameSettings?.responseType,
   );
-  const canPlay = !isLaunchStarting && !watchedBlocked && !poolCheck.blocked;
+  const { playlists } = usePublishedPlaylists(gameSettings?.soundSelection === 'playlist');
+  const playlistName = playlistSourceDisplayName(playlists, gameSettings ?? {});
+  const { stats: playlistStatsRaw } = usePlaylistPoolStats({
+    playlistId: gameSettings?.playlistId,
+    decadePlaylistId: gameSettings?.decadePlaylistId,
+    roomId,
+    soundCount: gameSettings?.soundCount,
+    difficulty: gameSettings?.difficulty,
+    types: gameSettings?.soundTypes,
+    playlistWatched: gameSettings?.playlistWatched,
+    watchedMode: gameSettings?.watchedMode,
+    precision: gameSettings?.precision,
+    allowFallback: gameSettings?.watchedAllowFallback,
+    enabled: gameSettings?.soundSelection === 'playlist' && hasPlaylistSource(gameSettings ?? {}),
+  });
+  const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
+  const playlistPoolCheck = checkPlaylistPoolLaunch(
+    gameSettings?.soundSelection ?? 'random',
+    gameSettings?.responseType ?? 'mix',
+    playlistStats,
+    gameSettings?.watchedAllowFallback,
+  );
+  const canPlay =
+    !isLaunchStarting && !watchedBlocked && !playlistBlocked && !poolCheck.blocked && !playlistPoolCheck.blocked;
   const modeBadge = gameSettings ? soloLobbyModeBadge(gameSettings) : 'Standard · Solo';
   const ModeIcon = gameSettings?.gameType === 'sprint' ? Zap : Trophy;
 
@@ -108,9 +147,13 @@ export function SoloReady({
             <div className="glass-card flex flex-col gap-5 p-5 md:p-6">
               {gameSettings && (
                 <>
-                  <SoloLobbyRecap config={gameSettings} />
+                  <SoloLobbyRecap config={gameSettings} playlistName={playlistName} />
                   <div className="flex justify-center border-t border-border/60 pt-4">
-                    <LobbyRulesTrigger config={gameSettings} context={{ lobbyMode: 'solo' }} subtle />
+                    <LobbyRulesTrigger
+                      config={gameSettings}
+                      context={{ lobbyMode: 'solo', playlistName }}
+                      subtle
+                    />
                   </div>
                 </>
               )}
@@ -141,9 +184,19 @@ export function SoloReady({
                     {WATCHED_SOURCE_BLOCK_MESSAGE}
                   </p>
                 )}
-                {!watchedBlocked && poolCheck.blocked && poolCheck.reason && (
+                {playlistBlocked && !watchedBlocked && (
+                  <p className="text-center text-sm font-medium text-destructive" role="alert">
+                    {PLAYLISTS_COPY.choosePack}
+                  </p>
+                )}
+                {!watchedBlocked && !playlistBlocked && poolCheck.blocked && poolCheck.reason && (
                   <p className="text-center text-sm font-medium text-destructive" role="alert">
                     {poolCheck.reason}
+                  </p>
+                )}
+                {!watchedBlocked && !playlistBlocked && playlistPoolCheck.blocked && playlistPoolCheck.reason && (
+                  <p className="text-center text-sm font-medium text-destructive" role="alert">
+                    {playlistPoolCheck.reason}
                   </p>
                 )}
 

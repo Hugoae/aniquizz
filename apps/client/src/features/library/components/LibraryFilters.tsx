@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
   LIBRARY_COPY,
+  LIBRARY_SONG_TYPE_OPTIONS,
   LIBRARY_SORT_OPTIONS,
   LIBRARY_VIEW_OPTIONS,
 } from '@/features/library/copy/libraryCopy';
@@ -22,12 +23,6 @@ import {
   libraryDifficultyFilterClass,
   libraryDifficultyLabel,
 } from '@/features/library/lib/libraryStyles';
-
-const TYPE_OPTIONS: Array<{ value: LibrarySongType; label: string }> = [
-  { value: 'OP', label: LIBRARY_COPY.typeOp },
-  { value: 'ED', label: LIBRARY_COPY.typeEd },
-  { value: 'INSERT', label: LIBRARY_COPY.typeInsert },
-];
 
 const DIFFICULTY_OPTIONS: LibraryDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 
@@ -191,7 +186,7 @@ export function LibraryFilters({
               role="group"
               aria-label={LIBRARY_COPY.filterSectionTypes}
             >
-              {TYPE_OPTIONS.map((opt) => {
+              {LIBRARY_SONG_TYPE_OPTIONS.map((opt) => {
                 const active = songTypes.includes(opt.value);
                 return (
                   <Button

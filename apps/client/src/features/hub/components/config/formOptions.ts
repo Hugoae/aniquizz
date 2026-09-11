@@ -34,7 +34,7 @@ export interface SoundTypeOption {
 
 export const SOUND_TYPES: SoundTypeOption[] = [
   { id: 'opening', label: 'Openings', icon: Music2, disabled: false },
-  { id: 'ending', label: 'Endings', icon: Disc, disabled: true },
+  { id: 'ending', label: 'Endings', icon: Disc, disabled: false },
 ];
 
 /** Difficulty tiers, each with its semantic "active" token styling. */

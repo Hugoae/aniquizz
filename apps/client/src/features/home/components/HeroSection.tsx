@@ -30,23 +30,23 @@ export function HeroSection() {
           )}
         >
           
-          {/* Eyebrow — the audio signature made literal */}
-          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-secondary/60 border border-border mb-5 backdrop-blur-sm">
+          {/* Eyebrow */}
+          <div className="mb-5 inline-flex items-center gap-2.5 rounded-full border border-border bg-secondary/60 px-4 py-2 backdrop-blur-sm">
             <span className="eq h-3 text-aqua" aria-hidden="true">
               <i></i><i></i><i></i><i></i>
             </span>
-            <span className="text-sm font-medium text-muted-foreground">Devine l'anime rien qu'à sa musique</span>
+            <span className="text-sm font-medium text-muted-foreground">{HOME_COPY.eyebrow}</span>
           </div>
 
           {/* Main Heading */}
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-[1.05] text-balance">
-            Testez votre{' '}
-            <span className="gradient-text">culture anime</span>
+            {HOME_COPY.titleLead}{' '}
+            <span className="gradient-text">{HOME_COPY.titleAccent}</span>
           </h1>
 
           {/* Subheading */}
           <p className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto px-4">
-            Devinez l'anime à partir de la musique. Défiez vos amis et prouvez que vous êtes le meilleur.
+            {HOME_COPY.sub}
           </p>
 
           {/* CTA Buttons */}

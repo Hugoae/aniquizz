@@ -5,8 +5,9 @@ import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
 import type { Room } from '../game/engine/Room';
 import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
+import { assertPublishedPlaylistSource } from '../game/playlistRecipeService';
 import { resolvePlayerCatalogueIds } from '../lists/listResolver';
-import { hasWatchedListLink } from '@aniquizz/shared';
+import { hasWatchedListLink, toClientRoomSettings } from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { BotConfig } from '../game/engine/types';
 import { LOBBY_LIST_ROOM } from './lobbyRooms';
@@ -14,12 +15,17 @@ import { LOBBY_LIST_ROOM } from './lobbyRooms';
 /** Balanced default behaviour for lobby-spawned dev bots. */
 const DEV_BOT_CONFIG: BotConfig = { accuracy: 0.7, minDelayMs: 2_000, maxDelayMs: 8_000 };
 
+/** Watched source, or a thematic pack with the Watched overlay. */
+const roomUsesWatchedPool = (room: Room): boolean =>
+  room.settings.soundSelection === 'watched' ||
+  (room.settings.soundSelection === 'playlist' && Boolean(room.settings.playlistWatched));
+
 /**
  * Warm a player's watched list (AniList or MAL) while they sit in the lobby so
  * match-start playlist build hits the in-memory cache. Fire-and-forget.
  */
 const warmWatchedList = async (room: Room, userId: string): Promise<void> => {
-  if (room.settings.soundSelection !== 'watched') return;
+  if (!roomUsesWatchedPool(room)) return;
   const player = room.players.get(userId);
   if (!player || player.isBot) return;
 
@@ -41,7 +47,7 @@ const warmWatchedList = async (room: Room, userId: string): Promise<void> => {
 
 /** Warm every human player's watched list (e.g. when a room switches to Watched). */
 const warmWatchedListForRoom = (room: Room): void => {
-  if (room.settings.soundSelection !== 'watched') return;
+  if (!roomUsesWatchedPool(room)) return;
   for (const player of room.players.values()) {
     if (!player.isBot) void warmWatchedList(room, player.userId);
   }
@@ -55,7 +61,7 @@ export const registerLobbyHandlers = (
   const uid = (): string => socket.data.userId as string;
   const broadcastRooms = () => gameManager.broadcastRoomList();
 
-  const createLobby = (payload: CreateLobbyInput) => {
+  const createLobby = async (payload: CreateLobbyInput) => {
     try {
       const username = payload.username || socket.data.username || 'Joueur';
       const avatar = payload.avatar || 'player1';
@@ -67,6 +73,11 @@ export const registerLobbyHandlers = (
         hostName: username,
         hostAvatar: avatar,
       });
+      const sourceCheck = await assertPublishedPlaylistSource(settings);
+      if (!sourceCheck.ok) {
+        socket.emit('error', { message: sourceCheck.reason });
+        return;
+      }
 
       const room = gameManager.createRoom(uid(), settings);
       socket.join(room.id);
@@ -86,7 +97,7 @@ export const registerLobbyHandlers = (
       socket.emit('lobby:joined', {
         roomId: room.id,
         userId: uid(),
-        settings: room.settings,
+        settings: toClientRoomSettings(room.settings, { includePassword: true }),
         isHost: true,
         players: room.toPublicPlayers(),
         status: room.status,
@@ -149,7 +160,7 @@ export const registerLobbyHandlers = (
       socket.emit('lobby:joined', {
         roomId: room.id,
         userId: uid(),
-        settings: room.settings,
+        settings: toClientRoomSettings(room.settings, { includePassword: uid() === room.hostId }),
         isHost: uid() === room.hostId,
         players: room.toPublicPlayers(),
         status: room.status,
@@ -162,7 +173,7 @@ export const registerLobbyHandlers = (
     }
   };
 
-  const updateRoomSettings = (payload: { roomId: string; settings: unknown }) => {
+  const updateRoomSettings = async (payload: { roomId: string; settings: unknown }) => {
     const room = gameManager.getRoom(payload.roomId);
     if (!room || uid() !== room.hostId) return;
     const next = mergeRoomSettings(room.settings, payload.settings);
@@ -177,10 +188,21 @@ export const registerLobbyHandlers = (
       });
     }
 
-    const wasWatched = room.settings.soundSelection === 'watched';
-    room.applySettings(uid(), next);
-    // Newly switched to Watched → warm every player's list now, not at start.
-    if (!wasWatched && next.soundSelection === 'watched') warmWatchedListForRoom(room);
+    const sourceCheck = await assertPublishedPlaylistSource(next);
+    if (!sourceCheck.ok) {
+      socket.emit('error', { message: sourceCheck.reason });
+      return;
+    }
+
+    const wasWatchedPool = roomUsesWatchedPool(room);
+    if (!room.applySettings(uid(), next)) {
+      socket.emit('error', {
+        message: 'Impossible de modifier les paramètres pendant le lancement.',
+      });
+      return;
+    }
+    // Newly switched to Watched (or playlist overlay) → warm lists now, not at start.
+    if (!wasWatchedPool && roomUsesWatchedPool(room)) warmWatchedListForRoom(room);
     logger.info(`[Lobby] Settings updated for room ${room.id}`, 'Lobby');
     broadcastRooms();
   };
@@ -254,7 +276,7 @@ export const registerLobbyHandlers = (
   };
 
   socket.on('lobby:create', guard(socket, 'lobby:create', RATE_LIMITS.createLobby, createLobby));
-  socket.on('lobby:join', requireAuth(socket, joinLobby));
+  socket.on('lobby:join', guard(socket, 'lobby:join', RATE_LIMITS.joinLobby, joinLobby, { byIp: true }));
   socket.on('get_rooms', getRooms);
   socket.on('lobby:subscribe_list', subscribeRoomList);
   socket.on('lobby:unsubscribe_list', unsubscribeRoomList);

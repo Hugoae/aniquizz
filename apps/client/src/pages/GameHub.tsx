@@ -84,7 +84,6 @@ function PlayHomePage() {
     lobbyPlayers,
     currentRoomId,
     isAmIHost,
-    mySocketId,
     gameStatus,
     isLaunchStarting,
     multiplayerCount,
@@ -132,7 +131,7 @@ function PlayHomePage() {
             players={lobbyPlayers}
             maxPlayers={roomConfig.maxPlayers}
             isHost={isAmIHost}
-            currentUserId={user?.id || mySocketId}
+            currentUserId={user?.id ?? ''}
             gameSettings={roomConfig}
             roomCode={currentRoomId}
             gameStatus={gameStatus}

@@ -26,6 +26,15 @@ export interface GameConfig {
   watchedMode?: 'union' | 'intersection';
   /** When true in Watched mode, the host opted in to fill missing rounds from the global catalogue. */
   watchedAllowFallback?: boolean;
+  /** Staff thematic playlist id when `soundSelection === 'playlist'`. Null clears a previous id. */
+  playlistId?: string | null;
+  /** Optional decade pack combined with `playlistId` (snapshot intersection). Null clears it. */
+  decadePlaylistId?: string | null;
+  /**
+   * When true with a playlist source, intersect the pack with AniList/MAL lists.
+   * Fallback (if opted in) fills from the rest of the pack, never the global catalogue.
+   */
+  playlistWatched?: boolean;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */

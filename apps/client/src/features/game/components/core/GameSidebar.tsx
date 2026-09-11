@@ -37,7 +37,7 @@ interface GameSidebarProps {
 const formatTime = (timestamp: number) => new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hideScores, phase, roomId, currentUserId, attentionSignal }: GameSidebarProps) {
-  const meId = currentUserId ?? socket.id;
+  const meId = currentUserId;
   const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);

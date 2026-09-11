@@ -7,6 +7,7 @@ import type { GamePlayer } from './types';
 import type { UserRole } from './roles';
 import type { AnimeSuggestion } from './utils';
 import type { WatchedPoolStats } from './watchedPool';
+import type { CataloguePoolStats, PlaylistPoolStats } from './playlist';
 import type { Precision } from './game';
 import type {
   AnswerType,
@@ -171,6 +172,10 @@ export interface ServerToClientEvents {
   watched_count: (payload: { listSize: number; playableSongs: number }) => void;
   /** Resolved Watched pool stats (solo list or lobby union/intersection). */
   'watched:pool_stats': (payload: WatchedPoolStats) => void;
+  /** Playlist source pool stats (pack ± Watched overlay). */
+  'playlist:pool_stats': (payload: PlaylistPoolStats) => void;
+  /** Random-source catalogue pool (OP/ED + difficulty). */
+  'catalogue:pool_stats': (payload: CataloguePoolStats) => void;
 
   // Chat / profile / general
   'chat:message': (message: ChatMessage) => void;
@@ -247,6 +252,28 @@ export interface ClientToServerEvents {
     difficulty?: string[];
     types?: string[];
     watchedMode?: 'union' | 'intersection';
+    precision?: string;
+  }) => void;
+  /** Resolves playlist pool stats (snapshot ± decade overlay ± lobby filters ± Watched). */
+  'playlist:get_pool_stats': (payload: {
+    playlistId?: string | null;
+    decadePlaylistId?: string | null;
+    roomId?: string;
+    soundCount?: number;
+    difficulty?: string[];
+    types?: string[];
+    playlistWatched?: boolean;
+    watchedMode?: 'union' | 'intersection';
+    precision?: string;
+    allowFallback?: boolean;
+    requestId?: number;
+  }) => void;
+  /** Resolves random-source catalogue counts for current OP/ED + difficulty. */
+  'catalogue:get_pool_stats': (payload?: {
+    soundCount?: number;
+    difficulty?: string[];
+    types?: string[];
+    requestId?: number;
   }) => void;
   /** Server-side anime autocomplete search (legacy per-keystroke path). */
   'anime:search': (payload: AnimeSearchInput) => void;

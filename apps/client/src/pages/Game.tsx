@@ -22,11 +22,13 @@ import {
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink, maxSprintPointsPerRound } from '@aniquizz/shared';
+import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink, maxSprintPointsPerRound, playlistSourceDisplayName } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { parseGameNavState } from '@/features/game/gameNavState';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
+import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
+import { sourceChipValue } from '@/features/hub/components/roomSettings';
 
 type InputMode = 'typing' | 'carre' | 'duo';
 type GameMode = 'solo' | 'multiplayer';
@@ -58,6 +60,7 @@ export default function Game() {
     initialFirstVideo: initialState.gameData?.firstVideo ?? null,
     initialVideoMode: normalizeVideoMode(settings.videoMode),
     watchedListLinked: hasWatchedListLink(profile ?? {}),
+    isSolo: gameMode === 'solo',
     onCancelled: () => navigate('/play', { state: { returnToLobby: true, roomId }, replace: true }),
     onClosed: (reason) => {
       if (isBanSanctionReason(reason)) {
@@ -213,16 +216,24 @@ export default function Game() {
     if (!isSprint && activeSettings.responseType === 'mix') setInputMode('duo');
   }, [isSprint, activeSettings.responseType]);
 
+  const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
+  const playlistName = playlistSourceDisplayName(playlists, settings);
+
   const configBadges = useMemo(() => ({
-    sourceLabel: settings.soundSelection === 'watched' ? 'Watched' : 'Aléatoire',
+    sourceLabel: sourceChipValue(settings.soundSelection, playlistName),
     difficultyLabel: Array.isArray(settings.difficulty) && settings.difficulty.length === 1
       ? settings.difficulty[0]
       : 'Varié',
     precisionLabel: getPrecisionChipLabel(settings.precision),
     modeLabel: 'Standard',
-  }), [settings.soundSelection, settings.difficulty, settings.precision]);
+  }), [settings.soundSelection, settings.difficulty, settings.precision, playlistName]);
 
-  const gameOverSettings = state.matchSettings ?? settings;
+  const gameOverSettings = {
+    ...settings,
+    ...(state.matchSettings ?? {}),
+    playlistId: state.matchSettings?.playlistId ?? settings.playlistId,
+    decadePlaylistId: state.matchSettings?.decadePlaylistId ?? settings.decadePlaylistId,
+  };
 
   if (phase === 'ended') {
     if (!state.victoryData) {

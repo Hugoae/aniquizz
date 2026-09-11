@@ -7,17 +7,8 @@ import {
   formatRevealSeasonYear,
   isRevealAccentColor,
   revealAccentStyle,
+  REVEAL_TAG_TONES,
 } from '@/features/game/lib/revealMeta';
-
-// Decorative genre tags cycle through the token palette (no raw colors).
-const TAG_TONES = [
-  'bg-primary/10 text-primary border-primary/20',
-  'bg-accent/10 text-accent border-accent/20',
-  'bg-aqua/10 text-aqua border-aqua/20',
-  'bg-info/10 text-info border-info/20',
-  'bg-success/10 text-success border-success/20',
-  'bg-warning/10 text-warning border-warning/20',
-];
 
 interface SongInfoCardProps {
   animeName: string;
@@ -203,7 +194,7 @@ export function SongInfoCard({
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {metaPills}
             {tags?.slice(0, 3).map((tag, i) => (
-              <span key={tag} className={cn('hidden rounded border px-1.5 py-0.5 text-[9px] font-medium sm:inline', TAG_TONES[i % TAG_TONES.length])}>
+              <span key={tag} className={cn('hidden rounded border px-1.5 py-0.5 text-[9px] font-medium sm:inline', REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length])}>
                 {tag}
               </span>
             ))}
@@ -256,7 +247,7 @@ export function SongInfoCard({
         {tags && tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {tags.slice(0, 6).map((tag, i) => (
-              <span key={tag} className={cn('whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-medium', TAG_TONES[i % TAG_TONES.length])}>
+              <span key={tag} className={cn('whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-medium', REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length])}>
                 {tag}
               </span>
             ))}

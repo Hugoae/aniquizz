@@ -171,7 +171,7 @@ Typical JSON sizes at emit time (empty catalogue / 4-player multi / 10 rounds):
 | `rooms_update` | 0.3–3 kB | Trimmed settings; scales with public room count; targeted fan-out |
 | `friends:presence` | <0.3 kB | Per friend notification |
 | `anime:all_names` | 5–50 kB (scales with catalogue) | Full `FuzzyAnimeCandidate[]` once per session; replaces per-keystroke traffic |
-| `anime:search_results` | *(legacy handler, unused by client)* | Server still exposes `anime:search` but the SPA no longer calls it since 26.2.1 |
+| `anime:search_results` | Warm-up only | Used until `anime:all_names` is cached; skipped once local search is ready |
 
 The full `anime_list` transport (scaled with catalogue size) was removed in 10.8;
 autocomplete now costs one small request/response per keystroke instead of one
@@ -204,13 +204,13 @@ Catalogue snapshot at measurement: **434 songs (all COMPLETED), 265 animes, 91 f
 
 The full `anime_list` transport (scaled with catalogue size) was removed in 10.8.
 **26.2.1** reverted autocomplete to a **single bulk download + local fuzzy** (see below);
-the per-keystroke `anime:search` path is no longer used by the client.
+the per-keystroke `anime:search` path is only used while the bulk catalogue is still warming up.
 
 ### Axis 1 — autocomplete (10.8 server search → 26.2.1 client fuzzy)
 
 **10.8 (superseded for in-game UX):** the client sent a debounced `anime:search { requestId, query, precision }`; the server ran `getFuzzySuggestions` over its cached name list and returned ≤5 ranked matches per keystroke.
 
-**26.2.1 (current):** `useAnimeSearch` fetches the catalogue **once** per session via `anime:get_all` → `anime:all_names`, caches it module-side (with retry on reconnect), then runs `getFuzzySuggestions` **locally on every keystroke** — instant suggestions, no per-keystroke network round-trip. The fuzzy logic (`getFuzzySuggestions`) is unchanged and still fully unit-tested in `packages/shared`. The server `anime:search` handler remains for backward compatibility but is not called by the current client.
+**26.2.1 (current):** `useAnimeSearch` fetches the catalogue **once** per session via `anime:get_all` → `anime:all_names`, then `prepareFuzzyCatalogue` (normalized fields + franchise labels) and a 2-char prefix index. Each keystroke scans the prefix-scoped rows locally. Full-catalogue fuzzy runs only when that scope has **zero** hits (e.g. first letters are a typo). `anime:search` is used only until the bulk list is cached.
 
 ### Axis 2 — playlist build
 

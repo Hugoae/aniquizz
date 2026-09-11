@@ -8,7 +8,7 @@ import { z } from "zod";
 const envSchema = z.object({
   VITE_SUPABASE_URL: z.string().url("VITE_SUPABASE_URL must be a valid URL"),
   VITE_SUPABASE_ANON_KEY: z.string().min(1, "VITE_SUPABASE_ANON_KEY is required"),
-  // Optional: falls back to localhost in dev / Render URL in prod (see socket.ts).
+  // Optional: falls back to localhost in dev / Render URL in prod (see serverApiBase).
   VITE_SERVER_URL: z.string().url().optional(),
   // Optional but required for media playback (Cloudflare R2 public base URL).
   VITE_R2_PUBLIC_URL: z.string().url().optional(),
@@ -29,3 +29,11 @@ if (!parsed.success) {
 }
 
 export const env = parsed.data;
+
+const IS_PROD = import.meta.env.MODE === "production";
+const FALLBACK_PROD_SERVER = "https://aniquizz-server.onrender.com";
+
+/** Shared HTTP/socket origin for the Express API (dev localhost, prod Render). */
+export const serverApiBase = (): string =>
+  IS_PROD ? env.VITE_SERVER_URL || FALLBACK_PROD_SERVER : "http://localhost:3001";
+

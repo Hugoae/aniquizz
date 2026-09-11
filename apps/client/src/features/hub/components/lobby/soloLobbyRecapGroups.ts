@@ -44,7 +44,10 @@ function soundTypeChips(types: string[] | undefined): SettingChipSpec[] {
 }
 
 /** Grouped solo pre-game recap — mirrors GameForm sections (Partie / Réponse / Musique / Vidéo). */
-export function buildSoloLobbyRecapGroups(config: GameConfig): SoloLobbyRecapGroup[] {
+export function buildSoloLobbyRecapGroups(
+  config: GameConfig,
+  playlistName?: string | null,
+): SoloLobbyRecapGroup[] {
   const difficultyBadge = getDifficultyBadge(config.difficulty ?? []);
   const videoMode = normalizeVideoMode(config.videoMode);
 
@@ -109,7 +112,10 @@ export function buildSoloLobbyRecapGroups(config: GameConfig): SoloLobbyRecapGro
           key: 'source',
           icon: Shuffle,
           label: '',
-          value: SOURCE_LABELS[config.soundSelection],
+          value:
+            config.soundSelection === 'playlist'
+              ? (playlistName?.trim() || SOURCE_LABELS.playlist)
+              : SOURCE_LABELS[config.soundSelection],
           className: SETTING_CHIP_NEUTRAL,
         },
       ],

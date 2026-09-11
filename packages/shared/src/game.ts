@@ -38,6 +38,19 @@ export interface RoomSettings extends RoomConfig {
   name: string;
 }
 
+/**
+ * Guest-facing room settings. The join password stays on the server (and is
+ * sent only to the host) so `lobby:joined` / `room_updated` cannot leak it.
+ */
+export function toClientRoomSettings(
+  settings: RoomSettings,
+  opts: { includePassword?: boolean } = {},
+): RoomSettings {
+  if (opts.includePassword) return settings;
+  if (!settings.password) return settings;
+  return { ...settings, password: '' };
+}
+
 // --- SONG / PLAYLIST ---
 /** Public per-round song info sent to clients at reveal (no answer leaks). */
 export interface RevealSong {
@@ -217,6 +230,8 @@ export type MatchSettingsSnapshot = Pick<
   | 'soundSelection'
   | 'videoMode'
   | 'songStartMode'
+  | 'playlistId'
+  | 'decadePlaylistId'
 >;
 
 export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
@@ -230,6 +245,8 @@ export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot
     soundSelection: settings.soundSelection,
     videoMode: settings.videoMode,
     songStartMode: settings.songStartMode,
+    playlistId: settings.playlistId ?? undefined,
+    decadePlaylistId: settings.decadePlaylistId ?? undefined,
   };
 }
 
@@ -280,6 +297,8 @@ export interface RoomListSettingsSummary {
   responseType: ResponseType;
   soundSelection: string;
   videoMode?: VideoMode;
+  playlistId?: string;
+  decadePlaylistId?: string;
 }
 
 export interface RoomListItem {

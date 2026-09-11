@@ -33,6 +33,7 @@ packages/database/
     ├── reset_all.ts            <-- DANGER: wipe DB catalogue + empty R2 bucket + delete local JSON
     ├── seed_db.ts              <-- Reset + refill catalogue metadata from JSON (no downloads)
     ├── seed_dev_catalogue.ts   <-- DEV: quickly put a few playable openings on R2 (COMPLETED)
+    ├── seed_thematic_playlists.ts <-- v26.5: upsert staff packs + freeze COMPLETED snapshots
     ├── set_video_cache_control.ts <-- One-off: backfill immutable Cache-Control on all R2 objects
     └── lib/                    <-- r2-client, media (ffmpeg), song-helpers, pipeline-schemas (zod)
 ```
@@ -87,6 +88,31 @@ after a major new season release; you may miss freshly published sequels.
 resolved AnimeThemes sources and skip any stale ones (e.g. rows left over from
 the retired Supabase storage bucket).
 
+To retry rows already marked `SKIPPED`, use an explicit retry flag. Targeting
+keys is safest; bulk retry requeues every automatically skipped row while
+preserving deliberate `WORKER_SKIP_VIDEO_KEYS` exclusions:
+
+```powershell
+# Retry selected files — PowerShell, from packages/database
+$env:WORKER_RETRY_VIDEO_KEYS = "OnePiece-21-ED25.mp4,AnotherAnime-123-ED1.mp4"
+$env:WORKER_SOURCE_INCLUDE = "animethemes.moe"
+pnpm exec ts-node .\scripts\4_sync_storage.ts
+Remove-Item Env:WORKER_RETRY_VIDEO_KEYS
+Remove-Item Env:WORKER_SOURCE_INCLUDE
+
+# Or retry all automatically skipped AnimeThemes files
+$env:RETRY_SKIPPED_ON_START = "true"
+$env:WORKER_SOURCE_INCLUDE = "animethemes.moe"
+pnpm exec ts-node .\scripts\4_sync_storage.ts
+Remove-Item Env:RETRY_SKIPPED_ON_START
+Remove-Item Env:WORKER_SOURCE_INCLUDE
+```
+
+These flags reset matching rows to `PENDING` and clear `errorLog` immediately
+before the normal worker starts. If the source is still corrupt or ffmpeg still
+cannot decode it, the row returns to `ERROR`; a later run with
+`RESET_ERRORS_ON_START=true` will classify it as `SKIPPED` again.
+
 Or run the whole thing in one shot:
 
 ```bash
@@ -106,6 +132,60 @@ The AnimeThemes cache stores **every** theme (OP + ED) regardless of this
 setting, so switching from `OP` to `OP,ED` later only re-parses the cache — no
 re-fetch. Step 2 picks the best video per theme (creditless first, then highest
 resolution) and records the episode range into `Song.episodeRange`.
+
+### Targeted AnimeThemes fetches
+
+Step 2 is unlocked-only by default, preserving the historical full-pipeline
+behavior. Explicit selection modes may enrich locked anime without unlocking or
+overwriting their metadata:
+
+| Goal | Environment |
+|------|-------------|
+| All unlocked anime (default) | no selector |
+| All anime, including locked | `ANIMETHEMES_INCLUDE_LOCKED=1` |
+| Exact AniList ids | `ANIMETHEMES_TARGET_IDS=16498,101922` |
+| Live AniList top N | `ANIMETHEMES_TOP_LIMIT=100` |
+| Current exported DB snapshot as input | `ANIMETHEMES_INPUT_FILE=manual_edits.json` |
+| Preview only | `ANIMETHEMES_DRY_RUN=1` |
+
+`ANIMETHEMES_TOP_LIMIT` queries AniList live with `POPULARITY_DESC`, then keeps
+the first N eligible anime present in the selected input. Intentionally excluded
+or absent ids are printed and replaced by the next ranked entries. Top and exact
+id selectors cannot be combined. `ANIMETHEMES_DRY_RUN=1` performs the AniList
+selection but makes no AnimeThemes request and writes neither the cache nor
+`data_step2.json`.
+
+For a locked production catalogue, use the latest exported
+`manual_edits.json` directly. Example: fetch every ending for the 100 most
+popular eligible anime:
+
+```powershell
+# PowerShell — run from packages/database
+$env:ANIMETHEMES_INPUT_FILE = "manual_edits.json"
+$env:ANIMETHEMES_TOP_LIMIT = "100"
+$env:SONG_TYPES = "ED"
+$env:ANIMETHEMES_DRY_RUN = "1"
+pnpm exec ts-node .\scripts\2_fetch_animethemes.ts
+
+# Apply after reviewing the selected ids
+Remove-Item Env:ANIMETHEMES_DRY_RUN
+pnpm exec ts-node .\scripts\2_fetch_animethemes.ts
+pnpm exec ts-node .\scripts\3_load_initial_data.ts
+
+$env:WORKER_SOURCE_INCLUDE = "animethemes.moe"
+pnpm exec ts-node .\scripts\4_sync_storage.ts
+pnpm r2:scan
+
+Remove-Item Env:ANIMETHEMES_INPUT_FILE
+Remove-Item Env:ANIMETHEMES_TOP_LIMIT
+Remove-Item Env:SONG_TYPES
+Remove-Item Env:WORKER_SOURCE_INCLUDE
+```
+
+Step 2 replaces only the selected anime's song list in `data_step2.json`.
+Step 3 does not delete omitted songs: it creates missing `(animeId, songType,
+sequence)` rows, keeps completed R2 URLs, and still respects locked anime
+metadata and existing locked songs.
 
 ### Enriched metadata
 
@@ -160,6 +240,22 @@ npx ts-node scripts/export_db_to_json.ts   # dump DB -> data/manual_edits.json
 # edit titles / tags / difficulty / isLocked in the JSON
 npx ts-node scripts/import_edits_to_db.ts  # apply edits back to the DB
 ```
+
+When `manual_edits.json` already contains local changes, **do not export first**:
+an export would overwrite those changes. Back up, import, verify, then export
+the normalized DB snapshot:
+
+```powershell
+# PowerShell — run from packages/database
+Copy-Item .\data\manual_edits.json .\data\manual_edits.before-import.json
+pnpm exec ts-node .\scripts\import_edits_to_db.ts
+pnpm pipeline:check-locks
+pnpm exec ts-node .\scripts\export_db_to_json.ts
+```
+
+The import updates rows with known ids and never deletes missing rows. Songs
+without ids are ignored. It is not wrapped in one global transaction, so keep
+the backup until the post-import checks pass.
 
 ### Permanent exclusions (anime + songs)
 

@@ -18,4 +18,22 @@ describe('buildLobbySettingChips', () => {
       value: 'Vidéo floutée',
     });
   });
+
+  it('shows the selected playlist names on the source chip', () => {
+    const chips = buildLobbySettingChips({
+      soundCount: 20,
+      guessDuration: 15,
+      difficulty: ['easy'],
+      precision: 'franchise',
+      responseType: 'typing',
+      soundSelection: 'playlist',
+      videoMode: 'hidden',
+      playlistName: 'Shonen ∩ Années 2010',
+    });
+
+    expect(chips.find((c) => c.key === 'source')).toMatchObject({
+      label: 'Source',
+      value: 'Shonen ∩ Années 2010',
+    });
+  });
 });

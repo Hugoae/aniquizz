@@ -10,6 +10,7 @@ import { registerLeaderboardRoute } from './routes/leaderboard';
 import { registerLibraryRoutes } from './routes/library';
 import { registerSuggestionRoutes } from './routes/suggestions';
 import { registerAdminRoutes } from './modules/admin/adminRoutes';
+import { registerPlaylistRoutes } from './routes/playlists';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
@@ -31,6 +32,7 @@ async function main() {
     registerLeaderboardRoute(app);
     registerLibraryRoutes(app);
     registerSuggestionRoutes(app);
+    registerPlaylistRoutes(app);
     registerAdminRoutes(app, io, gameManager);
 
     // 3. Socket manager wires all feature handlers.

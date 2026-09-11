@@ -180,12 +180,20 @@ model Match {
   endedAt     DateTime?
   responseType StoredResponseType?
   precision    StoredPrecision?
+  /** Staff thematic playlist used as the music source, if any (v26.5 stats). */
+  playlistId   String?
+  /** Decade overlay when the match combined a genre pack with a decade pack. */
+  decadePlaylistId String?
 
-  players MatchPlayer[]
-  rounds  MatchRound[]
+  players  MatchPlayer[]
+  rounds   MatchRound[]
+  playlist ThematicPlaylist? @relation("MatchPrimaryPlaylist", fields: [playlistId], references: [id], onDelete: SetNull)
+  decadePlaylist ThematicPlaylist? @relation("MatchDecadePlaylist", fields: [decadePlaylistId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([startedAt(sort: Desc)])
+  @@index([playlistId])
+  @@index([decadePlaylistId])
 }
 
 model MatchPlayer {
@@ -255,6 +263,7 @@ model Franchise {
   animes         Anime[]
 
   @@index([maxPopularity(sort: Desc)])
+  @@index([genres], type: Gin)
 }
 
 model Anime {
@@ -322,6 +331,7 @@ model Song {
   likes   SongLike[]
   suggestions Suggestion[]
   rounds  MatchRound[]
+  thematicPlaylists ThematicPlaylistSong[]
 
   @@index([animeId])
   @@index([downloadStatus])
@@ -329,6 +339,7 @@ model Song {
   // Composite for the playlist candidate scan (always filters COMPLETED, often by
   // type + difficulty). Speeds match-start selection as the catalogue grows.
   @@index([downloadStatus, songType, difficulty])
+  @@index([tags], type: Gin)
 }
 
 model SongHistory {
@@ -426,4 +437,36 @@ model PlayerAnimeList {
 
   @@unique([profileId, animeId])
   @@index([animeId])
+}
+
+/// Staff-curated music pack (v26.5). Recipe is resolved into a frozen snapshot on publish.
+model ThematicPlaylist {
+  id            String    @id @default(uuid())
+  slug          String    @unique
+  name          String
+  description   String    @default("")
+  category      String    @default("theme")
+  recipe        Json
+  isPublished   Boolean   @default(false)
+  snapshotAt    DateTime?
+  snapshotCount Int       @default(0)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  songs   ThematicPlaylistSong[]
+  matches Match[] @relation("MatchPrimaryPlaylist")
+  decadeMatches Match[] @relation("MatchDecadePlaylist")
+
+  @@index([isPublished, sortOrder])
+}
+
+model ThematicPlaylistSong {
+  playlistId String
+  songId     Int
+  playlist   ThematicPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  song       Song             @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@id([playlistId, songId])
+  @@index([songId])
 }

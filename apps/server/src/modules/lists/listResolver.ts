@@ -1,10 +1,15 @@
 import { prisma } from '@aniquizz/database';
-import { getUserAnimeIds as getAnilistAnimeIds } from '../anilist/anilistService';
+import { resolveAnilistList } from '../anilist/anilistService';
 import { getUserAnimeIds as getMalAnimeIds } from '../mal/malService';
 
 export interface WatchedListSources {
   anilistUsername?: string | null;
   malUsername?: string | null;
+}
+
+export interface CatalogueResolveResult {
+  ids: number[];
+  listError?: 'anilist_blocked';
 }
 
 const trimOrNull = (value?: string | null): string | null => {
@@ -23,14 +28,10 @@ export const loadProfileListSources = async (userId: string): Promise<WatchedLis
   };
 };
 
-/**
- * Resolve one player's Watched pool to internal Anime ids.
- * AniList and MAL are mutually exclusive per profile; overrides may come from RoomPlayer.
- */
-export const resolvePlayerCatalogueIds = async (
+export const resolvePlayerCatalogueWithMeta = async (
   userId: string,
   overrides: WatchedListSources = {},
-): Promise<number[]> => {
+): Promise<CatalogueResolveResult> => {
   let anilist = trimOrNull(overrides.anilistUsername);
   let mal = trimOrNull(overrides.malUsername);
 
@@ -40,7 +41,22 @@ export const resolvePlayerCatalogueIds = async (
     mal = trimOrNull(fromDb.malUsername);
   }
 
-  if (anilist) return getAnilistAnimeIds(anilist);
-  if (mal) return getMalAnimeIds(mal);
-  return [];
+  if (anilist) {
+    const result = await resolveAnilistList(anilist);
+    return {
+      ids: result.ids,
+      listError: result.blocked || result.stale ? 'anilist_blocked' : undefined,
+    };
+  }
+  if (mal) return { ids: await getMalAnimeIds(mal) };
+  return { ids: [] };
 };
+
+/**
+ * Resolve one player's Watched pool to internal Anime ids.
+ * AniList and MAL are mutually exclusive per profile; overrides may come from RoomPlayer.
+ */
+export const resolvePlayerCatalogueIds = async (
+  userId: string,
+  overrides: WatchedListSources = {},
+): Promise<number[]> => (await resolvePlayerCatalogueWithMeta(userId, overrides)).ids;

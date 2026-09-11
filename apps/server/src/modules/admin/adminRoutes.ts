@@ -14,31 +14,14 @@ import type { GameManager } from '../game/gameManager';
 import type { BotConfig } from '../game/engine/types';
 import { MODERATION_BAN_MESSAGE, normalizePrecision } from '@aniquizz/shared';
 import * as adminService from './adminService';
+import * as playlistAdmin from './thematicPlaylistAdmin';
+import { handlePrismaError } from './prismaHttpError';
 import { assertModerationAllowed } from '../../config/protectedAccounts';
 
 const ROLES = ['USER', 'MODERATOR', 'ADMIN'] as const;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
 const DOWNLOAD_STATUSES = ['PENDING', 'PROCESSING', 'COMPLETED', 'ERROR', 'SKIPPED'] as const;
 const SONG_TYPES = ['OP', 'ED', 'INSERT'] as const;
-
-/** Map common Prisma write errors to friendly HTTP responses. Returns handled. */
-const handlePrismaError = (e: unknown, res: Response): boolean => {
-  if (e instanceof Prisma.PrismaClientKnownRequestError) {
-    if (e.code === 'P2002') {
-      res.status(409).json({ error: 'Valeur déjà utilisée (videoKey ou nom unique).' });
-      return true;
-    }
-    if (e.code === 'P2025') {
-      res.status(404).json({ error: 'Élément introuvable.' });
-      return true;
-    }
-    if (e.code === 'P2003') {
-      res.status(400).json({ error: 'Référence invalide (animeId / franchiseId).' });
-      return true;
-    }
-  }
-  return false;
-};
 
 const DEFAULT_BOT_CONFIG: BotConfig = { accuracy: 0.7, minDelayMs: 2_000, maxDelayMs: 8_000 };
 
@@ -80,11 +63,12 @@ const guardProtectedTarget = async (
   return true;
 };
 
-/** Small helper: run an async handler and forward failures as a 500. */
+/** Small helper: run an async handler and map Prisma write errors. */
 const wrap =
   (fn: (req: AuthedRequest, res: Response) => Promise<void>) =>
   (req: AuthedRequest, res: Response): void => {
     fn(req, res).catch((e) => {
+      if (handlePrismaError(e, res)) return;
       logger.error('Admin route failed', 'Admin', e);
       if (!res.headersSent) res.status(500).json({ error: 'Internal error.' });
     });
@@ -707,6 +691,97 @@ export function registerAdminRoutes(
         'Admin',
       );
       res.json(result);
+    }),
+  );
+
+  // --- THEMATIC PLAYLISTS (v26.5) -------------------------------------------
+
+  router.get(
+    '/playlists',
+    requireRole('ADMIN'),
+    wrap(async (_req, res) => {
+      const playlists = await playlistAdmin.listAdminPlaylists();
+      res.json({ playlists });
+    }),
+  );
+
+  router.post(
+    '/playlists/preview',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const parsed = playlistAdmin.playlistRecipeSchema.safeParse(req.body?.recipe ?? req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid playlist recipe.' });
+        return;
+      }
+      const preview = await playlistAdmin.previewRecipe(parsed.data);
+      res.json(preview);
+    }),
+  );
+
+  router.post(
+    '/playlists/seed',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const publish = req.body?.publish !== false;
+      const seeded = await playlistAdmin.seedStaffPlaylists(publish);
+      logger.info(`Admin ${req.actor!.username} seeded ${seeded.length} staff playlists`, 'Admin');
+      res.json({ seeded });
+    }),
+  );
+
+  router.post(
+    '/playlists',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const parsed = playlistAdmin.playlistUpsertSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid playlist payload.' });
+        return;
+      }
+      const row = await playlistAdmin.upsertPlaylist(undefined, parsed.data);
+      res.status(201).json(row);
+    }),
+  );
+
+  router.patch(
+    '/playlists/:id',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const parsed = playlistAdmin.playlistUpsertSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid playlist payload.' });
+        return;
+      }
+      const row = await playlistAdmin.upsertPlaylist(pid(req), parsed.data);
+      res.json(row);
+    }),
+  );
+
+  router.post(
+    '/playlists/:id/publish',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const snapshotCount = await playlistAdmin.refreshPlaylistSnapshot(pid(req), true);
+      res.json({ snapshotCount, isPublished: true });
+    }),
+  );
+
+  router.post(
+    '/playlists/:id/refresh',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const snapshotCount = await playlistAdmin.refreshPlaylistSnapshot(pid(req), false);
+      res.json({ snapshotCount });
+    }),
+  );
+
+  router.delete(
+    '/playlists/:id',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      await playlistAdmin.deletePlaylist(pid(req));
+      res.status(204).end();
     }),
   );
 

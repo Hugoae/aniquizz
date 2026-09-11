@@ -1,3 +1,4 @@
+# Public pages are crawlable. Live game, lobby, and account routes stay out of the index.
 User-agent: *
 Allow: /
 Disallow: /play

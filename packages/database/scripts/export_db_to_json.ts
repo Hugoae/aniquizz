@@ -28,6 +28,7 @@ async function main() {
     orderBy: { name: 'asc' }
   });
 
+  fs.mkdirSync(path.dirname(EXPORT_FILE), { recursive: true });
   fs.writeFileSync(EXPORT_FILE, JSON.stringify(data, null, 2));
 
   console.log(`\n✅ EXPORT RÉUSSI !`);

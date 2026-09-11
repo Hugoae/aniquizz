@@ -11,9 +11,9 @@ describe('buildChoiceCandidatePool', () => {
     { id: 99, name: 'Obscure Anime', franchise: 'Obscure' },
   ];
 
-  it('returns the full catalogue when watchedIds is omitted', () => {
-    const pool = buildChoiceCandidatePool(rows, 'anime');
-    expect(pool).toEqual(['Naruto', 'Bleach', 'One Piece', 'Death Note', 'Obscure Anime']);
+  it('returns an empty pool when the allowed id list is empty', () => {
+    const pool = buildChoiceCandidatePool(rows, 'anime', []);
+    expect(pool).toEqual([]);
   });
 
   it('restricts the pool to watched anime ids in AniList mode', () => {

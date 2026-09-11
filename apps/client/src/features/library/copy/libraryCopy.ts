@@ -4,7 +4,7 @@ export const LIBRARY_COPY = {
   heroEyebrow: 'Catalogue complet',
   heroTitle: 'Librairie musicale',
   heroSubtitle:
-    'Explorez openings, endings et inserts. Écoutez les extraits et retrouvez vos découvertes en partie.',
+    'Explorez openings et endings. Écoutez les extraits et retrouvez vos découvertes en partie.',
   searchPlaceholder: 'Rechercher un anime, un titre ou un artiste…',
   filterSectionSearch: 'Recherche',
   filterToggle: 'Filtres',
@@ -52,10 +52,8 @@ export const LIBRARY_COPY = {
   songsViewHint: 'Vue Sons — pagination par extrait',
   typeOp: 'Openings',
   typeEd: 'Endings',
-  typeInsert: 'Inserts',
   typeOpShort: 'OP',
   typeEdShort: 'ED',
-  typeInsertShort: 'Insert',
   diffEasy: 'Facile',
   diffMedium: 'Moyen',
   diffHard: 'Difficile',
@@ -80,7 +78,6 @@ export const LIBRARY_COPY = {
 export const LIBRARY_SONG_TYPE_OPTIONS = [
   { value: 'OP', label: LIBRARY_COPY.typeOp },
   { value: 'ED', label: LIBRARY_COPY.typeEd },
-  { value: 'INSERT', label: LIBRARY_COPY.typeInsert },
 ] as const;
 
 export const LIBRARY_VIEW_OPTIONS = [

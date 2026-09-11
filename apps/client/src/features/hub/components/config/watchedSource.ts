@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import type { RoomConfig } from '@aniquizz/shared';
-import { hasWatchedListLink } from '@aniquizz/shared';
+import { ANILIST_API_DOWN_MESSAGE, hasEnoughQcmNames, hasWatchedListLink } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 /** Watched source is selectable in the UI but cannot launch until a list provider is linked. */
@@ -8,12 +8,29 @@ export function isWatchedSourceBlocked(
   soundSelection: RoomConfig['soundSelection'],
   user: User | null,
   profile: Profile | null,
+  playlistWatched?: boolean,
 ): boolean {
-  return soundSelection === 'watched' && (!user || !hasWatchedListLink(profile ?? {}));
+  const usesWatched =
+    soundSelection === 'watched' || (soundSelection === 'playlist' && Boolean(playlistWatched));
+  return usesWatched && (!user || !hasWatchedListLink(profile ?? {}));
 }
 
 export const WATCHED_SOURCE_BLOCK_MESSAGE =
   'Impossible : liez AniList ou MyAnimeList, ou choisissez une autre source.';
+
+export const WATCHED_LIST_UNAVAILABLE =
+  'Votre liste est vide ou inaccessible (privée sur AniList ?). Passez-la en public, ou changez de source.';
+
+export const WATCHED_ANILIST_BLOCKED_MESSAGE = ANILIST_API_DOWN_MESSAGE;
+
+export const WATCHED_ANILIST_STALE_MESSAGE =
+  "AniList est instable : la liste affichée peut dater de quelques minutes.";
+
+export const WATCHED_QCM_TOO_SMALL_MESSAGE =
+  'Pas assez d\'animes distincts dans ce pool pour le QCM. Passez en Typing ou élargissez les filtres.';
+
+export const WATCHED_SERVER_OFFLINE =
+  "Le serveur de jeu n'est pas joignable (port 3001). Lance-le avec pnpm run dev, puis réessaie.";
 
 export interface WatchedPoolLaunchCheck {
   blocked: boolean;
@@ -26,14 +43,29 @@ export interface WatchedPoolLaunchCheck {
  */
 export function checkWatchedPoolLaunch(
   soundSelection: RoomConfig['soundSelection'],
-  stats: { playableSongs: number; soundCount: number; insufficient: boolean; watchedMode?: 'union' | 'intersection' } | null,
+  stats: {
+    playableSongs: number;
+    soundCount: number;
+    insufficient: boolean;
+    watchedMode?: 'union' | 'intersection';
+    animeCount?: number;
+    distinctNames?: number;
+    listError?: 'anilist_blocked';
+  } | null,
   watchedAllowFallback?: boolean,
+  responseType: RoomConfig['responseType'] = 'mix',
 ): WatchedPoolLaunchCheck {
   if (soundSelection !== 'watched' || !stats) {
     return { blocked: false, reason: null };
   }
 
   if (stats.playableSongs === 0) {
+    if (stats.listError === 'anilist_blocked') {
+      return { blocked: true, reason: WATCHED_ANILIST_BLOCKED_MESSAGE };
+    }
+    if (stats.animeCount === 0) {
+      return { blocked: true, reason: WATCHED_LIST_UNAVAILABLE };
+    }
     const modeHint =
       stats.watchedMode === 'intersection'
         ? ' en mode Commun'
@@ -55,7 +87,22 @@ export function checkWatchedPoolLaunch(
     };
   }
 
+  if (
+    typeof stats.distinctNames === 'number' &&
+    !hasEnoughQcmNames(stats.distinctNames, responseType ?? 'mix')
+  ) {
+    return { blocked: true, reason: WATCHED_QCM_TOO_SMALL_MESSAGE };
+  }
+
   return { blocked: false, reason: null };
+}
+
+/**
+ * Union/Commun only applies when several humans can contribute a list.
+ * Hidden in solo and while creating (or sitting alone in) a salon.
+ */
+export function showWatchedFusionMode(isRoom: boolean, playerCount = 0): boolean {
+  return isRoom && playerCount > 1;
 }
 
 /** French label for the Watched fusion mode (lobby banner, pool stats). */
@@ -151,8 +198,11 @@ export function checkWatchedLobby(
   soundSelection: RoomConfig['soundSelection'],
   watchedMode: RoomConfig['watchedMode'],
   players: WatchedLobbyPlayer[],
+  playlistWatched?: boolean,
 ): WatchedLobbyCheck {
-  if (soundSelection !== 'watched') return NO_BLOCK;
+  if (soundSelection !== 'watched' && !(soundSelection === 'playlist' && playlistWatched)) {
+    return NO_BLOCK;
+  }
 
   const humans = players.filter((p) => !p.isBot);
   if (!humans.length) return NO_BLOCK;
