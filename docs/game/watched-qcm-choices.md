@@ -48,8 +48,8 @@ Thematic playlists (v26.5) use the same helper with **snapshot anime ids** (opti
 
 ## Edge cases & follow-up
 
-| Case | Current behaviour | Future (chantier 26.1 #2) |
-|------|-------------------|---------------------------|
+| Case | Current behaviour | Backlog |
+|------|-------------------|---------|
 | List has &lt; 4 distinct names (QCM / Mix) | Lobby + `validateWatchedStart` block via `hasEnoughQcmNames` (same gate as playlists). Typing-only rooms skip the gate. | — |
 | List has &lt; 2 distinct names (Duo) | Duo still pads with `???` if Mix/QCM somehow starts; Mix/QCM is already blocked at 4 names | Optional Duo-only threshold |
 | Anime on AniList but no song in catalogue | Excluded from both song and choice pools (no row in cache) | — |
@@ -68,4 +68,4 @@ Manual smoke (2026-07-10): Watched + Mix/QCM — distractors confirmed on-list o
 
 - AniList lobby guards: `apps/client/.../watchedSource.ts`
 - Playlist Watched resolution: `PlaylistBuilder.resolveWatchedIds()`
-- Planned min-list UX: `PLAN.md` § 26.1 chantier #2
+- The QCM/Mix minimum-list gate shipped in v26.5; only a dedicated Duo threshold remains optional.

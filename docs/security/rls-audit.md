@@ -35,7 +35,7 @@ open or deferred.
 | Item | Risk | Plan |
 |------|------|------|
 | Avatars bucket public listing | Low — filenames are UUID-scoped | Tighten SELECT policy to object-level only |
-| Leaked-password (HIBP) | Low — Supabase Pro+ (`password_hibp_enabled`) | Enable in Auth settings or Management API `PATCH /v1/projects/{ref}/config/auth`. Docs: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection |
+| Leaked-password (HIBP) | Low — Supabase Pro+ (`password_hibp_enabled`) | Intentionally not enabled while Pro+ is unavailable; advisor WARN accepted |
 | Automated RLS regression in CI | Medium | Future: SQL policy snapshot test against staging |
 
 ## Verification commands
@@ -56,4 +56,4 @@ node scripts/check-english-code.mjs
 - **2026-07-09 (9.1)**: Enable RLS deny-by-default on server-only match/social tables; revoke catalogue writes from client roles.
 - **2026-07-09 (9.2)**: Document posture; add socket integration tests for ban/mute/anti-cheat/watched abort paths.
 - **2026-09-10**: Dropped `SongHistory` `"Add to history"` INSERT policy; revoked INSERT/UPDATE/DELETE/TRUNCATE on `SongHistory` and TRUNCATE on `Profile` from `anon`/`authenticated`. Client SELECT of own history remains.
-- **2026-09-10 (HIBP)**: Advisor `auth_leaked_password_protection` still WARN on project `qjnfdhmvvledhtwwfrzb`. Enabling `password_hibp_enabled` needs a Management API token (or Dashboard → Authentication → Attack protection) and a Pro+ plan. No access token was available in this environment.
+- **2026-09-12 (HIBP)**: Intentionally not enabled because the project does not have Supabase Pro+. Advisor `auth_leaked_password_protection` remains WARN and is accepted; this is not an open 26.5 action.

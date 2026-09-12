@@ -72,4 +72,8 @@ If a snapshot song becomes `SKIPPED` / missing, pool resolution ignores it. A dr
 
 ## Out of v1
 
-Player-created playlists, sharing, fork, per-pack ladder, library browse-by-pack, INSERT songs, private packs. News id 7 covers endings + packs; tag `26.5` at commit/deploy.
+Player-created playlists, sharing, fork, per-pack ladder, library browse-by-pack, INSERT songs, private packs.
+
+## Release state
+
+Shipped in v26.5 (`89c7627`, tag `26.5`). Staff slugs `movies` and `easy-hits` are retired by every seed; `easy-hits` was removed from production on 2026-09-12.

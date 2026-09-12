@@ -40,7 +40,7 @@ Dashboard → **aniquizz-server** → Environment → set:
 CLIENT_URL=https://aniquizz.com
 ```
 
-(`render.yaml` already documents this; sync if the live service still has the old Vercel URL.)
+`render.yaml` documents the same production value. Keep the Render environment aligned when domains change.
 
 ### 3. Vercel env (optional)
 

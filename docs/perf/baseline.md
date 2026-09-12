@@ -11,7 +11,7 @@ Use this document as the **before** reference for Phase 10 optimizations. Re-run
 | Production URL | `https://aniquizz.com` |
 | Client deploy | Vercel (SPA + prerender on 7 public routes) |
 | Server deploy | Render Starter |
-| Catalogue | Empty at capture time (pipeline repopulation pending) |
+| Catalogue | Empty in this historical 2026-07-09 capture; later releases repopulated it |
 
 ## Lighthouse (production)
 
@@ -196,11 +196,11 @@ large one-off download per game.
 
 **Structural wins:** shell entry gzip ~**20 kB** (Supabase deferred); Google Fonts removed; Vercel immutable cache on `/assets/*`; Home + Bricolage 800 woff2 preloaded at build.
 
-Re-run prod Lighthouse after Vercel deploy to validate LCP improvement.
+Historical 10.9 follow-up: the deployment completed. Re-run production Lighthouse when client performance work resumes rather than treating these local-preview values as current.
 
 ## Phase 10.8 — server & DB hot paths
 
-Catalogue snapshot at measurement: **434 songs (all COMPLETED), 265 animes, 91 franchises** (repopulation in progress).
+Historical catalogue snapshot at measurement: **434 songs (all COMPLETED), 265 animes, 91 franchises**. The later v26.5 catalogue contains about 3000 songs.
 
 The full `anime_list` transport (scaled with catalogue size) was removed in 10.8.
 **26.2.1** reverted autocomplete to a **single bulk download + local fuzzy** (see below);
@@ -229,7 +229,6 @@ the per-keystroke `anime:search` path is only used while the bulk catalogue is s
 - Added composite `Song(downloadStatus, songType, difficulty)` (migration `20260709140000_perf_song_index`, applied live idempotently).
 - `EXPLAIN ANALYZE` at 434 rows still shows seq scans (cheaper than index at this size) — the index is **preventive for scale** and will be preferred by the planner as the catalogue grows into the thousands.
 
-## Next steps
+## Future measurement
 
-1. **Deploy 10.9 to Vercel** → re-run prod Lighthouse mobile on `/` and update baseline.
-2. Re-measure playlist build + candidate scan as catalogue grows.
+When performance work resumes, re-run production Lighthouse mobile on `/` and re-measure playlist build plus candidate scans against the current catalogue.

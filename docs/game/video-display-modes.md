@@ -82,7 +82,7 @@ Optional summary chip (Résumé): **Vidéo** → *Audio seul* / *Floutée* / *Fe
 - Full video visible during guess
 - Moving peek window mid-round
 - User-adjustable peek size
-- Playlists tab (deferred backlog post-26.2)
+- Player-created playlist packs (staff playlists shipped in v26.5)
 
 ## Related
 
