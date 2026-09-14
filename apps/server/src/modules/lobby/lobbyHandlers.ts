@@ -15,6 +15,7 @@ import {
 } from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import { parseSocketPayload } from '../../core/parseSocketPayload';
+import { resolveLobbyUsername } from '../../core/displayUsername';
 import type { BotConfig } from '../game/engine/types';
 import { LOBBY_LIST_ROOM } from './lobbyRooms';
 
@@ -70,7 +71,11 @@ export const registerLobbyHandlers = (
 
   const createLobby = async (payload: CreateLobbyInput) => {
     try {
-      const username = payload.username || socket.data.username || 'Joueur';
+      const username = resolveLobbyUsername(
+        socket.data.isAuthenticated,
+        socket.data.username,
+        payload.username,
+      );
       const avatar = payload.avatar || 'player1';
       // Empty name → auto-assign the first free "Salon N" slot.
       const providedName = (payload.roomName ?? '').trim();
@@ -121,7 +126,11 @@ export const registerLobbyHandlers = (
   const joinLobby = (payload: JoinLobbyInput) => {
     try {
       const { roomId, password } = payload;
-      const username = payload.username || socket.data.username || 'Joueur';
+      const username = resolveLobbyUsername(
+        socket.data.isAuthenticated,
+        socket.data.username,
+        payload.username,
+      );
       const avatar = payload.avatar || 'player1';
       const room = gameManager.getRoom(roomId);
 

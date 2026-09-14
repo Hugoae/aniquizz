@@ -3,6 +3,9 @@ export const SITE_URL =
   (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '') ||
   'https://aniquizz.com';
 
+/** Display / shell version tag. `sync:news` copies it into `index.html`. */
+export const SITE_VERSION = '26.6';
+
 export const SITE_NAME = 'AniQuizz';
 
 /** External page for optional, no-perk support of AniQuizz. */

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
@@ -9,6 +10,9 @@ interface PasswordFieldProps {
   autoComplete: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  required?: boolean;
+  /** Extra control aligned with the label (e.g. "forgot password"). */
+  headerRight?: ReactNode;
 }
 
 /** Password input with a white label above and a press-and-hold reveal eye. */
@@ -19,6 +23,8 @@ export function PasswordField({
   autoComplete,
   onChange,
   disabled,
+  required,
+  headerRight,
 }: PasswordFieldProps) {
   const [reveal, setReveal] = useState(false);
   const hide = () => setReveal(false);
@@ -40,9 +46,12 @@ export function PasswordField({
 
   return (
     <div className="space-y-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label htmlFor={id} className="text-sm font-medium text-foreground">
+          {label}
+        </label>
+        {headerRight}
+      </div>
       <div className="relative">
         <Input
           id={id}
@@ -51,6 +60,7 @@ export function PasswordField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           disabled={disabled}
+          required={required}
           className="pr-10"
         />
         <button

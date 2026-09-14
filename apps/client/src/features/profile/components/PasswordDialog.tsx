@@ -4,6 +4,9 @@ import { Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { PasswordField } from '@/components/ui/PasswordField';
+import { AUTH_COPY } from '@/features/auth/copy/authCopy';
+import { mapAuthErrorMessage } from '@/features/auth/lib/authErrorMessage';
+import { isPasswordValid } from '@/features/auth/lib/passwordPolicy';
 import {
   Dialog,
   DialogContent,
@@ -18,13 +21,6 @@ interface PasswordDialogProps {
   onOpenChange: (open: boolean) => void;
   userEmail: string | undefined;
 }
-
-const isPasswordValid = (pw: string) =>
-  pw.length >= 8 &&
-  /[a-z]/.test(pw) &&
-  /[A-Z]/.test(pw) &&
-  /[0-9]/.test(pw) &&
-  /[^A-Za-z0-9]/.test(pw);
 
 /** Self-contained "change password" modal (owns its fields + submit logic). */
 export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialogProps) {
@@ -55,9 +51,7 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
       return;
     }
     if (!isPasswordValid(newPassword)) {
-      toast.error(
-        'Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
-      );
+      toast.error(AUTH_COPY.passwordInvalid);
       return;
     }
     setIsChangingPassword(true);
@@ -69,25 +63,14 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
         current_password: currentPassword,
       });
       if (error) {
-        const msg = error.message || '';
-        if (/different from the old|should be different|same.*password/i.test(msg)) {
-          toast.error("Le nouveau mot de passe doit être différent de l'ancien.");
-        } else if (/current password|invalid|incorrect|credential/i.test(msg)) {
-          toast.error('Mot de passe actuel incorrect.');
-        } else if (/weak|at least|character|requirement|pwned|leaked/i.test(msg)) {
-          toast.error('Le nouveau mot de passe ne respecte pas les exigences de sécurité.');
-        } else {
-          toast.error(msg || 'Erreur lors du changement de mot de passe.');
-        }
+        toast.error(mapAuthErrorMessage(error));
         return;
       }
 
       toast.success('Mot de passe mis à jour !');
       close();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe.',
-      );
+      toast.error(mapAuthErrorMessage(err));
     } finally {
       setIsChangingPassword(false);
     }
@@ -127,10 +110,7 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
             value={confirmPassword}
             onChange={setConfirmPassword}
           />
-          <p className="text-xs text-muted-foreground">
-            Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère
-            spécial.
-          </p>
+          <p className="text-xs text-muted-foreground">{AUTH_COPY.passwordHint}</p>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={close}>

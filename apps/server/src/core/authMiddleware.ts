@@ -11,6 +11,7 @@ import {
   type WatchedListProvider,
 } from '@aniquizz/shared';
 import type { TypedSocket } from './socketTypes';
+import { resolveAuthenticatedUsername, usernameFromMetadata } from './displayUsername';
 
 /**
  * Canonical, verified identity attached to every socket.
@@ -30,17 +31,7 @@ export interface ResolvedIdentity {
 }
 
 /** Extract a display name from Supabase user metadata (display only, not auth). */
-const usernameFromMetadata = (
-  metadata: Record<string, unknown> | undefined,
-  fallback: string,
-): string => {
-  if (!metadata) return fallback;
-  const name =
-    (metadata.username as string | undefined) ||
-    (metadata.user_name as string | undefined) ||
-    (metadata.name as string | undefined);
-  return name?.trim() || fallback;
-};
+export { usernameFromMetadata };
 
 /** Legacy fallback for projects still issuing HS256 tokens signed with the JWT secret. */
 const verifyLegacyHs256 = (token: string): SupabaseJwtPayload | null => {
@@ -86,6 +77,7 @@ export const resolveIdentityFromToken = async (
 
 /** DB-resolved moderation state for an authenticated user. */
 interface ModerationState {
+  username: string | null;
   role: UserRole;
   bannedUntil: Date | null;
   mutedUntil: Date | null;
@@ -100,6 +92,7 @@ const loadModeration = async (userId: string): Promise<ModerationState | null> =
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
       select: {
+        username: true,
         role: true,
         bannedUntil: true,
         mutedUntil: true,
@@ -111,6 +104,7 @@ const loadModeration = async (userId: string): Promise<ModerationState | null> =
     });
     if (!profile) return null;
     return {
+      username: profile.username,
       role: profile.role as UserRole,
       bannedUntil: profile.bannedUntil,
       mutedUntil: profile.mutedUntil,
@@ -175,6 +169,9 @@ export const socketAuthMiddleware = async (
     logger.warn(`Rejected banned user ${identity.userId}`, 'Socket');
     return next(new Error('BANNED'));
   }
+
+  // Profile.username is the rename source of truth; metadata is signup-race fallback only.
+  data.username = resolveAuthenticatedUsername(moderation?.username, identity.username);
 
   data.role = moderation?.role ?? 'USER';
   data.level = moderation?.level ?? 1;

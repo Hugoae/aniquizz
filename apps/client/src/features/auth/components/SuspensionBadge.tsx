@@ -5,23 +5,21 @@ import { formatRemaining, isSanctionActive } from '@/lib/suspension';
 
 /**
  * Header indicator shown to a player who is currently banned or muted.
- * Ticks every second for the live countdown; sanction changes arrive via
- * `profile:sanction_updated` (AuthContext) without waiting for a profile poll.
+ * Ticks every second for the live countdown only while a sanction is active.
  */
 export function SuspensionBadge() {
   const { profile } = useAuth();
   const [, force] = useState(0);
+  const banned = isSanctionActive(profile?.bannedUntil);
+  const muted = isSanctionActive(profile?.mutedUntil);
 
   useEffect(() => {
+    if (!banned && !muted) return;
     const tick = setInterval(() => force((n) => n + 1), 1000);
     return () => clearInterval(tick);
-  }, []);
+  }, [banned, muted]);
 
-  if (!profile) return null;
-
-  const banned = isSanctionActive(profile.bannedUntil);
-  const muted = isSanctionActive(profile.mutedUntil);
-  if (!banned && !muted) return null;
+  if (!profile || (!banned && !muted)) return null;
 
   if (banned) {
     return (

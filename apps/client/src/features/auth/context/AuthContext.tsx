@@ -9,6 +9,7 @@ import {
 } from 'react';
 import type { Session, User, SupabaseClient } from '@supabase/supabase-js';
 import { captureClientError } from '@/lib/errorReporter';
+import { createProfileFetchGate } from '@/features/auth/lib/profileFetchGate';
 
 const loadSupabase = () => import('@/lib/supabase').then((m) => m.supabase);
 
@@ -62,6 +63,8 @@ type AuthContextType = {
   /** @deprecated Use `authReady` — kept for callers that still gate on `!loading`. */
   loading: boolean;
   profileLoading: boolean;
+  /** True after the Profile SELECT failed for the current session (Header degraded chip). */
+  profileFailed: boolean;
   isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -79,22 +82,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileFailed, setProfileFailed] = useState(false);
   const supabaseRef = useRef<SupabaseClient | null>(null);
+  const fetchGateRef = useRef(createProfileFetchGate());
 
   const fetchProfile = useCallback(async (userId: string, client: SupabaseClient) => {
+    const started = fetchGateRef.current.begin(userId);
+    if (started.skipped) return;
+
     setProfileLoading(true);
+    setProfileFailed(false);
     try {
       const { data, error } = await client.from('Profile').select('*').eq('id', userId).single();
 
-      if (error) {
-        captureClientError(error, { source: 'auth_fetch_profile' });
-      } else {
-        setProfile(data);
+      if (!fetchGateRef.current.isCurrent(started.generation)) return;
+
+      if (error || !data) {
+        captureClientError(error ?? new Error('empty profile'), { source: 'auth_fetch_profile' });
+        let keptCurrent = false;
+        setProfile((prev) => {
+          if (prev?.id === userId) {
+            keptCurrent = true;
+            return prev;
+          }
+          return null;
+        });
+        if (!keptCurrent) setProfileFailed(true);
+        return;
       }
+
+      setProfile(data);
+      setProfileFailed(false);
     } catch (err) {
       captureClientError(err, { source: 'auth_fetch_profile' });
+      if (!fetchGateRef.current.isCurrent(started.generation)) return;
+      let keptCurrent = false;
+      setProfile((prev) => {
+        if (prev?.id === userId) {
+          keptCurrent = true;
+          return prev;
+        }
+        return null;
+      });
+      if (!keptCurrent) setProfileFailed(true);
     } finally {
-      setProfileLoading(false);
+      fetchGateRef.current.finish(started.generation);
+      if (fetchGateRef.current.isCurrent(started.generation)) {
+        setProfileLoading(false);
+      }
     }
   }, []);
 
@@ -102,6 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
     let subscription: { unsubscribe: () => void } | undefined;
+    const fetchGate = fetchGateRef.current;
 
     const initAuth = async () => {
       try {
@@ -120,19 +156,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const {
           data: { subscription: sub },
-        } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        } = supabase.auth.onAuthStateChange(async (event, newSession) => {
           if (!mounted) return;
 
           setSession(newSession);
 
           if (newSession?.user) {
             setProfile((prev) => {
-              if (prev && prev.id === newSession.user.id) return prev;
+              if (prev?.id === newSession.user.id) return prev;
+              // TOKEN_REFRESHED must not start a second SELECT (getSession / INITIAL_SESSION
+              // already did) and must not retry a failed load on every refresh.
+              if (event === 'TOKEN_REFRESHED') return prev;
               void fetchProfile(newSession.user.id, supabase);
-              return prev;
+              return null;
             });
           } else {
+            fetchGate.invalidate();
             setProfile(null);
+            setProfileFailed(false);
             setProfileLoading(false);
           }
 
@@ -150,6 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       mounted = false;
+      fetchGate.invalidate();
       subscription?.unsubscribe();
     };
   }, [fetchProfile]);
@@ -194,10 +236,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
+      fetchGateRef.current.invalidate();
+      setProfile(null);
+      setProfileFailed(false);
+      setProfileLoading(false);
       const supabase = supabaseRef.current ?? (await loadSupabase());
       supabaseRef.current = supabase;
       await supabase.auth.signOut();
-      setProfile(null);
       setSession(null);
     } catch (err) {
       captureClientError(err, { source: 'auth_sign_out' });
@@ -230,12 +275,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       authReady,
       loading: !authReady,
       profileLoading,
+      profileFailed,
       isAdmin,
       signOut,
       refreshProfile,
       patchProfile,
     }),
-    [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile, patchProfile],
+    [
+      session,
+      profile,
+      authReady,
+      profileLoading,
+      profileFailed,
+      isAdmin,
+      signOut,
+      refreshProfile,
+      patchProfile,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

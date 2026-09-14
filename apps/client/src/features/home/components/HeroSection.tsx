@@ -1,17 +1,15 @@
-import { startTransition } from 'react';
 import { Lightbulb, Music, Play, Trophy } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { HOME_COPY } from '@/features/home/copy/homeCopy';
-import { useNavigate } from 'react-router-dom';
 import { dailyApi } from '@/lib/dailyApi';
-import { prefetchGameHub, prefetchRoute } from '@/lib/routePrefetch';
+import { prefetchGameHub, prefetchRoute, routeIntentHandlers } from '@/lib/routePrefetch';
 import { isFirstLandingPaint } from '@/lib/initialPaint';
 import { cn } from '@/lib/utils';
 
 import { NewsSection } from './NewsSection';
 
 export function HeroSection() {
-  const navigate = useNavigate();
   const skipEntryAnimation = isFirstLandingPaint();
 
   return (
@@ -29,7 +27,6 @@ export function HeroSection() {
             !skipEntryAnimation && 'animate-fade-in',
           )}
         >
-          {/* Eyebrow */}
           <div className="mb-5 inline-flex items-center gap-2.5 rounded-full border border-border bg-secondary/60 px-4 py-2 backdrop-blur-sm">
             <span className="eq h-3 text-aqua" aria-hidden="true">
               <i></i>
@@ -40,78 +37,58 @@ export function HeroSection() {
             <span className="text-sm font-medium text-muted-foreground">{HOME_COPY.eyebrow}</span>
           </div>
 
-          {/* Main Heading */}
           <h1 className="font-display text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-[1.05] text-balance">
             {HOME_COPY.titleLead} <span className="gradient-text">{HOME_COPY.titleAccent}</span>
           </h1>
 
-          {/* Subheading */}
           <p className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto px-4">
             {HOME_COPY.sub}
           </p>
 
-          {/* CTA Buttons */}
           <div className="flex flex-col items-center gap-4">
-            {/* Main Play Button */}
-            <Button
-              variant="glow"
-              size="xxl"
-              onClick={() => startTransition(() => navigate('/play'))}
-              onMouseEnter={() => {
-                prefetchGameHub();
-                void dailyApi.today();
-              }}
-              onFocus={() => {
-                prefetchGameHub();
-                void dailyApi.today();
-              }}
-              className="group font-display"
-            >
-              <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
-              Jouer
+            <Button asChild variant="glow" size="xxl" className="group font-display">
+              <Link
+                to="/play"
+                {...routeIntentHandlers(() => {
+                  prefetchGameHub();
+                  void dailyApi.today();
+                })}
+              >
+                <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
+                {HOME_COPY.play}
+              </Link>
             </Button>
 
-            {/* Secondary Buttons */}
             <div className="flex flex-wrap justify-center gap-3 pt-1">
-              <Button
-                variant="glass"
-                size="lg"
-                onClick={() => navigate('/library')}
-                onMouseEnter={() => prefetchRoute('library')}
-                onFocus={() => prefetchRoute('library')}
-                className="hover-lift gap-2"
-              >
-                <Music className="h-5 w-5" />
-                Librairie
+              <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
+                <Link to="/library" {...routeIntentHandlers(() => prefetchRoute('library'))}>
+                  <Music className="h-5 w-5" />
+                  {HOME_COPY.library}
+                </Link>
               </Button>
-              <Button
-                variant="glass"
-                size="lg"
-                onClick={() => navigate('/leaderboard')}
-                onMouseEnter={() => prefetchRoute('leaderboard')}
-                onFocus={() => prefetchRoute('leaderboard')}
-                className="hover-lift gap-2"
-              >
-                <Trophy className="h-5 w-5" />
-                Classement
+              <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
+                <Link
+                  to="/leaderboard"
+                  {...routeIntentHandlers(() => prefetchRoute('leaderboard'))}
+                >
+                  <Trophy className="h-5 w-5" />
+                  {HOME_COPY.leaderboard}
+                </Link>
               </Button>
-              <Button
-                variant="glass"
-                size="lg"
-                onClick={() => navigate('/suggestions')}
-                onMouseEnter={() => prefetchRoute('suggestions')}
-                onFocus={() => prefetchRoute('suggestions')}
-                className="hover-lift gap-2"
-              >
-                <Lightbulb className="h-5 w-5" />
-                Idées
+              <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
+                <Link
+                  to="/suggestions"
+                  {...routeIntentHandlers(() => prefetchRoute('suggestions'))}
+                >
+                  <Lightbulb className="h-5 w-5" />
+                  {HOME_COPY.ideas}
+                </Link>
               </Button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* News Section - Compact */}
       <NewsSection />
     </div>
   );

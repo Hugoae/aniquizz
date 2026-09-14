@@ -3,15 +3,30 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **feature audit — Auth + Home** · **v26.7 parked** (2026-09-14)
+## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. Quality-gate waves 1–2.6 committed (or about to be). **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`. 26.7 stays parked.
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Next:** Hub. **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
-### Quality gates — wave 1 ✅
+### Audit — method
 
-Playbook and CI now match what AGENTS.md claimed. The 6–8 rules that actually bite are encoded; the rest stays review.
+Not a version bump. Walk the product after 26.6, encode the rules that already bit us, then audit each remaining feature with the same prompt.
+
+| Piece                   | What it is                                                                                                                                                                                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Prompt**              | [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) — French deliverable; 10 lenses (code, split, project rules, security, perf, logic, design/a11y, tests, **phone/responsive**, **SEO/alt/links**). Code/commits stay English.                        |
+| **Earlier global pass** | 26.5 product-audit hardening (canvas `full-product-audit`, 10–11 Sept.): Mix scoring, `skip_round`, SongHistory RLS, votes, peek, join rate-limit, etc. Still recorded under 26.5 below. Daily / leaderboard / suggestions were audited in their own 26.4–26.6 work. |
+| **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
+| **Parked**              | `jsx-a11y` 14 warns (FriendsPanel, GameSidebar, PlayerCardBase, …) · HIBP leaked-password · 26.7                                                                                                                                                                     |
+
+**Feature queue:** Auth + Home ✅ → **Hub** → Game (engine / lobby / match UI) → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+
+### Audit — quality gates ✅
+
+Playbook and CI now match what `AGENTS.md` claimed. Shipped on `main` as `0b0685c` (ahead of origin until this push). Wave 2 remaining for toolchain: none. Do not disable `jsx-a11y` to ship; promote to error after a dedicated cleanup.
+
+#### Wave 1
 
 | Gate                       | What changed                                                                                                                                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -20,7 +35,7 @@ Playbook and CI now match what AGENTS.md claimed. The 6–8 rules that actually 
 | **ESLint server + shared** | `eqeqeq` (null ignored), `no-explicit-any`, `no-floating-promises`. `requireAuth` / `guard` settle listener promises (Socket.io never awaits).                                                                |
 | **Zod mutators**           | `socketPayloads.ts`: `game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`. Invalid payload → generic `Requête invalide.` Settings patches still go through `normalizeRoomSettings`. |
 
-### Quality gates — wave 2.1 ✅ (format)
+#### Wave 2.1 — format
 
 One mechanical Prettier pass, then the gate. No style debate in review.
 
@@ -30,7 +45,7 @@ One mechanical Prettier pass, then the gate. No style debate in review.
 | **CI**                | `pnpm format:check` after the English-code check, before lint.                                                                                |
 | **Baseline**          | `pnpm format` on `**/*.{ts,tsx,js,jsx,json,md}` so a clone is green.                                                                          |
 
-### Quality gates — wave 2.2 ✅ (package boundaries)
+#### Wave 2.2 — package boundaries
 
 ESLint `no-restricted-imports` so a stray import fails CI instead of rotting the monorepo.
 
@@ -42,7 +57,7 @@ ESLint `no-restricted-imports` so a stray import fails CI instead of rotting the
 
 Relative `../server` / `../client` paths are also blocked. `@aniquizz/shared` stays the only legal cross-app import. Zod remains allowed in shared.
 
-### Quality gates — wave 2.3 ✅ (shared watch)
+#### Wave 2.3 — shared watch
 
 The SPA aliases `packages/shared/src`; the server requires `dist/`. A sentence in AGENTS was not enough.
 
@@ -53,11 +68,11 @@ The SPA aliases `packages/shared/src`; the server requires `dist/`. A sentence i
 | **nodemon**             | Watches `packages/shared/dist` (500 ms debounce) and restarts the server.                                                                                                |
 | **`pnpm dev:server`**   | `turbo run dev --filter=aniquizz-server --filter=@aniquizz/shared` so the watch runs with the server, not nodemon alone.                                                 |
 
-### Quality gates — wave 2.4 ✅ (lovable-tagger)
+#### Wave 2.4 — lovable-tagger
 
 Dropped the Lovable `componentTagger` Vite plugin (`mode === 'development'` only) and the `lovable-tagger` dependency. Production build was already tagger-free.
 
-### Quality gates — wave 2.5 ✅ (jsx-a11y warn)
+#### Wave 2.5 — jsx-a11y warn
 
 `eslint-plugin-jsx-a11y` recommended on the SPA, **warn** not error. CI stays green. Baseline: **14** `jsx-a11y` warnings (plus 27 existing react-refresh / exhaustive-deps).
 
@@ -73,7 +88,7 @@ Dropped the Lovable `componentTagger` Vite plugin (`mode === 'development'` only
 
 Hottest files: `FriendsPanel`, `GameSidebar`, `PlayerCardBase`. Promote to error after a dedicated cleanup — not this pass.
 
-### Quality gates — wave 2.6 ✅ (SPA strict + lint)
+#### Wave 2.6 — SPA strict + lint
 
 Measured a global `strict: true` flip: **10** errors, all hub/game-over. Per-folder tsconfigs would have been weaker for the same work.
 
@@ -83,9 +98,43 @@ Measured a global `strict: true` flip: **10** errors, all hub/game-over. Per-fol
 | **Fixes**               | Duplicate JSX `key` spreads (`SettingChipItem`); `franchise: string \| null` in the anime prefix index; `checkWatchedPoolLaunch` accepts `undefined` stats; dead `players: []` before spread on `lobby:joined`; solo `GameConfig` vs `RoomConfig` on `PlayConfigPage`. |
 | **Client ESLint**       | `eqeqeq` (`null` ignore) + `@typescript-eslint/no-explicit-any` as **error** (0 new findings). `no-unused-vars` stays off.                                                                                                                                             |
 
-**Wave 2 remaining:** none for toolchain. **Parked:** dedicated `jsx-a11y` cleanup (14 warns) then promote the plugin to error. Do not disable rules to ship.
+### Audit — Auth + Home ✅ (2026-09-14)
 
-**Next:** feature audits starting **Auth + Home**. 26.7 stays parked.
+Canvas: `auth-home-feature-audit`. No P0. Scores after fix: Auth security/logic 8.5 · Home perf/design 8.5 · tests 7.5. Already industrial (kept): JWT `getUser`, Prisma role/ban, guest vs `INVALID_TOKEN` vs `BANNED`, RLS Profile own, `SeoHead` + JSON-LD + prerender, Ko-fi `noopener`, SkipLink, design tokens.
+
+#### P1
+
+| Item                    | What changed                                                                                                                                                                                                                                      |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Profile fetch race**  | `createProfileFetchGate` in `profileFetchGate.ts`. Generation counter; skip duplicate SELECT. `TOKEN_REFRESHED` must not refetch/retry.                                                                                                           |
+| **Header skeleton**     | `headerAuthSlot`: `'loading' \| 'profile' \| 'degraded' \| 'sign-in'`. Failed Profile SELECT no longer looks like logged-out. `/profile` own-load failure has retry UI.                                                                           |
+| **Socket display name** | `resolveAuthenticatedUsername` / `resolveLobbyUsername` in `displayUsername.ts`. `authMiddleware` loads `username`; rename updates `socket.data.username`. Authenticated lobby **ignores** the client-sent username. Identity stays JWT `userId`. |
+| **Home short viewport** | Outer `h-[100dvh] overflow-hidden`; `<main>` `flex-1 min-h-0 overflow-y-auto`; inner `my-auto`. Header stays `fixed` (`pt-16`). Short / landscape can reach CTAs and news.                                                                        |
+
+#### P2
+
+| Item                  | What changed                                                                                                                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home news bundle**  | `newsTypes.ts` + slim `latestNewsPreview` (no `content`) so eager `/` does not pull `newsData.ts`. `NewsSection` reads the preview only.                                                                                                          |
+| **Dead badge**        | Deleted `HomeNewBadge.tsx` and `.home-new-badge*` CSS.                                                                                                                                                                                            |
+| **Home CTAs + news**  | Copy in `HOME_COPY`. Hero CTAs and news cards are `<Link>` via `Button asChild` (middle-click). `findHomePlayCta` prefers `a[href="/play"]` (shell dismiss still needs Jouer ≥ 56px, flex, non-transparent bg).                                   |
+| **SuspensionBadge**   | `setInterval` only while ban/mute is active.                                                                                                                                                                                                      |
+| **Passwords**         | Shared `isPasswordValid` in `passwordPolicy.ts`. AuthModal uses `PasswordField`. Signup validates full complexity, not HTML `minLength={8}` only.                                                                                                 |
+| **Auth errors**       | `mapAuthErrorMessage` — never return raw English Supabase strings.                                                                                                                                                                                |
+| **`/reset-password`** | `resolveResetPasswordAccess`: a normal logged-in visit → `already-signed-in` (go to `/profile`), not the recovery form without the current password. Module-level `passwordRecoverySignal` in `supabase.ts` so `PASSWORD_RECOVERY` is not missed. |
+
+#### Follow-ups (after P1/P2)
+
+| Item                      | What changed                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Single-source teasers** | `allNews` is canonical. `scripts/news-teasers.mjs` (`pnpm --filter aniquizz-client sync:news`) writes `newsPreview.ts` and patches `index.html` app-shell (version + two cards, `<!--app-shell-news-->` markers). Vite plugin runs on `dev`/`build`; prerender `/news` uses the same parser. Test: preview ≡ `allNews.slice(0, 2)` and `sync:news --check`. For v26.7: add the article, bump `SITE_VERSION`, run `dev` or `sync:news`. |
+| **Honest degraded chip**  | Profile SELECT failure: no XP conic ring, no fake level 1. Label « Profil indisponible » (dashed border). Session name is avatar initials only. Click retries and opens `/profile`.                                                                                                                                                                                                                                                    |
+| **AuthModal copy**        | Titles, toasts, fields, switch, legal strings live in `authCopy.ts` (`AUTH_COPY.modal.*`).                                                                                                                                                                                                                                                                                                                                             |
+| **Touch prefetch**        | `routeIntentHandlers`: `pointerenter` + `focus` + `pointerdown` on Home CTAs (Jouer also warms `dailyApi.today()`). `warmLikelyRoutes` still idles play + profile.                                                                                                                                                                                                                                                                     |
+
+**Not in this pass:** Hub audit · jsx-a11y backlog · HIBP · 26.7.
+
+**Next:** Hub feature audit with the French prompt (phone + SEO lenses). Do not start 26.7.
 
 ### 26.6 — Quiz du jour ✅
 
@@ -109,8 +158,6 @@ Five globally identical songs per Paris day. Not a `Match`: no `gamesPlayed` / w
 Daily heard clips upsert `SongHistory` (started rounds only; leftover forfeit skips). Match `game_over` uses the same rule (`matchHeardSongIds` from recorded + in-progress clips, not the leftover playlist). Admin daily reset rewinds those rows. Profile / leaderboard / admin counts filter `COMPLETED` songs. Collection medals on the profile use design tokens (`text-medal-bronze` / `text-silver` / `text-warning` / `text-aqua`), not hex.
 
 **Next after this release:** 26.7 in `PLAN.md` (found bar on the profile pokédex; heard / found playlists).
-
-**Known nits (non-blocking):** admin reset can decrement `longestStreak` when today only _tied_ an older record; mid/low popularity bands can still surface well-known titles.
 
 **Known nits (non-blocking):** admin reset can decrement `longestStreak` when today only _tied_ an older record; mid/low popularity bands can still surface well-known titles.
 

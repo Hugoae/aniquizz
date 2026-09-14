@@ -10,10 +10,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordField } from '@/components/ui/PasswordField';
 import { supabase } from '@/lib/supabase';
-import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, User, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { getErrorMessage } from '@/lib/errors';
+import { AUTH_COPY } from '@/features/auth/copy/authCopy';
+import { mapAuthErrorMessage } from '@/features/auth/lib/authErrorMessage';
+import { isPasswordValid } from '@/features/auth/lib/passwordPolicy';
 
 interface AuthModalProps {
   open: boolean;
@@ -41,70 +44,67 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (mode === 'signup' && !isPasswordValid(password)) {
+      setError(AUTH_COPY.passwordInvalid);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        toast.success('Bon retour parmi nous !');
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        if (signInError) throw signInError;
+        toast.success(AUTH_COPY.modal.login.toast);
         onOpenChange(false);
       } else if (mode === 'signup') {
-        const { error } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: { data: { username } },
         });
-        if (error) throw error;
-        toast.success('Compte créé ! Vérifiez vos emails.');
+        if (signUpError) throw signUpError;
+        toast.success(AUTH_COPY.modal.signup.toast);
         onOpenChange(false);
       } else {
         // Password recovery. Never reveal whether the account exists.
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
-        if (error) throw error;
-        toast.success(
-          "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé.",
-        );
+        if (resetError) throw resetError;
+        toast.success(AUTH_COPY.modal.forgot.toast);
         setMode('login');
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err));
+      setError(mapAuthErrorMessage(err));
     } finally {
       setLoading(false);
     }
   };
 
-  const title =
-    mode === 'login' ? 'CONNEXION' : mode === 'signup' ? 'INSCRIPTION' : 'MOT DE PASSE OUBLIÉ';
-  const description =
-    mode === 'login'
-      ? 'Connectez-vous pour sauvegarder votre progression.'
-      : mode === 'signup'
-        ? 'Rejoignez la communauté AniQuizz !'
-        : 'Entrez votre email pour recevoir un lien de réinitialisation.';
+  const copy = AUTH_COPY.modal[mode];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px] sm:rounded-xl bg-card border-border">
+      <DialogContent className="max-h-[min(90dvh,40rem)] overflow-y-auto sm:max-w-[400px] sm:rounded-xl bg-card border-border">
         <DialogHeader>
           <DialogTitle className="text-2xl font-black text-center gradient-text">
-            {title}
+            {copy.title}
           </DialogTitle>
-          <DialogDescription className="text-center">{description}</DialogDescription>
+          <DialogDescription className="text-center">{copy.description}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           {mode === 'signup' && (
             <div className="space-y-2">
-              <Label htmlFor="username">Pseudo</Label>
+              <Label htmlFor="username">{AUTH_COPY.modal.fields.username}</Label>
               <div className="relative">
                 <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="username"
-                  placeholder="OtakuDu93"
+                  placeholder={AUTH_COPY.modal.fields.usernamePlaceholder}
                   className="pl-9"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -115,13 +115,13 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{AUTH_COPY.modal.fields.email}</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 id="email"
                 type="email"
-                placeholder="exemple@email.com"
+                placeholder={AUTH_COPY.modal.fields.emailPlaceholder}
                 className="pl-9"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -132,56 +132,47 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
           {mode !== 'forgot' && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Mot de passe</Label>
-                {mode === 'login' && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode('forgot');
-                      setError(null);
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    Mot de passe oublié ?
-                  </button>
-                )}
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                />
-              </div>
+              <PasswordField
+                id="password"
+                label={AUTH_COPY.modal.fields.password}
+                autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                value={password}
+                onChange={setPassword}
+                required
+                headerRight={
+                  mode === 'login' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode('forgot');
+                        setError(null);
+                      }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      {AUTH_COPY.modal.fields.forgotLink}
+                    </button>
+                  ) : null
+                }
+              />
               {mode === 'signup' && (
                 <>
+                  <p className="text-xs text-muted-foreground">{AUTH_COPY.passwordHint}</p>
                   <p className="text-xs text-muted-foreground">
-                    Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un
-                    caractère spécial.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    En créant un compte, vous acceptez nos{' '}
+                    {AUTH_COPY.modal.signup.legalLead}
                     <Link
                       to="/legal/cgu"
                       className="text-primary underline-offset-2 hover:underline"
                     >
-                      conditions d&apos;utilisation
-                    </Link>{' '}
-                    et notre{' '}
+                      {AUTH_COPY.modal.signup.terms}
+                    </Link>
+                    {AUTH_COPY.modal.signup.legalMid}
                     <Link
                       to="/legal/confidentialite"
                       className="text-primary underline-offset-2 hover:underline"
                     >
-                      politique de confidentialité
+                      {AUTH_COPY.modal.signup.privacy}
                     </Link>
-                    .
+                    {AUTH_COPY.modal.signup.legalEnd}
                   </p>
                 </>
               )}
@@ -197,11 +188,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
           <Button type="submit" className="w-full font-bold" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {mode === 'login'
-              ? 'Se connecter'
-              : mode === 'signup'
-                ? "S'inscrire"
-                : 'Envoyer le lien'}
+            {copy.submit}
           </Button>
 
           <div className="text-center text-sm text-muted-foreground mt-4">
@@ -214,11 +201,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 }}
                 className="text-primary hover:underline font-semibold"
               >
-                Retour à la connexion
+                {AUTH_COPY.modal.forgot.back}
               </button>
             ) : (
               <>
-                {mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
+                {AUTH_COPY.modal[mode].switchPrompt}
                 <button
                   type="button"
                   onClick={() => {
@@ -227,7 +214,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                   }}
                   className="text-primary hover:underline font-semibold"
                 >
-                  {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
+                  {AUTH_COPY.modal[mode].switchAction}
                 </button>
               </>
             )}

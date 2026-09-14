@@ -6,6 +6,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { escapeHtml, extractNewsItems, NEWS_DATA_PATH } from './news-teasers.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(ROOT, '../dist');
@@ -15,33 +16,6 @@ const SITE = 'AniQuizz';
 const HOME_TITLE = "AniQuizz - Le Blindtest d'Anime";
 const HOME_DESC =
   "Blindtest anime en ligne. Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !";
-
-function escapeHtml(s) {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function extractNewsItems() {
-  const src = readFileSync(
-    path.join(ROOT, '../src/features/news/data/newsData.ts'),
-    'utf8',
-  );
-  const items = [];
-  const re =
-    /id:\s*(\d+),\s*\n\s*title:\s*'((?:\\'|[^'])*)',\s*\n\s*description:\s*'((?:\\'|[^'])*)',/g;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    items.push({
-      id: Number(m[1]),
-      title: m[2].replace(/\\'/g, "'"),
-      description: m[3].replace(/\\'/g, "'"),
-    });
-  }
-  return items;
-}
 
 function shell(title, body) {
   return `<main id="main-content"><h1>${escapeHtml(title)}</h1>${body}</main>`;
@@ -53,7 +27,7 @@ function homeBody() {
 }
 
 function newsBody() {
-  const items = extractNewsItems();
+  const items = extractNewsItems(readFileSync(NEWS_DATA_PATH, 'utf8'));
   const list = items
     .map(
       (n) =>

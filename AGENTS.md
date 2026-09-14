@@ -20,7 +20,7 @@ Multi-context layout: [`CONTEXT-MAP.md`](./CONTEXT-MAP.md) at the root points to
 per-package `CONTEXT.md` (role, business glossary, known pitfalls). Read the context
 relevant to your task before scanning the package. See `docs/agents/domain.md` for how
 to consume them; [`ARCHITECTURE.md`](./ARCHITECTURE.md) has the full system detail.
-Full-feature audit prompt (all lenses): [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md).
+Full-feature audit prompt (all lenses, **French**): [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md).
 
 ---
 

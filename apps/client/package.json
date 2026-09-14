@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/prerender-routes.mjs && node scripts/check-production-scripts.mjs",
+    "sync:news": "node scripts/news-teasers.mjs",
     "build:analyze": "cross-env ANALYZE=1 vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

@@ -26,7 +26,20 @@ export function prefetchRoute(key: RouteKey): void {
   void importers[key]().catch(() => prefetched.delete(key));
 }
 
-/** Warm the `/play` chunk on intent (hover/focus) so navigation feels instant. */
+/** Pointer/keyboard intent: hover, focus, and touch/click down — not hover-only. */
+export function routeIntentHandlers(run: () => void): {
+  onPointerEnter: () => void;
+  onFocus: () => void;
+  onPointerDown: () => void;
+} {
+  return {
+    onPointerEnter: run,
+    onFocus: run,
+    onPointerDown: run,
+  };
+}
+
+/** Warm the `/play` chunk on intent (hover/focus/pointer-down) so navigation feels instant. */
 export function prefetchGameHub(): void {
   prefetchRoute('play');
 }

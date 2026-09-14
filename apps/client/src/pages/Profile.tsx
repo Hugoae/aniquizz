@@ -127,7 +127,8 @@ export default function Profile() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, profile, signOut, authReady, refreshProfile } = useAuth();
+  const { user, profile, signOut, authReady, refreshProfile, profileFailed, profileLoading } =
+    useAuth();
   const {
     addById,
     remove,
@@ -442,6 +443,29 @@ export default function Profile() {
             <div className="glass-card rounded-xl border border-border bg-card/40 p-10 text-center">
               <h1 className="text-2xl font-black">Profil indisponible</h1>
               <p className="mt-2 text-sm text-muted-foreground">Ce profil n’est pas accessible.</p>
+            </div>
+          </main>
+          <FloatingSettingsButton />
+        </div>
+      </>
+    );
+  }
+
+  if (isOwn && authReady && user && !profile && profileFailed && !profileLoading) {
+    return (
+      <>
+        <SeoHead title="Profil indisponible" noindex path="/profile" />
+        <div className="min-h-screen bg-background pb-20">
+          <Header />
+          <main id="main-content" className="pt-24 container max-w-[1400px] mx-auto px-4">
+            <div className="glass-card rounded-xl border border-border bg-card/40 p-10 text-center">
+              <h1 className="text-2xl font-black">Impossible de charger le profil</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Ta session est toujours active. Réessaie dans un instant.
+              </p>
+              <Button className="mt-6" onClick={() => void refreshProfile()}>
+                Réessayer
+              </Button>
             </div>
           </main>
           <FloatingSettingsButton />

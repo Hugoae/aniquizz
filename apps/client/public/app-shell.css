@@ -386,7 +386,7 @@ body {
   box-shadow: 0 0 0 2px hsl(265 25% 7%), 0 0 14px hsl(265 68% 54% / 0.55);
 }
 
-/* News — matches NewsSection.tsx (latest 2 items; sync when newsData changes) */
+/* News — latest 2 items; generated into index.html by scripts/news-teasers.mjs */
 .app-shell-news {
   width: 100%;
   padding: 1.5rem 1rem;

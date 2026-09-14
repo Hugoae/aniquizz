@@ -6,7 +6,8 @@ to your task instead of scanning the whole package.
 
 See [`docs/agents/domain.md`](./docs/agents/domain.md) for how to consume these docs,
 [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) for the full-feature
-audit prompt, and [`AGENTS.md`](./AGENTS.md) for the full engineering playbook.
+audit prompt (French; includes mobile/responsive and SEO/alt lenses),
+and [`AGENTS.md`](./AGENTS.md) for the full engineering playbook.
 
 ## Contexts
 

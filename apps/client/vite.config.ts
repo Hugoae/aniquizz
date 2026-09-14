@@ -1,8 +1,34 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 import path from 'path';
 import fs from 'fs';
 import { visualizer } from 'rollup-plugin-visualizer';
+import { NEWS_DATA_PATH, SITE_PATH, syncNewsTeasers } from './scripts/news-teasers.mjs';
+
+/** Keep newsPreview.ts + index.html app-shell in lockstep with allNews / SITE_VERSION. */
+function newsTeasersPlugin(): Plugin {
+  const sync = () => {
+    const { changed, version } = syncNewsTeasers();
+    if (changed) {
+      console.log(`[news-teasers] synced preview + app-shell (v${version})`);
+    }
+  };
+
+  return {
+    name: 'aniquizz-news-teasers',
+    buildStart: sync,
+    configureServer(server) {
+      sync();
+      server.watcher.add([NEWS_DATA_PATH, SITE_PATH]);
+      server.watcher.on('change', (file) => {
+        const norm = file.replace(/\\/g, '/');
+        if (norm.endsWith('/newsData.ts') || norm.endsWith('/site.ts')) {
+          sync();
+        }
+      });
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -11,6 +37,7 @@ export default defineConfig({
     port: 8080,
   },
   plugins: [
+    newsTeasersPlugin(),
     react(),
     {
       // Inline the critical shell CSS and keep it first, so the static #app-shell

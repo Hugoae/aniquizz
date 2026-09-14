@@ -11,4 +11,11 @@ describe('HOME_COPY', () => {
     expect(HOME_COPY.sub).toMatch(/sans pubs/i);
     expect(HOME_COPY.sub).toMatch(/gratuit/i);
   });
+
+  it('keeps landing CTAs in the copy module', () => {
+    expect(HOME_COPY.play).toBe('Jouer');
+    expect(HOME_COPY.library).toBe('Librairie');
+    expect(HOME_COPY.leaderboard).toBe('Classement');
+    expect(HOME_COPY.ideas).toBe('Idées');
+  });
 });

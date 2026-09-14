@@ -72,6 +72,9 @@ export const registerProfileHandlers = (
         data: updateData,
       });
 
+      const nextUsername = typeof updateData.username === 'string' ? updateData.username : null;
+      if (nextUsername) socket.data.username = nextUsername;
+
       socket.emit('user_profile', { success: true });
       logger.info(`Profil mis à jour pour ${userId}`, 'Profile');
     } catch (error) {

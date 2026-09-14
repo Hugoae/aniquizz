@@ -50,8 +50,22 @@ export async function waitForAppStylesheet(): Promise<void> {
 }
 
 /**
+ * Home play CTA: prefer the `/play` link (middle-clickable) so the probe does
+ * not depend on the French label. Fall back to a button whose text includes Jouer.
+ */
+export function findHomePlayCta(root: ParentNode = document): Element | null {
+  const byHref = root.querySelector('#root a[href="/play"], a[href="/play"]');
+  if (byHref) return byHref;
+  return (
+    [...root.querySelectorAll('#root button, button')].find((btn) =>
+      btn.textContent?.trim().includes('Jouer'),
+    ) ?? null
+  );
+}
+
+/**
  * True when the mounted Home tree has Tailwind utilities applied (not just link.sheet).
- * Targets the "Jouer" CTA specifically — generic button probes false-positive on header/cookie UI.
+ * Targets the play CTA specifically — generic button probes false-positive on header/cookie UI.
  */
 export function isHomeStyled(): boolean {
   const h1 = document.querySelector('#root h1.font-display');
@@ -60,19 +74,17 @@ export function isHomeStyled(): boolean {
   const titlePx = parseFloat(getComputedStyle(h1).fontSize);
   if (titlePx < 44) return false;
 
-  const playBtn = [...document.querySelectorAll('#root button')].find((btn) =>
-    btn.textContent?.trim().includes('Jouer'),
-  );
-  if (!playBtn) return false;
+  const playCta = findHomePlayCta();
+  if (!playCta) return false;
 
-  const btn = getComputedStyle(playBtn);
+  const btn = getComputedStyle(playCta);
   if (btn.display !== 'flex' && btn.display !== 'inline-flex') return false;
   if (parseFloat(btn.height) < 56) return false;
 
   const bg = btn.backgroundColor;
   if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') return false;
 
-  const icon = playBtn.querySelector('svg');
+  const icon = playCta.querySelector('svg');
   if (icon) {
     const iconBox = icon.getBoundingClientRect();
     if (iconBox.width > 48 || iconBox.height > 48) return false;

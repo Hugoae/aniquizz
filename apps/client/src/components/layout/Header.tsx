@@ -6,17 +6,28 @@ import { Coffee, LogIn, Shield } from 'lucide-react';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
+import { headerAuthSlot, sessionDisplayName } from '@/features/auth/lib/headerAuthSlot';
+import { AUTH_COPY } from '@/features/auth/copy/authCopy';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { prefetchRoute } from '@/lib/routePrefetch';
 import { KOFI_URL } from '@/lib/site';
 
 export function Header() {
   const navigate = useNavigate();
-  const { user, profile, authReady } = useAuth();
+  const { user, profile, authReady, profileFailed, refreshProfile } = useAuth();
   const { setShowAuthModal } = useAuthModal();
   const isStaff = hasRole(profile?.role, 'MODERATOR');
+  const slot = headerAuthSlot({
+    authReady,
+    hasUser: Boolean(user),
+    hasProfile: Boolean(profile),
+    profileFailed,
+  });
 
-  const showProfileLoading = !authReady || Boolean(user && !profile);
+  const openProfile = () => {
+    if (slot === 'degraded') void refreshProfile();
+    navigate('/profile');
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
@@ -37,7 +48,7 @@ export function Header() {
       </Link>
 
       <div className="flex min-w-[2.75rem] items-center justify-end gap-3">
-        {user && profile && <SuspensionBadge />}
+        {slot === 'profile' && <SuspensionBadge />}
         <Button
           asChild
           variant="outline"
@@ -55,7 +66,7 @@ export function Header() {
             <span className="hidden sm:inline">Soutenir</span>
           </a>
         </Button>
-        {user && profile && isStaff && (
+        {slot === 'profile' && isStaff && (
           <Button
             variant="ghost"
             onClick={() => navigate('/admin')}
@@ -70,21 +81,30 @@ export function Header() {
             <span className="hidden md:inline text-sm font-semibold">Admin</span>
           </Button>
         )}
-        {user && profile && <div className="h-6 w-px bg-border/70" aria-hidden="true" />}
-        {showProfileLoading ? (
+        {slot === 'profile' && <div className="h-6 w-px bg-border/70" aria-hidden="true" />}
+        {slot === 'loading' ? (
           <ProfileButton loading />
-        ) : user && profile ? (
+        ) : slot === 'profile' && profile ? (
           <ProfileButton
             username={profile.username}
             avatar={profile.avatar}
             xp={profile.xp}
-            onClick={() => navigate('/profile')}
+            onClick={openProfile}
+            onPrefetch={() => prefetchRoute('profile')}
+          />
+        ) : slot === 'degraded' ? (
+          <ProfileButton
+            username={sessionDisplayName(user)}
+            label={AUTH_COPY.profileUnavailable}
+            chipTitle={AUTH_COPY.profileUnavailableHint}
+            degraded
+            onClick={openProfile}
             onPrefetch={() => prefetchRoute('profile')}
           />
         ) : (
           <Button onClick={() => setShowAuthModal(true)} variant="default" className="font-bold">
             <LogIn className="mr-2 h-4 w-4" aria-hidden />
-            Se connecter
+            {AUTH_COPY.signIn}
           </Button>
         )}
       </div>
