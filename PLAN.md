@@ -10,7 +10,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.3**  | ✅ Shipped | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                              |
 | **26.4**  | ✅ Shipped | Song likes, suggestions, library views, community leaderboard                                                         |
 | **26.5**  | ✅ Shipped | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
-| **26.6**  | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-14)                                   |
+| **26.6**  | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
 | **26.7**  | 🔮 Next    | Profile pokédex found bar · heard / found / liked playlists                                                           |
 | **26.x+** | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
@@ -266,7 +266,7 @@ P0/P1/P2 useful from the 10 Sept. 2026 audit (see `PROGRESS.md`): Mix clamp, ski
 ## Update 26.6 — Quiz du jour, settings & donations
 
 Player settings, **Artiste** precision, Ko-fi, and **Quiz du jour** shipped as tag
-`26.6` (`ed82c96`, 2026-09-14) — see [`PROGRESS.md`](./PROGRESS.md).
+`26.6` (`ed82c96`, public launch 2026-09-15) — see [`PROGRESS.md`](./PROGRESS.md).
 
 ### 1. New answer precision — Artiste ✅
 
@@ -303,7 +303,7 @@ Dedicated daily streak (including `0/5`) and XP: participation (`3` × active so
 `12` per correct, plus `20` on recap victory (≥ 3 found) and `10` extra for a perfect day.
 Does **not** increment ordinary match aggregates (`gamesPlayed`, wins, guesses, win streak).
 Heard clips **do** upsert `SongHistory` (pokédex). Ranking: correct desc,
-then cumulative time (ties `1-2-2-4`). Launch numbering **#1 = 2026-09-14**.
+then cumulative time (ties `1-2-2-4`). Launch numbering **#1 = 2026-09-15**.
 
 **Public:** landing, QCM play on `StandardGameLayout`, reveal likes (catalogue song id),
 recap, daily leaderboard, profile history merge.

@@ -13,7 +13,7 @@ export const allNews: NewsItem[] = [
       '**Quiz du jour**\n' +
       '• Cinq QCM identiques pour tout le monde, précision **Anime**, compte requis.\n' +
       '• Une seule tentative officielle : quitter, rafraîchir ou fermer l’onglet abandonne les questions restantes. Pas de reprise au milieu.\n' +
-      '• 15 secondes pour deviner, 15 secondes de révélation par manche. Reset à minuit **heure de Paris**. Le n°1 correspond au 14 septembre 2026.\n' +
+      '• 15 secondes pour deviner, 15 secondes de révélation par manche. Reset à minuit **heure de Paris**. Le n°1 correspond au 15 septembre 2026.\n' +
       '• Score sur 5, classement du jour (trouvés, puis le temps), série quotidienne même à 0/5, un peu d’XP.\n' +
       '• Victoire dès 3 trouvés, bonus si 5/5.\n' +
       '• Le classement du jour est visible. À la révélation, vous pouvez liker le son comme en solo / multi.\n' +
@@ -35,7 +35,7 @@ export const allNews: NewsItem[] = [
       '• Titres et crédits manquants repris là où c’était sûr.\n' +
       '• La recherche comprend mieux les requêtes du type **bleach ED5** (librairie, admin, suggestions).\n\n' +
       'Bon quiz, et à demain pour le suivant !',
-    date: '2026-09-14T12:00:00Z',
+    date: '2026-09-15T12:00:00Z',
     type: 'update',
   },
   {

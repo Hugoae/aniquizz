@@ -56,7 +56,7 @@ is left unchanged. Future days replace the song instead of voiding. There is no
 
 Today’s lineup stays editable until the first attempt; past days are read-only.
 
-Launch numbering starts at **#1 on 2026-09-14** (update 26.6).
+Launch numbering starts at **#1 on 2026-09-15** (update 26.6).
 
 ## Generation
 

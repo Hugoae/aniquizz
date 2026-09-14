@@ -9,7 +9,7 @@ export const latestNewsPreview: NewsPreviewItem[] = [
     title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:
       'Défi quotidien, paramètres joueur, précision Artiste, bouton Soutenir, et un passage catalogue.',
-    date: '2026-09-14T12:00:00Z',
+    date: '2026-09-15T12:00:00Z',
     type: 'update',
   },
   {

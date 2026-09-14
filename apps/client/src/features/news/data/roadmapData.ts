@@ -74,7 +74,7 @@ export const roadmapData: RoadmapItem[] = [
     description:
       'Cinq QCM identiques pour tous, une tentative, série dédiée, classement du jour, reset minuit Paris.',
     status: 'done',
-    date: '14 septembre 2026, v26.6',
+    date: '15 septembre 2026, v26.6',
   },
   {
     title: 'Refonte du profil',
