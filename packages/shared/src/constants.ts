@@ -123,6 +123,11 @@ export const GAME_CONFIG = {
     MAX_PLAYERS_PER_LOBBY: 50,
     CHAT_HISTORY: 50,
     MAX_USERNAME_LENGTH: 16,
+    /**
+     * Preset keys (`player1`) or a Supabase avatars public URL + cache buster.
+     * Hub Zod must not cap this at a filename length — uploaded URLs are ~140 chars.
+     */
+    MAX_AVATAR_LENGTH: 512,
     MAX_CHAT_LENGTH: 200,
     /** Typing answers (franchise / anime / artist). Oversized payloads are dropped. */
     MAX_ANSWER_LENGTH: 256,

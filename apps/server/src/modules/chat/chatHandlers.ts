@@ -1,8 +1,9 @@
-import { GAME_CONFIG } from '@aniquizz/shared';
+import { chatSendMessageInputSchema } from '@aniquizz/shared';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
 import { logger } from '../../utils/logger';
 import { guard, RATE_LIMITS } from '../../core/guards';
+import { parseSocketPayload } from '../../core/parseSocketPayload';
 
 export const registerChatHandlers = (
   io: TypedServer,
@@ -10,14 +11,15 @@ export const registerChatHandlers = (
   gameManager: GameManager,
 ) => {
   const sendMessage = (payload: { roomId: string; content: string }) => {
-    if (!payload.roomId || !payload.content?.trim()) return;
+    const parsed = parseSocketPayload(socket, chatSendMessageInputSchema, payload);
+    if (!parsed) return;
 
     const userId = socket.data.userId;
     // Only authenticated members of the target room may broadcast to it. This
     // prevents a client from injecting messages into arbitrary rooms it never
     // joined (the roomId is client-supplied).
     if (!userId) return;
-    const room = gameManager.getRoom(payload.roomId);
+    const room = gameManager.getRoom(parsed.roomId);
     const player = room?.players.get(userId);
     if (!room || !player) return;
 
@@ -28,24 +30,20 @@ export const registerChatHandlers = (
       return;
     }
 
-    // Trim + hard length cap so a single message can't flood the room.
-    const content = payload.content.trim().slice(0, GAME_CONFIG.LIMITS.MAX_CHAT_LENGTH);
-    if (!content) return;
-
     // Talking counts as activity so a chatty lobby isn't closed as "idle".
     room.touch();
 
-    io.to(payload.roomId).emit('chat:message', {
+    io.to(parsed.roomId).emit('chat:message', {
       id: Date.now().toString(),
       senderId: userId,
       username: player.username || socket.data.username || 'Inconnu',
       avatar: player.avatar || 'player1',
-      content,
+      content: parsed.content,
       timestamp: Date.now(),
       isSystem: false,
     });
 
-    logger.info(`Chat message in ${payload.roomId} from ${player.username || userId}`, 'Chat');
+    logger.info(`Chat message in ${parsed.roomId} from ${player.username || userId}`, 'Chat');
   };
 
   socket.on('chat:sendMessage', guard(socket, 'chat:sendMessage', RATE_LIMITS.chat, sendMessage));

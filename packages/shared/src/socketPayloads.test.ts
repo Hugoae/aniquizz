@@ -6,6 +6,7 @@ import {
   joinLobbyInputSchema,
   lobbyTargetInputSchema,
   roomIdInputSchema,
+  chatSendMessageInputSchema,
   updateRoomSettingsInputSchema,
 } from './socketPayloads';
 
@@ -135,6 +136,36 @@ describe('createLobbyInputSchema', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('accepts a uploaded-avatar public URL and strips client userId', () => {
+    const avatar =
+      'https://example.supabase.co/storage/v1/object/public/avatars/' +
+      'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/avatar.jpg?v=1736890000000';
+    expect(avatar.length).toBeGreaterThan(64);
+    expect(
+      createLobbyInputSchema.parse({
+        roomName: 'Solo de Host',
+        username: 'Host',
+        avatar,
+        userId: 'not-a-trusted-id',
+        settings: { maxPlayers: 1 },
+      }),
+    ).toEqual({
+      roomName: 'Solo de Host',
+      username: 'Host',
+      avatar,
+      settings: { maxPlayers: 1 },
+    });
+  });
+
+  it('rejects an oversized avatar string', () => {
+    expect(
+      createLobbyInputSchema.safeParse({
+        settings: {},
+        avatar: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_AVATAR_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('joinLobbyInputSchema', () => {
@@ -182,5 +213,32 @@ describe('lobbyTargetInputSchema', () => {
     expect(lobbyTargetInputSchema.safeParse({ roomId: 'A3K9ZQ', targetId: '' }).success).toBe(
       false,
     );
+  });
+});
+
+describe('chatSendMessageInputSchema', () => {
+  it('trims content and strips unknown keys', () => {
+    expect(
+      chatSendMessageInputSchema.parse({
+        roomId: 'A3K9ZQ',
+        content: '  salut  ',
+        extra: true,
+      }),
+    ).toEqual({ roomId: 'A3K9ZQ', content: 'salut' });
+  });
+
+  it('rejects empty, whitespace-only, or oversized content', () => {
+    expect(chatSendMessageInputSchema.safeParse({ roomId: 'A3K9ZQ', content: '' }).success).toBe(
+      false,
+    );
+    expect(chatSendMessageInputSchema.safeParse({ roomId: 'A3K9ZQ', content: '   ' }).success).toBe(
+      false,
+    );
+    expect(
+      chatSendMessageInputSchema.safeParse({
+        roomId: 'A3K9ZQ',
+        content: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_CHAT_LENGTH + 1),
+      }).success,
+    ).toBe(false);
   });
 });

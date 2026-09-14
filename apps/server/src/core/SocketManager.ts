@@ -9,6 +9,7 @@ import type { GameManager } from '../modules/game/gameManager';
 import { registerChatHandlers } from '../modules/chat/chatHandlers';
 import { registerLobbyHandlers } from '../modules/lobby/lobbyHandlers';
 import { registerGameHandlers } from '../modules/game/gameHandlers';
+import { registerPoolStatsHandlers } from '../modules/game/poolStatsHandlers';
 import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
 import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
@@ -97,6 +98,7 @@ export class SocketManager {
       registerChatHandlers(this.io, socket, this.gameManager);
       registerLobbyHandlers(this.io, socket, this.gameManager);
       registerGameHandlers(this.io, socket, this.gameManager);
+      registerPoolStatsHandlers(socket, this.gameManager);
       registerProfileHandlers(this.io, socket, this.gameManager);
       registerGeneralHandlers(this.io, socket, this.gameManager);
       registerFriendsHandlers(this.io, socket, this.gameManager);

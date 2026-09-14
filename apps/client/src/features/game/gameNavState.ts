@@ -1,4 +1,5 @@
 import type { GamePlayer, RoomSettings } from '@aniquizz/shared';
+import { roomIdInputSchema } from '@aniquizz/shared';
 
 /** Navigation state handed over by the lobby when a match starts. */
 export interface GameNavState {
@@ -10,15 +11,33 @@ export interface GameNavState {
   gameStartTime?: number;
 }
 
-export function parseGameNavState(state: unknown): GameNavState {
-  if (!state || typeof state !== 'object') return {};
+function parseRoomId(value: unknown): string | undefined {
+  const parsed = roomIdInputSchema.safeParse({ roomId: value });
+  return parsed.success ? parsed.data.roomId : undefined;
+}
+
+function roomIdFromSearch(search: string | undefined): string | undefined {
+  if (!search) return undefined;
+  const raw = search.startsWith('?') ? search.slice(1) : search;
+  return parseRoomId(new URLSearchParams(raw).get('roomId'));
+}
+
+/**
+ * Lobby handover (`location.state`) plus `/game?roomId=` so a refresh can still
+ * call `get_game_state`. The query wins when both are present.
+ */
+export function parseGameNavState(state: unknown, search?: string): GameNavState {
+  const fromSearch = roomIdFromSearch(search);
+  if (!state || typeof state !== 'object') {
+    return fromSearch ? { roomId: fromSearch } : {};
+  }
 
   const s = state as Record<string, unknown>;
   const settings = s.settings;
   const gameData = s.gameData;
 
   return {
-    roomId: typeof s.roomId === 'string' ? s.roomId : undefined,
+    roomId: fromSearch ?? parseRoomId(s.roomId),
     players: Array.isArray(s.players) ? (s.players as GamePlayer[]) : undefined,
     settings:
       settings && typeof settings === 'object' ? (settings as Partial<RoomSettings>) : undefined,
@@ -35,4 +54,10 @@ export function parseGameNavState(state: unknown): GameNavState {
         : undefined,
     gameStartTime: typeof s.gameStartTime === 'number' ? s.gameStartTime : undefined,
   };
+}
+
+/** In-match path that survives a refresh (room id is not only in location.state). */
+export function gamePath(roomId: string): string {
+  const id = parseRoomId(roomId);
+  return id ? `/game?roomId=${encodeURIComponent(id)}` : '/game';
 }

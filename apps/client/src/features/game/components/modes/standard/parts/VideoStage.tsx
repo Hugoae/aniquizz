@@ -111,10 +111,12 @@ export const VideoStage = memo(function VideoStage({
   return (
     <div
       className={cn(
-        'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500',
+        'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500 landscape:max-h-[min(28vh,11rem)]',
         isGuessing && videoMode === 'peek' ? 'bg-background' : 'bg-black',
       )}
     >
+      {/* Music excerpt — no dialogue captions to ship; aria-label already describes the clip. */}
+      {/* eslint-disable-next-line jsx-a11y/media-has-caption -- guessing clip is audio/video without a caption track */}
       <video
         ref={videoRef}
         className={videoClassName}

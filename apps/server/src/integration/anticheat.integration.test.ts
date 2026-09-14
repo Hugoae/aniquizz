@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { GameSyncState, LobbyJoinedPayload, RoundStartPayload } from '@aniquizz/shared';
+import { INVALID_SOCKET_PAYLOAD_MESSAGE } from '../core/parseSocketPayload';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { countPlayableSongs } from '../test/dbHelpers';
 import { hasIntegrationEnv } from '../test/env';
@@ -52,6 +53,16 @@ describe.skipIf(!hasIntegrationEnv)('anti-cheat integration', () => {
 
     await new Promise((r) => setTimeout(r, 500));
     expect(answeredEvents).toHaveLength(0);
+  });
+
+  it('rejects a missing roomId on match sync, return, and cancel', async () => {
+    const events = ['get_game_state', 'game:return_to_lobby', 'game:cancel'] as const;
+    for (const event of events) {
+      const errorPromise = onceEvent<{ message: string }>(socket, 'error');
+      socket.emit(event, undefined as unknown as { roomId: string });
+      const err = await errorPromise;
+      expect(err.message).toBe(INVALID_SOCKET_PAYLOAD_MESSAGE);
+    }
   });
 
   it.skipIf(!hasSongs)('does not leak answer content before round_reveal', async () => {

@@ -10,21 +10,10 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
 import { Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 import { StandardGameOver } from '@/features/game/components/modes/standard/StandardGameOver';
 import { StandardGameLayout } from '@/features/game/components/modes/standard/StandardGameLayout';
 import { GlobalSettingsModal } from '@/features/settings/components/GlobalSettingsModal';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
@@ -44,7 +33,11 @@ import {
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
-import { parseGameNavState } from '@/features/game/gameNavState';
+import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
+import { MissingGameRoom } from '@/features/game/components/MissingGameRoom';
+import { MatchLoadingOverlay } from '@/features/game/components/MatchLoadingOverlay';
+import { GameLeaveDialogs } from '@/features/game/components/GameLeaveDialogs';
+import { GAME_COPY } from '@/features/game/copy/gameCopy';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import { sourceChipValue } from '@/features/hub/components/roomSettings';
@@ -63,7 +56,7 @@ export default function Game() {
   const location = useLocation();
   const { profile } = useAuth();
 
-  const initialState = parseGameNavState(location.state);
+  const initialState = parseGameNavState(location.state, location.search);
   const roomId = initialState.roomId ?? '';
   const initialPlayers = initialState.players ?? [];
   const settings: Partial<RoomSettings> = initialState.settings ?? { gameType: 'standard' };
@@ -90,6 +83,14 @@ export default function Game() {
       navigate('/play', { replace: true });
     },
   });
+
+  // Keep room identity in the URL so F5 can emit get_game_state.
+  useEffect(() => {
+    if (!roomId) return;
+    const params = new URLSearchParams(location.search);
+    if (params.get('roomId') === roomId) return;
+    navigate(gamePath(roomId), { replace: true, state: location.state });
+  }, [roomId, location.search, location.state, navigate]);
 
   const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
   const isSprint = activeSettings.gameType === 'sprint';
@@ -146,7 +147,7 @@ export default function Game() {
   const [loadingCount, setLoadingCount] = useState(3);
 
   const myProfile = {
-    username: profile?.username || 'Moi',
+    username: profile?.username || GAME_COPY.config.me,
     avatar: profile?.avatar || 'player1',
     xp: profile?.xp ?? 0,
   };
@@ -156,9 +157,7 @@ export default function Game() {
 
   /** Shown when the player hard-leaves the salon (`leave_room`), not on soft lobby return. */
   const leaveSalonConsequences =
-    gameMode === 'solo'
-      ? 'Le salon sera fermé et la partie annulée.'
-      : 'La partie continuera pour les autres joueurs.';
+    gameMode === 'solo' ? GAME_COPY.consequences.solo : GAME_COPY.consequences.multi;
 
   const choices =
     inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : [];
@@ -258,7 +257,7 @@ export default function Game() {
       setSubmittedAnswer(val);
       actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode], gameMode === 'solo' && soloAutoReveal);
     },
-    [actions.answer, gameMode, inputMode, soloAutoReveal],
+    [actions, gameMode, inputMode, soloAutoReveal],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -278,9 +277,9 @@ export default function Game() {
       difficultyLabel:
         Array.isArray(settings.difficulty) && settings.difficulty.length === 1
           ? settings.difficulty[0]
-          : 'Varié',
+          : GAME_COPY.config.varied,
       precisionLabel: getPrecisionChipLabel(settings.precision),
-      modeLabel: 'Standard',
+      modeLabel: GAME_COPY.config.standard,
     }),
     [settings.soundSelection, settings.difficulty, settings.precision, playlistName],
   );
@@ -292,12 +291,21 @@ export default function Game() {
     decadePlaylistId: state.matchSettings?.decadePlaylistId ?? settings.decadePlaylistId,
   };
 
+  if (!roomId) {
+    return (
+      <>
+        <SeoHead title={PAGE_TITLES.game} noindex path="/game" />
+        <MissingGameRoom />
+      </>
+    );
+  }
+
   if (phase === 'ended') {
     if (!state.victoryData) {
       return (
         <div className="absolute inset-0 z-50 flex animate-fade-in flex-col items-center justify-center gap-4 bg-background">
           <Loader2 className="h-12 w-12 animate-spin text-primary" aria-hidden />
-          <p className="text-muted-foreground">Chargement des résultats…</p>
+          <p className="text-muted-foreground">{GAME_COPY.results.loading}</p>
         </div>
       );
     }
@@ -375,41 +383,13 @@ export default function Game() {
       />
 
       {phase === 'loading' ? (
-        <div
-          className="absolute inset-0 z-40 bg-background flex flex-col items-center justify-center animate-fade-in gap-6"
-          role="status"
-          aria-live="polite"
-          aria-label="Chargement de la partie"
-        >
-          <div className="relative">
-            <Loader2 className="h-20 w-20 text-primary animate-spin" aria-hidden />
-            <div className="absolute inset-0 flex items-center justify-center">
-              {/* "GO!" only once the first clip is actually ready (build done). If the
-                  build overruns the countdown, keep the spinner instead of a
-                  misleading "GO!" that would sit there until the round truly starts. */}
-              <span className="text-2xl font-bold tabular-nums text-primary">
-                {loadingCount > 0 ? loadingCount : firstClipReady ? 'GO!' : ''}
-              </span>
-            </div>
-          </div>
-          <div className="text-center space-y-2">
-            <h2 className="text-3xl font-bold animate-pulse gradient-text">CHARGEMENT...</h2>
-            <p className="text-muted-foreground">
-              {loadingCount === 0 && !firstClipReady
-                ? 'Préparation de la partie…'
-                : 'Préparez vos écouteurs...'}
-            </p>
-          </div>
-          {amIHost ? (
-            <Button variant="destructive" onClick={actions.cancel} className="mt-8">
-              Annuler la partie
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => setHardLeavePrompt('play')} className="mt-8">
-              Quitter le salon
-            </Button>
-          )}
-        </div>
+        <MatchLoadingOverlay
+          loadingCount={loadingCount}
+          firstClipReady={firstClipReady}
+          amIHost={amIHost}
+          onCancel={actions.cancel}
+          onLeaveSalon={() => setHardLeavePrompt('play')}
+        />
       ) : (
         <DevRenderProfiler id="StandardGameLayout">
           <StandardGameLayout
@@ -435,76 +415,16 @@ export default function Game() {
 
       <GlobalSettingsModal open={showSettings} onOpenChange={setShowSettings} />
 
-      {/* Soft vs hard leave — two distinct server paths, one clear dialog. */}
-      <AlertDialog open={showLeaveChoice} onOpenChange={setShowLeaveChoice}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Quitter le match ?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <span className="block">
-                <strong className="text-foreground">Retour au lobby</strong> — vous quittez
-                l&apos;écran de jeu mais restez dans le salon.
-              </span>
-              <span className="block">
-                <strong className="text-foreground">Quitter le salon</strong> — vous êtes retiré du
-                salon. {leaveSalonConsequences}
-              </span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                handleReturnToLobby();
-                setShowLeaveChoice(false);
-              }}
-              className="bg-primary"
-            >
-              Retour au lobby
-            </AlertDialogAction>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setShowLeaveChoice(false);
-                leaveSalon('/play');
-              }}
-              className="text-destructive hover:bg-destructive/10"
-            >
-              Quitter le salon
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Hard leave confirmation — shared by profile and "Quitter le salon" (`leave_room`). */}
-      <AlertDialog
-        open={hardLeavePrompt !== null}
-        onOpenChange={(open) => !open && setHardLeavePrompt(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Quitter le salon ?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {hardLeavePrompt === 'profile' && (
-                <>
-                  Vous quitterez le salon pour accéder à votre profil.
-                  <br />
-                </>
-              )}
-              {leaveSalonConsequences}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmHardLeave}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {hardLeavePrompt === 'profile' ? 'Quitter et voir mon profil' : 'Quitter le salon'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <GameLeaveDialogs
+        showLeaveChoice={showLeaveChoice}
+        onShowLeaveChoiceChange={setShowLeaveChoice}
+        hardLeavePrompt={hardLeavePrompt}
+        onHardLeavePromptChange={setHardLeavePrompt}
+        leaveSalonConsequences={leaveSalonConsequences}
+        onReturnToLobby={handleReturnToLobby}
+        onLeaveSalonPlay={() => leaveSalon('/play')}
+        onConfirmHardLeave={confirmHardLeave}
+      />
     </>
   );
 }

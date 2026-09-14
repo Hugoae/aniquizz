@@ -39,6 +39,7 @@ export function PlayerCardBase({
   const displayName = player.name || player.username || 'Joueur';
   const hasChildren = React.Children.count(children) > 0;
   const isDisconnected = player.isConnected === false;
+  const interactive = Boolean(onClick);
 
   return (
     <div
@@ -53,7 +54,19 @@ export function PlayerCardBase({
               : 'border-border/60 bg-card/95 hover:bg-card',
         className,
       )}
-      onClick={onClick}
+      {...(interactive && onClick
+        ? {
+            role: 'button' as const,
+            tabIndex: 0,
+            onClick,
+            onKeyDown: (event: React.KeyboardEvent<HTMLDivElement>) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onClick();
+              }
+            },
+          }
+        : {})}
     >
       {topLeftContent}
       {topRightContent}

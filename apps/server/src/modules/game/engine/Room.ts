@@ -529,6 +529,7 @@ export class Room {
   }
 
   playerReturnToLobby(userId: string): void {
+    if (!this.players.has(userId)) return;
     this.returnedPlayers.add(userId);
     const player = this.players.get(userId);
     if (player) player.isReady = userId === this.hostId;

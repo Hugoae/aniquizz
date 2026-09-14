@@ -9,19 +9,19 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 
 ## Glossary
 
-| Term                   | Definition                                                                                                                                                        | Where                                                          |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| **GameManager**        | Top-level orchestrator of rooms and matches; injected into every socket handler.                                                                                  | `modules/game/gameManager.ts`                                  |
-| **Room**               | Live lobby/match state: roster, settings, active `MatchEngine`, `priorMatchSongIds`.                                                                              | `modules/game/.../Room.ts`                                     |
-| **MatchEngine**        | Round loop for one match: song → guess → reveal → score; emits `round_start` (carries `videoMode`, `peekWindow`, `videoStartTime`).                               | `modules/game/engine/MatchEngine.ts`                           |
-| **PlaylistBuilder**    | Draws songs + QCM distractors; applies Watched `watchedIds`, thematic playlist membership, precision, and cross-match exclusion.                                  | `modules/game/engine/PlaylistBuilder.ts`                       |
-| **gameService**        | Catalogue access + choice-candidate caching (`getChoiceCandidates`, `getArtistChoiceCandidates`).                                                                 | `modules/game/gameService.ts`                                  |
-| **SocketManager**      | Registers every handler module and wires shared deps (e.g. passes `gameManager` to profile handlers).                                                             | `core/SocketManager.ts`                                        |
-| **authMiddleware**     | Verifies the Supabase JWT on handshake → `socket.data` (`userId`, `role`, `mutedUntil`).                                                                          | `core/authMiddleware.ts`                                       |
-| **guards**             | Per-action rate limits (chat, answers, anime search, `deleteAccount`, …). Returned promises are settled (Socket.io does not await).                               | `core/guards.ts`                                               |
-| **parseSocketPayload** | Zod parse at the socket boundary for mutating events.                                                                                                             | `core/parseSocketPayload.ts`                                   |
-| **Watched pool**       | AniList-list resolution + playable-song counting for a room.                                                                                                      | `modules/anilist/`, `watchedPoolService`                       |
-| **Daily challenge**    | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; HTTP play loop (no Socket.io room). Heard clips upsert `SongHistory` (pokédex). | `modules/daily/`, `routes/daily.ts`, `docs/game/daily-quiz.md` |
+| Term                   | Definition                                                                                                                                                                                                 | Where                                                          |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **GameManager**        | Top-level orchestrator of rooms and matches; injected into every socket handler.                                                                                                                           | `modules/game/gameManager.ts`                                  |
+| **Room**               | Live lobby/match state: roster, settings, active `MatchEngine`, `priorMatchSongIds`.                                                                                                                       | `modules/game/.../Room.ts`                                     |
+| **MatchEngine**        | Round loop for one match: song → guess → reveal → score; emits `round_start` (carries `videoMode`, `peekWindow`, `videoStartTime`). Helpers: `matchEngineBots` / `matchEngineReveal` / `matchEngineVotes`. | `modules/game/engine/MatchEngine.ts`                           |
+| **PlaylistBuilder**    | Draws songs + QCM distractors; applies Watched `watchedIds`, thematic playlist membership, precision, and cross-match exclusion.                                                                           | `modules/game/engine/PlaylistBuilder.ts`                       |
+| **gameService**        | Catalogue access + choice-candidate caching (`getChoiceCandidates`, `getArtistChoiceCandidates`).                                                                                                          | `modules/game/gameService.ts`                                  |
+| **SocketManager**      | Registers every handler module and wires shared deps (e.g. passes `gameManager` to profile handlers).                                                                                                      | `core/SocketManager.ts`                                        |
+| **authMiddleware**     | Verifies the Supabase JWT on handshake → `socket.data` (`userId`, `role`, `mutedUntil`).                                                                                                                   | `core/authMiddleware.ts`                                       |
+| **guards**             | Per-action rate limits (chat, answers, anime search, `deleteAccount`, …). Returned promises are settled (Socket.io does not await).                                                                        | `core/guards.ts`                                               |
+| **parseSocketPayload** | Zod parse at the socket boundary for mutating events.                                                                                                                                                      | `core/parseSocketPayload.ts`                                   |
+| **Watched pool**       | AniList-list resolution + playable-song counting for a room. Lobby preview sockets live in `poolStatsHandlers`.                                                                                            | `watchedPoolService`, `poolStatsHandlers.ts`                   |
+| **Daily challenge**    | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; HTTP play loop (no Socket.io room). Heard clips upsert `SongHistory` (pokédex).                                          | `modules/daily/`, `routes/daily.ts`, `docs/game/daily-quiz.md` |
 
 ## Known pitfalls
 
@@ -29,11 +29,14 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   the socket/HTTP contract in `@aniquizz/shared`. ESLint `no-restricted-imports`
   enforces this.
 - **Mutating socket events are Zod-parsed.** `game:answer`, `update_room_settings`,
-  `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, plus lobby `create` / `join` /
+  `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, `game:return_to_lobby`,
+  `game:cancel`, `get_game_state`, `chat:sendMessage`, plus lobby `create` / `join` /
   `kick` / `transfer_host` / `leave_room` / `toggle_ready`. Invalid JSON still yields a generic
   `Requête invalide.` — do not leak Zod paths.
   Room settings patches are then re-validated by `normalizeRoomSettings`.
-  `password` and `roomName` are length-capped (`GAME_CONFIG.LIMITS`).
+  `password`, `roomName`, and `avatar` (preset key or uploaded public URL) are
+  length-capped (`GAME_CONFIG.LIMITS`). Do not cap `avatar` as if it were a
+  filename — custom avatars are Supabase object URLs (~140 chars).
   The public room list (`get_rooms` / `lobby:subscribe_list`) requires auth; guests
   can still connect without a token for other read-only events.
 - **`pnpm dev` keeps `@aniquizz/shared` `dist/` fresh.** The server resolves

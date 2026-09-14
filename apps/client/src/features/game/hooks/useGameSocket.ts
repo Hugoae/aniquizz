@@ -26,6 +26,7 @@ import type {
 import { normalizeVideoMode, GAME_CONFIG } from '@aniquizz/shared';
 import { createInitialState, gameReducer, type GameState } from '../state/gameReducer';
 import { playerDisplayName } from '../utils/ranking';
+import { GAME_COPY, playerDisconnectedToast, playerLeftMatchToast } from '../copy/gameCopy';
 
 interface UseGameSocketOptions {
   roomId: string;
@@ -88,6 +89,10 @@ export function useGameSocket({
   onCancelledRef.current = onCancelled;
   const onClosedRef = useRef(onClosed);
   onClosedRef.current = onClosed;
+  const currentUserIdRef = useRef(currentUserId);
+  currentUserIdRef.current = currentUserId;
+  const isSoloRef = useRef(isSolo);
+  isSoloRef.current = isSolo;
 
   // Track connection state across PLAYERS_UPDATE payloads so we can announce when
   // someone drops or leaves. Seeded from the initial roster (all assumed present).
@@ -157,20 +162,25 @@ export function useGameSocket({
         const label = playerDisplayName(player);
         next.set(id, { connected, inGame, username: label, isBot });
         const before = prev.get(id);
-        if (id === String(currentUserId) || isBot) continue;
+        if (id === String(currentUserIdRef.current) || isBot) continue;
 
         if (before?.connected === true && !connected) {
-          toast.warning(`${label} s'est déconnecté.`);
+          toast.warning(playerDisconnectedToast(label));
         } else if (before?.inGame === true && !inGame) {
           // Returned to the lobby or otherwise left the active match roster.
-          toast.info(`${label} a quitté la partie.`);
+          toast.info(playerLeftMatchToast(label));
         }
       }
 
       // Hard leave (`leave_room`) — only toast if they hadn't already left the match.
       for (const [id, before] of prev) {
-        if (!seen.has(id) && id !== String(currentUserId) && !before.isBot && before.inGame) {
-          toast.info(`${before.username} a quitté la partie.`);
+        if (
+          !seen.has(id) &&
+          id !== String(currentUserIdRef.current) &&
+          !before.isBot &&
+          before.inGame
+        ) {
+          toast.info(playerLeftMatchToast(before.username));
         }
       }
 
@@ -179,7 +189,7 @@ export function useGameSocket({
 
     const handlers = {
       game_state_sync: (s: GameSyncState) =>
-        dispatch({ type: 'SYNC', state: s, myUserId: currentUserId }),
+        dispatch({ type: 'SYNC', state: s, myUserId: currentUserIdRef.current }),
       game_started: (p: GameStartedPayload) =>
         dispatch({ type: 'GAME_STARTED', payload: p, clientVideoMode: clientVideoModeRef.current }),
       'game:ready': (p: GameReadyPayload) => dispatch({ type: 'GAME_READY', payload: p }),
@@ -189,7 +199,7 @@ export function useGameSocket({
       'sprint:leaderboard': (p: SprintLeaderboardPayload) =>
         dispatch({ type: 'SPRINT_LEADERBOARD', payload: p }),
       round_reveal: (p: RoundRevealPayload) =>
-        dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserId }),
+        dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserIdRef.current }),
       'game:preload': (p: PreloadVideoPayload) =>
         dispatch({ type: 'PRELOAD', videoKey: p.videoKey, videoStartTime: p.videoStartTime }),
       update_players: (p: PlayersUpdatePayload) => {
@@ -202,7 +212,7 @@ export function useGameSocket({
           victoryData: p.victoryData,
           roundHistoryByUserId: p.roundHistoryByUserId,
           matchSettings: p.matchSettings,
-          myUserId: currentUserId,
+          myUserId: currentUserIdRef.current,
         }),
       vote_update: (p: VoteUpdatePayload) => dispatch({ type: 'VOTE_UPDATE', payload: p }),
       game_paused: (p: { isPaused: boolean }) => dispatch({ type: 'PAUSED', isPaused: p.isPaused }),
@@ -221,14 +231,14 @@ export function useGameSocket({
         }, 1000);
       },
       'game:fallback_notification': (p: { message: string }) => {
-        toast.warning('Info Playlist', { description: p.message, duration: 6000 });
+        toast.warning(GAME_COPY.toasts.playlistInfo, { description: p.message, duration: 6000 });
       },
       game_cancelled: (p?: { reason?: string }) => {
-        toast.error(p?.reason || "Partie annulée par l'hôte.");
+        toast.error(p?.reason || GAME_COPY.toasts.cancelledHost);
         onCancelledRef.current?.();
       },
       room_closed: (p?: { reason?: string }) => {
-        const reason = p?.reason || 'Salon fermé.';
+        const reason = p?.reason || GAME_COPY.toasts.roomClosed;
         if (!notifyModerationBan(reason)) {
           toast.error(reason);
         }
@@ -236,7 +246,7 @@ export function useGameSocket({
       },
       error: (p: { message: string }) => {
         if (notifyModerationBan(p.message)) return;
-        toast.error(p.message || 'Erreur');
+        toast.error(p.message || GAME_COPY.toasts.genericError);
       },
     };
 
@@ -279,7 +289,7 @@ export function useGameSocket({
       socket.off('room_closed', handlers.room_closed);
       socket.off('error', handlers.error);
     };
-  }, [roomId, currentUserId]);
+  }, [roomId]);
 
   // Recover from dropped round_reveal (reconnect, Render restart, etc.).
   useEffect(() => {
@@ -293,7 +303,9 @@ export function useGameSocket({
       if (phaseRef.current !== 'guessing') return;
       socket.emit('get_game_state', { roomId });
       skipTimer = window.setTimeout(() => {
-        if (phaseRef.current === 'guessing' && isSolo) socket.emit('game:skip_round', { roomId });
+        if (phaseRef.current === 'guessing' && isSoloRef.current) {
+          socket.emit('game:skip_round', { roomId });
+        }
       }, 800) as unknown as number;
     };
 
@@ -310,7 +322,7 @@ export function useGameSocket({
       window.clearTimeout(recoveryTimer);
       if (skipTimer) window.clearTimeout(skipTimer);
     };
-  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, isSolo]);
+  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused]);
 
   const answer = useCallback(
     (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => {

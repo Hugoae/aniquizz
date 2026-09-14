@@ -84,7 +84,7 @@ export function SoloResult({
         </div>
       )}
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <MatchConfigHeader className="lg:col-span-3 lg:col-start-3" settings={settings} />
 

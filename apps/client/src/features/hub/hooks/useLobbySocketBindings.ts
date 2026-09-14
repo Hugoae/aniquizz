@@ -22,6 +22,7 @@ import {
   type LobbyView,
 } from '@/features/hub/lobbySocketPolicy';
 import { HUB_COPY } from '@/features/hub/copy/hubCopy';
+import { gamePath } from '@/features/game/gameNavState';
 import { notifyModerationBan } from '@/lib/suspension';
 import { socket } from '@/lib/socket';
 
@@ -257,7 +258,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
         ),
       };
 
-      navigateRef.current('/game', {
+      navigateRef.current(gamePath(data.roomId), {
         state: {
           roomId: data.roomId,
           gameData: gameDataConstructed,

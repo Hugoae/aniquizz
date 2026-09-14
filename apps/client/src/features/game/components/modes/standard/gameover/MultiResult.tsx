@@ -44,7 +44,7 @@ export function MultiResult({
         <ConfettiLayer dots={MULTI_DEFEAT_CONFETTI} glowClassName={GLOW.multiDefeat} />
       )}
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
+      <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
         <MatchConfigHeader settings={settings} />
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">

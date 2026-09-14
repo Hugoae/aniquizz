@@ -33,6 +33,30 @@ describe('Room.canStartMatch', () => {
   });
 });
 
+describe('Room.playerReturnToLobby', () => {
+  it('ignores a user who is not in the room', () => {
+    const { io } = createMockIo();
+    const room = new Room('room-1', io, 'host', makeSettings());
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+
+    room.playerReturnToLobby('outsider');
+
+    expect(room.returnedPlayers.has('outsider')).toBe(false);
+  });
+
+  it('marks a member as returned', () => {
+    const { io } = createMockIo();
+    const room = new Room('room-1', io, 'host', makeSettings());
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+    room.addOrReconnect('guest', 'Guest', 'guest', 's-guest');
+
+    room.playerReturnToLobby('guest');
+
+    expect(room.returnedPlayers.has('guest')).toBe(true);
+    expect(room.returnedPlayers.has('host')).toBe(false);
+  });
+});
+
 describe('Room.applySettings', () => {
   it('applies host settings while the room is waiting', () => {
     const { io } = createMockIo();

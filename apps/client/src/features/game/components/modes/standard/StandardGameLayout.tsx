@@ -192,7 +192,7 @@ function StandardGameLayoutInner({
   const showSprintBoard = isSprint && phase === 'revealed' && sprintLeaderboard != null;
 
   return (
-    <div className="fixed inset-0 flex h-[100dvh] w-screen flex-col overflow-hidden overscroll-none bg-background">
+    <div className="fixed inset-0 flex h-[100dvh] w-screen flex-col overflow-hidden overscroll-none bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
       <GameTopBar
         currentRound={currentRound}
         totalRounds={totalRounds}
@@ -213,7 +213,7 @@ function StandardGameLayoutInner({
         <main
           id={SkipLinkTarget}
           className={cn(
-            'relative flex min-w-0 flex-1 flex-col items-center overflow-hidden p-4',
+            'relative flex min-w-0 flex-1 flex-col items-center overflow-x-hidden overflow-y-auto p-4',
             // Reserve room for the always-present collapsed rail so opening the
             // overlay panel never reflows `main` (which caused a scroll jump).
             gameMode !== 'solo' && 'pr-14',
@@ -230,7 +230,7 @@ function StandardGameLayoutInner({
             {roundMeter ? <div className="flex shrink-0 justify-center">{roundMeter}</div> : null}
             <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
               {/* Left stack: video, answer slot, players floor. */}
-              <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-hidden">
+              <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-y-auto overflow-x-hidden">
                 <VideoStage
                   videoRef={videoRef}
                   phase={phase}

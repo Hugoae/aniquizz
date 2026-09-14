@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type KeyboardEvent } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
@@ -137,7 +137,7 @@ export function GameSidebar({
         onClick={onToggle}
         aria-label={isCollapsed ? 'Ouvrir le panneau' : 'Fermer le panneau'}
         aria-expanded={!isCollapsed}
-        className="absolute -left-3 top-4 z-10 h-6 w-6 rounded-lg border border-border bg-card hover:bg-secondary"
+        className="absolute -left-5 top-4 z-10 h-11 w-11 rounded-lg border border-border bg-card hover:bg-secondary"
       >
         {isCollapsed ? <ChevronLeft className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
         {isCollapsed && unreadCount > 0 && (
@@ -201,12 +201,26 @@ export function GameSidebar({
                 const hasAnswered = phase === 'guessing' && player.hasAnswered === true;
                 const streak = player.streak ?? 0;
                 const isDisconnected = player.isConnected === false;
+                const clickable = Boolean(onPlayerClick);
                 return (
                   <div
                     key={player.id}
-                    onClick={() => onPlayerClick?.(player.id)}
+                    {...(clickable
+                      ? {
+                          role: 'button' as const,
+                          tabIndex: 0,
+                          onClick: () => onPlayerClick?.(player.id),
+                          onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onPlayerClick?.(player.id);
+                            }
+                          },
+                        }
+                      : {})}
                     className={cn(
-                      'glass-card cursor-pointer p-3 transition-all hover:bg-secondary/50',
+                      'glass-card p-3 transition-all',
+                      clickable && 'cursor-pointer hover:bg-secondary/50',
                       isMe && 'border-primary/50',
                       isDisconnected && 'opacity-50 grayscale',
                     )}

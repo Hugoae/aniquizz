@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Next:** Game. **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + follow-up: lobby avatar Zod cap). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -18,9 +18,9 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **Prompt**              | [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) — French deliverable; 10 lenses (code, split, project rules, security, perf, logic, design/a11y, tests, **phone/responsive**, **SEO/alt/links**). Code/commits stay English.                        |
 | **Earlier global pass** | 26.5 product-audit hardening (canvas `full-product-audit`, 10–11 Sept.): Mix scoring, `skip_round`, SongHistory RLS, votes, peek, join rate-limit, etc. Still recorded under 26.5 below. Daily / leaderboard / suggestions were audited in their own 26.4–26.6 work. |
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
-| **Parked**              | `jsx-a11y` 14 warns (FriendsPanel, GameSidebar, PlayerCardBase, …) · HIBP leaked-password · 26.7                                                                                                                                                                     |
+| **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → **Game** → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → **Game ✅** → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -131,8 +131,50 @@ Same shape as Auth + Home follow-ups: leftovers after P2, not a new severity wav
 | **Copy leftovers**          | Toasts, SEO `/play`, fallbacks `Invité` / `Joueur` / `Salon de jeu` live in `hubCopy.ts`. SEO uses vousvoiement (`Configurez votre partie…`).                                                 |
 | **SourceSection deps**      | Fallback auto-off effects keep `update` in a ref so eslint `exhaustive-deps` is clean without re-running on an unstable callback.                                                             |
 | **Friends home_stats**      | Bubble still fetches once on connect. Interval poll only on `/` or while the panel is open — not every 10s on `/play` lobby.                                                                  |
-| **`game:skip_round` Zod**   | Same `roomIdInputSchema` as `start_game` / votes. Neighbour Game hole closed so the mutating-event list matches AGENTS. `returnToLobby` / `cancelGame` stay for the Game audit.               |
+| **`game:skip_round` Zod**   | Same `roomIdInputSchema` as `start_game` / votes. Neighbour Game hole closed so the mutating-event list matches AGENTS. `returnToLobby` / `cancelGame` / `get_game_state` closed in Game P1.  |
 | **Left for Game / parking** | Controller still ~447 lines (cap ~400). `GameConfigForm` / `SourceSection` at the limit. 14 `jsx-a11y` warns. Logged-in lobby QA (tool cannot fill credentials). Landscape / physical iPhone. |
+
+### Audit — Game P1 ✅ (2026-09-14)
+
+Canvas: `game-feature-audit`. No P0. Server still owns score / skip / cancel. P2 is closed in the next section.
+
+| Item                  | What changed                                                                                                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zod match events**  | `game:return_to_lobby`, `game:cancel`, `get_game_state` go through `roomIdInputSchema` + `parseSocketPayload`. Missing payload emits `Requête invalide.` instead of throwing in `requireAuth`.                                  |
+| **Return membership** | `Room.playerReturnToLobby` no-ops unless `players.has(userId)` — outsiders cannot pollute `returnedPlayers`.                                                                                                                    |
+| **F5 `/game`**        | Identity in `/game?roomId=`. `parseGameNavState` prefers the query, then `location.state`. Hub `game_started` navigates with `gamePath`. Missing/invalid id shows `MissingGameRoom` (link `/play`) instead of infinite loading. |
+| **Tests**             | `gameNavState` query/state; `Room.playerReturnToLobby`; `parseSocketPayload(undefined)`; anticheat integration missing payload on sync/return/cancel.                                                                           |
+
+### Audit — Game P2 ✅ (2026-09-14)
+
+Canvas: `game-feature-audit`. Game audit is **closed** (P1 + P2). Do not start 26.7.
+
+| Item                  | What changed                                                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Vote rate limits**  | `vote_pause` / `vote_skip` / `game:skip_round` use `guard(..., RATE_LIMITS.vote)` — 8 / 5s.                                                                            |
+| **Chat Zod**          | `chat:sendMessage` parsed with `chatSendMessageInputSchema` (roomId + trimmed content, max 200). Membership + mute unchanged.                                          |
+| **Copy**              | `gameCopy.ts`: loading, leave dialogs, toasts, config badges. Vousvoiement tests.                                                                                      |
+| **Partition**         | Pool stats → `poolStatsHandlers.ts`. MatchEngine bots / reveal / vote helpers extracted. `Game.tsx` leave dialogs + loading overlay split out.                         |
+| **Socket rebind**     | `useGameSocket` match subscription deps `[roomId]`; `currentUserId` / `isSolo` live in refs (solo skip recovery still never runs in multi).                            |
+| **Reducer tests**     | SYNC lobby `videoMode` fallback; peekWindow kept when a later sync omits it; GAME_STARTED client fallback.                                                             |
+| **a11y (Game-owned)** | Sidebar toggle 44px; player rows / `PlayerCardBase` only interactive when a click handler exists; loading `h1`; `media-has-caption` documented skip on the music clip. |
+| **Responsive (CSS)**  | Match shell `safe-area-inset-*`; answer column `overflow-y-auto`; game-over `min-h-dvh`; landscape video `max-h`. Live match still not QA'd without a session.         |
+| **handleAction deps** | `useCallback` lists `actions` so exhaustive-deps is clean.                                                                                                             |
+
+**Left over on purpose:** `MatchEngine.ts` (~954) and `Game.tsx` (~430) stay above the ~400 soft cap. Extracting `getSyncState` / finish+XP without touching that code is not worth the coupling.
+
+**Not in this pass:** FriendsPanel / remaining jsx-a11y backlog · HIBP · 26.7 · physical iPhone.
+
+### Audit — Game follow-up ✅ (2026-09-14)
+
+Hub Zod on `lobby:create` / `lobby:join` capped `avatar` at 64 chars. Custom avatars are Supabase public URLs (~137 chars). Solo « Lancer la partie » emits `lobby:create` with `profile.avatar`, so every uploaded-avatar account got `Requête invalide.` before `start_game` ran — independent of room settings.
+
+| Item             | What changed                                                                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Avatar cap**   | `GAME_CONFIG.LIMITS.MAX_AVATAR_LENGTH` = 512. `createLobby` / `joinLobby` Zod use it. Tests: URL accepted, `userId` stripped, oversized rejected. |
+| **Logged-in QA** | Blocked until this hotfix: guest `/game` still redirects to AuthModal. Pause/skip/F5/chat/iOS keyboard need a session after Render picks this up. |
+
+**Next:** Profile audit. Do not start 26.7.
 
 ### Audit — Auth + Home ✅ (2026-09-14)
 

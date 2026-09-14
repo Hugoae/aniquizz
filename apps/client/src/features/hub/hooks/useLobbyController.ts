@@ -89,8 +89,12 @@ export function useLobbyController() {
   /** Keep room identity across socket replace so reconnect can re-join the IO channel. */
   const currentRoomIdRef = useRef('');
   const gameStatusRef = useRef<GameStatus>('waiting');
-  const identityRef = useRef({
-    userId: user?.id as string | undefined,
+  const identityRef = useRef<{
+    userId: string | undefined;
+    username: string;
+    avatar: string;
+  }>({
+    userId: user?.id,
     username: HUB_COPY.guest,
     avatar: 'player1',
   });

@@ -15,6 +15,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 | **useAnimeSearch / useArtistSearch** | Local fuzzy autocomplete; artist mode uses a separate catalogue (`artist:get_all`).                         | `features/game/hooks/`                            |
 | **gameReducer**                      | Client mirror of match state; merges server payloads (with lobby-config fallbacks for `videoMode`).         | `features/game/`                                  |
 | **useLobbyController**               | Lobby actions (create/join, settings, `addBots`, ready). Socket listeners live in `useLobbySocketBindings`. | `features/hub/`                                   |
+| **gameCopy**                         | Isolated French match strings (loading, leave dialogs, toasts).                                             | `features/game/copy/gameCopy.ts`                  |
 | **hubCopy**                          | Isolated French hub strings (mode select, join list, password dialog, reset).                               | `features/hub/copy/hubCopy.ts`                    |
 | **lobbyRulesCopy**                   | Pure builder turning live `RoomConfig` into French rules text (unit-tested).                                | `features/hub/components/lobby/lobbyRulesCopy.ts` |
 | **VideoStage**                       | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants.                 | `features/game/`                                  |
@@ -34,7 +35,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 - **`jsx-a11y` is warn**, not error. Fix findings in a dedicated pass; don't
   disable the plugin to ship.
 - **User-facing copy is French; code/comments English.** Keep strings isolated
-  (e.g. `lobbyRulesCopy.ts`, copy files) for future i18n — don't inline French in logic.
+  (e.g. `gameCopy.ts`, `hubCopy.ts`, `lobbyRulesCopy.ts`) for future i18n — don't inline French in logic.
 - **Design tokens only** — style via Tailwind semantic classes (`bg-primary`,
   `text-muted-foreground`) or `hsl(var(--token))`; reuse `.glass-card`,
   `.gradient-text`, `FOCUS_RING`, and `components/ui/` primitives. No hardcoded hex.
@@ -42,6 +43,8 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   (e.g. `normalizeVideoMode`) is pulled in via an `import type` block.
 - **The server can omit newer `round_start` fields** (older deploy). The client merges
   `videoMode` from lobby config as a fallback — preserve that path when editing the reducer.
+- **`/game` identity lives in `?roomId=`.** `parseGameNavState` reads the query first so a
+  refresh can still `get_game_state`. Do not rely on `location.state` alone.
 - **Reset the clip cache on `phase === 'loading'`** so a solo replay in the same lobby
   gets fresh offsets; the reveal (`RevealSong` by `id`) must skip reload.
 - **Respect `prefers-reduced-motion`** (handled globally in `index.css`) — don't add

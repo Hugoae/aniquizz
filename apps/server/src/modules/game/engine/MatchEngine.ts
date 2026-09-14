@@ -16,7 +16,6 @@ import {
   type GameReadyPayload,
   type GameSyncState,
   type ResponseType,
-  type RevealSong,
   type RoundStartPayload,
   type RoundRevealPayload,
   type SongDifficulty,
@@ -38,6 +37,14 @@ import type { MatchRepository } from './MatchRepository';
 import type { ScoringStrategy } from './ScoringStrategy';
 import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
+import { scheduleBotAnswers } from './matchEngineBots';
+import { buildRoundHistoryByUser, toRevealSong } from './matchEngineReveal';
+import {
+  countActiveVotes,
+  isHumanVoter,
+  playerCanVote,
+  requiredVoteCount,
+} from './matchEngineVotes';
 
 interface EngineDeps {
   builder: PlaylistBuilder;
@@ -305,7 +312,14 @@ export class MatchEngine {
         );
       }
     });
-    this.scheduleBotAnswers(item);
+    this.botTimers.push(
+      ...scheduleBotAnswers({
+        players: this.room.players.values(),
+        item,
+        responseType: this.room.settings.responseType,
+        handleAnswer: (userId, answer, answerType) => this.handleAnswer(userId, answer, answerType),
+      }),
+    );
     this.isRoundLoading = false;
 
     logger.info(
@@ -460,7 +474,7 @@ export class MatchEngine {
     const next = this.playlist[this.currentRoundIndex + 1];
     const payload: RoundRevealPayload = {
       round: this.currentRoundIndex + 1,
-      song: this.toRevealSong(item),
+      song: toRevealSong(item),
       players: this.room.toPublicPlayers(true),
       nextVideo: next?.videoKey ?? null,
       nextVideoStartTime: next?.videoStartTime ?? null,
@@ -529,7 +543,9 @@ export class MatchEngine {
       multiWinnerCount: result.multiWinnerCount,
     };
 
-    const roundHistoryByUserId = this.buildRoundHistoryByUser();
+    const roundHistoryByUserId = buildRoundHistoryByUser(this.playlist, this.recordedRounds, [
+      ...this.room.players.keys(),
+    ]);
     const matchSettings = pickMatchSettings(this.room.settings);
     this.finishedVictoryData = victoryData;
     this.finishedRoundHistoryByUserId = roundHistoryByUserId;
@@ -686,7 +702,7 @@ export class MatchEngine {
   votePause(userId: string): void {
     if (this.isRoundLoading) return;
     if (this.room.status !== 'playing' && this.room.status !== 'paused') return;
-    if (!this.canVote(userId)) return;
+    if (!playerCanVote(this.room.players.get(userId))) return;
     if (this.room.status === 'paused') {
       this.resume();
       return;
@@ -695,7 +711,7 @@ export class MatchEngine {
     else this.pauseVotes.add(userId);
 
     const required = this.requiredVotes();
-    const count = this.countActiveVotes(this.pauseVotes);
+    const count = countActiveVotes(this.pauseVotes, this.room.players);
     this.isPausePending = count >= required;
     this.channel.emit('vote_update', {
       type: 'pause',
@@ -707,10 +723,10 @@ export class MatchEngine {
 
   voteSkip(userId: string): void {
     if (this.room.status !== 'playing' || this.isRoundLoading) return;
-    if (!this.canVote(userId)) return;
+    if (!playerCanVote(this.room.players.get(userId))) return;
     this.skipVotes.add(userId);
     const required = this.requiredVotes();
-    const count = this.countActiveVotes(this.skipVotes);
+    const count = countActiveVotes(this.skipVotes, this.room.players);
     this.channel.emit('vote_update', { type: 'skip', count, required });
 
     if (count < required) return;
@@ -733,12 +749,12 @@ export class MatchEngine {
     if (hadSkip) {
       this.channel.emit('vote_update', {
         type: 'skip',
-        count: this.countActiveVotes(this.skipVotes),
+        count: countActiveVotes(this.skipVotes, this.room.players),
         required,
       });
     }
     if (hadPause) {
-      const count = this.countActiveVotes(this.pauseVotes);
+      const count = countActiveVotes(this.pauseVotes, this.room.players);
       this.isPausePending = count >= required;
       this.channel.emit('vote_update', {
         type: 'pause',
@@ -808,7 +824,7 @@ export class MatchEngine {
       const nextItem = this.playlist[this.currentRoundIndex + 1];
       base.reveal = {
         round: this.currentRoundIndex + 1,
-        song: this.toRevealSong(item),
+        song: toRevealSong(item),
         players: this.room.toPublicPlayers(true),
         nextVideo: nextItem?.videoKey ?? null,
         nextVideoStartTime: nextItem?.videoStartTime ?? null,
@@ -869,61 +885,11 @@ export class MatchEngine {
     this.botTimers = [];
   }
 
-  /** Schedule each bot's single answer for the current guessing round. */
-  private scheduleBotAnswers(item: PlaylistItem): void {
-    const responseType = (this.room.settings.responseType ?? 'mix') as ResponseType;
-    const botAnswerType: AnswerType = responseType === 'typing' ? 'typing' : 'qcm';
-    const maxDelay = Math.max(200, item.guessDuration * 1000 - 400);
-
-    for (const p of this.room.players.values()) {
-      if (!p.isBot || !p.botConfig) continue;
-      const cfg = p.botConfig;
-      const lo = Math.min(cfg.minDelayMs, maxDelay);
-      const hi = Math.min(Math.max(cfg.maxDelayMs, cfg.minDelayMs), maxDelay);
-      const delay = lo + Math.random() * Math.max(0, hi - lo);
-
-      const willBeCorrect = Math.random() < cfg.accuracy;
-      const answer = willBeCorrect
-        ? (item.validAnswers[0] ?? item.anime)
-        : this.pickWrongAnswer(item);
-
-      const botId = p.userId;
-      const timer = setTimeout(() => {
-        this.handleAnswer(botId, answer, botAnswerType);
-      }, delay);
-      this.botTimers.push(timer);
-    }
-  }
-
-  /** A plausible-but-wrong answer for a bot (a decoy choice, else a placeholder). */
-  private pickWrongAnswer(item: PlaylistItem): string {
-    const valid = new Set(item.validAnswers.map((a) => a.toLowerCase()));
-    const decoy = item.choices.find((c) => !valid.has(c.toLowerCase()));
-    return decoy ?? '—';
-  }
-
   // --- HELPERS --------------------------------------------------------------
 
-  /** Human, connected players — bots never vote to pause/skip. */
-  private humanVoters(): RoomPlayer[] {
-    return [...this.room.players.values()].filter((p) => p.isConnected && !p.isBot);
-  }
-
   private requiredVotes(): number {
-    return Math.max(1, Math.ceil(this.humanVoters().length / 2));
-  }
-
-  private canVote(userId: string): boolean {
-    const player = this.room.players.get(userId);
-    return Boolean(player && player.isConnected && !player.isBot);
-  }
-
-  private countActiveVotes(votes: Set<string>): number {
-    let count = 0;
-    for (const id of votes) {
-      if (this.canVote(id)) count += 1;
-    }
-    return count;
+    const humans = [...this.room.players.values()].filter(isHumanVoter).length;
+    return requiredVoteCount(humans);
   }
 
   /**
@@ -935,63 +901,6 @@ export class MatchEngine {
       choices: item.choices,
       duo: item.duo,
     });
-  }
-
-  private toRevealSong(item: PlaylistItem): RevealSong {
-    return {
-      id: item.id,
-      anime: item.anime,
-      title: item.title,
-      artist: item.artist,
-      type: item.typeLabel,
-      difficulty: item.difficulty,
-      cover: item.cover,
-      franchise: item.franchise,
-      year: item.year,
-      season: item.season,
-      format: item.format,
-      episodeRange: item.episodeRange,
-      coverColor: item.coverColor,
-      siteUrl: item.siteUrl,
-      tags: item.tags,
-      animeId: item.animeId,
-      videoKey: item.videoKey,
-      videoStartTime: 0,
-    };
-  }
-
-  /** Authoritative per-player round recap for game-over and reconnect sync. */
-  private buildRoundHistoryByUser(): Record<string, RoundHistoryEntry[]> {
-    const playlistBySongId = new Map(this.playlist.map((item) => [item.id, item]));
-    const byUser = new Map<string, RoundHistoryEntry[]>();
-    const playerIds = [...this.room.players.keys()];
-
-    for (const recorded of this.recordedRounds) {
-      const item = playlistBySongId.get(recorded.songId) ?? this.playlist[recorded.roundNumber - 1];
-      if (!item) continue;
-      const song = this.toRevealSong(item);
-      const answersByUser = new Map(recorded.answers.map((a) => [a.userId, a]));
-
-      for (const userId of playerIds) {
-        const answer = answersByUser.get(userId);
-        const entry: RoundHistoryEntry = {
-          round: recorded.roundNumber,
-          song,
-          isCorrect: answer?.isCorrect ?? false,
-          points: answer?.pointsAwarded ?? 0,
-          myAnswer: answer?.answer ?? null,
-          answerType: answer?.answerType ?? null,
-          answerTimeMs: answer?.isCorrect && answer.timeMs != null ? answer.timeMs : null,
-          speedRank: answer?.speedRank ?? null,
-          speedBonus: answer?.speedBonus ?? 0,
-        };
-        const list = byUser.get(userId) ?? [];
-        list.push(entry);
-        byUser.set(userId, list);
-      }
-    }
-
-    return Object.fromEntries(byUser);
   }
 
   /** Typed broadcast channel for this room. */
