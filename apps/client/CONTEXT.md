@@ -68,7 +68,9 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   `getVideoUrl` already treats `http(s)` keys as absolute — match/daily guessing
   locators may be Worker `/v/{token}` URLs, not `Anime-id-OPx.mp4`. Keep that
   Worker origin in `vercel.json` CSP `media-src` (and `connect-src`); otherwise
-  Chrome blocks the clip with no picture and no sound.
+  Chrome blocks the clip with no picture and no sound. Reveal re-signs the token
+  — `VideoStage` must not reset paint flags on that URL change or the player
+  stays `opacity-0` (sound without picture).
 - **Respect `prefers-reduced-motion`** (handled globally in `index.css`) — don't add
   animations that ignore it.
 - Route entry points are lazy-loaded; keep the Suspense/prefetch pattern

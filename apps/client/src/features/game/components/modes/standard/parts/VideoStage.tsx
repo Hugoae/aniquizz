@@ -8,6 +8,7 @@ import { peekClipPath, peekWindowRect, type VideoMode } from '@aniquizz/shared';
 import { MatchCountdownOverlays } from '../../../shared/MatchCountdownOverlays';
 import { cn } from '@/lib/utils';
 import type { GamePhase } from './types';
+import { guessingClipPaintKey } from './videoStagePaint';
 
 interface VideoStageProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -60,12 +61,13 @@ export const VideoStage = memo(function VideoStage({
 }: VideoStageProps) {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [hasPaintedFrame, setHasPaintedFrame] = useState(false);
-  const currentVideoKey = currentSong?.videoKey ?? null;
+  const paintKey = guessingClipPaintKey(phase, currentSong);
 
   useEffect(() => {
+    if (paintKey === null) return;
     setIsVideoReady(false);
     setHasPaintedFrame(false);
-  }, [currentVideoKey]);
+  }, [paintKey]);
 
   const markVideoReady = () => setIsVideoReady(true);
   const markPaintedFrame = () => setHasPaintedFrame(true);
