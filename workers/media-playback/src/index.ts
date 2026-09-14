@@ -1,3 +1,4 @@
+import { isFullObjectRange, parseHttpByteRange } from '../../../packages/shared/src/httpByteRange';
 import {
   parseMediaPlaybackTokenFromPath,
   verifyMediaPlaybackToken,
@@ -6,12 +7,6 @@ import {
 const ALLOW_METHODS = 'GET, HEAD, OPTIONS';
 const ALLOW_HEADERS = 'Range, If-Range, If-None-Match, If-Modified-Since';
 const EXPOSE_HEADERS = 'Accept-Ranges, Content-Length, Content-Range, ETag, Last-Modified';
-const CONDITIONAL_HEADERS = [
-  'if-match',
-  'if-none-match',
-  'if-modified-since',
-  'if-unmodified-since',
-] as const;
 
 function allowedOrigins(env: Env): string[] {
   return env.CORS_ORIGIN.split(',')
@@ -40,44 +35,35 @@ function jsonStatus(status: number, request: Request, env: Env): Response {
   return new Response(null, { status, headers });
 }
 
-function applyContentRange(headers: Headers, object: R2Object): void {
-  const range = object.range;
-  if (!range) return;
-  const size = object.size;
-  let start: number;
-  let end: number;
-  if ('suffix' in range) {
-    start = Math.max(0, size - range.suffix);
-    end = size - 1;
-  } else {
-    start = range.offset ?? 0;
-    const length = range.length ?? size - start;
-    end = start + length - 1;
-  }
-  headers.set('Content-Range', `bytes ${start}-${end}/${size}`);
-}
-
-function objectHeaders(object: R2Object, request: Request, env: Env): Headers {
+/**
+ * writeHttpMetadata copies the uploaded Content-Length (full object). Browsers
+ * send `Range: bytes=0-1` probes; a 206 whose Content-Length is still the full
+ * file size never reaches HAVE_METADATA — no picture, no sound.
+ */
+function playbackHeaders(
+  object: R2Object,
+  request: Request,
+  env: Env,
+  fullSize: number,
+  partial: { offset: number; length: number } | null,
+): Headers {
   const headers = corsHeaders(request, env);
   object.writeHttpMetadata(headers);
-  headers.set('etag', object.httpEtag);
-  headers.set('Accept-Ranges', 'bytes');
-  headers.set('Content-Type', 'video/mp4');
   headers.delete('Content-Disposition');
-  applyContentRange(headers, object);
+  headers.delete('Content-Range');
+  headers.set('Content-Type', 'video/mp4');
+  headers.set('Accept-Ranges', 'bytes');
+  headers.set('etag', object.httpEtag);
   headers.set('Cache-Control', 'private, max-age=300');
+  headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  if (partial) {
+    const end = partial.offset + partial.length - 1;
+    headers.set('Content-Range', `bytes ${partial.offset}-${end}/${fullSize}`);
+    headers.set('Content-Length', String(partial.length));
+  } else {
+    headers.set('Content-Length', String(fullSize));
+  }
   return headers;
-}
-
-function r2GetOptions(request: Request): R2GetOptions {
-  const options: R2GetOptions = {};
-  if (request.headers.has('Range')) {
-    options.range = request.headers;
-  }
-  if (CONDITIONAL_HEADERS.some((name) => request.headers.has(name))) {
-    options.onlyIf = request.headers;
-  }
-  return options;
 }
 
 function logStatus(status: number): void {
@@ -103,30 +89,47 @@ async function playbackResponse(request: Request, env: Env): Promise<Response> {
     return jsonStatus(status, request, env);
   }
 
-  if (request.method === 'HEAD') {
-    const object = await env.MEDIA.head(verified.videoKey);
-    if (object === null) {
-      logStatus(404);
-      return jsonStatus(404, request, env);
-    }
-    return new Response(null, { status: 200, headers: objectHeaders(object, request, env) });
+  const meta = await env.MEDIA.head(verified.videoKey);
+  if (meta === null) {
+    logStatus(404);
+    return jsonStatus(404, request, env);
   }
 
-  const object = await env.MEDIA.get(verified.videoKey, r2GetOptions(request));
+  const range = parseHttpByteRange(request.headers.get('Range'), meta.size);
+  const partial = range && !isFullObjectRange(range, meta.size) ? range : null;
+
+  if (request.method === 'HEAD') {
+    logStatus(200);
+    return new Response(null, {
+      status: 200,
+      headers: playbackHeaders(meta, request, env, meta.size, null),
+    });
+  }
+
+  const object = await env.MEDIA.get(
+    verified.videoKey,
+    partial ? { range: { offset: partial.offset, length: partial.length } } : undefined,
+  );
 
   if (object === null) {
     logStatus(404);
     return jsonStatus(404, request, env);
   }
 
-  const headers = objectHeaders(object, request, env);
   if (!('body' in object) || object.body == null) {
-    return new Response(null, { status: 412, headers });
+    logStatus(412);
+    return new Response(null, {
+      status: 412,
+      headers: playbackHeaders(object, request, env, meta.size, partial),
+    });
   }
 
-  // Browsers reject 206 without Content-Range. Chrome always sends Range for <video>.
-  const status = headers.has('Content-Range') ? 206 : 200;
-  return new Response(object.body, { status, headers });
+  const status = partial ? 206 : 200;
+  logStatus(status);
+  return new Response(object.body, {
+    status,
+    headers: playbackHeaders(object, request, env, meta.size, partial),
+  });
 }
 
 export default {
