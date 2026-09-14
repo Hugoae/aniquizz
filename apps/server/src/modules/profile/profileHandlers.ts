@@ -3,15 +3,18 @@ import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
 import { prisma } from '@aniquizz/database';
 import {
+  deleteAccountInputSchema,
   isTrustedSupabaseAvatarUrl,
   mergePlayerPrefsPatch,
   normalizeAccountPrivacy,
   normalizePlayerPrefs,
-  type AccountPrivacyInput,
-  type PlayerPrefsInput,
+  updatePrefsInputSchema,
+  updatePrivacyInputSchema,
+  updateProfileDataInputSchema,
 } from '@aniquizz/shared';
 import { env } from '../../config/env';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
+import { parseSocketPayload } from '../../core/parseSocketPayload';
 import type { GameManager } from '../game/gameManager';
 import { DeleteAccountError, deleteUserAccount } from './deleteAccount';
 import { schedulePresenceBroadcast } from '../friends/friendsPresence';
@@ -45,26 +48,20 @@ export const registerProfileHandlers = (
     }
   };
 
-  const handleUpdateProfile = async (payload: {
-    username?: string;
-    avatarUrl?: string;
-    showFavoriteSongs?: boolean;
-  }) => {
+  const handleUpdateProfile = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, updateProfileDataInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
 
     try {
       const updateData: Record<string, unknown> = {};
-      if (payload.username) updateData.username = payload.username;
-      if (payload.avatarUrl) {
-        if (!isTrustedSupabaseAvatarUrl(payload.avatarUrl, env.SUPABASE_URL, userId)) {
+      if (parsed.username !== undefined) updateData.username = parsed.username;
+      if (parsed.avatarUrl) {
+        if (!isTrustedSupabaseAvatarUrl(parsed.avatarUrl, env.SUPABASE_URL, userId)) {
           socket.emit('error', { message: "URL d'avatar invalide." });
           return;
         }
-        updateData.avatar = payload.avatarUrl;
-      }
-
-      if (payload.showFavoriteSongs !== undefined) {
-        updateData.showFavoriteSongs = Boolean(payload.showFavoriteSongs);
+        updateData.avatar = parsed.avatarUrl;
       }
 
       await prisma.profile.update({
@@ -80,20 +77,22 @@ export const registerProfileHandlers = (
     } catch (error) {
       logger.error('Erreur update profil', 'Profile', error);
       socket.emit('error', {
-        message: payload.username
+        message: parsed.username
           ? 'Ce pseudo est peut-être déjà pris.'
           : 'Impossible de mettre à jour le profil.',
       });
     }
   };
 
-  const handleDeleteAccount = async (payload: { confirmUsername?: string }) => {
+  const handleDeleteAccount = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, deleteAccountInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
 
     try {
       await deleteUserAccount({
         userId,
-        confirmUsername: payload?.confirmUsername ?? '',
+        confirmUsername: parsed.confirmUsername,
         io,
         gameManager,
       });
@@ -104,12 +103,14 @@ export const registerProfileHandlers = (
       }
       logger.error('Erreur suppression compte', 'Profile', error);
       socket.emit('profile:error', {
-        message: 'Impossible de supprimer le compte. Réessaie plus tard.',
+        message: 'Impossible de supprimer le compte. Réessayez plus tard.',
       });
     }
   };
 
-  const handleUpdatePrefs = async (payload: PlayerPrefsInput) => {
+  const handleUpdatePrefs = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, updatePrefsInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
 
     try {
@@ -122,7 +123,7 @@ export const registerProfileHandlers = (
         return;
       }
 
-      const next = mergePlayerPrefsPatch(normalizePlayerPrefs(current), payload);
+      const next = mergePlayerPrefsPatch(normalizePlayerPrefs(current), parsed);
 
       await prisma.profile.update({
         where: { id: userId },
@@ -136,7 +137,9 @@ export const registerProfileHandlers = (
     }
   };
 
-  const handleUpdatePrivacy = async (payload: AccountPrivacyInput) => {
+  const handleUpdatePrivacy = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, updatePrivacyInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
       const current = await prisma.profile.findUnique({
@@ -155,7 +158,7 @@ export const registerProfileHandlers = (
       }
       const next = normalizeAccountPrivacy({
         ...current,
-        ...(payload && typeof payload === 'object' ? payload : {}),
+        ...parsed,
       });
       await prisma.profile.update({
         where: { id: userId },
@@ -170,7 +173,10 @@ export const registerProfileHandlers = (
   };
 
   socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
-  socket.on('update_profile_data', requireAuth(socket, handleUpdateProfile));
+  socket.on(
+    'update_profile_data',
+    guard(socket, 'update_profile_data', RATE_LIMITS.updateProfile, handleUpdateProfile),
+  );
   socket.on(
     'profile:update_prefs',
     guard(socket, 'profile:update_prefs', RATE_LIMITS.updatePrefs, handleUpdatePrefs),

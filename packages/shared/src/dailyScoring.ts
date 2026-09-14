@@ -101,26 +101,51 @@ export function nextDailyStreak(input: {
   };
 }
 
-export function summarizeDailyCareer(
-  rows: Array<{ rank: number | null; totalResponseMs: number; correctCount: number }>,
-): {
+export type DailyCareerSummary = {
   dailyTotalCorrect: number;
   dailyTotalResponseMs: number;
   dailyAvgRank: number | null;
   dailyBestRank: number | null;
   dailyAvgTimeMs: number | null;
   dailyBestTimeMs: number | null;
-} {
-  if (rows.length === 0) {
-    return {
-      dailyTotalCorrect: 0,
-      dailyTotalResponseMs: 0,
-      dailyAvgRank: null,
-      dailyBestRank: null,
-      dailyAvgTimeMs: null,
-      dailyBestTimeMs: null,
-    };
-  }
+};
+
+const EMPTY_DAILY_CAREER: DailyCareerSummary = {
+  dailyTotalCorrect: 0,
+  dailyTotalResponseMs: 0,
+  dailyAvgRank: null,
+  dailyBestRank: null,
+  dailyAvgTimeMs: null,
+  dailyBestTimeMs: null,
+};
+
+/**
+ * Same rounding as `summarizeDailyCareer`, from SQL `_sum` / `_avg` / `_min`
+ * so profile stats never load every daily attempt into Node.
+ */
+export function summarizeDailyCareerFromAggregates(input: {
+  count: number;
+  totalCorrect: number;
+  totalMs: number;
+  avgRank: number | null;
+  bestRank: number | null;
+  bestTimeMs: number | null;
+}): DailyCareerSummary {
+  if (input.count <= 0) return EMPTY_DAILY_CAREER;
+  return {
+    dailyTotalCorrect: input.totalCorrect,
+    dailyTotalResponseMs: input.totalMs,
+    dailyAvgRank: input.avgRank == null ? null : Math.round(input.avgRank * 10) / 10,
+    dailyBestRank: input.bestRank,
+    dailyAvgTimeMs: Math.round(input.totalMs / input.count),
+    dailyBestTimeMs: input.bestTimeMs,
+  };
+}
+
+export function summarizeDailyCareer(
+  rows: Array<{ rank: number | null; totalResponseMs: number; correctCount: number }>,
+): DailyCareerSummary {
+  if (rows.length === 0) return EMPTY_DAILY_CAREER;
   let totalCorrect = 0;
   let totalMs = 0;
   let rankSum = 0;
@@ -137,12 +162,12 @@ export function summarizeDailyCareer(
     }
     bestTime = bestTime == null ? row.totalResponseMs : Math.min(bestTime, row.totalResponseMs);
   }
-  return {
-    dailyTotalCorrect: totalCorrect,
-    dailyTotalResponseMs: totalMs,
-    dailyAvgRank: rankN > 0 ? Math.round((rankSum / rankN) * 10) / 10 : null,
-    dailyBestRank: bestRank,
-    dailyAvgTimeMs: Math.round(totalMs / rows.length),
-    dailyBestTimeMs: bestTime,
-  };
+  return summarizeDailyCareerFromAggregates({
+    count: rows.length,
+    totalCorrect,
+    totalMs,
+    avgRank: rankN > 0 ? rankSum / rankN : null,
+    bestRank,
+    bestTimeMs: bestTime,
+  });
 }

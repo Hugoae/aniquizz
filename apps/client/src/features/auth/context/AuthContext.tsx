@@ -200,10 +200,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cleanupLevelUp: (() => void) | undefined;
     let cleanupSanction: (() => void) | undefined;
+    let cleanupSessionReplace: (() => void) | undefined;
     let disposed = false;
 
     void import('@/lib/socketLifecycle').then(
-      ({ syncSocketSession, registerLevelUpHandler, registerSanctionHandler }) => {
+      ({
+        syncSocketSession,
+        registerLevelUpHandler,
+        registerSanctionHandler,
+        registerSessionReplacementReconnect,
+      }) => {
         if (disposed) return;
         syncSocketSession(session, profile?.username || 'Anonyme');
         if (!session?.user) return;
@@ -222,6 +228,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               : prev,
           );
         });
+        cleanupSessionReplace = registerSessionReplacementReconnect();
       },
     );
 
@@ -229,6 +236,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       disposed = true;
       cleanupLevelUp?.();
       cleanupSanction?.();
+      cleanupSessionReplace?.();
     };
   }, [session, session?.user?.id, session?.access_token, profile?.username, fetchProfile]);
 

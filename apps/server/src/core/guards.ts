@@ -157,6 +157,8 @@ export const RATE_LIMITS = {
   updatePrefs: { points: 12, durationMs: 10_000 },
   /** Privacy audiences: infrequent, still capped. */
   updatePrivacy: { points: 8, durationMs: 10_000 },
+  /** Username / avatar / favorite-visibility writes. Same order as privacy. */
+  updateProfile: { points: 8, durationMs: 10_000 },
   /** Manual list sync is expensive (AniList/MAL); keep it tight. */
   listsMutate: { points: 8, durationMs: 60_000 },
   listsRefresh: { points: 3, durationMs: 60_000 },

@@ -8,6 +8,7 @@ import {
   browseLibraryAnimes,
   browseLibrarySongs,
   getLibrarySongById,
+  getLibrarySongsByIds,
 } from '../modules/catalogue/libraryBrowse';
 import { browseLibraryTree } from '../modules/catalogue/libraryTree';
 import { getLibraryMeta } from '../modules/catalogue/libraryMeta';
@@ -164,7 +165,9 @@ export function registerLibraryRoutes(app: Application): void {
         res.status(401).json({ error: 'Missing bearer token.' });
         return;
       }
-      res.json(await getPinnedSongIds(req.actor.userId));
+      const pinned = await getPinnedSongIds(req.actor.userId);
+      const songs = await getLibrarySongsByIds(pinned.songIds, req.actor.userId);
+      res.json({ ...pinned, songs });
     }),
   );
 

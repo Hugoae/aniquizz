@@ -1,25 +1,17 @@
-import {
-  lazy,
-  Suspense,
-  useEffect,
-  useLayoutEffect,
-  type ReactElement,
-  type ReactNode,
-} from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
-import {
-  RouteSkeletonFallback,
-  DelayedRouteFallback,
-} from '@/components/layout/RouteSkeletonFallback';
+import { DelayedRouteFallback } from '@/components/layout/RouteSkeletonFallback';
 import { warmLikelyRoutes } from '@/lib/routePrefetch';
 import { dismissAppShellWhenReady } from '@/lib/appShell';
 import { markLandingPaintDone } from '@/lib/initialPaint';
 
 import { AuthProvider, useAuth } from '@/features/auth/context/AuthContext';
 import { AuthModalProvider, useAuthModal } from '@/features/auth/context/AuthModalContext';
+import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute';
+import { consumeAuthReturnTo } from '@/features/auth/lib/authReturnTo';
 import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
@@ -52,22 +44,6 @@ const FriendsProvider = lazy(() =>
   import('@/features/friends/FriendsContext').then((m) => ({ default: m.FriendsProvider })),
 );
 
-/** Gameplay and profile routes require an authenticated session. */
-const ProtectedRoute = ({ children }: { children: ReactElement }) => {
-  const { session, authReady } = useAuth();
-  const { setShowAuthModal } = useAuthModal();
-
-  useEffect(() => {
-    if (authReady && !session) {
-      setShowAuthModal(true);
-    }
-  }, [authReady, session, setShowAuthModal]);
-
-  if (!authReady) return <RouteSkeletonFallback />;
-  if (!session) return <Navigate to="/" replace />;
-  return children;
-};
-
 /** Friends socket state is only needed for signed-in users — defer the chunk until then. */
 function SessionFriendsProvider({ children }: { children: ReactNode }) {
   const { session, authReady } = useAuth();
@@ -90,6 +66,19 @@ const AppContent = () => {
   const { showAuthModal, setShowAuthModal } = useAuthModal();
   const { session, authReady } = useAuth();
   const navigate = useNavigate();
+
+  const consumedReturnTo = useRef(false);
+
+  useEffect(() => {
+    if (!session) {
+      consumedReturnTo.current = false;
+      return;
+    }
+    if (!authReady || consumedReturnTo.current) return;
+    consumedReturnTo.current = true;
+    const next = consumeAuthReturnTo();
+    if (next) navigate(next, { replace: true });
+  }, [authReady, session, navigate]);
 
   // Keep the HTML shell covering #root until Tailwind is verified on the mounted Home.
   useLayoutEffect(() => {

@@ -134,10 +134,17 @@ export function StatsCarousel({ items }: { items: StatItem[] }) {
                 aria-label={`Page ${i + 1}`}
                 aria-current={i === page}
                 className={cn(
-                  'h-1.5 rounded-full transition-all',
-                  i === page ? 'w-5 bg-primary' : 'w-1.5 bg-muted hover:bg-muted-foreground/40',
+                  'flex min-h-11 min-w-11 items-center justify-center rounded-full',
+                  i === page ? 'text-primary' : 'text-muted hover:text-muted-foreground',
                 )}
-              />
+              >
+                <span
+                  className={cn(
+                    'rounded-full transition-all',
+                    i === page ? 'h-1.5 w-5 bg-primary' : 'h-1.5 w-1.5 bg-current',
+                  )}
+                />
+              </button>
             ))}
           </div>
         </>

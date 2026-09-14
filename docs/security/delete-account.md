@@ -15,6 +15,13 @@ Self-service **right to erasure** for authenticated users. Available from the ow
    - `supabaseAdmin.auth.admin.deleteUser(userId)`
    - Emit `profile:account_deleted` + `force_logout` on all user sockets, then disconnect
 
+## Why Prisma before Auth
+
+Deleting Auth first can lock the user out while Profile (and PII) still exists — they
+cannot sign in to retry. Prisma-first is the recoverable order: if Auth delete fails,
+the profile row is already gone and the client shows `AUTH_DELETE_FAILED_MESSAGE`
+(contact support to remove the orphan Auth user). Do not invert this sequence.
+
 ## Security
 
 | Control      | Implementation                                                                                        |
@@ -44,5 +51,6 @@ Self-service **right to erasure** for authenticated users. Available from the ow
 ## Tests
 
 - `apps/server/src/integration/deleteAccount.integration.test.ts` — wrong `confirmUsername` rejected; test account preserved.
+- `apps/server/src/integration/profileCascade.integration.test.ts` — Prisma `Profile` delete cascades friendships.
 
 Manual smoke: profile ⋮ → delete → confirm → redirected home, cannot sign in again.

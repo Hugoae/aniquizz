@@ -188,6 +188,17 @@ describe.skipIf(!hasIntegrationEnv)('song likes integration', () => {
     const pinned = (await pinRes.json()) as { songIds: number[] };
     expect(pinned.songIds).toEqual([songId]);
 
+    const getPinned = await fetch(`${bundle.url}/library/likes/pinned`, {
+      headers: authHeaders(),
+    });
+    expect(getPinned.status).toBe(200);
+    const hydrated = (await getPinned.json()) as {
+      songIds: number[];
+      songs: Array<{ id: number }>;
+    };
+    expect(hydrated.songIds).toEqual([songId]);
+    expect(hydrated.songs.map((s) => s.id)).toEqual([songId]);
+
     const userId = TEST_USER_IDS.admin;
     const favRes = await fetch(`${bundle.url}/library/users/${userId}/favorites`);
     expect(favRes.status).toBe(200);

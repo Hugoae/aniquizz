@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix). **Profile is closed** (P1 + P2 + logged-in smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Hub/Game **logged-in** match/lobby QA is still open (those audits were guest + tests).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → **Game ✅** → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → **Library** → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -178,7 +178,51 @@ Hub Zod on `lobby:create` / `lobby:join` capped `avatar` at 64 chars. Custom ava
 
 P2 added `landscape:max-h-[min(28vh,11rem)]` on `VideoStage`. Tailwind `landscape:` is `(orientation: landscape)` — every desktop monitor matches, so the clip became a ~176px strip. Cap is now `max-h-[42vh]`, with a tighter `36vh` only when landscape **and** `max-height: 500px` (phone on its side). Safe-area + column scroll stay.
 
-**Next:** Profile audit. Do not start 26.7.
+**Next:** Library audit. Do not start 26.7.
+
+### Audit — Profile P1 ✅ (2026-09-14)
+
+Canvas: `profile-feature-audit`. No P0. Server still owns username / avatar URL / privacy writes / GDPR delete.
+
+| Item                          | What changed                                                                                                                                                                                               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Zod mutators**              | `update_profile_data`, `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account` go through `socketPayloads.ts` + `parseSocketPayload`. Missing / empty / oversized → `Requête invalide.` |
+| **Username cap**              | Server trims and caps at `MAX_USERNAME_LENGTH` (16). UI `maxLength` uses the same constant.                                                                                                                |
+| **Rate limit**                | `update_profile_data` uses `guard(..., RATE_LIMITS.updateProfile)` — 8 / 10s.                                                                                                                              |
+| **Public profile errors**     | `profile:get_public` failures emit `profile:error`. The public page no longer navigates home on `friends:error`.                                                                                           |
+| **Privacy `everyone` invite** | Invalid `lobbyInviteAudience: 'everyone'` is rejected at Zod (no silent coerce).                                                                                                                           |
+
+**Left for P2:** god files, copy isolation, guest returnTo, unbounded stats queries. **Not started:** 26.7.
+
+### Audit — Profile P2 ✅ (2026-09-14)
+
+Canvas: `profile-feature-audit`. Profile audit is **closed** (P1 + P2 + smoke). Do not start 26.7.
+
+| Item                   | What changed                                                                                                                                                                                                                           |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Partition**          | `Profile.tsx` is a thin page. Data in `useProfilePage`; chrome in `ProfilePageShell` / unavailable / avatar / username / own menu / pokédex / achievements stub / pinned row. Pinned-favorites dialog uses `usePinnedFavoritesDialog`. |
+| **Copy**               | `profileCopy.ts` — vousvoiement (toasts, delete, pokédex, favorites).                                                                                                                                                                  |
+| **Guest returnTo**     | `ProtectedRoute` stores a same-origin path (`authReturnTo.ts`). After login, `App` consumes it. `/profile` and `/play` deep links survive the auth modal.                                                                              |
+| **Career queries**     | Match multi/solo/playtime via SQL (`profileMatchCareer.ts`). Daily career from Prisma aggregates + `summarizeDailyCareerFromAggregates` — no `findMany` of every finished match/attempt into Node.                                     |
+| **Unavailable public** | Missing user id returns `unavailablePublicProfile` (no `computeRichStats` throw). Client shows `ProfileUnavailable`, does not navigate home.                                                                                           |
+| **Tests**              | View-model, returnTo, copy, socket-ready, canonical strip; mutators / cascade / privacy unknown-id integration.                                                                                                                        |
+
+**Not in this pass:** FriendsPanel jsx-a11y · HIBP · 26.7 liked-songs playlist (spec only in `PLAN.md`).
+
+### Audit — Profile follow-up (logged-in smoke) ✅ (2026-09-14)
+
+First audit domain walked signed-in in the browser (`admin_dev` on local Vite + server). Auth/Home/Hub/Game used guest UI, CSS viewports, and unit/integration tests. Hub parked "Logged-in lobby QA (tool cannot fill credentials)". Game logged-in pause/skip/F5/chat is still open.
+
+Socket.io does not auto-reconnect after `io server disconnect`. A same-tab overlapping handshake (`connect` → `session_replaced` → kill) dropped `profile:get_stats` / `friends:list` / `profile:get_public` on the dying socket. Stats stayed on `INITIAL_OWN_PROFILE_STATS` (pokédex « Total disponible : 0 ») while XP in the header still came from Auth.
+
+| Item                   | What changed                                                                                                                                                                                              |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Settle + reconnect** | `subscribeWhenSocketReady` waits 80 ms after `connect` and emits only if still connected. `registerSessionReplacementReconnect` calls `connect()` for same-tab ghosts. Feature hooks never own handshake. |
+| **Friends spinner**    | Snapshot request on the live socket; 8 s timeout clears `loading` if `friends:state` never arrives.                                                                                                       |
+| **Canonical leftover** | Static `index.html` canonical is `/`. `SeoHead` + `stripUnmanagedCanonicalLinks` leave a single `https://aniquizz.com/profile` (Helmet `data-rh`).                                                        |
+| **Browser**            | Own `/profile`: pokédex denominator 3002, friends list (not infinite spinner). Unknown UUID: « Profil indisponible » without home redirect. `/play` → solo config still works signed-in.                  |
+
+**Next:** Library audit. Optional later: Hub/Game logged-in smoke with the same test account. Do not start 26.7.
 
 ### Audit — Auth + Home ✅ (2026-09-14)
 

@@ -41,4 +41,14 @@ describe('consumeIpRateLimit', () => {
     }
     expect(consumeIpRateLimit('203.0.113.10', 'vote_pause', rule)).toBe(true);
   });
+
+  it('caps profile identity writes at 8 hits per 10s window', () => {
+    const rule = RATE_LIMITS.updateProfile;
+    expect(rule.points).toBe(8);
+    expect(rule.durationMs).toBe(10_000);
+    for (let i = 0; i < rule.points; i++) {
+      expect(consumeIpRateLimit('203.0.113.10', 'update_profile_data', rule)).toBe(false);
+    }
+    expect(consumeIpRateLimit('203.0.113.10', 'update_profile_data', rule)).toBe(true);
+  });
 });

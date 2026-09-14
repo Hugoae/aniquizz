@@ -270,3 +270,31 @@ export const browseLibraryAnimes = async (
     totalSongs,
   };
 };
+
+export const getLibrarySongsByIds = async (
+  songIds: number[],
+  userId: string,
+): Promise<LibrarySong[]> => {
+  if (!songIds.length) return [];
+  const unique = [...new Set(songIds)];
+  const rows = await prisma.song.findMany({
+    where: { id: { in: unique }, downloadStatus: 'COMPLETED' },
+    select: songSelect,
+  });
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  let discovered = new Set<number>();
+  let liked = new Set<number>();
+  try {
+    const flags = await resolveUserSongFlags(userId, unique);
+    discovered = flags.discovered;
+    liked = flags.liked;
+  } catch (e) {
+    logger.warn('[Library] Failed to resolve user flags for pinned songs', 'Library', e);
+  }
+  const songs: LibrarySong[] = [];
+  for (const id of unique) {
+    const row = byId.get(id);
+    if (row) songs.push(mapLibrarySong(row, discovered.has(id), liked.has(id)));
+  }
+  return songs;
+};

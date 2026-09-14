@@ -5,13 +5,14 @@ import {
   mergeProfileHistory,
   normalizeAccountPrivacy,
   PROFILE_HISTORY_TAKE,
-  summarizeDailyCareer,
+  summarizeDailyCareerFromAggregates,
   toDailyHistoryEntry,
   type PrivacyViewerKind,
 } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { friendsService } from '../friends/friendsService';
 import { redactPresence, unavailablePublicProfile } from './privacyRedaction';
+import { queryFinishedMatchCareer } from './profileMatchCareer';
 
 const PLAYABLE_SONGS_TTL_MS = 10 * 60 * 1000;
 let playableSongsCache: { count: number; at: number } | null = null;
@@ -42,11 +43,11 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       historyRows,
       dailyHistoryRows,
       dailyStats,
-      dailyCareerRows,
+      dailyCareerAgg,
       scoreAgg,
       timeAgg,
       roundsPlayed,
-      finishedMatches,
+      finishedCareer,
     ] = await Promise.all([
       countPlayableSongs(),
       prisma.songHistory.count({
@@ -127,9 +128,12 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
           perfectDays: true,
         },
       }),
-      prisma.dailyAttempt.findMany({
+      prisma.dailyAttempt.aggregate({
         where: { profileId: userId, state: { in: ['COMPLETED', 'FORFEITED', 'EXPIRED'] } },
-        select: { rank: true, totalResponseMs: true, correctCount: true },
+        _count: { _all: true },
+        _sum: { correctCount: true, totalResponseMs: true },
+        _avg: { rank: true },
+        _min: { rank: true, totalResponseMs: true },
       }),
       // Cumulative score/XP + answer time (avg & min) + rounds + multi/solo split + playtime.
       prisma.matchPlayer.aggregate({
@@ -142,14 +146,7 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
         _min: { timeMs: true },
       }),
       prisma.roundAnswer.count({ where: { matchPlayer: { profileId: userId } } }),
-      prisma.matchPlayer.findMany({
-        where: { profileId: userId, match: { status: 'FINISHED' } },
-        select: {
-          match: {
-            select: { startedAt: true, endedAt: true, _count: { select: { players: true } } },
-          },
-        },
-      }),
+      queryFinishedMatchCareer(userId),
     ]);
 
     const progressPercent = totalSongs > 0 ? Math.round((discoveredSongs / totalSongs) * 100) : 0;
@@ -201,17 +198,16 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       }),
     );
     const history = mergeProfileHistory(matchHistory, dailyHistory);
-    const dailyCareer = summarizeDailyCareer(dailyCareerRows);
+    const dailyCareer = summarizeDailyCareerFromAggregates({
+      count: dailyCareerAgg._count._all,
+      totalCorrect: dailyCareerAgg._sum.correctCount ?? 0,
+      totalMs: dailyCareerAgg._sum.totalResponseMs ?? 0,
+      avgRank: dailyCareerAgg._avg.rank == null ? null : Number(dailyCareerAgg._avg.rank),
+      bestRank: dailyCareerAgg._min.rank,
+      bestTimeMs: dailyCareerAgg._min.totalResponseMs,
+    });
 
-    let multiCount = 0;
-    let soloCount = 0;
-    let playtimeMs = 0;
-    for (const row of finishedMatches) {
-      const m = row.match;
-      if (m._count.players > 1) multiCount += 1;
-      else soloCount += 1;
-      if (m.endedAt) playtimeMs += m.endedAt.getTime() - m.startedAt.getTime();
-    }
+    const { multiCount, soloCount, playtimeMs } = finishedCareer;
 
     const winRate =
       profile.gamesPlayed > 0 ? Math.round((profile.gamesWon / profile.gamesPlayed) * 100) : 0;
@@ -335,6 +331,8 @@ export const getPublicProfile = async (
     }),
     resolveRelation(viewerId, targetId),
   ]);
+
+  if (!privacyRow) return unavailablePublicProfile(targetId);
 
   const privacy = normalizeAccountPrivacy(privacyRow);
   const viewerKind = viewerKindFromRelation(relation);

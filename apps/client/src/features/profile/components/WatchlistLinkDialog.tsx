@@ -8,17 +8,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import type { WatchedListProvider } from '@aniquizz/shared';
+import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 
 const COPY: Record<WatchedListProvider, { title: string; placeholder: string; hint: string }> = {
   anilist: {
-    title: 'Lier AniList',
-    placeholder: 'Votre pseudo AniList exact...',
-    hint: "Utilise le pseudo de l'URL du profil (anilist.co/user/...), pas le nom affiché.",
+    title: PROFILE_COPY.watchlistAnilistTitle,
+    placeholder: PROFILE_COPY.watchlistAnilistPlaceholder,
+    hint: PROFILE_COPY.watchlistAnilistHint,
   },
   mal: {
-    title: 'Lier MyAnimeList',
-    placeholder: 'Votre pseudo MyAnimeList exact...',
-    hint: "Utilise le pseudo de l'URL du profil (myanimelist.net/profile/...), pas le nom affiché.",
+    title: PROFILE_COPY.watchlistMalTitle,
+    placeholder: PROFILE_COPY.watchlistMalPlaceholder,
+    hint: PROFILE_COPY.watchlistMalHint,
   },
 };
 
@@ -68,7 +69,7 @@ export function WatchlistLinkDialog({
           </div>
           <DialogFooter>
             <Button type="submit" disabled={saving || !value.trim()}>
-              {saving ? 'Liaison...' : 'Sauvegarder'}
+              {saving ? PROFILE_COPY.watchlistSaving : PROFILE_COPY.watchlistSave}
             </Button>
           </DialogFooter>
         </form>

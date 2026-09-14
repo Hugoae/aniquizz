@@ -217,7 +217,12 @@ export const registerFriendsHandlers = (
       const profile = await getPublicProfile(userId, targetId, presence(targetId), friends);
       socket.emit('profile:public', profile);
     } catch (e) {
-      fail(e, 'get_public');
+      if (e instanceof FriendServiceError) {
+        socket.emit('profile:error', { message: e.message });
+        return;
+      }
+      logger.error('[Friends] get_public failed', 'Friends', e);
+      socket.emit('profile:error', { message: 'Une erreur est survenue.' });
     }
   };
 

@@ -91,9 +91,11 @@ export interface SongLikesIdsResponse {
   total: number;
 }
 
-/** Ordered song ids pinned for profile showcase (max 10). */
+/** Ordered song ids pinned for profile showcase (max 5). */
 export interface ProfilePinnedSongsResponse {
   songIds: number[];
+  /** Present on GET /library/likes/pinned so the pin dialog skips N× song fetches. */
+  songs?: LibrarySong[];
 }
 
 export interface ProfilePinnedSongsInput {

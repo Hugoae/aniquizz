@@ -4,8 +4,8 @@ import { GAME_TYPE_LABELS, gameTypeFromStoredMode } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { formatDailyClock } from '@/features/daily/lib/dailyRecap';
-
-const MEDAL_HEX: Record<number, string> = { 1: '#FACC15', 2: '#CBD5E1', 3: '#C67B48' };
+import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
+import { matchRankMedalToken } from '@/features/profile/lib/matchHistoryAccent';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -91,7 +91,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
 
   const solo = entry.rank == null || entry.playerCount <= 1;
   const gameType = gameTypeFromStoredMode(entry.mode);
-  const topMedal = !solo && entry.rank && entry.rank <= 3 ? MEDAL_HEX[entry.rank] : null;
+  const topMedal = !solo && entry.rank && entry.rank <= 3 ? matchRankMedalToken(entry.rank) : null;
   const defeat = solo && !entry.isWinner;
 
   const color = entry.isWinner
@@ -180,19 +180,19 @@ export function MatchHistory({
     <div>
       <div className="flex items-center gap-2 mb-4">
         <History className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-bold">Historique de parties</h2>
+        <h2 className="text-xl font-bold">{PROFILE_COPY.historyTitle}</h2>
       </div>
 
       <div className="glass-card bg-card/40 rounded-xl p-2">
         {redacted ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground/60">
             <History className="h-8 w-8 opacity-40" />
-            L’historique récent de ce joueur est privé.
+            {PROFILE_COPY.historyPrivate}
           </div>
         ) : entries.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground/60">
             <History className="h-8 w-8 opacity-40" />
-            Aucune partie jouée pour l'instant.
+            {PROFILE_COPY.historyEmpty}
           </div>
         ) : (
           <ul className="space-y-2">

@@ -6,6 +6,9 @@ import type { GameManager } from '../game/gameManager';
 import { prepareSuggestionsForAccountDeletion } from '../feedback/suggestionService';
 import { isFreshReauth } from './deleteAccountReauth';
 
+export const AUTH_DELETE_FAILED_MESSAGE =
+  'Le profil a été effacé mais la suppression Auth a échoué. Contactez le support.';
+
 export class DeleteAccountError extends Error {
   constructor(
     message: string,
@@ -78,7 +81,7 @@ export const deleteUserAccount = async (opts: {
   const { data: authUser, error: authLookupError } =
     await supabaseAdmin.auth.admin.getUserById(userId);
   if (authLookupError || !authUser.user) {
-    throw new DeleteAccountError('Impossible de vérifier la session. Réessaie.', 'FAILED');
+    throw new DeleteAccountError('Impossible de vérifier la session. Réessayez.', 'FAILED');
   }
   if (!isFreshReauth(authUser.user.last_sign_in_at)) {
     throw new DeleteAccountError(
@@ -100,10 +103,7 @@ export const deleteUserAccount = async (opts: {
       `[Profile] Supabase Auth delete failed for ${userId}: ${authError.message}`,
       'Profile',
     );
-    throw new DeleteAccountError(
-      'Le profil a été effacé mais la suppression Auth a échoué. Contacte le support.',
-      'FAILED',
-    );
+    throw new DeleteAccountError(AUTH_DELETE_FAILED_MESSAGE, 'FAILED');
   }
 
   disconnectAllUserSockets(io, userId, 'Votre compte a été supprimé. À bientôt sur AniQuizz !');

@@ -7,6 +7,10 @@ import {
   lobbyTargetInputSchema,
   roomIdInputSchema,
   chatSendMessageInputSchema,
+  deleteAccountInputSchema,
+  updatePrefsInputSchema,
+  updatePrivacyInputSchema,
+  updateProfileDataInputSchema,
   updateRoomSettingsInputSchema,
 } from './socketPayloads';
 
@@ -240,5 +244,81 @@ describe('chatSendMessageInputSchema', () => {
         content: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_CHAT_LENGTH + 1),
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('updateProfileDataInputSchema', () => {
+  it('trims username, caps length, and strips unknown keys', () => {
+    expect(
+      updateProfileDataInputSchema.parse({
+        username: '  Kirikou  ',
+        extra: true,
+      }),
+    ).toEqual({ username: 'Kirikou' });
+  });
+
+  it('rejects empty, whitespace-only, or oversized usernames', () => {
+    expect(updateProfileDataInputSchema.safeParse({ username: '' }).success).toBe(false);
+    expect(updateProfileDataInputSchema.safeParse({ username: '   ' }).success).toBe(false);
+    expect(
+      updateProfileDataInputSchema.safeParse({
+        username: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_USERNAME_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+  });
+
+  it('requires at least one known field', () => {
+    expect(updateProfileDataInputSchema.safeParse({}).success).toBe(false);
+    expect(updateProfileDataInputSchema.safeParse(undefined).success).toBe(false);
+    expect(updateProfileDataInputSchema.parse({ username: 'Kirikou', extra: 1 })).toEqual({
+      username: 'Kirikou',
+    });
+  });
+
+  it('rejects favorite visibility — that patch belongs on profile:update_privacy', () => {
+    expect(updateProfileDataInputSchema.safeParse({ showFavoriteSongs: false }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('updatePrefsInputSchema', () => {
+  it('accepts a partial patch and strips unknown keys', () => {
+    expect(updatePrefsInputSchema.parse({ audioVolume: 40, extra: true })).toEqual({
+      audioVolume: 40,
+    });
+  });
+
+  it('rejects a non-object payload or an invalid motion mode', () => {
+    expect(updatePrefsInputSchema.safeParse(undefined).success).toBe(false);
+    expect(updatePrefsInputSchema.safeParse({ motionMode: 'off' }).success).toBe(false);
+  });
+});
+
+describe('updatePrivacyInputSchema', () => {
+  it('accepts a partial privacy patch', () => {
+    expect(
+      updatePrivacyInputSchema.parse({
+        matchHistoryAudience: 'friends',
+        extra: true,
+      }),
+    ).toEqual({ matchHistoryAudience: 'friends' });
+  });
+
+  it('rejects lobbyInviteAudience everyone', () => {
+    expect(updatePrivacyInputSchema.safeParse({ lobbyInviteAudience: 'everyone' }).success).toBe(
+      false,
+    );
+  });
+});
+
+describe('deleteAccountInputSchema', () => {
+  it('requires a non-empty confirmation username', () => {
+    expect(deleteAccountInputSchema.parse({ confirmUsername: 'Kirikou' })).toEqual({
+      confirmUsername: 'Kirikou',
+    });
+    expect(deleteAccountInputSchema.safeParse({}).success).toBe(false);
+    expect(deleteAccountInputSchema.safeParse({ confirmUsername: '   ' }).success).toBe(false);
+    expect(deleteAccountInputSchema.safeParse(undefined).success).toBe(false);
   });
 });

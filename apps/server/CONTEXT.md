@@ -30,9 +30,10 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   enforces this.
 - **Mutating socket events are Zod-parsed.** `game:answer`, `update_room_settings`,
   `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, `game:return_to_lobby`,
-  `game:cancel`, `get_game_state`, `chat:sendMessage`, plus lobby `create` / `join` /
-  `kick` / `transfer_host` / `leave_room` / `toggle_ready`. Invalid JSON still yields a generic
-  `Requête invalide.` — do not leak Zod paths.
+  `game:cancel`, `get_game_state`, `chat:sendMessage`, `update_profile_data`,
+  `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account`, plus lobby
+  `create` / `join` / `kick` / `transfer_host` / `leave_room` / `toggle_ready`. Invalid JSON
+  still yields a generic `Requête invalide.` — do not leak Zod paths.
   Room settings patches are then re-validated by `normalizeRoomSettings`.
   `password`, `roomName`, and `avatar` (preset key or uploaded public URL) are
   length-capped (`GAME_CONFIG.LIMITS`). Do not cap `avatar` as if it were a
@@ -60,5 +61,8 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 - **Prisma migrations are manual on Supabase.** `prisma migrate dev` fails (no shadow
   DB, P1001). Author SQL by hand, `db execute`, then `migrate resolve --applied`
   (see database `CONTEXT.md`).
-- **Never log secrets** (JWTs, room passwords). Use Pino structured logs.
+- **Account deletion is Prisma-first then Auth.** Inverting that order can lock
+  the user out while PII remains. If Auth delete fails, the French support
+  message is intentional. Profile stats use SQL aggregates for career daily /
+  match counts — do not `findMany` every finished match into Node.
 - Bind to `0.0.0.0:$PORT` — Render requirement; filesystem is ephemeral.

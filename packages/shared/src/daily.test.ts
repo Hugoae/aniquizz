@@ -25,6 +25,7 @@ import {
   offeredDailyChoice,
   summarizeDailyRounds,
   summarizeDailyCareer,
+  summarizeDailyCareerFromAggregates,
   toDailyHistoryEntry,
   zonedWallTimeToUtc,
 } from './daily';
@@ -144,6 +145,26 @@ describe('daily XP and scoring', () => {
         { rank: 1, totalResponseMs: 10_000, correctCount: 5 },
         { rank: 4, totalResponseMs: 20_000, correctCount: 3 },
       ]),
+    ).toEqual({
+      dailyTotalCorrect: 8,
+      dailyTotalResponseMs: 30_000,
+      dailyAvgRank: 2.5,
+      dailyBestRank: 1,
+      dailyAvgTimeMs: 15_000,
+      dailyBestTimeMs: 10_000,
+    });
+  });
+
+  it('matches row summaries when built from SQL aggregates', () => {
+    expect(
+      summarizeDailyCareerFromAggregates({
+        count: 2,
+        totalCorrect: 8,
+        totalMs: 30_000,
+        avgRank: 2.5,
+        bestRank: 1,
+        bestTimeMs: 10_000,
+      }),
     ).toEqual({
       dailyTotalCorrect: 8,
       dailyTotalResponseMs: 30_000,

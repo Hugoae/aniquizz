@@ -23,7 +23,10 @@ import type {
   RecentPlayer,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 import { useAuth } from '@/features/auth/context/AuthContext';
+
+const FRIENDS_SNAPSHOT_TIMEOUT_MS = 8_000;
 
 const EMPTY: FriendsState = {
   friends: [],
@@ -138,6 +141,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    setLoading(true);
+
     const onState = (s: FriendsState) => {
       setState(s);
       setLoading(false);
@@ -169,6 +174,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       toast.error(e.message);
     };
     const requestSnapshot = () => {
+      if (!socket.connected) return;
       socket.emit('friends:list');
       socket.emit('friends:recent');
     };
@@ -178,17 +184,17 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     socket.on('friends:recent', onRecent);
     socket.on('friends:info', onInfo);
     socket.on('friends:error', onError);
-    socket.on('connect', requestSnapshot);
-
-    if (socket.connected) requestSnapshot();
+    const stopReady = subscribeWhenSocketReady(socket, requestSnapshot);
+    const timeout = window.setTimeout(() => setLoading(false), FRIENDS_SNAPSHOT_TIMEOUT_MS);
 
     return () => {
+      stopReady();
+      window.clearTimeout(timeout);
       socket.off('friends:state', onState);
       socket.off('friends:presence', onPresence);
       socket.off('friends:recent', onRecent);
       socket.off('friends:info', onInfo);
       socket.off('friends:error', onError);
-      socket.off('connect', requestSnapshot);
     };
   }, [user, reconcileOptimistic, clearOptimisticForUser]);
 

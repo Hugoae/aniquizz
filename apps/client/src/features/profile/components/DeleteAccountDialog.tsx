@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 import { supabase } from '@/lib/supabase';
 import { socket } from '@/lib/socket';
 
@@ -58,7 +59,7 @@ export function DeleteAccountDialog({
         password,
       });
       if (authError) {
-        toast.error('Mot de passe incorrect.');
+        toast.error(PROFILE_COPY.deleteWrongPassword);
         return;
       }
 
@@ -67,7 +68,7 @@ export function DeleteAccountDialog({
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           cleanup();
-          reject(new Error('Délai dépassé. Réessaie.'));
+          reject(new Error(PROFILE_COPY.deleteTimeout));
         }, 30_000);
 
         const onDeletedEvent = () => {
@@ -76,7 +77,7 @@ export function DeleteAccountDialog({
         };
         const onError = (err: { message?: string }) => {
           cleanup();
-          reject(new Error(err?.message || 'Impossible de supprimer le compte.'));
+          reject(new Error(err?.message || PROFILE_COPY.deleteFailed));
         };
 
         const cleanup = () => {
@@ -92,12 +93,12 @@ export function DeleteAccountDialog({
         socket.emit('profile:delete_account', { confirmUsername });
       });
 
-      toast.success('Compte supprimé.');
+      toast.success(PROFILE_COPY.deleteSuccess);
       reset();
       onOpenChange(false);
       onDeleted();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Impossible de supprimer le compte.');
+      toast.error(err instanceof Error ? err.message : PROFILE_COPY.deleteFailed);
     } finally {
       setIsDeleting(false);
     }
@@ -117,21 +118,18 @@ export function DeleteAccountDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
             <AlertTriangle className="h-5 w-5" aria-hidden />
-            Supprimer mon compte
+            {PROFILE_COPY.deleteTitle}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-sm">
-          <p className="text-muted-foreground">
-            Cette action est <strong className="text-foreground">définitive et irréversible</strong>
-            . Seront supprimés : ton profil, tes statistiques, ton historique de parties, ta liste
-            AniList liée et tes liens d&apos;amitié.
-          </p>
+          <p className="text-muted-foreground">{PROFILE_COPY.deleteBody}</p>
 
           <div className="space-y-2">
             <label htmlFor="confirm-username" className="text-sm font-medium">
-              Saisis ton pseudo <span className="font-mono text-destructive">{username}</span> pour
-              confirmer
+              {PROFILE_COPY.deleteConfirmLead}{' '}
+              <span className="font-mono text-destructive">{username}</span>{' '}
+              {PROFILE_COPY.deleteConfirmTrail}
             </label>
             <Input
               id="confirm-username"
@@ -155,13 +153,13 @@ export function DeleteAccountDialog({
 
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" onClick={close} disabled={isDeleting}>
-            Annuler
+            {PROFILE_COPY.deleteCancel}
           </Button>
           <Button variant="destructive" onClick={handleDelete} disabled={!canSubmit}>
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
             ) : (
-              'Supprimer définitivement'
+              PROFILE_COPY.deleteSubmit
             )}
           </Button>
         </DialogFooter>

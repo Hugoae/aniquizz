@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
+import { stripUnmanagedCanonicalLinks } from '@/components/seo/stripUnmanagedCanonical';
 import {
   absoluteUrl,
   DEFAULT_DESCRIPTION,
@@ -44,6 +46,10 @@ export function SeoHead({
   const metaDescription = description ?? DEFAULT_DESCRIPTION;
 
   const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
+
+  useEffect(() => {
+    stripUnmanagedCanonicalLinks(canonical);
+  }, [canonical]);
 
   return (
     <Helmet>

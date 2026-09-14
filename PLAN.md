@@ -11,7 +11,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.4**  | ✅ Shipped | Song likes, suggestions, library views, community leaderboard                                                         |
 | **26.5**  | ✅ Shipped | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
 | **26.6**  | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-14)                                   |
-| **26.7**  | 🔮 Next    | Profile pokédex found bar · heard / found playlists                                                                   |
+| **26.7**  | 🔮 Next    | Profile pokédex found bar · heard / found / liked playlists                                                           |
 | **26.x+** | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
@@ -343,10 +343,16 @@ Goal: make collection progress readable, and let players replay what they alread
 - Sibling source: **Déjà trouvés** — `correctCount ≥ 1` only.
 - Same solo/multi rules as Heard (host list in multi unless a later pass adds union/intersection).
 
+### 4. Liked playlist
+
+- Sibling source: **Titres likés** — draw only from the player's `SongLike` rows (hearts from reveal / library), not from the 5 pinned profile showcase.
+- Same pool gates as Heard/Found: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
+- Solo/multi: host likes in multi unless a later pass adds union/intersection. Distinct from staff thematic packs (26.5) and from player-created playlists (26.x+ backlog).
+
 ### 26.7 checklist (at boundary)
 
 - [ ] Profile found bar + tests.
-- [ ] Heard + found playlist sources, lobby copy, pool stats.
+- [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
 - [ ] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
 
 ---
@@ -380,7 +386,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | **Traduction EN**                    | Wire i18n; UI strings already isolated (French default).                                                                                                                                                         |
 | **Light mode**                       | Removed Phase 8 (dark-only); re-add requires token audit + `UserAvatar`/game surfaces.                                                                                                                           |
 | **Franchise catalogue cleanup**      | Data pass: DBZ, Naruto, AOT spin-offs → canonical franchises.                                                                                                                                                    |
-| **Playlists — player packs**         | Staff packs are **26.5**. Heard/found game sources are **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                                                     |
+| **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources are **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                                           |
 | **Graphiques statistiques (profil)** | Visual breakdown on profile · period filter · Recharts lazy on `/profile`. DB snapshots already persist (`Match.responseType`, `Match.precision`, `MatchPlayer.soloMedal`); UI + aggregation API still deferred. |
 
 ### Infra & quality (as needed)

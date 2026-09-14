@@ -321,11 +321,7 @@ export interface ClientToServerEvents {
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
   'profile:get_stats': () => void;
-  update_profile_data: (payload: {
-    username?: string;
-    avatarUrl?: string;
-    showFavoriteSongs?: boolean;
-  }) => void;
+  update_profile_data: (payload: { username?: string; avatarUrl?: string }) => void;
   /** Persist player comfort prefs. Rate-limited; omitted keys keep the stored value. */
   'profile:update_prefs': (payload: PlayerPrefsInput) => void;
   /** Persist account privacy audiences. Rate-limited; omitted keys keep the stored value. */
