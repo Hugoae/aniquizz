@@ -66,7 +66,9 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 - **Reset the clip cache on `phase === 'loading'`** so a solo replay in the same lobby
   gets fresh offsets; the reveal (`RevealSong` by `id`) must skip reload.
   `getVideoUrl` already treats `http(s)` keys as absolute — match/daily guessing
-  locators may be Worker `/v/{token}` URLs, not `Anime-id-OPx.mp4`.
+  locators may be Worker `/v/{token}` URLs, not `Anime-id-OPx.mp4`. Keep that
+  Worker origin in `vercel.json` CSP `media-src` (and `connect-src`); otherwise
+  Chrome blocks the clip with no picture and no sound.
 - **Respect `prefers-reduced-motion`** (handled globally in `index.css`) — don't add
   animations that ignore it.
 - Route entry points are lazy-loaded; keep the Suspense/prefetch pattern
