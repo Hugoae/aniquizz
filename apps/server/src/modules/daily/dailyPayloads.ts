@@ -188,22 +188,6 @@ export const tracksForAttempt = (rounds: DailyRoundRow[], answers: DailyAnswerRo
     }),
   );
 
-/** Next non-voided clip after `position` — video bytes only, no identity leak. */
-export const nextPlayableClip = (
-  rounds: DailyRoundRow[],
-  position: number,
-): { nextVideo: string; nextVideoStartTime: number } | null => {
-  const upcoming = rounds
-    .filter((row) => !row.voided && row.position > position)
-    .sort((a, b) => a.position - b.position);
-  for (const row of upcoming) {
-    const snapshot = snapshotOf(row);
-    if (!snapshot.videoKey) continue;
-    return { nextVideo: snapshot.videoKey, nextVideoStartTime: snapshot.videoStartTime };
-  }
-  return null;
-};
-
 export const toRevealDto = (input: {
   round: DailyRoundRow;
   answer: DailyAnswerRow | undefined;
@@ -213,7 +197,6 @@ export const toRevealDto = (input: {
   finished: boolean;
 }): DailyRevealDto => {
   const snapshot = snapshotOf(input.round);
-  const next = nextPlayableClip(input.rounds, input.round.position);
   return {
     position: input.round.position,
     selectedLabel: input.answer?.selectedLabel ?? null,
@@ -224,8 +207,6 @@ export const toRevealDto = (input: {
     tracks: tracksForAttempt(input.rounds, input.answers),
     revealEndsAt: input.revealUntil.toISOString(),
     finished: input.finished,
-    nextVideo: next?.nextVideo ?? null,
-    nextVideoStartTime: next?.nextVideoStartTime ?? null,
   };
 };
 

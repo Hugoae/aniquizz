@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DailyRoundSnapshot } from '@aniquizz/shared';
-import { toResultDto, toRevealDto, toRevealSong, type DailyRoundRow } from './dailyPayloads';
+import { toResultDto, toRevealSong, type DailyRoundRow } from './dailyPayloads';
 
 const snapshot = (id: number, anime: string): DailyRoundSnapshot => ({
   id,
@@ -43,50 +43,6 @@ describe('dailyPayloads likes', () => {
     const song = toRevealSong(snapshot(4242, 'Bleach'));
     expect(song.id).toBe(4242);
     expect(song.anime).toBe('Bleach');
-  });
-
-  it('warms the next playable clip without leaking its identity', () => {
-    const rounds = [round(1, 11), round(2, 22), round(3, 33)];
-    const answer = { roundId: 'round-1', selectedLabel: 'Anime 1', isCorrect: true, responseMs: 500 };
-    const dto = toRevealDto({
-      round: rounds[0],
-      answer,
-      rounds,
-      answers: [answer],
-      revealUntil: new Date('2026-09-14T10:00:15.000Z'),
-      finished: false,
-    });
-    expect(dto.nextVideo).toBe('k-22');
-    expect(dto.nextVideoStartTime).toBe(8);
-    expect(JSON.stringify(dto)).not.toContain('Anime 2');
-    expect(JSON.stringify(dto)).not.toContain('Song 22');
-  });
-
-  it('skips voided rounds when choosing the next clip', () => {
-    const rounds = [round(1, 11), { ...round(2, 22), voided: true }, round(3, 33)];
-    const dto = toRevealDto({
-      round: rounds[0],
-      answer: undefined,
-      rounds,
-      answers: [],
-      revealUntil: new Date('2026-09-14T10:00:15.000Z'),
-      finished: false,
-    });
-    expect(dto.nextVideo).toBe('k-33');
-  });
-
-  it('omits the next clip on the last playable round', () => {
-    const rounds = [round(1, 11)];
-    const dto = toRevealDto({
-      round: rounds[0],
-      answer: undefined,
-      rounds,
-      answers: [],
-      revealUntil: new Date('2026-09-14T10:00:15.000Z'),
-      finished: true,
-    });
-    expect(dto.nextVideo).toBeNull();
-    expect(dto.nextVideoStartTime).toBeNull();
   });
 
   it('keeps that catalogue id on the recap rows', () => {
