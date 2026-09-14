@@ -65,6 +65,11 @@ export default tseslint.config(
               name: 'aniquizz-server',
               message: 'Do not import the server package from the client.',
             },
+            {
+              name: '@aniquizz/shared/mediaPlayback',
+              message:
+                'Playback token signing stays on the server and media Worker — the SPA must not import it.',
+            },
           ],
           patterns: [
             {

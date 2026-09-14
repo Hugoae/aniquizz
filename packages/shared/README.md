@@ -4,20 +4,21 @@ Framework-agnostic code shared by the client and server.
 
 ## Contents
 
-| Module         | Purpose                                                    |
-| -------------- | ---------------------------------------------------------- |
-| `events.ts`    | Typed Socket.io contract (client ↔ server)                 |
-| `game.ts`      | Game config, room settings, payloads, public profile types |
-| `types.ts`     | Core domain types (`GamePlayer`, etc.)                     |
-| `constants.ts` | Shared constants                                           |
-| `roles.ts`     | `UserRole`, `hasRole()`                                    |
-| `utils.ts`     | Fuzzy anime matching (`getFuzzySuggestions`)               |
-| `scoring.ts`   | Round scoring                                              |
-| `grading.ts`   | Solo medals (Bronze → Platinum)                            |
-| `victory.ts`   | Victory / game-over computation                            |
-| `ranking.ts`   | Multiplayer ranking                                        |
-| `leveling.ts`  | XP → level                                                 |
-| `selection.ts` | Fisher–Yates shuffle                                       |
+| Module             | Purpose                                                    |
+| ------------------ | ---------------------------------------------------------- |
+| `events.ts`        | Typed Socket.io contract (client ↔ server)                 |
+| `game.ts`          | Game config, room settings, payloads, public profile types |
+| `types.ts`         | Core domain types (`GamePlayer`, etc.)                     |
+| `constants.ts`     | Shared constants                                           |
+| `roles.ts`         | `UserRole`, `hasRole()`                                    |
+| `utils.ts`         | Fuzzy anime matching (`getFuzzySuggestions`)               |
+| `scoring.ts`       | Round scoring                                              |
+| `grading.ts`       | Solo medals (Bronze → Platinum)                            |
+| `victory.ts`       | Victory / game-over computation                            |
+| `ranking.ts`       | Multiplayer ranking                                        |
+| `leveling.ts`      | XP → level                                                 |
+| `selection.ts`     | Fisher–Yates shuffle                                       |
+| `mediaPlayback.ts` | Opaque MP4 tokens (server/Worker only — not in the barrel) |
 
 ## Usage
 

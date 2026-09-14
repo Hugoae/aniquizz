@@ -1,0 +1,21 @@
+// Opaque MP4 playback: GET /v/{token} streams the R2 object sealed in the token.
+// Secrets stay out of this file — `npx wrangler secret put MEDIA_PLAYBACK_SECRET`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "aniquizz-media-playback",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-14",
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "aniquizz-videos",
+    },
+  ],
+  "vars": {
+    "CORS_ORIGIN": "https://aniquizz.com,https://www.aniquizz.com,http://localhost:8080,http://localhost:8083",
+  },
+}

@@ -1,0 +1,2 @@
+# Local Wrangler secrets (gitignored). Copy to `.dev.vars`.
+MEDIA_PLAYBACK_SECRET=replace-with-the-same-secret-as-the-game-server

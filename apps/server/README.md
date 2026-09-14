@@ -57,14 +57,16 @@ pnpm test:ensure-auth   # Ensure @aniquizz.test Supabase users exist
 
 Copy `.env.example` → `.env`. Required in production:
 
-| Variable                    | Purpose                                 |
-| --------------------------- | --------------------------------------- |
-| `PORT`                      | HTTP port (Render sets automatically)   |
-| `DATABASE_URL`              | Postgres connection string              |
-| `SUPABASE_URL`              | Supabase project URL                    |
-| `SUPABASE_SERVICE_ROLE_KEY` | JWT verification + admin ops            |
-| `CLIENT_URL`                | CORS origin (`https://aniquizz.com`)    |
-| `R2_*`                      | Optional on server unless admin uploads |
+| Variable                    | Purpose                                  |
+| --------------------------- | ---------------------------------------- |
+| `PORT`                      | HTTP port (Render sets automatically)    |
+| `DATABASE_URL`              | Postgres connection string               |
+| `SUPABASE_URL`              | Supabase project URL                     |
+| `SUPABASE_SERVICE_ROLE_KEY` | JWT verification + admin ops             |
+| `CLIENT_URL`                | CORS origin (`https://aniquizz.com`)     |
+| `MEDIA_PLAYBACK_URL`        | Opaque MP4 Worker origin (prod required) |
+| `MEDIA_PLAYBACK_SECRET`     | AES-GCM secret shared with the Worker    |
+| `R2_*`                      | Optional on server unless admin uploads  |
 
 ## Deploy (Render)
 
@@ -76,6 +78,10 @@ Configured in root `render.yaml`:
 - **Region:** Frankfurt, Starter plan
 
 Bind address: `0.0.0.0:$PORT` (Render requirement).
+
+Deploy `workers/media-playback` first, then set `MEDIA_PLAYBACK_URL` /
+`MEDIA_PLAYBACK_SECRET` on the web service (see that Worker README). Without
+those vars locally, the server keeps emitting public R2 keys.
 
 ## Testing
 

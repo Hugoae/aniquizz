@@ -75,7 +75,7 @@ export interface RevealSong {
   siteUrl?: string;
   tags?: string[];
   animeId?: number;
-  /** R2 video key — used to play the OP/ED during reveal. */
+  /** R2 object key, or a signed Worker playback URL when MEDIA_PLAYBACK_URL is set. */
   videoKey: string;
   /** Start offset in seconds (0 = play from the beginning on reveal). */
   videoStartTime: number;
@@ -107,6 +107,7 @@ export interface GameStartedPayload {
 export interface RoundStartPayload extends PhaseTiming {
   round: number;
   totalRounds: number;
+  /** Playback locator (signed Worker URL in production, raw R2 key locally). */
   videoKey: string;
   videoStartTime: number;
   /** Buffer (ms) before the guess clock starts, to let the video load. */
@@ -158,8 +159,8 @@ export interface RoundRevealPayload extends PhaseTiming {
 }
 
 /** Ask the client to warm a clip's buffer ahead of time (round 1 during the
- *  intro, next rounds during the reveal). Emitted only in "safe" phases where
- *  the answer is not being guessed, so exposing the key leaks nothing. */
+ *  intro, next rounds during the reveal). `videoKey` is a playback locator
+ *  (signed Worker URL in production) — never rely on it being a readable filename. */
 export interface PreloadVideoPayload {
   videoKey: string;
   videoStartTime: number;

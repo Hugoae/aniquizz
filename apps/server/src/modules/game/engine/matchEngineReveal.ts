@@ -1,4 +1,5 @@
 import type { RevealSong, RoundHistoryEntry } from '@aniquizz/shared';
+import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import type { PlaylistItem, RecordedRound } from './types';
 
 /** Public reveal payload for a playlist row (no answer leaks). */
@@ -20,7 +21,7 @@ export function toRevealSong(item: PlaylistItem): RevealSong {
     siteUrl: item.siteUrl,
     tags: item.tags,
     animeId: item.animeId,
-    videoKey: item.videoKey,
+    videoKey: toPlaybackUrl(item.videoKey),
     videoStartTime: 0,
   };
 }

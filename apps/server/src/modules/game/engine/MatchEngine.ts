@@ -30,6 +30,7 @@ import {
   scoreForAnswer,
   type SprintLeaderboardPayload,
 } from '@aniquizz/shared';
+import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import { logger } from '../../../utils/logger';
 import { RoundClock } from './RoundClock';
 import type { PlaylistBuilder } from './PlaylistBuilder';
@@ -159,12 +160,12 @@ export class MatchEngine {
     );
 
     // Warm the round-1 clip while the intro countdown plays out, so playback is
-    // instant when the first round starts (no cold buffering). Safe to expose the
-    // key here: nobody is guessing yet.
+    // instant when the first round starts (no cold buffering). The locator is a
+    // signed Worker URL when MEDIA_PLAYBACK_URL is set — never the R2 filename.
     const first = this.playlist[0];
     if (first) {
       this.channel.emit('game:preload', {
-        videoKey: first.videoKey,
+        videoKey: toPlaybackUrl(first.videoKey),
         videoStartTime: first.videoStartTime,
       });
     }
@@ -337,7 +338,7 @@ export class MatchEngine {
     return {
       round: this.currentRoundIndex + 1,
       totalRounds: this.playlist.length,
-      videoKey: item.videoKey,
+      videoKey: toPlaybackUrl(item.videoKey),
       videoStartTime: item.videoStartTime,
       startBuffer: START_BUFFER_MS,
       serverNow: Date.now(),
@@ -477,7 +478,7 @@ export class MatchEngine {
       round: this.currentRoundIndex + 1,
       song: toRevealSong(item),
       players: this.room.toPublicPlayers(true),
-      nextVideo: next?.videoKey ?? null,
+      nextVideo: next ? toPlaybackUrl(next.videoKey) : null,
       nextVideoStartTime: next?.videoStartTime ?? null,
       serverNow: Date.now(),
       endsAt: this.clock.endsAt,
@@ -803,7 +804,12 @@ export class MatchEngine {
       round: null as RoundStartPayload | null,
       reveal: null as RoundRevealPayload | null,
       ready: null as GameReadyPayload | null,
-      introFirstVideo: this.phase === 'intro' ? (this.playlist[0]?.videoKey ?? null) : undefined,
+      introFirstVideo:
+        this.phase === 'intro'
+          ? this.playlist[0]
+            ? toPlaybackUrl(this.playlist[0].videoKey)
+            : null
+          : undefined,
     };
 
     if (this.room.status === 'finished' && this.finishedVictoryData) {
@@ -827,7 +833,7 @@ export class MatchEngine {
         round: this.currentRoundIndex + 1,
         song: toRevealSong(item),
         players: this.room.toPublicPlayers(true),
-        nextVideo: nextItem?.videoKey ?? null,
+        nextVideo: nextItem ? toPlaybackUrl(nextItem.videoKey) : null,
         nextVideoStartTime: nextItem?.videoStartTime ?? null,
         serverNow: Date.now(),
         endsAt: this.clock.endsAt,

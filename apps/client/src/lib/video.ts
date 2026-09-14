@@ -4,6 +4,7 @@ const R2_PUBLIC_URL = env.VITE_R2_PUBLIC_URL;
 
 export function getVideoUrl(key: string | undefined | null): string {
   if (!key) return '';
+  // Match / daily guessing payloads may already be absolute Worker URLs.
   if (key.startsWith('http')) return key;
 
   if (!R2_PUBLIC_URL) {

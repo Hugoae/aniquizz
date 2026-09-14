@@ -22,6 +22,7 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 | **parseSocketPayload** | Zod parse at the socket boundary for mutating events.                                                                                                                                                      | `core/parseSocketPayload.ts`                                   |
 | **Watched pool**       | AniList-list resolution + playable-song counting for a room. Lobby preview sockets live in `poolStatsHandlers`.                                                                                            | `watchedPoolService`, `poolStatsHandlers.ts`                   |
 | **Daily challenge**    | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; HTTP play loop (no Socket.io room). Heard clips upsert `SongHistory` (pokédex).                                          | `modules/daily/`, `routes/daily.ts`, `docs/game/daily-quiz.md` |
+| **Playback URL**       | Player-facing MP4 locator. `toPlaybackUrl` wraps the R2 key in a signed Worker URL when `MEDIA_PLAYBACK_URL` is set. Library/admin keep raw keys.                                                          | `lib/mediaPlaybackUrl.ts`, `workers/media-playback/`           |
 
 ## Known pitfalls
 
@@ -54,6 +55,8 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   returns a playable round. Reopening `/daily` forfeits `IN_PROGRESS`.
 - **`round_start` must stay reconnect-safe.** `videoMode` / `peekWindow` / `videoStartTime`
   are echoed on the payload so a reconnecting client re-renders identically.
+  `videoKey` (and `nextVideo` / `game:preload`) is a playback locator, not a
+  readable R2 filename, when the media Worker is configured.
 - **Watched vs Random distractors differ.** In Watched / playlist mode QCM candidates must use the
   same restricted anime ids as the songs, or players deduce answers they never saw. Playlist fallback never leaves the snapshot.
 - **Zod `.strip()` drops unknown settings keys.** `playlistId` / `decadePlaylistId` / `playlistWatched` must stay in `settings.ts`.
@@ -66,3 +69,6 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   message is intentional. Profile stats use SQL aggregates for career daily /
   match counts — do not `findMany` every finished match into Node.
 - Bind to `0.0.0.0:$PORT` — Render requirement; filesystem is ephemeral.
+- **Guessing payloads must not contain the R2 filename.** `toPlaybackUrl` is identity
+  without `MEDIA_PLAYBACK_URL` (local public R2). Production requires the Worker
+  env pair. Do not sign Library / admin catalogue keys.

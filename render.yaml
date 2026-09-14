@@ -29,3 +29,7 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+      - key: MEDIA_PLAYBACK_URL
+        sync: false
+      - key: MEDIA_PLAYBACK_SECRET
+        sync: false

@@ -11,27 +11,60 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
  * `undefined` deep in the request path. Import this module before anything that
  * reads `process.env`.
  */
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
-  PORT: z.coerce.number().int().positive().default(3001),
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+    PORT: z.coerce.number().int().positive().default(3001),
 
-  // Client origin(s) used for CORS. Comma-separated list allowed.
-  CLIENT_URL: z.string().url().optional(),
+    // Client origin(s) used for CORS. Comma-separated list allowed.
+    CLIENT_URL: z.string().url().optional(),
 
-  // Database (consumed by Prisma via @aniquizz/database).
-  DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
+    // Database (consumed by Prisma via @aniquizz/database).
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
-  // Supabase identity: used to verify Socket.io handshakes via auth.getUser().
-  SUPABASE_URL: z.string().url('SUPABASE_URL is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
-  // Optional legacy fallback for HS256 tokens (not needed with JWT Signing Keys).
-  // CI/hosting often inject unset secrets as empty strings, so coerce '' → undefined.
-  SUPABASE_JWT_SECRET: z.preprocess(
-    (v) => (v === '' ? undefined : v),
-    z.string().min(1).optional(),
-  ),
-});
+    // Supabase identity: used to verify Socket.io handshakes via auth.getUser().
+    SUPABASE_URL: z.string().url('SUPABASE_URL is required'),
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+    // Optional legacy fallback for HS256 tokens (not needed with JWT Signing Keys).
+    // CI/hosting often inject unset secrets as empty strings, so coerce '' → undefined.
+    SUPABASE_JWT_SECRET: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().min(1).optional(),
+    ),
+
+    // Opaque MP4 Worker. Both or neither; required together in production.
+    MEDIA_PLAYBACK_URL: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().url().optional(),
+    ),
+    MEDIA_PLAYBACK_SECRET: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().min(16).optional(),
+    ),
+  })
+  .superRefine((data, ctx) => {
+    const hasUrl = Boolean(data.MEDIA_PLAYBACK_URL);
+    const hasSecret = Boolean(data.MEDIA_PLAYBACK_SECRET);
+    if (hasUrl !== hasSecret) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'MEDIA_PLAYBACK_URL and MEDIA_PLAYBACK_SECRET must be set together',
+        path: hasUrl ? ['MEDIA_PLAYBACK_SECRET'] : ['MEDIA_PLAYBACK_URL'],
+      });
+    }
+    if (
+      data.NODE_ENV === 'production' &&
+      process.env.VITEST !== 'true' &&
+      (!hasUrl || !hasSecret)
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'MEDIA_PLAYBACK_URL and MEDIA_PLAYBACK_SECRET are required in production',
+        path: ['MEDIA_PLAYBACK_URL'],
+      });
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 

@@ -20,6 +20,7 @@ See [`README.md`](./README.md) for the module table and build commands.
 | **Choice candidate pool**     | The set of animes used to build QCM distractors; `buildChoiceCandidatePool(rows, precision, allowedAnimeIds?)` filters + dedupes. Empty `[]` is a closed universe (not global).                                                                     | `selection.ts`                     |
 | **Thematic playlist recipe**  | Staff pack membership: genres/tags/year/formats + include/exclude. Year is the song anime's `seasonYear`.                                                                                                                                           | `playlist.ts`                      |
 | **Daily challenge**           | Five-song QCM, not a Match. `decideDailySettle({ allowAdvance: false })` is GET `/today` — close a fully answered run, never start the next song.                                                                                                   | `daily.ts`                         |
+| **Media playback token**      | AES-GCM `{ videoKey, exp }` for the opaque MP4 Worker. **Not** re-exported from `index.ts` — import `@aniquizz/shared/mediaPlayback` from the server/Worker only.                                                                                   | `mediaPlayback.ts`                 |
 
 ## Known pitfalls
 
@@ -40,3 +41,5 @@ See [`README.md`](./README.md) for the module table and build commands.
 - Keep this package free of `react`, `express`, `prisma`, or `socket.io` runtime
   imports — ESLint `no-restricted-imports` fails the CI if they appear, including
   `import type`. **Zod is allowed** (socket and shared validation).
+  `mediaPlayback.ts` uses `node:crypto` and must stay off the SPA barrel
+  (`index.ts`); import `@aniquizz/shared/mediaPlayback` from the server/Worker only.

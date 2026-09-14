@@ -27,6 +27,7 @@ import {
   type DailyTrackState,
   type RevealSong,
 } from '@aniquizz/shared';
+import { toPlaybackUrl } from '../../lib/mediaPlaybackUrl';
 import { parseDailySnapshot } from './dailySnapshot';
 
 export interface DailyRoundRow {
@@ -77,7 +78,7 @@ export const toRevealSong = (snapshot: DailyRoundSnapshot): RevealSong => ({
   siteUrl: snapshot.siteUrl,
   tags: snapshot.tags,
   animeId: snapshot.animeId,
-  videoKey: snapshot.videoKey,
+  videoKey: toPlaybackUrl(snapshot.videoKey),
   videoStartTime: 0,
 });
 
@@ -177,7 +178,7 @@ export const toSafeRound = (input: {
     roundId: input.round.id,
     position: input.round.position,
     total: input.total,
-    videoKey: snapshot.videoKey,
+    videoKey: toPlaybackUrl(snapshot.videoKey),
     videoStartTime: snapshot.videoStartTime,
     choices: snapshot.choices,
     roundStartedAt: input.roundStartedAt.toISOString(),

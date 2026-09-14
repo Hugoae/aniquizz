@@ -65,6 +65,8 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   Do not call `socket.connect()` from feature hooks — Auth owns the handshake.
 - **Reset the clip cache on `phase === 'loading'`** so a solo replay in the same lobby
   gets fresh offsets; the reveal (`RevealSong` by `id`) must skip reload.
+  `getVideoUrl` already treats `http(s)` keys as absolute — match/daily guessing
+  locators may be Worker `/v/{token}` URLs, not `Anime-id-OPx.mp4`.
 - **Respect `prefers-reduced-motion`** (handled globally in `index.css`) — don't add
   animations that ignore it.
 - Route entry points are lazy-loaded; keep the Suspense/prefetch pattern
