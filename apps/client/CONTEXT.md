@@ -43,6 +43,9 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   (e.g. `normalizeVideoMode`) is pulled in via an `import type` block.
 - **The server can omit newer `round_start` fields** (older deploy). The client merges
   `videoMode` from lobby config as a fallback — preserve that path when editing the reducer.
+- **`VideoStage` max-height is `42vh`.** Do not add a bare Tailwind `landscape:` max-height —
+  that query matches desktop monitors and flattens the clip. Phone-sideways tightening must
+  also require a short viewport (`max-height: 500px`).
 - **`/game` identity lives in `?roomId=`.** `parseGameNavState` reads the query first so a
   refresh can still `get_game_state`. Do not rely on `location.state` alone.
 - **Reset the clip cache on `phase === 'loading'`** so a solo replay in the same lobby

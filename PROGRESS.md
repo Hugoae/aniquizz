@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + follow-up: lobby avatar Zod cap). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -158,7 +158,7 @@ Canvas: `game-feature-audit`. Game audit is **closed** (P1 + P2). Do not start 2
 | **Socket rebind**     | `useGameSocket` match subscription deps `[roomId]`; `currentUserId` / `isSolo` live in refs (solo skip recovery still never runs in multi).                            |
 | **Reducer tests**     | SYNC lobby `videoMode` fallback; peekWindow kept when a later sync omits it; GAME_STARTED client fallback.                                                             |
 | **a11y (Game-owned)** | Sidebar toggle 44px; player rows / `PlayerCardBase` only interactive when a click handler exists; loading `h1`; `media-has-caption` documented skip on the music clip. |
-| **Responsive (CSS)**  | Match shell `safe-area-inset-*`; answer column `overflow-y-auto`; game-over `min-h-dvh`; landscape video `max-h`. Live match still not QA'd without a session.         |
+| **Responsive (CSS)**  | Match shell `safe-area-inset-*`; answer column `overflow-y-auto`; game-over `min-h-dvh`. Video stage stays `max-h-[42vh]` on desktop (bare `landscape:` crushed it).   |
 | **handleAction deps** | `useCallback` lists `actions` so exhaustive-deps is clean.                                                                                                             |
 
 **Left over on purpose:** `MatchEngine.ts` (~954) and `Game.tsx` (~430) stay above the ~400 soft cap. Extracting `getSyncState` / finish+XP without touching that code is not worth the coupling.
@@ -173,6 +173,10 @@ Hub Zod on `lobby:create` / `lobby:join` capped `avatar` at 64 chars. Custom ava
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Avatar cap**   | `GAME_CONFIG.LIMITS.MAX_AVATAR_LENGTH` = 512. `createLobby` / `joinLobby` Zod use it. Tests: URL accepted, `userId` stripped, oversized rejected. |
 | **Logged-in QA** | Blocked until this hotfix: guest `/game` still redirects to AuthModal. Pause/skip/F5/chat/iOS keyboard need a session after Render picks this up. |
+
+### Audit — Game follow-up (layout) ✅ (2026-09-14)
+
+P2 added `landscape:max-h-[min(28vh,11rem)]` on `VideoStage`. Tailwind `landscape:` is `(orientation: landscape)` — every desktop monitor matches, so the clip became a ~176px strip. Cap is now `max-h-[42vh]`, with a tighter `36vh` only when landscape **and** `max-height: 500px` (phone on its side). Safe-area + column scroll stay.
 
 **Next:** Profile audit. Do not start 26.7.
 

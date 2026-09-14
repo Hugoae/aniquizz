@@ -111,7 +111,10 @@ export const VideoStage = memo(function VideoStage({
   return (
     <div
       className={cn(
-        'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500 landscape:max-h-[min(28vh,11rem)]',
+        // Do not use bare `landscape:` — that media query matches every
+        // landscape monitor and crushed the stage to 11rem on desktop.
+        // Tighten only when the viewport is actually short (phone on its side).
+        'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500 [@media(orientation:landscape)_and_(max-height:500px)]:max-h-[36vh]',
         isGuessing && videoMode === 'peek' ? 'bg-background' : 'bg-black',
       )}
     >
