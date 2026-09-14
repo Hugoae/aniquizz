@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from './constants';
 import {
   answerInputSchema,
+  createLobbyInputSchema,
+  joinLobbyInputSchema,
+  lobbyTargetInputSchema,
   roomIdInputSchema,
   updateRoomSettingsInputSchema,
 } from './socketPayloads';
@@ -103,5 +106,81 @@ describe('updateRoomSettingsInputSchema', () => {
       }).success,
     ).toBe(false);
     expect(updateRoomSettingsInputSchema.safeParse({ roomId: 'A3K9ZQ' }).success).toBe(false);
+  });
+});
+
+describe('createLobbyInputSchema', () => {
+  it('accepts a named room and strips unknown keys', () => {
+    expect(
+      createLobbyInputSchema.parse({
+        roomName: 'Salon test',
+        username: 'Host',
+        avatar: 'player1',
+        settings: { maxPlayers: 8 },
+        extra: true,
+      }),
+    ).toEqual({
+      roomName: 'Salon test',
+      username: 'Host',
+      avatar: 'player1',
+      settings: { maxPlayers: 8 },
+    });
+  });
+
+  it('rejects an oversized room name', () => {
+    expect(
+      createLobbyInputSchema.safeParse({
+        roomName: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_ROOM_NAME_LENGTH + 1),
+        settings: {},
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('joinLobbyInputSchema', () => {
+  it('accepts a passworded join and keeps fromInvite informational', () => {
+    expect(
+      joinLobbyInputSchema.parse({
+        roomId: 'A3K9ZQ',
+        username: 'Guest',
+        avatar: 'player1',
+        password: 'secret',
+        fromInvite: true,
+      }),
+    ).toEqual({
+      roomId: 'A3K9ZQ',
+      username: 'Guest',
+      avatar: 'player1',
+      password: 'secret',
+      fromInvite: true,
+    });
+  });
+
+  it('rejects a non-alphanumeric room id and an oversized password', () => {
+    expect(
+      joinLobbyInputSchema.safeParse({
+        roomId: 'AB-12',
+        username: 'Guest',
+        avatar: 'player1',
+      }).success,
+    ).toBe(false);
+    expect(
+      joinLobbyInputSchema.safeParse({
+        roomId: 'A3K9ZQ',
+        password: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_ROOM_PASSWORD_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('lobbyTargetInputSchema', () => {
+  it('requires a room id and a non-empty target', () => {
+    expect(lobbyTargetInputSchema.parse({ roomId: 'A3K9ZQ', targetId: 'user-2' })).toEqual({
+      roomId: 'A3K9ZQ',
+      targetId: 'user-2',
+    });
+    expect(lobbyTargetInputSchema.safeParse({ roomId: 'A3K9ZQ', targetId: '' }).success).toBe(
+      false,
+    );
   });
 });

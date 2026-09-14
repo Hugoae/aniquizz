@@ -14,8 +14,10 @@ import { GameTypeSelector } from '@/features/hub/components/GameTypeSelector';
 import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
 import { defaultConfig, defaultRoomConfig } from '@/features/hub/hooks/useLobbyController';
 import { useLobbyControllerContext } from '@/features/hub/context/LobbyControllerContext';
+import { resolvePlayConfigIntent, type PlayConfigIntent } from '@/features/hub/playConfigSearch';
+import { HUB_COPY } from '@/features/hub/copy/hubCopy';
 
-export type PlayConfigIntent = 'solo' | 'create' | 'edit';
+export type { PlayConfigIntent };
 
 export interface PlayConfigLocationState {
   intent?: PlayConfigIntent;
@@ -41,13 +43,11 @@ function intentTitle(
 ): { lead: string; accent: string } {
   switch (intent) {
     case 'solo':
-      return { lead: 'Partie', accent: 'solo' };
+      return HUB_COPY.configTitle.solo;
     case 'edit':
-      return isSoloEdit
-        ? { lead: 'Paramètres de la', accent: 'partie' }
-        : { lead: 'Paramètres du', accent: 'salon' };
+      return isSoloEdit ? HUB_COPY.configTitle.editSolo : HUB_COPY.configTitle.editRoom;
     default:
-      return { lead: 'Créer un', accent: 'salon' };
+      return HUB_COPY.configTitle.create;
   }
 }
 
@@ -55,7 +55,7 @@ export function PlayConfigPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = (location.state ?? null) as PlayConfigLocationState | null;
-  const intent: PlayConfigIntent = locationState?.intent ?? 'create';
+  const intent: PlayConfigIntent = resolvePlayConfigIntent(location.search, locationState?.intent);
 
   const {
     user,
@@ -74,9 +74,7 @@ export function PlayConfigPage() {
   const isEdit = intent === 'edit';
   const isRoom = !isSolo;
 
-  const [editDraft, setEditDraft] = useState<RoomConfig | null>(() =>
-    isEdit ? (locationState?.draft ?? roomConfig) : null,
-  );
+  const [editDraft, setEditDraft] = useState<RoomConfig | null>(() => locationState?.draft ?? null);
 
   useEffect(() => {
     if (isEdit && locationState?.draft) {
@@ -160,12 +158,12 @@ export function PlayConfigPage() {
                   className="gap-2 pl-0 text-muted-foreground hover:text-foreground"
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-                  Retour
+                  {HUB_COPY.back}
                 </Button>
 
                 <div className="space-y-2">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                    Configuration
+                    {HUB_COPY.configSection}
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
                     {titleParts.lead} <span className="gradient-text">{titleParts.accent}</span>

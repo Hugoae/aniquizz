@@ -1,5 +1,18 @@
 import { prisma } from '@aniquizz/database';
-import type { CreateLobbyInput, JoinLobbyInput, RoomSettings } from '@aniquizz/shared';
+import type { RoomSettings } from '@aniquizz/shared';
+import {
+  canKickFromLobby,
+  createLobbyInputSchema,
+  evaluateLobbyJoin,
+  hasWatchedListLink,
+  joinLobbyInputSchema,
+  lobbyTargetInputSchema,
+  resolveActiveListProvider,
+  roomIdInputSchema,
+  toClientRoomSettings,
+  updateRoomSettingsInputSchema,
+  type LobbyJoinRejectReason,
+} from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
@@ -7,12 +20,6 @@ import type { Room } from '../game/engine/Room';
 import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
 import { assertPublishedPlaylistSource } from '../game/playlistRecipeService';
 import { resolvePlayerCatalogueIds } from '../lists/listResolver';
-import {
-  hasWatchedListLink,
-  resolveActiveListProvider,
-  toClientRoomSettings,
-  updateRoomSettingsInputSchema,
-} from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import { parseSocketPayload } from '../../core/parseSocketPayload';
 import { resolveLobbyUsername } from '../../core/displayUsername';
@@ -21,6 +28,13 @@ import { LOBBY_LIST_ROOM } from './lobbyRooms';
 
 /** Balanced default behaviour for lobby-spawned dev bots. */
 const DEV_BOT_CONFIG: BotConfig = { accuracy: 0.7, minDelayMs: 2_000, maxDelayMs: 8_000 };
+
+const JOIN_ERROR_MESSAGE: Record<Exclude<LobbyJoinRejectReason, 'password-required'>, string> = {
+  'not-found': 'Salon introuvable.',
+  'bad-password': 'Mot de passe incorrect.',
+  full: 'Le salon est complet.',
+  'in-progress': 'La partie est déjà en cours.',
+};
 
 /** Watched source, or a thematic pack with the Watched overlay. */
 const roomUsesWatchedPool = (room: Room): boolean =>
@@ -69,18 +83,20 @@ export const registerLobbyHandlers = (
   const uid = (): string => socket.data.userId as string;
   const broadcastRooms = () => gameManager.broadcastRoomList();
 
-  const createLobby = async (payload: CreateLobbyInput) => {
+  const createLobby = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, createLobbyInputSchema, payload);
+    if (!parsed) return;
     try {
       const username = resolveLobbyUsername(
         socket.data.isAuthenticated,
         socket.data.username,
-        payload.username,
+        parsed.username,
       );
-      const avatar = payload.avatar || 'player1';
+      const avatar = parsed.avatar || 'player1';
       // Empty name → auto-assign the first free "Salon N" slot.
-      const providedName = (payload.roomName ?? '').trim();
+      const providedName = (parsed.roomName ?? '').trim();
       const roomName = providedName || gameManager.nextDefaultRoomName();
-      const settings = normalizeRoomSettings(payload.settings, {
+      const settings = normalizeRoomSettings(parsed.settings, {
         roomName,
         hostName: username,
         hostAvatar: avatar,
@@ -123,39 +139,35 @@ export const registerLobbyHandlers = (
     }
   };
 
-  const joinLobby = (payload: JoinLobbyInput) => {
+  const joinLobby = (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, joinLobbyInputSchema, payload);
+    if (!parsed) return;
     try {
-      const { roomId, password } = payload;
+      const { roomId, password } = parsed;
       const username = resolveLobbyUsername(
         socket.data.isAuthenticated,
         socket.data.username,
-        payload.username,
+        parsed.username,
       );
-      const avatar = payload.avatar || 'player1';
+      const avatar = parsed.avatar || 'player1';
       const room = gameManager.getRoom(roomId);
-
-      if (!room) {
-        return socket.emit('error', { message: 'Salon introuvable.' });
+      const decision = evaluateLobbyJoin({
+        roomFound: Boolean(room),
+        isReturning: Boolean(room?.players.has(uid())),
+        isPrivate: Boolean(room?.settings.isPrivate),
+        storedPassword: room?.settings.password ?? '',
+        providedPassword: password,
+        playerCount: room?.players.size ?? 0,
+        maxPlayers: room?.settings.maxPlayers ?? 0,
+        status: room?.status ?? 'waiting',
+      });
+      if (!decision.ok) {
+        if (decision.reason === 'password-required') {
+          return socket.emit('password_required', { roomId });
+        }
+        return socket.emit('error', { message: JOIN_ERROR_MESSAGE[decision.reason] });
       }
-
-      const isReturning = room.players.has(uid());
-
-      // Private rooms always require the password — even from a friend invite
-      // (the invite is only a shortcut; `password_required` opens the prompt).
-      if (
-        !isReturning &&
-        room.settings.isPrivate &&
-        room.settings.password &&
-        room.settings.password !== password
-      ) {
-        if (!password) return socket.emit('password_required', { roomId });
-        return socket.emit('error', { message: 'Mot de passe incorrect.' });
-      }
-
-      if (!isReturning && room.players.size >= room.settings.maxPlayers) {
-        return socket.emit('error', { message: 'Le salon est complet.' });
-      }
-
+      if (!room) return;
       void socket.join(room.id);
       gameManager.cancelCleanup(room.id);
       room.addOrReconnect(uid(), username, avatar, socket.id, {
@@ -188,6 +200,7 @@ export const registerLobbyHandlers = (
       broadcastRooms();
     } catch (error) {
       logger.error('Failed to join lobby', 'Lobby', error);
+      socket.emit('error', { message: 'Impossible de rejoindre le salon.' });
     }
   };
 
@@ -233,10 +246,12 @@ export const registerLobbyHandlers = (
     broadcastRooms();
   };
 
-  const transferHost = (payload: { roomId: string; targetId: string }) => {
-    const room = gameManager.getRoom(payload.roomId);
+  const transferHost = (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, lobbyTargetInputSchema, payload);
+    if (!parsed) return;
+    const room = gameManager.getRoom(parsed.roomId);
     if (!room) return;
-    if (room.transferHost(uid(), payload.targetId)) {
+    if (room.transferHost(uid(), parsed.targetId)) {
       logger.info(`[Lobby] Host transferred in room ${room.id}`, 'Lobby');
       broadcastRooms();
     }
@@ -244,19 +259,29 @@ export const registerLobbyHandlers = (
 
   // Host removes another player. The host cannot kick themselves, and a match
   // in progress is left untouched (kick is a lobby-only control).
-  const kickFromLobby = (payload: { roomId: string; targetId: string }) => {
-    const room = gameManager.getRoom(payload.roomId);
-    if (!room || uid() !== room.hostId) return;
-    if (!payload.targetId || payload.targetId === room.hostId) return;
-    if (room.status !== 'waiting') return;
+  const kickFromLobby = (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, lobbyTargetInputSchema, payload);
+    if (!parsed) return;
+    const room = gameManager.getRoom(parsed.roomId);
+    if (!room) return;
+    if (
+      !canKickFromLobby({
+        actorIsHost: uid() === room.hostId,
+        hostId: room.hostId,
+        targetId: parsed.targetId,
+        status: room.status,
+      })
+    ) {
+      return;
+    }
     if (
       gameManager.kickPlayer(
-        payload.roomId,
-        payload.targetId,
+        parsed.roomId,
+        parsed.targetId,
         "Vous avez été exclu du salon par l'hôte.",
       )
     ) {
-      logger.info(`[Lobby] Host kicked ${payload.targetId} from room ${room.id}`, 'Lobby');
+      logger.info(`[Lobby] Host kicked ${parsed.targetId} from room ${room.id}`, 'Lobby');
       broadcastRooms();
     }
   };
@@ -275,16 +300,18 @@ export const registerLobbyHandlers = (
     }
   };
 
-  const handleLeave = (payload: { roomId: string }) => {
-    const room = gameManager.getRoom(payload.roomId);
+  const handleLeave = (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    const room = gameManager.getRoom(parsed.roomId);
     if (!room) return;
     const player = room.players.get(uid());
-    void socket.leave(payload.roomId);
-    logger.info(`[Lobby] "${player?.username ?? uid()}" left room ${payload.roomId}.`, 'Lobby');
+    void socket.leave(parsed.roomId);
+    logger.info(`[Lobby] "${player?.username ?? uid()}" left room ${parsed.roomId}.`, 'Lobby');
 
     const isEmpty = room.removePlayer(uid());
     if (isEmpty) {
-      gameManager.removeRoom(payload.roomId);
+      gameManager.removeRoom(parsed.roomId);
     }
     broadcastRooms();
   };
@@ -303,8 +330,10 @@ export const registerLobbyHandlers = (
     void socket.leave(LOBBY_LIST_ROOM);
   };
 
-  const toggleReady = (payload: { roomId: string }) => {
-    gameManager.getRoom(payload.roomId)?.toggleReady(uid());
+  const toggleReady = (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.toggleReady(uid());
   };
 
   socket.on('lobby:create', guard(socket, 'lobby:create', RATE_LIMITS.createLobby, createLobby));
@@ -312,8 +341,8 @@ export const registerLobbyHandlers = (
     'lobby:join',
     guard(socket, 'lobby:join', RATE_LIMITS.joinLobby, joinLobby, { byIp: true }),
   );
-  socket.on('get_rooms', getRooms);
-  socket.on('lobby:subscribe_list', subscribeRoomList);
+  socket.on('get_rooms', requireAuth(socket, getRooms));
+  socket.on('lobby:subscribe_list', requireAuth(socket, subscribeRoomList));
   socket.on('lobby:unsubscribe_list', unsubscribeRoomList);
   socket.on('transfer_host', requireAuth(socket, transferHost));
   socket.on('lobby:kick', requireAuth(socket, kickFromLobby));

@@ -9,6 +9,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { isRoomListJoinable, roomJoinButtonLabel } from '@/features/hub/components/roomListJoin';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
 interface RoomListProps {
@@ -36,9 +37,6 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
     [friends],
   );
 
-  const isJoinable = (room: RoomListItem) =>
-    room.status === 'waiting' && room.players < room.maxPlayers;
-
   const visibleRooms = useMemo(() => {
     const filtered = rooms.filter((room) => {
       if (filter === 'public') return !room.isPrivate;
@@ -47,7 +45,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
       return true;
     });
     const rank = (room: RoomListItem) =>
-      (isJoinable(room) ? 0 : 2) + (friendRoomIds.has(room.id) ? 0 : 1);
+      (isRoomListJoinable(room) ? 0 : 2) + (friendRoomIds.has(room.id) ? 0 : 1);
     return [...filtered].sort((a, b) => rank(a) - rank(b));
   }, [rooms, filter, friendRoomIds]);
 
@@ -177,12 +175,12 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                       size="sm"
                       className={cn(
                         'w-full transition-all font-bold rounded-lg',
-                        isFull && 'opacity-50',
+                        !isRoomListJoinable(room) && 'opacity-50',
                       )}
-                      disabled={isFull}
+                      disabled={!isRoomListJoinable(room)}
                       onClick={() => onJoin(room.id)}
                     >
-                      {isFull ? 'COMPLET' : isPlaying ? 'REGARDER' : 'REJOINDRE'}
+                      {roomJoinButtonLabel(room)}
                     </Button>
                   </div>
                 </div>

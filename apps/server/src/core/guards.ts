@@ -160,6 +160,8 @@ export const RATE_LIMITS = {
   /** Manual list sync is expensive (AniList/MAL); keep it tight. */
   listsMutate: { points: 8, durationMs: 60_000 },
   listsRefresh: { points: 3, durationMs: 60_000 },
+  /** Start-game clicks; status==='starting' still dedupes double-submit. */
+  startGame: { points: 5, durationMs: 10_000 },
   /** Account deletion: strict cap to slow abuse / accidental double-submit. */
   deleteAccount: { points: 3, durationMs: 60 * 60_000 },
 } as const;

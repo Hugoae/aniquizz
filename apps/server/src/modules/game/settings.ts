@@ -27,14 +27,14 @@ const settingsSchema = z
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
-    password: z.string().default(''),
+    password: z.string().max(GAME_CONFIG.LIMITS.MAX_ROOM_PASSWORD_LENGTH).default(''),
     maxPlayers: z.coerce
       .number()
       .int()
       .min(1)
       .max(GAME_CONFIG.LIMITS.MAX_PLAYERS_PER_LOBBY)
       .default(16),
-    roomName: z.string().optional(),
+    roomName: z.string().max(GAME_CONFIG.LIMITS.MAX_ROOM_NAME_LENGTH).optional(),
   })
   .strip()
   .superRefine((data, ctx) => {

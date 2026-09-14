@@ -3,6 +3,7 @@ import type { RoomListItem } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RoomList } from './RoomList';
+import { HUB_COPY } from '@/features/hub/copy/hubCopy';
 
 interface RoomListViewProps {
   rooms: RoomListItem[];
@@ -34,22 +35,23 @@ export function RoomListView({
         className="gap-2 mb-6 text-muted-foreground hover:text-foreground pl-0"
       >
         <ArrowLeft className="h-4 w-4" />
-        Retour
+        {HUB_COPY.back}
       </Button>
 
       <div className="flex flex-col gap-8 w-full max-w-4xl mx-auto">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <h1 className="text-3xl font-bold">
-            Rejoindre un <span className="gradient-text">salon</span>
+            {HUB_COPY.joinTitleLead}{' '}
+            <span className="gradient-text">{HUB_COPY.joinTitleAccent}</span>
           </h1>
           <Button variant="glow" size="lg" className="gap-2" onClick={onCreate}>
-            <Plus className="h-5 w-5" /> Créer un salon
+            <Plus className="h-5 w-5" /> {HUB_COPY.createRoom}
           </Button>
         </div>
 
         <div className="flex gap-2 w-full max-w-md">
           <Input
-            placeholder="CODE..."
+            placeholder={HUB_COPY.codePlaceholder}
             className="text-center uppercase tracking-widest font-mono font-bold"
             value={joinCode}
             onChange={(e) => onJoinCodeChange(e.target.value.toUpperCase())}
@@ -59,7 +61,7 @@ export function RoomListView({
             maxLength={6}
           />
           <Button onClick={() => onJoin(joinCode)} variant="secondary" disabled={!canJoinByCode}>
-            Rejoindre
+            {HUB_COPY.join}
           </Button>
         </div>
 

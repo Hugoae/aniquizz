@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { GAME_CONFIG, type RoomSettings } from '@aniquizz/shared';
 import { mergeRoomSettings, normalizeRoomSettings } from './settings';
-import type { RoomSettings } from '@aniquizz/shared';
 
 const meta = { hostName: 'Host', hostAvatar: 'player1' };
 
@@ -79,5 +79,22 @@ describe('mergeRoomSettings', () => {
     const next = mergeRoomSettings(withDecade, { decadePlaylistId: null });
     expect(next.decadePlaylistId).toBeUndefined();
     expect(next.playlistId).toBe(current.playlistId);
+  });
+});
+
+describe('settings field caps', () => {
+  it('rejects an oversized room name or password', () => {
+    expect(() =>
+      normalizeRoomSettings(
+        { roomName: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_ROOM_NAME_LENGTH + 1) },
+        meta,
+      ),
+    ).toThrow();
+    expect(() =>
+      normalizeRoomSettings(
+        { password: 'x'.repeat(GAME_CONFIG.LIMITS.MAX_ROOM_PASSWORD_LENGTH + 1) },
+        meta,
+      ),
+    ).toThrow();
   });
 });

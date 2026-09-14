@@ -5,7 +5,7 @@ import { DAILY_ROUND_COUNT, type DailyTodayResponse, type DailyTrackState } from
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { dailyApi } from '@/lib/dailyApi';
-import { prefetchRoute } from '@/lib/routePrefetch';
+import { prefetchRoute, routeIntentHandlers } from '@/lib/routePrefetch';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { DailyTracks } from '@/features/daily/components/DailyTracks';
 import { DailyRuleChips } from '@/features/daily/components/DailyRuleChips';
@@ -44,8 +44,7 @@ export function DailyQuizCard() {
     <div className="mx-auto mt-10 w-full max-w-4xl animate-fade-in px-0">
       <Link
         to="/daily"
-        onMouseEnter={() => prefetchRoute('daily')}
-        onFocus={() => prefetchRoute('daily')}
+        {...routeIntentHandlers(() => prefetchRoute('daily'))}
         className={cn(
           'group relative flex w-full items-center gap-5 overflow-hidden p-5 text-left md:p-6',
           'glass-card border border-border/50 transition-all duration-300',

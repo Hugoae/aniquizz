@@ -29,9 +29,13 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   the socket/HTTP contract in `@aniquizz/shared`. ESLint `no-restricted-imports`
   enforces this.
 - **Mutating socket events are Zod-parsed.** `game:answer`, `update_room_settings`,
-  `start_game`, `vote_pause`, and `vote_skip` go through `socketPayloads.ts`.
-  Invalid JSON still yields a generic `Requête invalide.` — do not leak Zod paths.
+  `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, plus lobby `create` / `join` /
+  `kick` / `transfer_host` / `leave_room` / `toggle_ready`. Invalid JSON still yields a generic
+  `Requête invalide.` — do not leak Zod paths.
   Room settings patches are then re-validated by `normalizeRoomSettings`.
+  `password` and `roomName` are length-capped (`GAME_CONFIG.LIMITS`).
+  The public room list (`get_rooms` / `lobby:subscribe_list`) requires auth; guests
+  can still connect without a token for other read-only events.
 - **`pnpm dev` keeps `@aniquizz/shared` `dist/` fresh.** The server resolves
   shared from `dist/` (the client aliases `src/`). Nodemon watches
   `packages/shared/dist` and restarts. If you start the server without Turbo,

@@ -16,6 +16,8 @@ export function useCataloguePoolStats(request: CataloguePoolStatsRequest) {
   const requestSeq = useRef(0);
 
   const { soundCount, difficulty, types, enabled = true } = request;
+  const difficultyKey = difficulty?.join(',') ?? null;
+  const typesKey = types?.join(',') ?? null;
 
   useEffect(() => {
     if (!enabled) {
@@ -34,14 +36,15 @@ export function useCataloguePoolStats(request: CataloguePoolStatsRequest) {
     socket.on('catalogue:pool_stats', onStats);
     socket.emit('catalogue:get_pool_stats', {
       soundCount,
-      difficulty,
-      types,
+      difficulty:
+        difficultyKey === null ? undefined : difficultyKey ? difficultyKey.split(',') : [],
+      types: typesKey === null ? undefined : typesKey ? typesKey.split(',') : [],
       requestId,
     });
     return () => {
       socket.off('catalogue:pool_stats', onStats);
     };
-  }, [enabled, soundCount, difficulty?.join(','), types?.join(',')]);
+  }, [enabled, soundCount, difficultyKey, typesKey]);
 
   return { stats, loading };
 }

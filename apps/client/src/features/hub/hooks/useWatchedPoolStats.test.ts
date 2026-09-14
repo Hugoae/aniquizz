@@ -50,4 +50,36 @@ describe('useWatchedPoolStats', () => {
       expect.objectContaining({ roomId: 'ROOM1' }),
     );
   });
+
+  it('refetches when difficulty changes, not when the array identity changes', () => {
+    const { rerender } = renderHook(
+      (props: { roomId: string; soundCount: number; enabled: boolean; difficulty: string[] }) =>
+        useWatchedPoolStats(props),
+      {
+        initialProps: {
+          roomId: 'ROOM1',
+          soundCount: 20,
+          enabled: true,
+          difficulty: ['easy'],
+        },
+      },
+    );
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
+
+    rerender({
+      roomId: 'ROOM1',
+      soundCount: 20,
+      enabled: true,
+      difficulty: ['easy'],
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
+
+    rerender({
+      roomId: 'ROOM1',
+      soundCount: 20,
+      enabled: true,
+      difficulty: ['hard'],
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(2);
+  });
 });

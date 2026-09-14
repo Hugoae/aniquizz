@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { AddFriendButton } from '@/features/friends/AddFriendButton';
-import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
+import { FOCUS_RING, HOVER_REVEAL } from '@/features/hub/components/config/ConfigPrimitives';
 
 export interface LobbyPlayer {
   id: string | number;
@@ -61,15 +61,15 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
             : 'glass-card border-border/50 hover:border-primary/30 hover-lift',
       )}
     >
-      {/* Host management controls (promote / kick), shown on hover/focus. */}
+      {/* Host management: always painted on touch; hover-reveal on fine pointers. */}
       {canManage && !isHost && (
-        <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <div className={cn('absolute right-2 top-2 flex items-center gap-1', HOVER_REVEAL)}>
           <button
             type="button"
             onClick={() => onTransferHost(player.id)}
             aria-label={`Nommer ${player.name} hôte`}
             className={cn(
-              'rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-warning',
+              'flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-warning',
               FOCUS_RING,
             )}
           >
@@ -80,7 +80,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
             onClick={() => onKick(player.id)}
             aria-label={`Exclure ${player.name} du salon`}
             className={cn(
-              'rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive',
+              'flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive',
               FOCUS_RING,
             )}
           >
@@ -90,7 +90,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
       )}
 
       {!isMe && typeof player.id === 'string' && (
-        <div className="absolute left-2 top-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <div className={cn('absolute left-2 top-2', HOVER_REVEAL)}>
           <AddFriendButton userId={player.id} isBot={isBot ?? isBotId(player.id)} compact />
         </div>
       )}

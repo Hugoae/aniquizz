@@ -32,6 +32,7 @@ import {
 } from '@/features/hub/context/LobbyControllerContext';
 import { PlayConfigPage } from '@/features/hub/pages/PlayConfigPage';
 import { PlayJoinPage } from '@/features/hub/pages/PlayJoinPage';
+import { HUB_COPY } from '@/features/hub/copy/hubCopy';
 
 function PlayPasswordDialog() {
   const {
@@ -48,13 +49,13 @@ function PlayPasswordDialog() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-5 w-5 text-primary" aria-hidden="true" />
-            Salon privé
+            {HUB_COPY.passwordDialog.title}
           </DialogTitle>
-          <DialogDescription>Mot de passe</DialogDescription>
+          <DialogDescription>{HUB_COPY.passwordDialog.description}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="room-join-password">Mot de passe</Label>
+            <Label htmlFor="room-join-password">{HUB_COPY.passwordDialog.label}</Label>
             <Input
               id="room-join-password"
               name="room-join-password"
@@ -71,10 +72,10 @@ function PlayPasswordDialog() {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
-            Annuler
+            {HUB_COPY.passwordDialog.cancel}
           </Button>
           <Button variant="glow" onClick={submitPassword} disabled={!passwordInput}>
-            Valider
+            {HUB_COPY.passwordDialog.submit}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -132,7 +133,7 @@ function PlayHomePage() {
         {isSoloLobby ? (
           <SoloReady
             gameSettings={roomConfig}
-            playerName={profile?.username || 'Joueur'}
+            playerName={profile?.username || HUB_COPY.player}
             playerAvatar={profile?.avatar || 'player1'}
             user={user}
             profile={profile}
@@ -144,7 +145,7 @@ function PlayHomePage() {
           />
         ) : (
           <MultiplayerLobby
-            roomName={roomConfig.roomName || 'Salon de jeu'}
+            roomName={roomConfig.roomName || HUB_COPY.defaultRoomName}
             players={lobbyPlayers}
             maxPlayers={roomConfig.maxPlayers}
             isHost={isAmIHost}
@@ -173,11 +174,11 @@ function PlayHomePage() {
     <>
       <SeoHead
         title={PAGE_TITLES.play}
-        description="Configure ta partie solo ou multijoueur et lance un blindtest anime."
+        description={HUB_COPY.seo.playDescription}
         path="/play"
         noindex
       />
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         <Header />
         <main id="main-content" className="container px-4 pb-12 pt-24 md:px-6">
           <div className="mx-auto max-w-6xl">

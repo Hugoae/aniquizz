@@ -95,8 +95,10 @@ export const registerGameHandlers = (
     gameManager.getRoom(parsed.roomId)?.voteSkip(uid());
   };
 
-  const skipCurrentRound = ({ roomId }: { roomId: string }) => {
-    gameManager.getRoom(roomId)?.forceEndRound(uid());
+  const skipCurrentRound = (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.forceEndRound(uid());
   };
 
   const returnToLobby = ({ roomId }: { roomId: string }) => {
@@ -276,7 +278,7 @@ export const registerGameHandlers = (
     }
   };
 
-  socket.on('start_game', requireAuth(socket, startGame));
+  socket.on('start_game', guard(socket, 'start_game', RATE_LIMITS.startGame, startGame));
   socket.on('game:answer', guard(socket, 'game:answer', RATE_LIMITS.answer, submitAnswer));
   socket.on('vote_pause', requireAuth(socket, votePause));
   socket.on('vote_skip', requireAuth(socket, voteSkip));

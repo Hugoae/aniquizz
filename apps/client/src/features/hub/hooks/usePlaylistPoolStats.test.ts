@@ -95,6 +95,29 @@ describe('usePlaylistPoolStats', () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it('refetches when difficulty changes, not when the array identity changes', () => {
+    const { rerender } = renderHook(
+      (props: typeof baseRequest & { difficulty?: string[] }) => usePlaylistPoolStats(props),
+      { initialProps: { ...baseRequest, difficulty: ['easy'] } },
+    );
+    act(() => {
+      vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
+
+    rerender({ ...baseRequest, difficulty: ['easy'] });
+    act(() => {
+      vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
+
+    rerender({ ...baseRequest, difficulty: ['hard'] });
+    act(() => {
+      vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledTimes(2);
+  });
+
   it('does not refetch when only soundCount changes', () => {
     const { rerender } = renderHook((props: typeof baseRequest) => usePlaylistPoolStats(props), {
       initialProps: baseRequest,

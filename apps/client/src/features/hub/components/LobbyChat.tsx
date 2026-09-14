@@ -57,7 +57,7 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
   };
 
   return (
-    <div className="glass-card flex h-72 min-h-0 w-full flex-col overflow-hidden lg:h-auto lg:w-80">
+    <div className="glass-card flex h-40 min-h-0 w-full shrink-0 flex-col overflow-hidden sm:h-48 lg:h-auto lg:min-h-0 lg:w-80 lg:flex-none">
       <div className="flex shrink-0 items-center gap-2 border-b border-border/50 px-4 py-3">
         <MessageSquare className="h-4 w-4 text-primary" aria-hidden="true" />
         <span className="text-sm font-bold uppercase tracking-wide">Chat du salon</span>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Eye, Link2, Shuffle, Music2, AlertTriangle } from 'lucide-react';
 import type { RoomConfig, PlaylistPoolStats, WatchedPoolStats } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
@@ -84,18 +84,20 @@ export function SourceSection({
     retry: retryPlaylists,
   } = usePublishedPlaylists(playlistTab);
   const playlistStats = playlistPoolStats;
+  const updateRef = useRef(update);
+  updateRef.current = update;
 
   useEffect(() => {
     if (!stats || stats.insufficient || !config.watchedAllowFallback) return;
     if (source !== 'watched') return;
-    update({ watchedAllowFallback: false });
-  }, [stats?.insufficient, config.watchedAllowFallback, source]);
+    updateRef.current({ watchedAllowFallback: false });
+  }, [stats, config.watchedAllowFallback, source]);
 
   useEffect(() => {
     if (!playlistStats || playlistStats.insufficient || !config.watchedAllowFallback) return;
     if (source !== 'playlist' || !config.playlistWatched) return;
-    update({ watchedAllowFallback: false });
-  }, [playlistStats?.insufficient, config.watchedAllowFallback, source, config.playlistWatched]);
+    updateRef.current({ watchedAllowFallback: false });
+  }, [playlistStats, config.watchedAllowFallback, source, config.playlistWatched]);
 
   const tabClass = (active: boolean) =>
     cn(

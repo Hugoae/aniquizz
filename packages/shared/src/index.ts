@@ -4,6 +4,7 @@ export * from './constants';
 export * from './types';
 export * from './utils';
 export * from './game';
+export * from './lobbyJoin';
 export * from './difficulty';
 export * from './poolFilters';
 export * from './scoring';

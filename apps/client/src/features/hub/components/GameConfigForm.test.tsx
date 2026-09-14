@@ -83,6 +83,7 @@ describe('GameConfigForm', () => {
 
     await user.click(screen.getByRole('button', { name: /lancer la partie/i }));
     expect(onSubmit).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: /réinitialiser/i })).toBeInTheDocument();
   });
 
   it('allows endings to be selected', async () => {

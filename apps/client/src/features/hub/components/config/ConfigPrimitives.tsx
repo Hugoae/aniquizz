@@ -8,6 +8,10 @@ import { cn } from '@/lib/utils';
 export const FOCUS_RING =
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background';
 
+/** Visible on touch; hover-only hide is limited to fine pointers. */
+export const HOVER_REVEAL =
+  'opacity-100 transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:focus-within:opacity-100';
+
 export function SectionHeader({
   icon: Icon,
   title,

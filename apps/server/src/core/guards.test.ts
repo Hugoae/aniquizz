@@ -21,4 +21,14 @@ describe('consumeIpRateLimit', () => {
     }
     expect(consumeIpRateLimit('203.0.113.11', 'lobby:join', rule)).toBe(false);
   });
+
+  it('caps startGame at 5 hits per 10s window', () => {
+    const rule = RATE_LIMITS.startGame;
+    expect(rule.points).toBe(5);
+    expect(rule.durationMs).toBe(10_000);
+    for (let i = 0; i < rule.points; i++) {
+      expect(consumeIpRateLimit('203.0.113.10', 'start_game', rule)).toBe(false);
+    }
+    expect(consumeIpRateLimit('203.0.113.10', 'start_game', rule)).toBe(true);
+  });
 });

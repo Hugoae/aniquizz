@@ -34,7 +34,7 @@ export const WATCHED_ANILIST_STALE_MESSAGE =
 export const WATCHED_QCM_TOO_SMALL_MESSAGE = qcmPoolTooSmallReason('franchise');
 
 export const WATCHED_SERVER_OFFLINE =
-  "Le serveur de jeu n'est pas joignable (port 3001). Lance-le avec pnpm run dev, puis réessaie.";
+  "Le serveur de jeu n'est pas joignable (port 3001). Lancez-le avec pnpm run dev, puis réessayez.";
 
 export interface WatchedPoolLaunchCheck {
   blocked: boolean;

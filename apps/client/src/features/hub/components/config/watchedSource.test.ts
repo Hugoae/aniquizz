@@ -7,6 +7,7 @@ import {
   showWatchedFusionMode,
   watchedPoolBannerVariantClasses,
   watchedPoolModeLabel,
+  WATCHED_SERVER_OFFLINE,
   WATCHED_SOURCE_BLOCK_MESSAGE,
 } from './watchedSource';
 
@@ -263,5 +264,12 @@ describe('resolveWatchedPoolBanner', () => {
 describe('WATCHED_SOURCE_BLOCK_MESSAGE', () => {
   it('is a French user-facing string', () => {
     expect(WATCHED_SOURCE_BLOCK_MESSAGE).toMatch(/AniList|MyAnimeList/i);
+  });
+});
+
+describe('WATCHED_SERVER_OFFLINE', () => {
+  it('uses vousvoiement', () => {
+    expect(WATCHED_SERVER_OFFLINE).toMatch(/Lancez-le/);
+    expect(WATCHED_SERVER_OFFLINE).not.toMatch(/Lance-le/);
   });
 });

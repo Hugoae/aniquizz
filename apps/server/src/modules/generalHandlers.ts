@@ -73,6 +73,5 @@ export const registerGeneralHandlers = (
     });
   };
 
-  // Écoute de la demande du client
   socket.on('get_home_stats', sendHomeStats);
 };

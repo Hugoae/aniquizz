@@ -26,6 +26,7 @@ import {
 } from './config/watchedSource';
 import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playlistSource';
 import { PLAYLISTS_COPY } from './config/playlistsCopy';
+import { HUB_COPY } from '@/features/hub/copy/hubCopy';
 import { ConfigPoolCard } from './config/ConfigPoolCard';
 import { resolveConfigPoolPreview } from './config/configPoolPreview';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
@@ -265,7 +266,7 @@ export function GameConfigForm<T extends GameConfig>({
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" onClick={onReset} className="gap-2 rounded-lg sm:w-auto">
               <RotateCcw className="h-4 w-4" aria-hidden="true" />
-              Reset
+              {HUB_COPY.reset}
             </Button>
             <Button
               variant="glow"

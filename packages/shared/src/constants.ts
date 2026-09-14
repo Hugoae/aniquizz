@@ -128,6 +128,10 @@ export const GAME_CONFIG = {
     MAX_ANSWER_LENGTH: 256,
     /** Lobby codes are 6 A–Z0–9 chars; allow slack without accepting huge strings. */
     MAX_ROOM_ID_LENGTH: 16,
+    /** Public lobby title (create payload + settings.roomName). */
+    MAX_ROOM_NAME_LENGTH: 48,
+    /** Private-room password. Empty string remains allowed. */
+    MAX_ROOM_PASSWORD_LENGTH: 64,
   },
 
   // --- SCORE GRADES ---

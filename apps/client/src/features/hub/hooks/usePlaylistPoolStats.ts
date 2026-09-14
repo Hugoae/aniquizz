@@ -41,6 +41,9 @@ export function usePlaylistPoolStats(request: PlaylistPoolStatsRequest) {
     refreshKey,
   } = request;
 
+  const difficultyKey = difficulty?.join(',') ?? null;
+  const typesKey = types?.join(',') ?? null;
+
   useEffect(() => {
     if (!enabled || !hasPlaylistSource({ playlistId, decadePlaylistId })) {
       setStats(null);
@@ -66,8 +69,9 @@ export function usePlaylistPoolStats(request: PlaylistPoolStatsRequest) {
         decadePlaylistId: decadePlaylistId ?? null,
         roomId,
         soundCount: soundCountRef.current,
-        difficulty,
-        types,
+        difficulty:
+          difficultyKey === null ? undefined : difficultyKey ? difficultyKey.split(',') : [],
+        types: typesKey === null ? undefined : typesKey ? typesKey.split(',') : [],
         playlistWatched,
         watchedMode,
         precision,
@@ -83,8 +87,8 @@ export function usePlaylistPoolStats(request: PlaylistPoolStatsRequest) {
     decadePlaylistId,
     roomId,
     enabled,
-    difficulty?.join(','),
-    types?.join(','),
+    difficultyKey,
+    typesKey,
     playlistWatched,
     watchedMode,
     precision,

@@ -13,24 +13,25 @@ import {
   GameConfig,
   RoomConfig,
   GameMode,
-  type GamePlayer,
   type GameStatus,
-  type GameStartedPayload,
-  type PlayersUpdatePayload,
   type RoomListItem,
   type RoomSettings,
-  type RoomUpdatedPayload,
-  normalizeVideoMode,
 } from '@aniquizz/shared';
-import type { LobbyPlayer } from '@/features/hub/components/MultiplayerLobby';
+import type { LobbyPlayer } from '@/features/hub/components/LobbyPlayerCard';
+import { HUB_COPY, soloRoomName } from '@/features/hub/copy/hubCopy';
+import { shouldPollHubHomeStats, type LobbyView } from '@/features/hub/lobbySocketPolicy';
 
-import { isBanSanctionReason } from '@aniquizz/shared';
-import { notifyModerationBan } from '@/lib/suspension';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { useLobbySocketBindings } from '@/features/hub/hooks/useLobbySocketBindings';
 import { socket } from '@/lib/socket';
 import { getPlayBannedMessage, isSanctionActive } from '@/lib/suspension';
+import {
+  playCreatePath,
+  parsePlayConfigSearch,
+  resolveLobbySettingsAction,
+} from '@/features/hub/playConfigSearch';
 
-export type LobbyView = 'modes' | 'lobby';
+export type { LobbyView } from '@/features/hub/lobbySocketPolicy';
 
 /** Navigation state used to resume/join a lobby or auto-create a solo game. */
 interface GameHubLocationState {
@@ -40,12 +41,6 @@ interface GameHubLocationState {
   roomId?: string;
   settings?: Partial<GameConfig>;
 }
-
-/** Shape the server actually sends for lobby players (wire-loose superset of GamePlayer). */
-type ServerLobbyPlayer = Partial<GamePlayer> & {
-  socketId?: string;
-  name?: string;
-};
 
 /** RoomSettings as they arrive over the wire (server adds `name`/`password`). */
 type WireRoomSettings = Partial<RoomSettings> & { name?: string; password?: string };
@@ -74,30 +69,6 @@ export const defaultRoomConfig: RoomConfig = {
   maxPlayers: 16,
 };
 
-const mapServerPlayersToLobby = (
-  serverPlayers: ServerLobbyPlayer[],
-  currentHostId?: string,
-): LobbyPlayer[] => {
-  if (!Array.isArray(serverPlayers)) return [];
-  return serverPlayers.map((p) => ({
-    id: p.id != null ? String(p.id) : '',
-    name: p.username || p.name || `Joueur ${String(p.id).substring(0, 4)}`,
-    avatar: p.avatar || 'player1',
-    isReady: p.isReady || false,
-    isHost: currentHostId && String(p.id) === String(currentHostId) ? true : p.isHost || false,
-    isInGame: p.isInGame,
-    isBot: typeof p.id === 'string' && p.id.startsWith('bot-'),
-    role: p.role,
-    level: p.level,
-    hasWatchedList: Boolean(p.anilistUsername?.trim() || p.malUsername?.trim()),
-    watchedListKey: [
-      p.activeListProvider ?? '',
-      p.anilistUsername?.trim() ?? '',
-      p.malUsername?.trim() ?? '',
-    ].join(':'),
-  }));
-};
-
 /**
  * Owns the whole Play/lobby state machine: socket lifecycle, lobby state,
  * view transitions, dialogs and the emit actions. Keeps play routes presentational.
@@ -120,7 +91,7 @@ export function useLobbyController() {
   const gameStatusRef = useRef<GameStatus>('waiting');
   const identityRef = useRef({
     userId: user?.id as string | undefined,
-    username: 'Invité',
+    username: HUB_COPY.guest,
     avatar: 'player1',
   });
 
@@ -128,6 +99,8 @@ export function useLobbyController() {
     if (locationState?.returnToLobby && locationState?.roomId) return 'lobby';
     return 'modes';
   });
+  const viewRef = useRef(view);
+  viewRef.current = view;
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -141,7 +114,13 @@ export function useLobbyController() {
   roomConfigRef.current = roomConfig;
 
   const [lobbyPlayers, setLobbyPlayers] = useState<LobbyPlayer[]>([]);
-  const [currentRoomId, setCurrentRoomId] = useState<string>(locationState?.roomId || '');
+  const lobbyPlayersRef = useRef(lobbyPlayers);
+  lobbyPlayersRef.current = lobbyPlayers;
+  const navigateRef = useRef(navigate);
+  navigateRef.current = navigate;
+  const [currentRoomId, setCurrentRoomId] = useState<string>(
+    () => locationState?.roomId || parsePlayConfigSearch(location.search).roomId || '',
+  );
   const [isAmIHost, setIsAmIHost] = useState(false);
   const [joinCode, setJoinCode] = useState('');
   const [availableRooms, setAvailableRooms] = useState<RoomListItem[]>([]);
@@ -154,7 +133,7 @@ export function useLobbyController() {
   const getPlayerIdentity = useCallback(
     () => ({
       userId: user?.id,
-      username: profile?.username || 'Invité',
+      username: profile?.username || HUB_COPY.guest,
       avatar: profile?.avatar || 'player1',
     }),
     [user, profile],
@@ -168,6 +147,8 @@ export function useLobbyController() {
       navigate('/play', { replace: true });
     }
   }, [navigate]);
+  const leaveConfigRouteRef = useRef(leaveConfigRoute);
+  leaveConfigRouteRef.current = leaveConfigRoute;
 
   useEffect(() => {
     const onJoinRoute = location.pathname.endsWith('/join');
@@ -189,6 +170,7 @@ export function useLobbyController() {
   useEffect(() => {
     const onStats = (s: { inMultiplayer: number }) => setMultiplayerCount(s.inMultiplayer);
     const fetchStats = () => {
+      if (!shouldPollHubHomeStats(pathnameRef.current, viewRef.current)) return;
       if (socket.connected) socket.emit('get_home_stats');
     };
     socket.on('home_stats', onStats);
@@ -203,15 +185,21 @@ export function useLobbyController() {
   }, []);
 
   useEffect(() => {
+    if (shouldPollHubHomeStats(location.pathname, view) && socket.connected) {
+      socket.emit('get_home_stats');
+    }
+  }, [view, location.pathname]);
+
+  useEffect(() => {
     if (locationState?.createSolo && !hasAutoCreatedRef.current) {
       hasAutoCreatedRef.current = true;
       if (locationState.settings) setConfig((prev) => ({ ...prev, ...locationState.settings }));
 
-      const pseudo = profile?.username || 'Joueur';
-      const soloRoomName = `${pseudo}'s Solo`;
+      const pseudo = profile?.username || HUB_COPY.player;
+      const soloRoomNameValue = soloRoomName(pseudo);
 
       const soloRoomPayload = {
-        roomName: soloRoomName,
+        roomName: soloRoomNameValue,
         ...getPlayerIdentity(),
         settings: {
           ...(locationState.settings || config),
@@ -226,228 +214,36 @@ export function useLobbyController() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationState, config, user, profile]);
 
-  useEffect(() => {
-    if (!socket.connected) socket.connect();
-
-    const onConnect = () => {
-      if (pathnameRef.current.endsWith('/join')) socket.emit('lobby:subscribe_list');
-      // After server namespace disconnect / session replace, the new socket is not
-      // in the Socket.IO room channel until lobby:join. Settings updates still
-      // work (roomId lookup), but room_updated never reaches the host.
-      const roomId = currentRoomIdRef.current;
-      if (roomId && gameStatusRef.current === 'waiting') {
-        socket.emit('lobby:join', { roomId, ...identityRef.current });
-      }
-    };
-    const onRoomsUpdate = (rooms: RoomListItem[]) => setAvailableRooms(rooms);
-
-    const myUserId = user?.id || '';
-
-    const onRoomCreated = (data: {
-      roomId: string;
-      room: { players?: ServerLobbyPlayer[]; status?: GameStatus; settings?: WireRoomSettings };
-    }) => {
-      const isSolo = data.room.settings?.maxPlayers === 1;
-      isSoloRoomRef.current = isSolo;
-      prevHostIdRef.current = myUserId || null;
-
-      setCurrentRoomId(data.roomId);
-      setIsAmIHost(true);
-      setLobbyPlayers(mapServerPlayersToLobby(data.room.players ?? [], myUserId));
-      if (data.room.status) setGameStatus(data.room.status);
-
-      if (data.room.settings) {
-        setRoomConfig((prev) => ({
-          ...prev,
-          ...data.room.settings,
-          roomName: data.room.settings?.name || prev.roomName,
-          password:
-            data.room.settings?.isPrivate === false
-              ? ''
-              : data.room.settings?.password || prev.password,
-        }));
-      }
-
-      setView('lobby');
-      leaveConfigRoute();
-    };
-
-    const onRoomJoined = (data: {
-      roomId: string;
-      players?: ServerLobbyPlayer[];
-      hostId?: string;
-      settings?: WireRoomSettings;
-      status?: GameStatus;
-    }) => {
-      isSoloRoomRef.current = data.settings?.maxPlayers === 1;
-      prevHostIdRef.current = data.hostId ? String(data.hostId) : null;
-      setCurrentRoomId(data.roomId);
-      if (data.hostId && myUserId) setIsAmIHost(String(data.hostId) === String(myUserId));
-      setLobbyPlayers(mapServerPlayersToLobby(data.players ?? [], data.hostId));
-
-      if (data.settings) {
-        setRoomConfig((prev) => ({
-          ...prev,
-          ...data.settings,
-          roomName: data.settings?.name || prev.roomName,
-          password:
-            data.settings?.isPrivate === false ? '' : data.settings?.password || prev.password,
-        }));
-      }
-
-      if (data.status) setGameStatus(data.status);
-      if (data.status !== 'waiting') setIsLaunchPending(false);
-      setShowPasswordModal(false);
-      setPasswordInput('');
-      setJoinCode('');
-      setView('lobby');
-      if (pathnameRef.current.endsWith('/join')) {
-        navigate('/play', { replace: true });
-      }
-    };
-
-    const onRoomUpdated = (data: RoomUpdatedPayload) => {
-      setRoomConfig((prev) => ({
-        ...prev,
-        ...data.roomSettings,
-        roomName: data.roomName,
-        password:
-          data.roomSettings?.isPrivate === false
-            ? ''
-            : data.roomSettings?.password || prev.password,
-      }));
-      setLobbyPlayers(mapServerPlayersToLobby(data.players, undefined));
-      if (!silentSettingsPatchRef.current) {
-        toast.info('Paramètres mis à jour.');
-      }
-      silentSettingsPatchRef.current = false;
-      leaveConfigRoute();
-    };
-
-    const onRoomClosed = (payload?: { reason?: string }) => {
-      const reason = payload?.reason || 'Salon fermé.';
-      if (!notifyModerationBan(reason)) {
-        toast.error(reason);
-      }
-      setIsLaunchPending(false);
-      setCurrentRoomId('');
-      setLobbyPlayers([]);
-      setGameStatus('waiting');
-      if (isBanSanctionReason(reason)) {
-        navigate('/', { replace: true });
-        return;
-      }
-      navigate('/play/join', { replace: true });
-    };
-    const onPasswordRequired = (data: { roomId: string }) => {
-      setPendingRoomId(data.roomId);
-      setPasswordInput('');
-      setShowPasswordModal(true);
-    };
-
-    const onUpdatePlayers = (data: PlayersUpdatePayload) => {
-      if (data.hostId && myUserId) {
-        const newHostId = String(data.hostId);
-        const amINewHost = newHostId === String(myUserId);
-        if (
-          amINewHost &&
-          prevHostIdRef.current !== null &&
-          prevHostIdRef.current !== newHostId &&
-          !isSoloRoomRef.current
-        ) {
-          toast.success("Vous êtes l'hôte !");
-        }
-        prevHostIdRef.current = newHostId;
-        setIsAmIHost(amINewHost);
-      }
-      if (data.status) setGameStatus(data.status);
-      if (data.status !== 'waiting') setIsLaunchPending(false);
-      setLobbyPlayers(mapServerPlayersToLobby(data.players, data.hostId));
-    };
-
-    const onGameStarted = (
-      data: GameStartedPayload & { firstChoices?: string[]; firstDuoChoices?: string[] },
-    ) => {
-      const isSolo = data.settings?.maxPlayers === 1;
-      const gameDataConstructed = {
-        firstVideo: data.firstVideo,
-        firstChoices: data.firstChoices,
-        firstDuoChoices: data.firstDuoChoices,
-      };
-      setIsLaunchPending(false);
-      setGameStatus('playing');
-      const safePlayers = mapServerPlayersToLobby(data.players || lobbyPlayers, undefined);
-      const localStartTime = Date.now() + (data.introDuration || 3000);
-      const mergedSettings = {
-        ...data.settings,
-        videoMode: normalizeVideoMode(
-          data.settings?.videoMode ??
-            roomConfigRef.current.videoMode ??
-            configRef.current.videoMode,
-        ),
-      };
-
-      navigate('/game', {
-        state: {
-          roomId: data.roomId,
-          gameData: gameDataConstructed,
-          players: safePlayers,
-          settings: mergedSettings,
-          mode: isSolo ? 'solo' : 'multiplayer',
-          gameStartTime: localStartTime,
-        },
-      });
-    };
-
-    const onError = (err: { message: string }) => {
-      setIsLaunchPending(false);
-      if (notifyModerationBan(err.message)) return;
-      toast.error(err.message || 'Erreur');
-      const msg = (err.message || '').toLowerCase();
-      if (msg.includes('mot de passe')) setPasswordInput('');
-      if (msg.includes('introuvable') || msg.includes('fermé') || msg.includes('complet')) {
-        setJoinCode('');
-        if (pathnameRef.current.endsWith('/join')) return;
-        setCurrentRoomId('');
-        setLobbyPlayers([]);
-        setGameStatus('waiting');
-        setView('modes');
-        window.history.replaceState({}, document.title);
-      }
-    };
-
-    socket.on('connect', onConnect);
-    socket.on('rooms_update', onRoomsUpdate);
-    // Host create → onRoomCreated (leaves /play/create). Host reconnect to the
-    // same roomId → onRoomJoined so mid-edit does not get force-kicked to lobby.
-    socket.on('lobby:joined', (data) => {
-      const isSameRoom = currentRoomIdRef.current === data.roomId;
-      if (data.isHost && !isSameRoom) {
-        onRoomCreated({ roomId: data.roomId, room: { ...data } });
-      } else {
-        onRoomJoined(data);
-      }
-    });
-    socket.on('room_updated', onRoomUpdated);
-    socket.on('room_closed', onRoomClosed);
-    socket.on('password_required', onPasswordRequired);
-    socket.on('update_players', onUpdatePlayers);
-    socket.on('game_started', onGameStarted);
-    socket.on('error', onError);
-
-    return () => {
-      socket.off('connect', onConnect);
-      socket.off('rooms_update', onRoomsUpdate);
-      socket.off('lobby:joined');
-      socket.off('room_updated', onRoomUpdated);
-      socket.off('room_closed', onRoomClosed);
-      socket.off('password_required', onPasswordRequired);
-      socket.off('update_players', onUpdatePlayers);
-      socket.off('game_started', onGameStarted);
-      socket.off('error', onError);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameStatus, view, leaveConfigRoute, navigate, location.pathname]);
+  useLobbySocketBindings(
+    {
+      pathnameRef,
+      currentRoomIdRef,
+      gameStatusRef,
+      identityRef,
+      lobbyPlayersRef,
+      navigateRef,
+      leaveConfigRouteRef,
+      isSoloRoomRef,
+      prevHostIdRef,
+      silentSettingsPatchRef,
+      roomConfigRef,
+      configRef,
+    },
+    {
+      setAvailableRooms,
+      setCurrentRoomId,
+      setIsAmIHost,
+      setLobbyPlayers,
+      setGameStatus,
+      setRoomConfig,
+      setView,
+      setIsLaunchPending,
+      setShowPasswordModal,
+      setPasswordInput,
+      setJoinCode,
+      setPendingRoomId,
+    },
+  );
 
   useEffect(() => {
     const st = (location.state ?? null) as GameHubLocationState | null;
@@ -478,27 +274,28 @@ export function useLobbyController() {
       }
       setConfig((prev) => ({ ...prev, mode }));
       if (mode === 'multiplayer') navigate('/play/join');
-      else navigate('/play/create', { state: { intent: 'solo' } });
+      else navigate(playCreatePath('solo'));
     },
     [profile?.bannedUntil, navigate],
   );
 
   const openCreateRoom = useCallback(() => {
     setRoomConfig({ ...defaultRoomConfig });
-    navigate('/play/create', { state: { intent: 'create' } });
+    setCurrentRoomId('');
+    navigate(playCreatePath('create'));
   }, [navigate]);
 
   const openLobbySettings = useCallback(() => {
-    navigate('/play/create', {
+    navigate(playCreatePath('edit', currentRoomIdRef.current), {
       state: { intent: 'edit', draft: roomConfigRef.current, returnTo: '/play' },
     });
   }, [navigate]);
 
   const emitSolo = useCallback(
     (soloConfig: GameConfig) => {
-      const pseudo = profile?.username || 'Joueur';
+      const pseudo = profile?.username || HUB_COPY.player;
       socket.emit('lobby:create', {
-        roomName: `${pseudo}'s Solo`,
+        roomName: soloRoomName(pseudo),
         ...getPlayerIdentity(),
         settings: { ...soloConfig, isPrivate: true, maxPlayers: 1, password: '' },
       });
@@ -513,21 +310,30 @@ export function useLobbyController() {
   const createOrUpdateRoom = useCallback(
     (override?: RoomConfig) => {
       const cfg = override ?? roomConfig;
-      if (view === 'lobby' && currentRoomId) {
-        socket.emit('update_room_settings', { roomId: currentRoomId, settings: cfg });
+      const search = parsePlayConfigSearch(location.search);
+      const roomId = currentRoomId || search.roomId || '';
+      const intent = search.intent ?? (roomId ? 'edit' : 'create');
+      const action = resolveLobbySettingsAction(intent, roomId);
+      if (action === 'missing-room') {
+        toast.error(HUB_COPY.toasts.missingRoom);
+        navigate('/play', { replace: true });
+        return;
+      }
+      if (action === 'update') {
+        socket.emit('update_room_settings', { roomId, settings: cfg });
         // Don't wait for room_updated — host may be off the Socket.IO channel after
         // a session replace; settings still apply server-side via roomId lookup.
         leaveConfigRoute();
-      } else {
-        const payload = {
-          roomName: cfg.roomName?.trim() || '',
-          ...getPlayerIdentity(),
-          settings: cfg,
-        };
-        socket.emit('lobby:create', payload);
+        return;
       }
+      const payload = {
+        roomName: cfg.roomName?.trim() || '',
+        ...getPlayerIdentity(),
+        settings: cfg,
+      };
+      socket.emit('lobby:create', payload);
     },
-    [view, currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute],
+    [currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute, location.search, navigate],
   );
 
   const patchRoomSettings = useCallback(

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Users, Check, X, LogIn, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -9,6 +9,7 @@ import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useFriendsOptional } from './FriendsContext';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
+import { shouldIntervalPollFriendsHomeStats } from './friendsHomeStats';
 
 /**
  * Home-page friends widget: a bottom-left bubble showing "online / total friends"
@@ -18,6 +19,7 @@ export function FriendsBubble() {
   const { user } = useAuth();
   const friendsCtx = useFriendsOptional();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const [open, setOpen] = useState(false);
   const [totalOnline, setTotalOnline] = useState<number | null>(null);
@@ -39,7 +41,7 @@ export function FriendsBubble() {
     return [...online, ...offline];
   }, [friends]);
 
-  // Live total-players-online count via home_stats (polled).
+  // Live total-players-online: one shot on connect, interval only on Home or an open bubble.
   useEffect(() => {
     if (!user) return;
     const onStats = (s: { online: number }) => setTotalOnline(s.online);
@@ -48,14 +50,16 @@ export function FriendsBubble() {
     socket.on('home_stats', onStats);
     socket.on('connect', fetchStats);
     fetchStats();
-    const interval = setInterval(fetchStats, 10_000);
+    const poll = shouldIntervalPollFriendsHomeStats(pathname, open)
+      ? setInterval(fetchStats, 10_000)
+      : undefined;
 
     return () => {
       socket.off('home_stats', onStats);
       socket.off('connect', fetchStats);
-      clearInterval(interval);
+      if (poll) clearInterval(poll);
     };
-  }, [user]);
+  }, [user, pathname, open]);
 
   // Close on outside click / Escape.
   useEffect(() => {

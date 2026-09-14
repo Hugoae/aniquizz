@@ -31,6 +31,31 @@ export async function connectSocket(
   });
 }
 
+/** Guest handshake: no token, read-only until requireAuth events. */
+export async function connectGuestSocket(url: string, username = 'Invité'): Promise<TestSocket> {
+  return new Promise((resolve, reject) => {
+    const socket = ioClient(url, {
+      transports: ['websocket'],
+      auth: { username },
+    });
+
+    const timer = setTimeout(() => {
+      socket.disconnect();
+      reject(new Error('Socket connect timeout'));
+    }, 15_000);
+
+    socket.on('connect', () => {
+      clearTimeout(timer);
+      resolve(socket);
+    });
+
+    socket.on('connect_error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+}
+
 export async function connectSocketExpectFail(
   url: string,
   token: string,

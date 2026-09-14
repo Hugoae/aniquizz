@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Next:** Hub. **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Next:** Game. **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | `jsx-a11y` 14 warns (FriendsPanel, GameSidebar, PlayerCardBase, …) · HIBP leaked-password · 26.7                                                                                                                                                                     |
 
-**Feature queue:** Auth + Home ✅ → **Hub** → Game (engine / lobby / match UI) → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → **Game** → Profile → Library → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -28,12 +28,12 @@ Playbook and CI now match what `AGENTS.md` claimed. Shipped on `main` as `0b0685
 
 #### Wave 1
 
-| Gate                       | What changed                                                                                                                                                                                                  |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Playbook in git**        | Stopped ignoring `AGENTS.md`, `PLAN.md`, `PROGRESS.md`, `docs/agents/`. `.cursor/rules/` is tracked; the rest of `.cursor/` stays ignored. `SCHEMA-TARGET.md` and `docs/progress-archive/` stay local.        |
-| **Client `tsc`**           | `aniquizz-client` `typecheck` script (`tsc -p tsconfig.app.json --noEmit`). CI runs `pnpm typecheck` after Prisma generate. Wave 1 kept `strict: false`; wave 2.6 flipped it.                                 |
-| **ESLint server + shared** | `eqeqeq` (null ignored), `no-explicit-any`, `no-floating-promises`. `requireAuth` / `guard` settle listener promises (Socket.io never awaits).                                                                |
-| **Zod mutators**           | `socketPayloads.ts`: `game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`. Invalid payload → generic `Requête invalide.` Settings patches still go through `normalizeRoomSettings`. |
+| Gate                       | What changed                                                                                                                                                                                                                                                                              |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Playbook in git**        | Stopped ignoring `AGENTS.md`, `PLAN.md`, `PROGRESS.md`, `docs/agents/`. `.cursor/rules/` is tracked; the rest of `.cursor/` stays ignored. `SCHEMA-TARGET.md` and `docs/progress-archive/` stay local.                                                                                    |
+| **Client `tsc`**           | `aniquizz-client` `typecheck` script (`tsc -p tsconfig.app.json --noEmit`). CI runs `pnpm typecheck` after Prisma generate. Wave 1 kept `strict: false`; wave 2.6 flipped it.                                                                                                             |
+| **ESLint server + shared** | `eqeqeq` (null ignored), `no-explicit-any`, `no-floating-promises`. `requireAuth` / `guard` settle listener promises (Socket.io never awaits).                                                                                                                                            |
+| **Zod mutators**           | `socketPayloads.ts`: `game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, plus lobby create/join/kick/transfer/leave/toggle_ready. Invalid payload → generic `Requête invalide.` Settings patches still go through `normalizeRoomSettings`. |
 
 #### Wave 2.1 — format
 
@@ -97,6 +97,42 @@ Measured a global `strict: true` flip: **10** errors, all hub/game-over. Per-fol
 | **`tsconfig.app.json`** | `strict: true`, `noFallthroughCasesInSwitch: true`. `noUnusedLocals` / `noUnusedParameters` stay false.                                                                                                                                                                |
 | **Fixes**               | Duplicate JSX `key` spreads (`SettingChipItem`); `franchise: string \| null` in the anime prefix index; `checkWatchedPoolLaunch` accepts `undefined` stats; dead `players: []` before spread on `lobby:joined`; solo `GameConfig` vs `RoomConfig` on `PlayConfigPage`. |
 | **Client ESLint**       | `eqeqeq` (`null` ignore) + `@typescript-eslint/no-explicit-any` as **error** (0 new findings). `no-unused-vars` stays off.                                                                                                                                             |
+
+### Audit — Hub P1 ✅ (2026-09-14)
+
+Canvas: `hub-feature-audit`. No P0. Server still owns join/start. P1 + P2 + follow-ups are closed.
+
+| Item                       | What changed                                                                                                                                                                                       |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Join while playing**     | Shared `isLobbyOpenForNewPlayers` / `isRoomListJoinable`. `lobby:join` rejects new players unless `waiting` (reconnects still allowed). Room list CTA is `EN COURS` / disabled — no fake spectate. |
+| **Config F5**              | Intent (+ edit `roomId`) lives in `/play/create?intent=…`. Refresh keeps solo vs create vs edit. Edit without a room id does not `lobby:create`. Socket rejoin runs if already connected.          |
+| **Host actions on touch**  | `HOVER_REVEAL`: kick/transfer (and add-friend) stay `opacity-100` unless `(hover: hover)`. 36px tap targets.                                                                                       |
+| **Socket listener rebind** | Hub socket effect binds once (`[]`). Identity/players/navigate live in refs so `game_started` is not dropped when `gameStatus` flips to `starting`.                                                |
+
+### Audit — Hub P2 ✅ (2026-09-14)
+
+| Item                      | What changed                                                                                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Partition**             | Socket listeners live in `useLobbySocketBindings`. Lobby chrome split into header / roster / footer / dialogs. Controller ~447 lines; `MultiplayerLobby` ~363.                                     |
+| **Copy**                  | `hubCopy.ts`: `Solo de {pseudo}`, `Réinitialiser`, password dialog copy. Watched offline uses vousvoiement (`Lancez-le`).                                                                          |
+| **Prefetch / poll**       | `DailyQuizCard` uses `routeIntentHandlers` (pointerdown). Hub `get_home_stats` only on `/play` mode-select. Pool hooks depend on `difficultyKey` / `typesKey`.                                     |
+| **Auth list + Zod**       | `requireAuth` on `get_rooms` / `lobby:subscribe_list`. Zod create/join/kick/transfer/leave/toggle_ready. `roomName` / `password` length caps. Join catch emits `Impossible de rejoindre le salon.` |
+| **Join / kick policy**    | Shared `evaluateLobbyJoin` / `canKickFromLobby`. Invites never skip the password. New players blocked while playing; returning players reconnect.                                                  |
+| **start_game rate limit** | `guard(..., RATE_LIMITS.startGame)` — 5 / 10s.                                                                                                                                                     |
+| **Responsive / design**   | Lobby `h-dvh` + safe-area. Chat `h-40 sm:h-48`. Mode select `min-h-dvh`. Password dialog description is no longer a label duplicate.                                                               |
+| **Tests**                 | Shared join/kick + Zod schemas; lobby integration (normalize, password+invite, playing, kick, guest list); RoomList EN COURS/COMPLET; PlayConfig intent; pool-hook keys; `lobbySocketPolicy`.      |
+
+### Audit — Hub follow-ups ✅ (2026-09-14)
+
+Same shape as Auth + Home follow-ups: leftovers after P2, not a new severity wave.
+
+| Item                        | What changed                                                                                                                                                                                  |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Copy leftovers**          | Toasts, SEO `/play`, fallbacks `Invité` / `Joueur` / `Salon de jeu` live in `hubCopy.ts`. SEO uses vousvoiement (`Configurez votre partie…`).                                                 |
+| **SourceSection deps**      | Fallback auto-off effects keep `update` in a ref so eslint `exhaustive-deps` is clean without re-running on an unstable callback.                                                             |
+| **Friends home_stats**      | Bubble still fetches once on connect. Interval poll only on `/` or while the panel is open — not every 10s on `/play` lobby.                                                                  |
+| **`game:skip_round` Zod**   | Same `roomIdInputSchema` as `start_game` / votes. Neighbour Game hole closed so the mutating-event list matches AGENTS. `returnToLobby` / `cancelGame` stay for the Game audit.               |
+| **Left for Game / parking** | Controller still ~447 lines (cap ~400). `GameConfigForm` / `SourceSection` at the limit. 14 `jsx-a11y` warns. Logged-in lobby QA (tool cannot fill credentials). Landscape / physical iPhone. |
 
 ### Audit — Auth + Home ✅ (2026-09-14)
 

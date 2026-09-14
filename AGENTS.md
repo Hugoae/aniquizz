@@ -130,7 +130,7 @@ Integration tests need Supabase test users: `pnpm test:setup` (see [`CONTRIBUTIN
 
 - TypeScript **strict** on `packages/shared`, `apps/server`, and `apps/client`. Avoid `any`. **`pnpm typecheck` runs `tsc` on the SPA** — Vite/SWC must not be the only gate. Client `noUnusedLocals` / `noUnusedParameters` stay off.
 - **Socket contract:** all cross-wire data must use types from `packages/shared/src/events.ts` and `packages/shared/src/game.ts`. Do not duplicate or weaken types on client or server.
-- **Mutating socket payloads** (`game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`) must be parsed with Zod schemas in `packages/shared/src/socketPayloads.ts` at the handler. Types on the wire are not a runtime boundary.
+- **Mutating socket payloads** (`game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`) must be parsed with Zod schemas in `packages/shared/src/socketPayloads.ts` at the handler. Types on the wire are not a runtime boundary.
 - **ESLint (server + shared):** `eqeqeq` (`null` ignore), `@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-floating-promises`. Socket.io never awaits listeners — `requireAuth` / `guard` settle returned promises. **Client:** same `eqeqeq` + `no-explicit-any`; `no-unused-vars` stays off (shadcn / catch noise).
 - **Package boundaries:** ESLint `no-restricted-imports` — client ↛ `apps/server` / `@aniquizz/database` / `express` / Prisma; shared ↛ `react` / `express` / Prisma / Socket.io runtime; server ↛ `react` / `apps/client`. Zod is allowed in shared.
 - **Client a11y:** `eslint-plugin-jsx-a11y` recommended runs as **warn**. Do not flip to error until a dedicated cleanup; do not disable the plugin to silence a warning.
