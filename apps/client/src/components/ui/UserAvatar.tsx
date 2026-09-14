@@ -1,6 +1,7 @@
 import { isTrustedSupabaseAvatarUrl } from '@aniquizz/shared';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import type { CSSProperties } from 'react';
 
 interface UserAvatarProps {
   avatar?: string;
@@ -9,16 +10,24 @@ interface UserAvatarProps {
   fallbackClassName?: string;
   /** Default lazy — use eager for above-the-fold identity (profile header). */
   loading?: 'lazy' | 'eager';
+  style?: CSSProperties;
 }
 
-export function UserAvatar({ avatar, username, className, fallbackClassName, loading = 'lazy' }: UserAvatarProps) {
+export function UserAvatar({
+  avatar,
+  username,
+  className,
+  fallbackClassName,
+  loading = 'lazy',
+  style,
+}: UserAvatarProps) {
   const initials = username ? username.substring(0, 2).toUpperCase() : '??';
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
   const uploadedSrc =
     avatar && supabaseUrl && isTrustedSupabaseAvatarUrl(avatar, supabaseUrl) ? avatar : undefined;
 
   return (
-    <Avatar className={cn("border border-primary/20", className)}>
+    <Avatar className={cn('border border-primary/20', className)} style={style}>
       <AvatarImage
         src={uploadedSrc}
         alt={username ? `Avatar de ${username}` : 'Avatar'}
@@ -26,7 +35,11 @@ export function UserAvatar({ avatar, username, className, fallbackClassName, loa
         loading={loading}
         decoding="async"
       />
-      <AvatarFallback className={cn('bg-secondary font-semibold text-secondary-foreground', fallbackClassName)}>{initials}</AvatarFallback>
+      <AvatarFallback
+        className={cn('bg-secondary font-semibold text-secondary-foreground', fallbackClassName)}
+      >
+        {initials}
+      </AvatarFallback>
     </Avatar>
   );
 }

@@ -34,7 +34,7 @@ async function closeGracefully(deps: ShutdownDeps, signal: string): Promise<void
 
     // io.close() also closes the underlying HTTP server it was attached to.
     await new Promise<void>((resolve, reject) => {
-      deps.io.close((err) => (err ? reject(err) : resolve()));
+      void deps.io.close((err) => (err ? reject(err) : resolve()));
     });
 
     await prisma.$disconnect();

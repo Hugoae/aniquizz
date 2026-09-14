@@ -20,8 +20,16 @@ async function main() {
       prisma.anime.count(),
       prisma.song.count(),
       prisma.song.count({ where: { downloadStatus: 'COMPLETED' } }),
-      prisma.song.findMany({ where: { downloadStatus: 'SKIPPED' }, select: { videoKey: true, errorLog: true }, orderBy: { videoKey: 'asc' } }),
-      prisma.song.findMany({ where: { downloadStatus: 'ERROR' }, select: { videoKey: true, errorLog: true }, orderBy: { videoKey: 'asc' } }),
+      prisma.song.findMany({
+        where: { downloadStatus: 'SKIPPED' },
+        select: { videoKey: true, errorLog: true },
+        orderBy: { videoKey: 'asc' },
+      }),
+      prisma.song.findMany({
+        where: { downloadStatus: 'ERROR' },
+        select: { videoKey: true, errorLog: true },
+        orderBy: { videoKey: 'asc' },
+      }),
       prisma.song.count({ where: { downloadStatus: 'PENDING' } }),
     ]);
 
@@ -30,12 +38,16 @@ async function main() {
 
     console.log('Pipeline lock check');
     console.log('====================');
-    console.log(`Catalogue in DB   : ${franchises} franchise(s), ${animes} anime(s), ${songs} song(s) (${completed} COMPLETED, ${pending} PENDING, ${skipped.length} SKIPPED, ${errors.length} ERROR)`);
+    console.log(
+      `Catalogue in DB   : ${franchises} franchise(s), ${animes} anime(s), ${songs} song(s) (${completed} COMPLETED, ${pending} PENDING, ${skipped.length} SKIPPED, ${errors.length} ERROR)`,
+    );
     console.log(`manual_edits.json : ${manualEditsPath}`);
     console.log(`Lock source       : ${result.source}`);
     console.log(`Locked franchises : ${result.lockedFranchises.length}`);
     console.log(`Locked anime ids  : ${result.lockedAnimeIds.size}`);
-    console.log(`Excluded anime ids  : ${exclusions.animeIds.size} (${defaultExclusionsPath(path.join(__dirname, '../data'))})`);
+    console.log(
+      `Excluded anime ids  : ${exclusions.animeIds.size} (${defaultExclusionsPath(path.join(__dirname, '../data'))})`,
+    );
     console.log(`Excluded song ids   : ${exclusions.songIds.size}`);
     console.log(`Excluded videoKeys  : ${exclusions.videoKeys.size}`);
 
@@ -61,14 +73,18 @@ async function main() {
     }
 
     if (skipped.length > 0) {
-      console.log(`\nSKIPPED songs (${skipped.length}) — use WORKER_RETRY_VIDEO_KEYS or RETRY_SKIPPED_ON_START=true to retry:`);
+      console.log(
+        `\nSKIPPED songs (${skipped.length}) — use WORKER_RETRY_VIDEO_KEYS or RETRY_SKIPPED_ON_START=true to retry:`,
+      );
       for (const s of skipped) {
         console.log(`  - ${s.videoKey}  |  ${(s.errorLog ?? '').slice(0, 90)}`);
       }
     }
 
     if (errors.length > 0) {
-      console.log(`\nERROR songs (${errors.length}) — will be retried on next run with RESET_ERRORS_ON_START=true:`);
+      console.log(
+        `\nERROR songs (${errors.length}) — will be retried on next run with RESET_ERRORS_ON_START=true:`,
+      );
       for (const s of errors) {
         console.log(`  - ${s.videoKey}  |  ${(s.errorLog ?? '').slice(0, 90)}`);
       }
@@ -76,7 +92,9 @@ async function main() {
 
     if (franchises > 0 && result.lockedFranchises.length === 0) {
       console.log('\nNote: your catalogue has data, but nothing is locked yet.');
-      console.log('      Step 1 will not freeze existing franchises unless you set isLocked or export manual_edits.json.');
+      console.log(
+        '      Step 1 will not freeze existing franchises unless you set isLocked or export manual_edits.json.',
+      );
     }
 
     if (result.lockedFranchises.length > 0) {

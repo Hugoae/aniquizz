@@ -131,14 +131,19 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
   };
 }
 /** Convert an authoritative PhaseTiming envelope to a local end timestamp. */
-function localEndsAt(t: { serverNow: number; endsAt: number }): number {
-  return Date.now() + (t.endsAt - t.serverNow);
+function localEndsAt(t: { serverNow: number; endsAt?: number; startsAt?: number }): number {
+  const target = t.endsAt ?? t.startsAt;
+  if (target === undefined) return Date.now();
+  return Date.now() + (target - t.serverNow);
 }
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'GAME_STARTED': {
       const p = action.payload;
-      const videoMode = resolveVideoMode(p.settings.videoMode, action.clientVideoMode ?? state.videoMode);
+      const videoMode = resolveVideoMode(
+        p.settings.videoMode,
+        action.clientVideoMode ?? state.videoMode,
+      );
       return {
         ...state,
         phase: 'loading',
@@ -250,9 +255,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         phaseEndsAt: localEndsAt(p),
         phaseDurationSeconds: p.durationSeconds,
         skipVotes: 0,
-        roundHistory: historyEntry
-          ? [...state.roundHistory, historyEntry]
-          : state.roundHistory,
+        roundHistory: historyEntry ? [...state.roundHistory, historyEntry] : state.roundHistory,
       };
     }
     case 'PLAYERS_UPDATE': {

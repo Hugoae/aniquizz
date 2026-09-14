@@ -1,5 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Users, MessageSquare, Send, Check, Flame, WifiOff } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  MessageSquare,
+  Send,
+  Check,
+  Flame,
+  WifiOff,
+} from 'lucide-react';
 import type { GamePlayer } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +16,13 @@ import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { socket } from '@/lib/socket';
-import { computeRanks, rankAccent, rankNeutralAccent, activeMatchPlayers, hasRankingSpread } from '@/features/game/utils/ranking';
+import {
+  computeRanks,
+  rankAccent,
+  rankNeutralAccent,
+  activeMatchPlayers,
+  hasRankingSpread,
+} from '@/features/game/utils/ranking';
 
 interface ChatMessage {
   id: string;
@@ -26,7 +41,7 @@ interface GameSidebarProps {
   onPlayerClick?: (playerId: string | number) => void;
   hideScores?: boolean;
   /** Current match phase; drives the guessing-time "answered" indicator. */
-  phase?: 'loading' | 'guessing' | 'revealed' | 'ended';
+  phase?: 'loading' | 'ready' | 'guessing' | 'revealed' | 'ended';
   roomId: string;
   /** Canonical userId of the local player (never socket.id). */
   currentUserId?: string;
@@ -34,9 +49,20 @@ interface GameSidebarProps {
   attentionSignal?: number;
 }
 
-const formatTime = (timestamp: number) => new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const formatTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hideScores, phase, roomId, currentUserId, attentionSignal }: GameSidebarProps) {
+export function GameSidebar({
+  players,
+  isCollapsed,
+  onToggle,
+  onPlayerClick,
+  hideScores,
+  phase,
+  roomId,
+  currentUserId,
+  attentionSignal,
+}: GameSidebarProps) {
   const meId = currentUserId;
   const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
   const [chatMessage, setChatMessage] = useState('');
@@ -125,7 +151,11 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
       {!isCollapsed && (
         <>
           <div className="border-b border-border p-2">
-            <div className="flex gap-1 rounded-lg bg-secondary/50 p-1" role="tablist" aria-label="Joueurs et chat">
+            <div
+              className="flex gap-1 rounded-lg bg-secondary/50 p-1"
+              role="tablist"
+              aria-label="Joueurs et chat"
+            >
               <Button
                 variant={activeTab === 'players' ? 'default' : 'ghost'}
                 size="sm"
@@ -142,7 +172,9 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                 size="sm"
                 role="tab"
                 aria-selected={activeTab === 'chat'}
-                aria-label={unreadCount > 0 && activeTab !== 'chat' ? `Chat, ${unreadCount} non lus` : 'Chat'}
+                aria-label={
+                  unreadCount > 0 && activeTab !== 'chat' ? `Chat, ${unreadCount} non lus` : 'Chat'
+                }
                 onClick={() => setActiveTab('chat')}
                 className="relative flex-1 gap-2 rounded-md"
               >
@@ -158,7 +190,11 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
           </div>
 
           {activeTab === 'players' ? (
-            <div role="tabpanel" aria-label="Joueurs" className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3">
+            <div
+              role="tabpanel"
+              aria-label="Joueurs"
+              className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3"
+            >
               {sortedPlayers.map((player, index) => {
                 const isMe = String(player.id) === String(meId);
                 const rank = ranks?.get(String(player.id)) ?? index + 1;
@@ -185,7 +221,11 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                         #{rankingEstablished ? rank : '-'}
                       </span>
                       <div className="relative shrink-0">
-                        <UserAvatar avatar={player.avatar} username={player.username} className="h-9 w-9" />
+                        <UserAvatar
+                          avatar={player.avatar}
+                          username={player.username}
+                          className="h-9 w-9"
+                        />
                         {isDisconnected && (
                           <span
                             className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-muted"
@@ -198,9 +238,7 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 truncate text-sm font-medium transition-colors hover:text-primary">
-                          <span className="truncate">
-                            {player.username}
-                          </span>
+                          <span className="truncate">{player.username}</span>
                           <RoleBadge role={player.role} />
                         </div>
                       </div>
@@ -219,11 +257,20 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
                           title={`Série de ${streak} bonnes réponses`}
                           aria-label={`Série de ${streak}`}
                         >
-                          <Flame className={cn('h-3 w-3 fill-warning text-warning', streak >= 5 && 'animate-pulse')} />
-                          <span className="text-[10px] font-black italic text-warning">{streak}</span>
+                          <Flame
+                            className={cn(
+                              'h-3 w-3 fill-warning text-warning',
+                              streak >= 5 && 'animate-pulse',
+                            )}
+                          />
+                          <span className="text-[10px] font-black italic text-warning">
+                            {streak}
+                          </span>
                         </span>
                       )}
-                      {!hideScores && <div className="text-lg font-bold text-primary">{player.score}</div>}
+                      {!hideScores && (
+                        <div className="text-lg font-bold text-primary">{player.score}</div>
+                      )}
                     </div>
                   </div>
                 );
@@ -233,28 +280,52 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
             <div role="tabpanel" aria-label="Chat" className="flex min-h-0 flex-1 flex-col">
               <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-3">
                 {messages.length === 0 && (
-                  <div className="mt-4 text-center text-xs italic text-muted-foreground opacity-50">Aucun message. Soyez le premier à parler !</div>
+                  <div className="mt-4 text-center text-xs italic text-muted-foreground opacity-50">
+                    Aucun message. Soyez le premier à parler !
+                  </div>
                 )}
                 {messages.map((msg, index) => {
                   const isMe = String(msg.senderId) === String(meId);
                   if (msg.isSystem) {
                     return (
                       <div key={msg.id || index} className="my-2 flex justify-center">
-                        <span className="rounded-full bg-secondary/50 px-2 py-1 text-[10px] italic text-muted-foreground">{msg.content}</span>
+                        <span className="rounded-full bg-secondary/50 px-2 py-1 text-[10px] italic text-muted-foreground">
+                          {msg.content}
+                        </span>
                       </div>
                     );
                   }
                   return (
-                    <div key={msg.id || index} className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}>
+                    <div
+                      key={msg.id || index}
+                      className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}
+                    >
                       <div className="mb-0.5 flex items-center gap-2">
-                        {!isMe && <UserAvatar avatar={msg.avatar || ''} username={msg.username} className="h-4 w-4" />}
-                        <span className={cn('text-xs font-bold', isMe ? 'text-primary' : 'text-foreground')}>{msg.username}</span>
-                        <span className="text-[10px] text-muted-foreground opacity-70">{formatTime(msg.timestamp)}</span>
+                        {!isMe && (
+                          <UserAvatar
+                            avatar={msg.avatar || ''}
+                            username={msg.username}
+                            className="h-4 w-4"
+                          />
+                        )}
+                        <span
+                          className={cn(
+                            'text-xs font-bold',
+                            isMe ? 'text-primary' : 'text-foreground',
+                          )}
+                        >
+                          {msg.username}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground opacity-70">
+                          {formatTime(msg.timestamp)}
+                        </span>
                       </div>
                       <div
                         className={cn(
                           'max-w-[90%] break-words rounded-lg px-3 py-1.5',
-                          isMe ? 'rounded-tr-none bg-primary text-primary-foreground' : 'rounded-tl-none bg-secondary text-secondary-foreground',
+                          isMe
+                            ? 'rounded-tr-none bg-primary text-primary-foreground'
+                            : 'rounded-tl-none bg-secondary text-secondary-foreground',
                         )}
                       >
                         {msg.content}
@@ -267,8 +338,22 @@ export function GameSidebar({ players, isCollapsed, onToggle, onPlayerClick, hid
 
               <div className="border-t border-border bg-card/50 p-3">
                 <form className="flex gap-2" onSubmit={handleSendMessage}>
-                  <Input value={chatMessage} onChange={(e) => setChatMessage(e.target.value)} placeholder="Message…" aria-label="Message de chat" className="h-9 text-sm" autoComplete="off" />
-                  <Button type="submit" variant="default" size="icon" aria-label="Envoyer" className="h-9 w-9 shrink-0" disabled={!chatMessage.trim()}>
+                  <Input
+                    value={chatMessage}
+                    onChange={(e) => setChatMessage(e.target.value)}
+                    placeholder="Message…"
+                    aria-label="Message de chat"
+                    className="h-9 text-sm"
+                    autoComplete="off"
+                  />
+                  <Button
+                    type="submit"
+                    variant="default"
+                    size="icon"
+                    aria-label="Envoyer"
+                    className="h-9 w-9 shrink-0"
+                    disabled={!chatMessage.trim()}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </form>

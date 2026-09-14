@@ -23,7 +23,11 @@ import {
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { readPlayerPrefs, writePlayerPrefs } from '@/features/settings/lib/playerPrefsStorage';
-import { applyMotionAttribute, readOsPrefersReduced, subscribeOsPrefersReduced } from '@/features/settings/lib/motionRuntime';
+import {
+  applyMotionAttribute,
+  readOsPrefersReduced,
+  subscribeOsPrefersReduced,
+} from '@/features/settings/lib/motionRuntime';
 
 export const PLAYER_PREFS_SYNC_MS = 700;
 
@@ -43,9 +47,7 @@ const PlayerPrefsContext = createContext<PlayerPrefsContextValue | null>(null);
 
 export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
   const { user, profile } = useAuth();
-  const [prefs, setPrefs] = useState<PlayerPrefs>(() =>
-    normalizePlayerPrefs(readPlayerPrefs()),
-  );
+  const [prefs, setPrefs] = useState<PlayerPrefs>(() => normalizePlayerPrefs(readPlayerPrefs()));
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
   const pendingRef = useRef(false);
@@ -158,9 +160,7 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleMute = useCallback(() => {
-    commit(
-      mergePlayerPrefsPatch(prefsRef.current, { audioMuted: !prefsRef.current.audioMuted }),
-    );
+    commit(mergePlayerPrefsPatch(prefsRef.current, { audioMuted: !prefsRef.current.audioMuted }));
   }, [commit]);
 
   const patchPrefs = useCallback(

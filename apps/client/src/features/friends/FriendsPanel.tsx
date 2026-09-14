@@ -55,7 +55,11 @@ function FriendRow({
 
   return (
     <div className="group flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors">
-      <button className="relative shrink-0" onClick={() => onOpen(friend.id)} title="Voir le profil">
+      <button
+        className="relative shrink-0"
+        onClick={() => onOpen(friend.id)}
+        title="Voir le profil"
+      >
         <UserAvatar avatar={friend.avatar} username={friend.username} className="h-9 w-9" />
         <PresenceDot status={friend.status} />
       </button>
@@ -107,7 +111,11 @@ function IncomingRow({
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg bg-primary/5 border border-primary/10">
       <button onClick={() => onOpen(request.user.id)} className="shrink-0">
-        <UserAvatar avatar={request.user.avatar} username={request.user.username} className="h-9 w-9" />
+        <UserAvatar
+          avatar={request.user.avatar}
+          username={request.user.username}
+          className="h-9 w-9"
+        />
       </button>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -209,7 +217,10 @@ export function FriendsPanel() {
   const handleJoin = (roomId: string) => navigate('/play', { state: { fromInvite: true, roomId } });
 
   const empty =
-    friends.length === 0 && incoming.length === 0 && outgoing.length === 0 && recentPlayers.length === 0;
+    friends.length === 0 &&
+    incoming.length === 0 &&
+    outgoing.length === 0 &&
+    recentPlayers.length === 0;
 
   return (
     <div>
@@ -234,7 +245,13 @@ export function FriendsPanel() {
               className="h-9 bg-background/50"
               autoFocus
             />
-            <Button type="submit" size="icon" variant="glow" className="h-9 w-9 shrink-0" title="Envoyer la demande">
+            <Button
+              type="submit"
+              size="icon"
+              variant="glow"
+              className="h-9 w-9 shrink-0"
+              title="Envoyer la demande"
+            >
               <Check className="h-4 w-4" />
             </Button>
             <Button
@@ -250,11 +267,7 @@ export function FriendsPanel() {
           </form>
         ) : (
           <div className="p-3 border-b border-border/60">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={() => setAdding(true)}
-            >
+            <Button variant="outline" className="w-full gap-2" onClick={() => setAdding(true)}>
               <UserPlus className="h-4 w-4" /> Ajouter un ami
             </Button>
           </div>
@@ -273,7 +286,13 @@ export function FriendsPanel() {
                     Demandes reçues ({incoming.length})
                   </h3>
                   {incoming.map((r) => (
-                    <IncomingRow key={r.id} request={r} onAccept={accept} onReject={reject} onOpen={openProfile} />
+                    <IncomingRow
+                      key={r.id}
+                      request={r}
+                      onAccept={accept}
+                      onReject={reject}
+                      onOpen={openProfile}
+                    />
                   ))}
                 </section>
               )}
@@ -286,7 +305,13 @@ export function FriendsPanel() {
                   </div>
                 ) : (
                   sortedFriends.map((f) => (
-                    <FriendRow key={f.id} friend={f} onRemove={remove} onOpen={openProfile} onJoin={handleJoin} />
+                    <FriendRow
+                      key={f.id}
+                      friend={f}
+                      onRemove={remove}
+                      onOpen={openProfile}
+                      onJoin={handleJoin}
+                    />
                   ))
                 )}
               </section>
@@ -298,7 +323,11 @@ export function FriendsPanel() {
                   </h3>
                   {outgoing.map((r) => (
                     <div key={r.id} className="flex items-center gap-3 p-2 rounded-lg opacity-70">
-                      <UserAvatar avatar={r.user.avatar} username={r.user.username} className="h-9 w-9 shrink-0" />
+                      <UserAvatar
+                        avatar={r.user.avatar}
+                        username={r.user.username}
+                        className="h-9 w-9 shrink-0"
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="font-semibold text-sm truncate">{r.user.username}</span>
@@ -340,8 +369,14 @@ export function FriendsPanel() {
                   </h3>
                   {blocked.map((b) => (
                     <div key={b.id} className="flex items-center gap-3 p-2 rounded-lg opacity-60">
-                      <UserAvatar avatar={b.avatar} username={b.username} className="h-9 w-9 shrink-0" />
-                      <div className="flex-1 min-w-0 font-semibold text-sm truncate">{b.username}</div>
+                      <UserAvatar
+                        avatar={b.avatar}
+                        username={b.username}
+                        className="h-9 w-9 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0 font-semibold text-sm truncate">
+                        {b.username}
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"

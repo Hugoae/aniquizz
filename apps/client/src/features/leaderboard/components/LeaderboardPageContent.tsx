@@ -31,9 +31,7 @@ export function LeaderboardPageContent() {
   const { setShowAuthModal } = useAuthModal();
   const board = useLeaderboard();
   const viewerId = profile?.id ?? null;
-  const restEntries = board.data
-    ? entriesBeyondPodium(board.data.entries, board.data.podium)
-    : [];
+  const restEntries = board.data ? entriesBeyondPodium(board.data.entries, board.data.podium) : [];
   const visibleIds = new Set([
     ...(board.data ? podiumPlayerIds(board.data.podium) : []),
     ...restEntries.map((entry) => entry.id),
@@ -58,7 +56,10 @@ export function LeaderboardPageContent() {
   return (
     <div className="min-h-[100dvh] bg-background">
       <Header />
-      <main id="main-content" className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-24">
+      <main
+        id="main-content"
+        className="mx-auto flex w-full max-w-5xl flex-col gap-6 px-4 pb-24 pt-24"
+      >
         <Button
           type="button"
           variant="ghost"
@@ -76,9 +77,7 @@ export function LeaderboardPageContent() {
           {liveMessage}
         </div>
 
-        {board.error && (
-          <LeaderboardErrorBanner message={board.error} onRetry={board.retry} />
-        )}
+        {board.error && <LeaderboardErrorBanner message={board.error} onRetry={board.retry} />}
 
         <div aria-busy={busy}>
           {board.loading && !board.data ? (

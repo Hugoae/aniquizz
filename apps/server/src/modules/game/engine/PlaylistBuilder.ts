@@ -26,7 +26,8 @@ import { loadPlaylistPoolScope } from '../playlistRecipeService';
 import { resolveWatchedIds } from '../watchedPoolService';
 import type { PlaylistItem, RoomPlayer } from './types';
 
-export type PlaylistAbortReason = 'watched_empty' | 'no_songs' | 'playlist_empty' | 'playlist_missing';
+export type PlaylistAbortReason =
+  'watched_empty' | 'no_songs' | 'playlist_empty' | 'playlist_missing';
 
 export interface BuiltPlaylist {
   playlist: PlaylistItem[];
@@ -104,7 +105,8 @@ export class PlaylistBuilder {
     const needsChoices = (settings.responseType ?? 'mix') !== 'typing';
 
     const startedAt = Date.now();
-    const overlayRestrictsChoices = playlistWatched && Boolean(watchedIds?.length) && !settings.watchedAllowFallback;
+    const overlayRestrictsChoices =
+      playlistWatched && Boolean(watchedIds?.length) && !settings.watchedAllowFallback;
     const [songsResult, choicePool] = await Promise.all([
       getRandomSongs(settings.soundCount || 10, filters),
       needsChoices
@@ -140,7 +142,14 @@ export class PlaylistBuilder {
     const songStartMode = normalizeSongStartMode(settings.songStartMode);
     const playlist = songs
       .map((song) =>
-        this.toPlaylistItem(song, precision, choicePool, guessDuration, needsChoices, songStartMode),
+        this.toPlaylistItem(
+          song,
+          precision,
+          choicePool,
+          guessDuration,
+          needsChoices,
+          songStartMode,
+        ),
       )
       .filter((item) => precision !== 'artist' || item.validAnswers.length > 0);
 

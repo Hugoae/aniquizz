@@ -1,31 +1,37 @@
-import { PrismaClient, Prisma } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
-import pLimit from "p-limit";
+import { PrismaClient, Prisma } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import pLimit from 'p-limit';
 import {
   createR2Client,
   getR2Bucket,
   getR2PublicUrl,
   r2ObjectExists,
   r2UploadFile,
-} from "./lib/r2-client";
-import { compressMp4, downloadToFile, getVideoDurationSeconds, isPlayableMp4, safeUnlink } from "./lib/media";
-import { formatDuration, Progress, Tally } from "./lib/progress";
-import { isPermanentWorkerError, parseSkipVideoKeys } from "./lib/worker-errors";
+} from './lib/r2-client';
+import {
+  compressMp4,
+  downloadToFile,
+  getVideoDurationSeconds,
+  isPlayableMp4,
+  safeUnlink,
+} from './lib/media';
+import { formatDuration, Progress, Tally } from './lib/progress';
+import { isPermanentWorkerError, parseSkipVideoKeys } from './lib/worker-errors';
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 const r2Client = createR2Client();
 const r2Bucket = getR2Bucket();
-const TEMP_DIR = path.join(__dirname, "../data/tmp");
+const TEMP_DIR = path.join(__dirname, '../data/tmp');
 
 const HARD_TIMEOUT = Number(process.env.WORKER_DOWNLOAD_TIMEOUT_MS ?? 60_000);
 const COMPRESS_TIMEOUT = Number(process.env.WORKER_COMPRESS_TIMEOUT_MS ?? 120_000);
 const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY ?? 3);
-const RESET_ERRORS_ON_START = process.env.RESET_ERRORS_ON_START === "true";
-const RETRY_SKIPPED_ON_START = process.env.RETRY_SKIPPED_ON_START === "true";
+const RESET_ERRORS_ON_START = process.env.RESET_ERRORS_ON_START === 'true';
+const RETRY_SKIPPED_ON_START = process.env.RETRY_SKIPPED_ON_START === 'true';
 // Download retry tuning (AnimeThemes' CDN 503s on bursts — retry with backoff).
 const DOWNLOAD_RETRIES = Number(process.env.WORKER_DOWNLOAD_RETRIES ?? 4);
 const RETRY_BASE_MS = Number(process.env.WORKER_RETRY_BASE_MS ?? 2000);
@@ -40,7 +46,7 @@ const SKIP_VIDEO_KEYS = parseSkipVideoKeys(process.env.WORKER_SKIP_VIDEO_KEYS);
 const RETRY_VIDEO_KEYS = parseSkipVideoKeys(process.env.WORKER_RETRY_VIDEO_KEYS);
 
 const pendingWhere: Prisma.SongWhereInput = {
-  downloadStatus: "PENDING",
+  downloadStatus: 'PENDING',
   ...(SOURCE_INCLUDE ? { sourceUrl: { contains: SOURCE_INCLUDE } } : {}),
 };
 
@@ -53,7 +59,11 @@ let progress: Progress | null = null;
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 /** Claim the next PENDING song (atomically flips it to PROCESSING). */
-async function claimNext(): Promise<{ id: number; videoKey: string; sourceUrl: string | null } | null> {
+async function claimNext(): Promise<{
+  id: number;
+  videoKey: string;
+  sourceUrl: string | null;
+} | null> {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const candidate = await tx.song.findFirst({
       where: pendingWhere,
@@ -62,7 +72,7 @@ async function claimNext(): Promise<{ id: number; videoKey: string; sourceUrl: s
     if (!candidate) return null;
     await tx.song.update({
       where: { id: candidate.id },
-      data: { downloadStatus: "PROCESSING" },
+      data: { downloadStatus: 'PROCESSING' },
     });
     return candidate;
   });
@@ -81,7 +91,7 @@ async function processNextSong(): Promise<boolean> {
   const outPath = path.join(TEMP_DIR, fileName);
 
   try {
-    if (!song.sourceUrl) throw new Error("Missing sourceUrl (AnimeThemes download URL)");
+    if (!song.sourceUrl) throw new Error('Missing sourceUrl (AnimeThemes download URL)');
 
     if (await r2ObjectExists(r2Client, r2Bucket, fileName)) {
       const existing = await prisma.song.findUnique({
@@ -91,9 +101,9 @@ async function processNextSong(): Promise<boolean> {
       if ((existing?.duration ?? 0) > 0) {
         await prisma.song.update({
           where: { id: song.id },
-          data: { downloadStatus: "COMPLETED", sourceUrl: getR2PublicUrl(fileName) },
+          data: { downloadStatus: 'COMPLETED', sourceUrl: getR2PublicUrl(fileName) },
         });
-        tally.add("Déjà sur R2");
+        tally.add('Déjà sur R2');
         return true;
       }
       if (progress) {
@@ -105,19 +115,19 @@ async function processNextSong(): Promise<boolean> {
       retries: DOWNLOAD_RETRIES,
       baseDelayMs: RETRY_BASE_MS,
       onRetry: ({ attempt, status, waitMs }) => {
-        tally.add("Retries download");
+        tally.add('Retries download');
         if (progress) {
           progress.line(
-            `⏳ retry ${attempt}/${DOWNLOAD_RETRIES}${status ? ` (${status})` : ""} in ${Math.round(waitMs / 1000)}s | ${fileName}`,
+            `⏳ retry ${attempt}/${DOWNLOAD_RETRIES}${status ? ` (${status})` : ''} in ${Math.round(waitMs / 1000)}s | ${fileName}`,
           );
         }
       },
     });
     await compressMp4(rawPath, outPath, COMPRESS_TIMEOUT);
     const playable = await isPlayableMp4(outPath);
-    if (!playable) throw new Error("Compressed output is not a playable MP4");
+    if (!playable) throw new Error('Compressed output is not a playable MP4');
     const duration = await getVideoDurationSeconds(outPath);
-    if (duration <= 0) throw new Error("Could not probe duration after compression");
+    if (duration <= 0) throw new Error('Could not probe duration after compression');
 
     const buffer = fs.readFileSync(outPath);
     await r2UploadFile(r2Client, r2Bucket, fileName, buffer);
@@ -125,23 +135,23 @@ async function processNextSong(): Promise<boolean> {
     await prisma.song.update({
       where: { id: song.id },
       data: {
-        downloadStatus: "COMPLETED",
+        downloadStatus: 'COMPLETED',
         sourceUrl: getR2PublicUrl(fileName),
         duration,
         errorLog: null,
       },
     });
-    tally.add("Téléchargés");
+    tally.add('Téléchargés');
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : 'Unknown error';
     // If we're stopping, leave the row for the SIGINT handler to re-queue.
     if (!stopping) {
       process.stdout.write(`\n   ❌ ${fileName}: ${message}\n`);
       await prisma.song.update({
         where: { id: song.id },
-        data: { downloadStatus: "ERROR", errorLog: message },
+        data: { downloadStatus: 'ERROR', errorLog: message },
       });
-      tally.add("Erreurs");
+      tally.add('Erreurs');
     }
   } finally {
     inFlight.delete(song.id);
@@ -171,15 +181,15 @@ async function runWorkerPool() {
 /** Re-queue rows stuck in PROCESSING from a previously interrupted run. */
 async function reclaimStale(): Promise<void> {
   const res = await prisma.song.updateMany({
-    where: { downloadStatus: "PROCESSING" },
-    data: { downloadStatus: "PENDING" },
+    where: { downloadStatus: 'PROCESSING' },
+    data: { downloadStatus: 'PENDING' },
   });
   if (res.count) console.log(`♻️  Reclaimed ${res.count} stale PROCESSING song(s) -> PENDING.`);
 }
 
 /** Graceful Ctrl-C: re-queue in-flight songs, clean temp, disconnect. */
 function installSignalHandler(): void {
-  process.on("SIGINT", async () => {
+  process.on('SIGINT', async () => {
     if (stopping) return;
     stopping = true;
     if (progress) progress.done();
@@ -188,11 +198,11 @@ function installSignalHandler(): void {
       if (inFlight.size) {
         await prisma.song.updateMany({
           where: { id: { in: [...inFlight] } },
-          data: { downloadStatus: "PENDING", errorLog: null },
+          data: { downloadStatus: 'PENDING', errorLog: null },
         });
       }
     } catch (e) {
-      console.error("Failed to re-queue in-flight songs:", e);
+      console.error('Failed to re-queue in-flight songs:', e);
     }
     try {
       fs.rmSync(TEMP_DIR, { recursive: true, force: true });
@@ -220,7 +230,7 @@ async function main() {
       // Preserve deliberate operator exclusions during a bulk retry. Target one
       // of those explicitly with WORKER_RETRY_VIDEO_KEYS when needed.
       retryScopes.push({
-        errorLog: { not: "Skipped via WORKER_SKIP_VIDEO_KEYS" },
+        errorLog: { not: 'Skipped via WORKER_SKIP_VIDEO_KEYS' },
       });
     }
     if (RETRY_VIDEO_KEYS.size > 0) {
@@ -229,18 +239,18 @@ async function main() {
 
     const retried = await prisma.song.updateMany({
       where: {
-        downloadStatus: "SKIPPED",
+        downloadStatus: 'SKIPPED',
         ...(SOURCE_INCLUDE ? { sourceUrl: { contains: SOURCE_INCLUDE } } : {}),
         OR: retryScopes,
       },
-      data: { downloadStatus: "PENDING", errorLog: null },
+      data: { downloadStatus: 'PENDING', errorLog: null },
     });
     console.log(`♻️  Reset ${retried.count} SKIPPED song(s) -> PENDING for an explicit retry.`);
   }
 
   if (RESET_ERRORS_ON_START) {
     const errors = await prisma.song.findMany({
-      where: { downloadStatus: "ERROR" },
+      where: { downloadStatus: 'ERROR' },
       select: { id: true, videoKey: true, errorLog: true },
     });
 
@@ -250,7 +260,7 @@ async function main() {
     if (retryable.length) {
       await prisma.song.updateMany({
         where: { id: { in: retryable.map((s) => s.id) } },
-        data: { downloadStatus: "PENDING", errorLog: null },
+        data: { downloadStatus: 'PENDING', errorLog: null },
       });
       console.log(`♻️  Reset ${retryable.length} ERROR song(s) -> PENDING.`);
     }
@@ -258,7 +268,7 @@ async function main() {
     if (permanent.length) {
       await prisma.song.updateMany({
         where: { id: { in: permanent.map((s) => s.id) } },
-        data: { downloadStatus: "SKIPPED" },
+        data: { downloadStatus: 'SKIPPED' },
       });
       console.log(`⏭️  Marked ${permanent.length} permanent ERROR song(s) as SKIPPED.`);
       for (const song of permanent) {
@@ -271,9 +281,9 @@ async function main() {
     const skipped = await prisma.song.updateMany({
       where: {
         videoKey: { in: [...SKIP_VIDEO_KEYS] },
-        downloadStatus: { in: ["PENDING", "ERROR"] },
+        downloadStatus: { in: ['PENDING', 'ERROR'] },
       },
-      data: { downloadStatus: "SKIPPED", errorLog: "Skipped via WORKER_SKIP_VIDEO_KEYS" },
+      data: { downloadStatus: 'SKIPPED', errorLog: 'Skipped via WORKER_SKIP_VIDEO_KEYS' },
     });
     if (skipped.count) {
       console.log(`⏭️  Skipped ${skipped.count} song(s) via WORKER_SKIP_VIDEO_KEYS.`);
@@ -284,7 +294,7 @@ async function main() {
   console.log(`📥 ${initialPending} song(s) to process.\n`);
 
   if (initialPending === 0) {
-    console.log("✨ Nothing to do.");
+    console.log('✨ Nothing to do.');
     await prisma.$disconnect();
     process.exit(0);
   }
@@ -293,11 +303,11 @@ async function main() {
   await runWorkerPool();
   progress.done();
 
-  const finalSuccess = await prisma.song.count({ where: { downloadStatus: "COMPLETED" } });
-  const finalSkipped = await prisma.song.count({ where: { downloadStatus: "SKIPPED" } });
-  const finalErrors = await prisma.song.count({ where: { downloadStatus: "ERROR" } });
+  const finalSuccess = await prisma.song.count({ where: { downloadStatus: 'COMPLETED' } });
+  const finalSkipped = await prisma.song.count({ where: { downloadStatus: 'SKIPPED' } });
+  const finalErrors = await prisma.song.count({ where: { downloadStatus: 'ERROR' } });
 
-  tally.print("📊 BILAN WORKER (ce run)");
+  tally.print('📊 BILAN WORKER (ce run)');
   console.log(`\n✨ JOB DONE in ${formatDuration(progress.elapsedMs)}`);
   console.log(`   ✅ COMPLETED (total DB): ${finalSuccess}`);
   console.log(`   ⏭️  SKIPPED (total DB)   : ${finalSkipped}`);

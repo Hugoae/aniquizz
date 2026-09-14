@@ -82,15 +82,12 @@ const applyAudience = (
   summary: FriendSummary,
   audience: PrivacyAudience,
   viewer: PrivacyViewerKind,
-): FriendSummary =>
-  canViewAudience(audience, viewer) ? summary : hidePresence(summary);
+): FriendSummary => (canViewAudience(audience, viewer) ? summary : hidePresence(summary));
 
 const statusRank = (s: PresenceStatus): number =>
   s === 'in_game' ? 0 : s === 'in_lobby' ? 1 : s === 'online' ? 2 : s === 'hidden' ? 3 : 4;
 
-const loadStatusAudiences = async (
-  ids: string[],
-): Promise<Map<string, PrivacyAudience>> => {
+const loadStatusAudiences = async (ids: string[]): Promise<Map<string, PrivacyAudience>> => {
   if (ids.length === 0) return new Map();
   const rows = await prisma.profile.findMany({
     where: { id: { in: ids } },
@@ -176,11 +173,7 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
   ];
   const audiences = await loadStatusAudiences(otherIds);
   const redact = (summary: FriendSummary, viewer: PrivacyViewerKind) =>
-    applyAudience(
-      summary,
-      audiences.get(summary.id) ?? DEFAULT_ONLINE_STATUS_AUDIENCE,
-      viewer,
-    );
+    applyAudience(summary, audiences.get(summary.id) ?? DEFAULT_ONLINE_STATUS_AUDIENCE, viewer);
   for (let i = 0; i < friends.length; i++) {
     friends[i] = redact(friends[i]!, 'friend');
   }
@@ -192,7 +185,14 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
     (a, b) => statusRank(a.status) - statusRank(b.status) || a.username.localeCompare(b.username),
   );
 
-  return { friends, incoming, outgoing, blocked, blockedByUserIds, allowFriendRequests: me?.allowFriendRequests ?? true };
+  return {
+    friends,
+    incoming,
+    outgoing,
+    blocked,
+    blockedByUserIds,
+    allowFriendRequests: me?.allowFriendRequests ?? true,
+  };
 };
 
 interface RequestOutcome {
@@ -205,10 +205,16 @@ interface RequestOutcome {
 }
 
 /** Resolve a target profile from either an exact username or a userId. */
-const resolveTarget = async (input: { username?: string; userId?: string }): Promise<ProfileLite> => {
+const resolveTarget = async (input: {
+  username?: string;
+  userId?: string;
+}): Promise<ProfileLite> => {
   if (input.userId) {
     if (isBotId(input.userId)) throw new FriendServiceError('Utilisateur introuvable.');
-    const byId = await prisma.profile.findUnique({ where: { id: input.userId }, select: PROFILE_SELECT });
+    const byId = await prisma.profile.findUnique({
+      where: { id: input.userId },
+      select: PROFILE_SELECT,
+    });
     if (!byId) throw new FriendServiceError('Utilisateur introuvable.');
     return byId;
   }
@@ -274,7 +280,8 @@ const sendRequest = async (
         throw new FriendServiceError('Action impossible.');
       }
       // PENDING:
-      if (existing.requesterId === requesterId) throw new FriendServiceError('Demande déjà envoyée.');
+      if (existing.requesterId === requesterId)
+        throw new FriendServiceError('Demande déjà envoyée.');
       // The target already sent us a request → accept it (mutual add).
       await tx.friendship.update({ where: { id: existing.id }, data: { status: 'ACCEPTED' } });
       return { type: 'accepted', other: target, requester };

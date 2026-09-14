@@ -19,7 +19,6 @@ const baseConfig: RoomConfig = {
   password: '',
   maxPlayers: 1,
   roomName: 'Test',
-  name: 'Test',
   hostName: 'Host',
   hostAvatar: 'player1',
 };
@@ -253,7 +252,10 @@ describe('PlaylistPicker', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /décennie/i })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /décennie/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(screen.getByRole('button', { name: /shonen/i })).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByRole('button', { name: /décennie/i }));
     expect(update).toHaveBeenCalledWith({

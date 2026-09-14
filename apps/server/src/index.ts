@@ -55,11 +55,10 @@ async function main() {
       logger.warn('Catalogue cache warm-up failed (non-fatal)', 'Server', error);
     });
     startDailyHorizonJob();
-
   } catch (error) {
     captureError(error, { context: 'Server', source: 'bootstrap' });
     process.exit(1);
   }
 }
 
-main();
+void main();

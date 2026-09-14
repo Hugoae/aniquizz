@@ -43,10 +43,16 @@ function formatChallengeDate(isoDay: string): string {
   });
 }
 
-export function DailyLanding({ today, onStart, onViewResult, onLogin, viewerId }: DailyLandingProps) {
+export function DailyLanding({
+  today,
+  onStart,
+  onViewResult,
+  onLogin,
+  viewerId,
+}: DailyLandingProps) {
   const [confirm, setConfirm] = useState(false);
-  const tracks = today.result?.tracks
-    ?? Array.from({ length: today.roundCount }, () => 'empty' as const);
+  const tracks =
+    today.result?.tracks ?? Array.from({ length: today.roundCount }, () => 'empty' as const);
   const done = today.status === 'completed';
   const settling = today.status === 'in_progress';
   const cta =
@@ -78,7 +84,9 @@ export function DailyLanding({ today, onStart, onViewResult, onLogin, viewerId }
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-4 pb-4 text-center lg:overflow-hidden">
         <div className="flex w-full max-w-3xl flex-col items-center gap-6 md:gap-8">
           <div className="space-y-3">
-            <p className="text-sm text-muted-foreground md:text-base">{formatChallengeDate(today.challengeDate)}</p>
+            <p className="text-sm text-muted-foreground md:text-base">
+              {formatChallengeDate(today.challengeDate)}
+            </p>
             <h1 className="flex flex-wrap items-center justify-center gap-3 text-5xl font-bold md:gap-4 md:text-6xl">
               {DAILY_COPY.titleLead} <span className="gradient-text">{DAILY_COPY.titleAccent}</span>
               {today.challengeNumber != null && (
@@ -88,7 +96,12 @@ export function DailyLanding({ today, onStart, onViewResult, onLogin, viewerId }
               )}
             </h1>
           </div>
-          <DailyRuleChips className="justify-center" size="lg" stacked guessSeconds={today.guessSeconds} />
+          <DailyRuleChips
+            className="justify-center"
+            size="lg"
+            stacked
+            guessSeconds={today.guessSeconds}
+          />
           <DailyTracks tracks={today.result?.tracks ?? tracks} size="xl" />
           {today.streak && <DailyStreakBadge current={today.streak.current} />}
           <p className="text-base text-muted-foreground" aria-live="polite">

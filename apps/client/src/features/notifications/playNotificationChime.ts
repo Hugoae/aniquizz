@@ -4,7 +4,9 @@ let sharedCtx: AudioContext | null = null;
 
 export function playNotificationChime(volumePercent: number): void {
   try {
-    const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const Ctor =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return;
     if (!sharedCtx) sharedCtx = new Ctor();
     if (sharedCtx.state === 'suspended') void sharedCtx.resume();

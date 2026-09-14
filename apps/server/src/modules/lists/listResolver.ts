@@ -6,10 +6,7 @@ import {
 } from '@aniquizz/shared';
 import { resolveAnilistList } from '../anilist/anilistService';
 import { anilistListGate } from '../anilist/anilistListGate';
-import {
-  invalidateMalUserCache,
-  resolveMalList,
-} from '../mal/malService';
+import { invalidateMalUserCache, resolveMalList } from '../mal/malService';
 
 export interface WatchedListSources {
   anilistUsername?: string | null;

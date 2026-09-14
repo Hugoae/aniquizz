@@ -38,7 +38,10 @@ export const attemptInclude = {
 export const playableRounds = (rounds: DailyRoundRow[]): DailyRoundRow[] =>
   rounds.filter((round) => !round.voided).sort((a, b) => a.position - b.position);
 
-export const unansweredPlayable = (rounds: DailyRoundRow[], answers: DailyAnswerRow[]): DailyRoundRow | null => {
+export const unansweredPlayable = (
+  rounds: DailyRoundRow[],
+  answers: DailyAnswerRow[],
+): DailyRoundRow | null => {
   const answered = new Set(answers.map((answer) => answer.roundId));
   return playableRounds(rounds).find((round) => !answered.has(round.id)) ?? null;
 };
@@ -164,7 +167,12 @@ export const finishAttempt = async (
   return fresh;
 };
 
-export const writeUnanswered = async (attemptId: string, roundId: string, responseMs: number, now: Date) => {
+export const writeUnanswered = async (
+  attemptId: string,
+  roundId: string,
+  responseMs: number,
+  now: Date,
+) => {
   try {
     await prisma.dailyAttemptAnswer.create({
       data: {
@@ -177,7 +185,8 @@ export const writeUnanswered = async (attemptId: string, roundId: string, respon
       },
     });
   } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+      throw error;
   }
 };
 

@@ -31,8 +31,11 @@ export function isRevealAccentColor(value: string | null | undefined): value is 
   return !!value && /^#[0-9A-Fa-f]{6}$/.test(value);
 }
 
-export function formatRevealSeasonYear(season?: string | null, year?: number | null): string | null {
-  const seasonLabel = season ? SEASON_LABELS[season.toUpperCase()] ?? season : null;
+export function formatRevealSeasonYear(
+  season?: string | null,
+  year?: number | null,
+): string | null {
+  const seasonLabel = season ? (SEASON_LABELS[season.toUpperCase()] ?? season) : null;
   if (seasonLabel && year) return `${seasonLabel} ${year}`;
   if (year) return String(year);
   if (seasonLabel) return seasonLabel;

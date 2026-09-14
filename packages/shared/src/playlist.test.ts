@@ -25,7 +25,9 @@ import {
   type PlaylistRecipe,
 } from './playlist';
 
-const baseSong = (overrides: Partial<PlaylistMembershipSong> & { id: number }): PlaylistMembershipSong => {
+const baseSong = (
+  overrides: Partial<PlaylistMembershipSong> & { id: number },
+): PlaylistMembershipSong => {
   const animeOverrides = overrides.anime;
   return {
     downloadStatus: 'COMPLETED',
@@ -86,7 +88,11 @@ describe('songMatchesRecipeDimensions', () => {
       songMatchesRecipeDimensions(song, { genres: ['Action'], tags: ['Mecha'], formats: ['TV'] }),
     ).toBe(true);
     expect(
-      songMatchesRecipeDimensions(song, { genres: ['Action'], tags: ['Mecha'], formats: ['MOVIE'] }),
+      songMatchesRecipeDimensions(song, {
+        genres: ['Action'],
+        tags: ['Mecha'],
+        formats: ['MOVIE'],
+      }),
     ).toBe(false);
   });
 });
@@ -112,9 +118,9 @@ describe('resolveRecipeMembership', () => {
   });
 
   it('unions includeSongIds even when dimensions would exclude the song', () => {
-    expect(resolveRecipeMembership(catalogue, { tags: ['Shounen'], includeSongIds: [13] })).toEqual([
-      10, 13,
-    ]);
+    expect(resolveRecipeMembership(catalogue, { tags: ['Shounen'], includeSongIds: [13] })).toEqual(
+      [10, 13],
+    );
   });
 
   it('does not include SKIPPED songs even via includeSongIds', () => {
@@ -168,8 +174,18 @@ describe('playlistChipsFromRecipe', () => {
 describe('intersectPlaylistSongIds', () => {
   it('intersects several snapshots and keeps a single set unchanged', () => {
     expect(intersectPlaylistSongIds([[1, 2, 3]])).toEqual([1, 2, 3]);
-    expect(intersectPlaylistSongIds([[1, 2, 3, 2], [2, 9, 3]])).toEqual([2, 3]);
-    expect(intersectPlaylistSongIds([[1, 2], [3, 4]])).toEqual([]);
+    expect(
+      intersectPlaylistSongIds([
+        [1, 2, 3, 2],
+        [2, 9, 3],
+      ]),
+    ).toEqual([2, 3]);
+    expect(
+      intersectPlaylistSongIds([
+        [1, 2],
+        [3, 4],
+      ]),
+    ).toEqual([]);
     expect(intersectPlaylistSongIds([])).toEqual([]);
   });
 });
@@ -202,14 +218,16 @@ describe('recipesAreEqual', () => {
   });
 
   it('ignores array order inside a dimension', () => {
-    expect(recipesAreEqual({ tags: ['Mecha', 'Shounen'] }, { tags: ['Shounen', 'Mecha'] })).toBe(true);
+    expect(recipesAreEqual({ tags: ['Mecha', 'Shounen'] }, { tags: ['Shounen', 'Mecha'] })).toBe(
+      true,
+    );
     expect(recipesAreEqual({ includeSongIds: [2, 1] }, { includeSongIds: [1, 2] })).toBe(true);
   });
 
   it('detects a year bound change', () => {
-    expect(recipesAreEqual({ yearMin: 2010, yearMax: 2019 }, { yearMin: 2010, yearMax: 2015 })).toBe(
-      false,
-    );
+    expect(
+      recipesAreEqual({ yearMin: 2010, yearMax: 2019 }, { yearMin: 2010, yearMax: 2015 }),
+    ).toBe(false);
   });
 });
 
@@ -302,7 +320,11 @@ describe('matchPlaylistPersistence', () => {
 
   it('clears both ids for a non-playlist source', () => {
     expect(
-      matchPlaylistPersistence({ soundSelection: 'random', playlistId: genre, decadePlaylistId: decade }),
+      matchPlaylistPersistence({
+        soundSelection: 'random',
+        playlistId: genre,
+        decadePlaylistId: decade,
+      }),
     ).toEqual({ playlistId: null, decadePlaylistId: null });
   });
 });
@@ -323,10 +345,7 @@ describe('publishedPlaylistSourceError', () => {
       publishedPlaylistSourceError(['a'], [{ id: 'a', isPublished: true, snapshotCount: 0 }]),
     ).toBe(PLAYLIST_UNAVAILABLE_REASON);
     expect(
-      publishedPlaylistSourceError(
-        ['a', 'b'],
-        [{ id: 'a', isPublished: true, snapshotCount: 12 }],
-      ),
+      publishedPlaylistSourceError(['a', 'b'], [{ id: 'a', isPublished: true, snapshotCount: 12 }]),
     ).toBe(PLAYLIST_UNAVAILABLE_REASON);
   });
 });

@@ -4,17 +4,17 @@ Reference for moderators and developers. Server enforcement is authoritative; th
 
 ## Roles
 
-| Action | MODERATOR | ADMIN |
-|--------|:---------:|:-----:|
-| View users / rooms / stats | ✅ | ✅ |
-| Mute / unmute | ✅ | ✅ |
-| Ban / unban | ✅ | ✅ |
-| Disconnect (kick, no sanction) | ✅ | ✅ |
-| End / close / kick from room | ✅ | ✅ |
-| Change user role | ❌ | ✅ |
-| Reset user stats | ❌ | ✅ |
-| Catalogue create/delete | ❌ | ✅ |
-| Dev tools | ❌ | ✅ |
+| Action                         | MODERATOR | ADMIN |
+| ------------------------------ | :-------: | :---: |
+| View users / rooms / stats     |    ✅     |  ✅   |
+| Mute / unmute                  |    ✅     |  ✅   |
+| Ban / unban                    |    ✅     |  ✅   |
+| Disconnect (kick, no sanction) |    ✅     |  ✅   |
+| End / close / kick from room   |    ✅     |  ✅   |
+| Change user role               |    ❌     |  ✅   |
+| Reset user stats               |    ❌     |  ✅   |
+| Catalogue create/delete        |    ❌     |  ✅   |
+| Dev tools                      |    ❌     |  ✅   |
 
 ## Sanctions
 
@@ -48,11 +48,11 @@ Presets in the admin UI map to minutes (`1h`, `12h`, `24h`, `1 week`, `1 month`,
 
 ## Related code
 
-| Layer | Path |
-|-------|------|
-| Shared event | `packages/shared/src/events.ts` → `profile:sanction_updated` |
-| Admin routes | `apps/server/src/modules/admin/adminRoutes.ts` |
-| Chat guard | `apps/server/src/modules/chat/chatHandlers.ts` |
-| Handshake guard | `apps/server/src/core/authMiddleware.ts` |
-| Admin UI | `apps/client/src/features/admin/components/UsersPanel.tsx`, `AdminUserRow.tsx` |
-| Player badge | `apps/client/src/features/auth/components/SuspensionBadge.tsx` |
+| Layer           | Path                                                                           |
+| --------------- | ------------------------------------------------------------------------------ |
+| Shared event    | `packages/shared/src/events.ts` → `profile:sanction_updated`                   |
+| Admin routes    | `apps/server/src/modules/admin/adminRoutes.ts`                                 |
+| Chat guard      | `apps/server/src/modules/chat/chatHandlers.ts`                                 |
+| Handshake guard | `apps/server/src/core/authMiddleware.ts`                                       |
+| Admin UI        | `apps/client/src/features/admin/components/UsersPanel.tsx`, `AdminUserRow.tsx` |
+| Player badge    | `apps/client/src/features/auth/components/SuspensionBadge.tsx`                 |

@@ -1,4 +1,9 @@
-import { DAILY_GUESS_MS, dailyPlayTracks, type DailySafeRoundDto, type DailyTrackState } from '@aniquizz/shared';
+import {
+  DAILY_GUESS_MS,
+  dailyPlayTracks,
+  type DailySafeRoundDto,
+  type DailyTrackState,
+} from '@aniquizz/shared';
 
 export function endsAtMs(iso: string): number {
   const parsed = Date.parse(iso);

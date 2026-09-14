@@ -231,8 +231,16 @@ export function PlaylistsPanel() {
 
       <section className="space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <Input placeholder="Slug" value={draft.slug} onChange={(e) => patchDraft('slug', e.target.value)} />
-          <Input placeholder="Nom" value={draft.name} onChange={(e) => patchDraft('name', e.target.value)} />
+          <Input
+            placeholder="Slug"
+            value={draft.slug}
+            onChange={(e) => patchDraft('slug', e.target.value)}
+          />
+          <Input
+            placeholder="Nom"
+            value={draft.name}
+            onChange={(e) => patchDraft('name', e.target.value)}
+          />
           <Input
             placeholder="Description"
             value={draft.description}
@@ -258,7 +266,8 @@ export function PlaylistsPanel() {
           />
         </div>
         <label className="block text-xs font-medium text-muted-foreground">
-          Recette JSON (genres / tags / yearMin / yearMax / formats / includeSongIds / excludeSongIds)
+          Recette JSON (genres / tags / yearMin / yearMax / formats / includeSongIds /
+          excludeSongIds)
           <textarea
             className={cn(controlClass, 'mt-1 min-h-[180px] w-full py-2 font-mono text-xs')}
             value={draft.recipeText}
@@ -266,7 +275,8 @@ export function PlaylistsPanel() {
           />
         </label>
         <p className="text-[11px] text-muted-foreground">
-          L&apos;année est celle de l&apos;entrée du son (`seasonYear`), pas l&apos;origine de la franchise.
+          L&apos;année est celle de l&apos;entrée du son (`seasonYear`), pas l&apos;origine de la
+          franchise.
         </p>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => void runPreview()} disabled={busy}>
@@ -275,24 +285,38 @@ export function PlaylistsPanel() {
           <Button onClick={() => void save()} disabled={busy} className="gap-2">
             <Save className="h-4 w-4" /> Enregistrer
           </Button>
-          <Button variant="outline" onClick={() => void publish()} disabled={busy || !selectedId} className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => void publish()}
+            disabled={busy || !selectedId}
+            className="gap-2"
+          >
             <Upload className="h-4 w-4" /> Publier
           </Button>
           <Button variant="outline" onClick={() => void refresh()} disabled={busy || !selectedId}>
             Rafraîchir snapshot
           </Button>
-          <Button variant="destructive" onClick={() => void remove()} disabled={busy || !selectedId} className="gap-2">
+          <Button
+            variant="destructive"
+            onClick={() => void remove()}
+            disabled={busy || !selectedId}
+            className="gap-2"
+          >
             <Trash2 className="h-4 w-4" /> Supprimer
           </Button>
         </div>
         {preview && (
           <div className="rounded-xl border border-border/60 bg-card/40 p-3 text-sm">
             <p>
-              <b>{preview.songCount}</b> sons jouables (OP {preview.typeBreakdown.OP} · ED {preview.typeBreakdown.ED})
+              <b>{preview.songCount}</b> sons jouables (OP {preview.typeBreakdown.OP} · ED{' '}
+              {preview.typeBreakdown.ED})
             </p>
             <p className="mt-2 text-xs text-muted-foreground">
               Années :{' '}
-              {preview.yearBreakdown.slice(0, 12).map((y) => `${y.year} (${y.count})`).join(', ') || '—'}
+              {preview.yearBreakdown
+                .slice(0, 12)
+                .map((y) => `${y.year} (${y.count})`)
+                .join(', ') || '—'}
               {preview.yearBreakdown.length > 12 ? '…' : ''}
             </p>
           </div>

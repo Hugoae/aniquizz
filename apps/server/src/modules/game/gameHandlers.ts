@@ -1,4 +1,14 @@
-import { getFuzzySuggestions, hasPlaylistSource, hasWatchedListLink, normalizePrecision, resolvePoolQueryFilters, type AnimeSearchInput, type ArtistSearchInput } from '@aniquizz/shared';
+import {
+  answerInputSchema,
+  getFuzzySuggestions,
+  hasPlaylistSource,
+  hasWatchedListLink,
+  normalizePrecision,
+  resolvePoolQueryFilters,
+  roomIdInputSchema,
+  type AnimeSearchInput,
+  type ArtistSearchInput,
+} from '@aniquizz/shared';
 import { getWatchedPoolStatsForPlayers } from './watchedPoolService';
 import {
   computePlaylistPoolStats,
@@ -22,6 +32,7 @@ import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import { captureError } from '../../utils/errorReporter';
 import { guard, guardSilent, requireAuth, RATE_LIMITS } from '../../core/guards';
+import { parseSocketPayload } from '../../core/parseSocketPayload';
 
 export const registerGameHandlers = (
   io: TypedServer,
@@ -31,7 +42,10 @@ export const registerGameHandlers = (
   // requireAuth/guard guarantee a non-null userId before these run.
   const uid = (): string => socket.data.userId as string;
 
-  const startGame = async ({ roomId }: { roomId: string }) => {
+  const startGame = async (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    const { roomId } = parsed;
     const room = gameManager.getRoom(roomId);
     if (!room) return;
     const check = room.canStartMatch(uid());
@@ -42,7 +56,9 @@ export const registerGameHandlers = (
     const settingsAtValidation = room.settings;
     const sourceCheck = await validateMusicSourceStart(room);
     if (!sourceCheck.ok) {
-      socket.emit('error', { message: sourceCheck.reason ?? 'Liste insuffisante pour cette source.' });
+      socket.emit('error', {
+        message: sourceCheck.reason ?? 'Liste insuffisante pour cette source.',
+      });
       return;
     }
     if (room.settings !== settingsAtValidation) {
@@ -54,26 +70,29 @@ export const registerGameHandlers = (
     void room.startMatch(() => gameManager.broadcastRoomList());
   };
 
-  const submitAnswer = ({
-    roomId,
-    answer,
-    answerType,
-    revealAfterAnswer,
-  }: {
+  const submitAnswer = (payload: {
     roomId: string;
     answer: string;
     answerType: 'typing' | 'qcm' | 'duo';
     revealAfterAnswer?: boolean;
   }) => {
-    gameManager.getRoom(roomId)?.handleAnswer(uid(), answer, answerType, { revealAfterAnswer });
+    const parsed = parseSocketPayload(socket, answerInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.handleAnswer(uid(), parsed.answer, parsed.answerType, {
+      revealAfterAnswer: parsed.revealAfterAnswer,
+    });
   };
 
-  const votePause = ({ roomId }: { roomId: string }) => {
-    gameManager.getRoom(roomId)?.votePause(uid());
+  const votePause = (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.votePause(uid());
   };
 
-  const voteSkip = ({ roomId }: { roomId: string }) => {
-    gameManager.getRoom(roomId)?.voteSkip(uid());
+  const voteSkip = (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.voteSkip(uid());
   };
 
   const skipCurrentRound = ({ roomId }: { roomId: string }) => {
@@ -383,8 +402,20 @@ export const registerGameHandlers = (
     guardSilent(socket, 'playlist:get_pool_stats', RATE_LIMITS.poolStats, getPlaylistPoolStats),
   );
   socket.on('catalogue:get_pool_stats', requireAuth(socket, getCataloguePoolStats));
-  socket.on('anime:search', guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch));
-  socket.on('anime:get_all', guardSilent(socket, 'anime:get_all', RATE_LIMITS.animeCatalogue, sendAllAnimeNames));
-  socket.on('artist:search', guardSilent(socket, 'artist:search', RATE_LIMITS.animeSearch, artistSearch));
-  socket.on('artist:get_all', guardSilent(socket, 'artist:get_all', RATE_LIMITS.animeCatalogue, sendAllArtistNames));
+  socket.on(
+    'anime:search',
+    guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch),
+  );
+  socket.on(
+    'anime:get_all',
+    guardSilent(socket, 'anime:get_all', RATE_LIMITS.animeCatalogue, sendAllAnimeNames),
+  );
+  socket.on(
+    'artist:search',
+    guardSilent(socket, 'artist:search', RATE_LIMITS.animeSearch, artistSearch),
+  );
+  socket.on(
+    'artist:get_all',
+    guardSilent(socket, 'artist:get_all', RATE_LIMITS.animeCatalogue, sendAllArtistNames),
+  );
 };

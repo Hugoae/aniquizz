@@ -35,7 +35,10 @@ describe('resolveEffectiveAnswerType', () => {
 
   it('clamps mix typing to qcm when the string is an offered choice', () => {
     expect(
-      resolveEffectiveAnswerType('typing', 'mix', 'Naruto', { choices: qcmChoices, duo: duoChoices }),
+      resolveEffectiveAnswerType('typing', 'mix', 'Naruto', {
+        choices: qcmChoices,
+        duo: duoChoices,
+      }),
     ).toBe('qcm');
   });
 

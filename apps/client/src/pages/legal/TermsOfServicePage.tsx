@@ -13,9 +13,9 @@ export default function TermsOfServicePage() {
 
       <h2>1. Objet</h2>
       <p>
-        Les présentes conditions régissent l&apos;accès et l&apos;utilisation d&apos;AniQuizz, jeu de
-        blind test anime en solo et multijoueur. En créant un compte ou en utilisant le service, vous
-        acceptez ces conditions.
+        Les présentes conditions régissent l&apos;accès et l&apos;utilisation d&apos;AniQuizz, jeu
+        de blind test anime en solo et multijoueur. En créant un compte ou en utilisant le service,
+        vous acceptez ces conditions.
       </p>
 
       <h2>2. Compte utilisateur</h2>
@@ -34,24 +34,24 @@ export default function TermsOfServicePage() {
         <li>Scraper massivement le catalogue ou surcharger l&apos;infrastructure.</li>
       </ul>
       <p>
-        La modération peut appliquer mute, ban temporaire ou permanent, et déconnexion immédiate en cas
-        de violation grave.
+        La modération peut appliquer mute, ban temporaire ou permanent, et déconnexion immédiate en
+        cas de violation grave.
       </p>
 
       <h2>4. Propriété intellectuelle</h2>
       <p>
         AniQuizz, son interface et son code sont protégés. Les extraits audio/vidéo proviennent de
-        sources tierces (AnimeThemes, etc.) et restent la propriété de leurs ayants droit ; le service
-        est un outil de quiz à but non commercial / éducatif culturel. Les titres d&apos;anime et
-        métadonnées proviennent notamment d&apos;AniList.
+        sources tierces (AnimeThemes, etc.) et restent la propriété de leurs ayants droit ; le
+        service est un outil de quiz à but non commercial / éducatif culturel. Les titres
+        d&apos;anime et métadonnées proviennent notamment d&apos;AniList.
       </p>
 
       <h2>5. Soutien volontaire</h2>
       <p>
-        AniQuizz peut proposer un lien vers Ko-fi permettant de soutenir volontairement le projet par
-        une contribution financière libre et ponctuelle. Cette contribution est facultative, sans
-        contrepartie, et n&apos;accorde aucun avantage, contenu ou accès particulier. AniQuizz reste
-        accessible gratuitement et sans publicité.
+        AniQuizz peut proposer un lien vers Ko-fi permettant de soutenir volontairement le projet
+        par une contribution financière libre et ponctuelle. Cette contribution est facultative,
+        sans contrepartie, et n&apos;accorde aucun avantage, contenu ou accès particulier. AniQuizz
+        reste accessible gratuitement et sans publicité.
       </p>
       <p>
         Les paiements sont traités hors d&apos;AniQuizz par Ko-fi et PayPal, selon leurs propres
@@ -67,8 +67,9 @@ export default function TermsOfServicePage() {
 
       <h2>7. Limitation de responsabilité</h2>
       <p>
-        Dans les limites autorisées par la loi, AniQuizz ne saurait être tenu responsable des dommages
-        indirects liés à l&apos;utilisation du service. Aucun gain financier n&apos;est garanti.
+        Dans les limites autorisées par la loi, AniQuizz ne saurait être tenu responsable des
+        dommages indirects liés à l&apos;utilisation du service. Aucun gain financier n&apos;est
+        garanti.
       </p>
 
       <h2>8. Résiliation</h2>
@@ -87,7 +88,11 @@ export default function TermsOfServicePage() {
       <h2>10. Contact</h2>
       <p>
         Questions :{' '}
-        <a href="https://github.com/Hugoae/aniquizz/issues" target="_blank" rel="noopener noreferrer">
+        <a
+          href="https://github.com/Hugoae/aniquizz/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           GitHub Issues — Hugoae/aniquizz
         </a>
         .

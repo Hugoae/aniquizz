@@ -6,7 +6,9 @@ export function activeMatchPlayers(players: GamePlayer[]): GamePlayer[] {
 }
 
 /** Display label — lobby payloads use `name`, wire payloads use `username`. */
-export function playerDisplayName(p: Pick<GamePlayer, 'id' | 'username'> & { name?: string }): string {
+export function playerDisplayName(
+  p: Pick<GamePlayer, 'id' | 'username'> & { name?: string },
+): string {
   return p.username || p.name || `Joueur ${String(p.id).substring(0, 4)}`;
 }
 

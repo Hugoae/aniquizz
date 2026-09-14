@@ -16,9 +16,13 @@ export default function PrivacyPolicyPage() {
 
       <h2>1. Responsable du traitement</h2>
       <p>
-        Le service AniQuizz est édité par l&apos;équipe AniQuizz. Pour toute question relative à
-        vos données personnelles, contactez-nous via{' '}
-        <a href="https://github.com/Hugoae/aniquizz/issues" target="_blank" rel="noopener noreferrer">
+        Le service AniQuizz est édité par l&apos;équipe AniQuizz. Pour toute question relative à vos
+        données personnelles, contactez-nous via{' '}
+        <a
+          href="https://github.com/Hugoae/aniquizz/issues"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           GitHub Issues
         </a>{' '}
         (projet Hugoae/aniquizz).
@@ -31,8 +35,8 @@ export default function PrivacyPolicyPage() {
           passe (hashé par Supabase Auth).
         </li>
         <li>
-          <strong>Profil de jeu :</strong> XP, niveau, statistiques, historique de parties, médailles
-          solo, préférences de jeu.
+          <strong>Profil de jeu :</strong> XP, niveau, statistiques, historique de parties,
+          médailles solo, préférences de jeu.
         </li>
         <li>
           <strong>Social :</strong> liste d&apos;amis, demandes d&apos;amitié, statut de blocage,
@@ -40,7 +44,8 @@ export default function PrivacyPolicyPage() {
         </li>
         <li>
           <strong>Listes AniList / MyAnimeList (optionnel) :</strong> pseudos liés pour filtrer le
-          mode « Ma liste » — nous ne stockons pas vos mots de passe ni la liste complète des animes.
+          mode « Ma liste » — nous ne stockons pas vos mots de passe ni la liste complète des
+          animes.
         </li>
         <li>
           <strong>Soutien Ko-fi (optionnel) :</strong> si vous choisissez de soutenir le projet,
@@ -56,7 +61,9 @@ export default function PrivacyPolicyPage() {
 
       <h2>3. Finalités et bases légales</h2>
       <ul>
-        <li>Fourniture du service et exécution du contrat (création de compte, parties, classements).</li>
+        <li>
+          Fourniture du service et exécution du contrat (création de compte, parties, classements).
+        </li>
         <li>Intérêt légitime : sécurité, anti-triche, modération, amélioration du service.</li>
         <li>Consentement : cookies d&apos;analyse non essentiels (voir section Cookies).</li>
         <li>Gestion des soutiens volontaires et respect des obligations comptables et fiscales.</li>
@@ -66,8 +73,8 @@ export default function PrivacyPolicyPage() {
       <p>Vos données peuvent être traitées par :</p>
       <ul>
         <li>
-          <strong>Supabase</strong> — authentification, base PostgreSQL, stockage avatars (UE / USA selon
-          projet).
+          <strong>Supabase</strong> — authentification, base PostgreSQL, stockage avatars (UE / USA
+          selon projet).
         </li>
         <li>
           <strong>Render</strong> — API et temps réel (serveur Node.js).
@@ -97,37 +104,37 @@ export default function PrivacyPolicyPage() {
 
       <h2>5. Durée de conservation</h2>
       <p>
-        Les données de compte et de jeu sont conservées tant que votre compte est actif. Les journaux
-        techniques sont conservés pour une durée limitée (généralement 30 à 90 jours), sauf obligation
-        légale ou enquête de modération. Les justificatifs liés aux soutiens sont conservés pendant la
-        durée requise par les obligations comptables et fiscales applicables.
+        Les données de compte et de jeu sont conservées tant que votre compte est actif. Les
+        journaux techniques sont conservés pour une durée limitée (généralement 30 à 90 jours), sauf
+        obligation légale ou enquête de modération. Les justificatifs liés aux soutiens sont
+        conservés pendant la durée requise par les obligations comptables et fiscales applicables.
       </p>
 
       <h2>6. Vos droits (RGPD)</h2>
       <p>
-        Vous disposez des droits d&apos;accès, de rectification, d&apos;effacement, de limitation, de
-        portabilité et d&apos;opposition. Pour les exercer, contactez-nous via GitHub Issues. Vous
-        pouvez également introduire une réclamation auprès de la CNIL (
+        Vous disposez des droits d&apos;accès, de rectification, d&apos;effacement, de limitation,
+        de portabilité et d&apos;opposition. Pour les exercer, contactez-nous via GitHub Issues.
+        Vous pouvez également introduire une réclamation auprès de la CNIL (
         <a href="https://www.cnil.fr" target="_blank" rel="noopener noreferrer">
           www.cnil.fr
         </a>
         ).
       </p>
       <p>
-        La suppression de compte (« droit à l&apos;effacement ») est disponible depuis votre profil :
-        menu <strong>⋮</strong> en haut à droite → <strong>Supprimer mon compte</strong> (confirmation
-        par pseudo et mot de passe).
+        La suppression de compte (« droit à l&apos;effacement ») est disponible depuis votre profil
+        : menu <strong>⋮</strong> en haut à droite → <strong>Supprimer mon compte</strong>{' '}
+        (confirmation par pseudo et mot de passe).
       </p>
 
       <h2>7. Cookies</h2>
       <p>
-        <strong>Nécessaires :</strong> session Supabase Auth, préférences essentielles au fonctionnement
-        du jeu — toujours actifs.
+        <strong>Nécessaires :</strong> session Supabase Auth, préférences essentielles au
+        fonctionnement du jeu — toujours actifs.
       </p>
       <p>
         <strong>Analyse (optionnels) :</strong> mesure d&apos;audience — uniquement si vous les
-        acceptez via le bandeau ou les paramètres. Aucun script d&apos;analyse tiers n&apos;est chargé
-        avant votre consentement.
+        acceptez via le bandeau ou les paramètres. Aucun script d&apos;analyse tiers n&apos;est
+        chargé avant votre consentement.
       </p>
       <p>
         Vous pouvez modifier votre choix à tout moment dans <strong>Paramètres → Cookies</strong>.
@@ -135,8 +142,9 @@ export default function PrivacyPolicyPage() {
 
       <h2>8. Sécurité</h2>
       <p>
-        Nous appliquons des mesures techniques et organisationnelles : authentification JWT, politiques
-        RLS sur la base de données, chiffrement HTTPS, modération et journalisation sans secrets.
+        Nous appliquons des mesures techniques et organisationnelles : authentification JWT,
+        politiques RLS sur la base de données, chiffrement HTTPS, modération et journalisation sans
+        secrets.
       </p>
 
       <h2>9. Mineurs</h2>

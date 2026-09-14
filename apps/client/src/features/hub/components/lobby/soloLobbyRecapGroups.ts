@@ -1,7 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import { Clock, Eye, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
-import { GAME_TYPE_LABELS, getPrecisionChipLabel, normalizeVideoMode, VIDEO_MODE_LABELS } from '@aniquizz/shared';
+import {
+  GAME_TYPE_LABELS,
+  getPrecisionChipLabel,
+  normalizeVideoMode,
+  VIDEO_MODE_LABELS,
+} from '@aniquizz/shared';
 import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { SOUND_TYPES } from '@/features/hub/components/config/formOptions';
@@ -28,7 +33,15 @@ const SOURCE_LABELS: Record<GameConfig['soundSelection'], string> = {
 
 function soundTypeChips(types: string[] | undefined): SettingChipSpec[] {
   if (!types?.length) {
-    return [{ key: 'sound-types-empty', icon: ListMusic, label: '', value: '—', className: SETTING_CHIP_NEUTRAL }];
+    return [
+      {
+        key: 'sound-types-empty',
+        icon: ListMusic,
+        label: '',
+        value: '—',
+        className: SETTING_CHIP_NEUTRAL,
+      },
+    ];
   }
 
   return types
@@ -114,7 +127,7 @@ export function buildSoloLobbyRecapGroups(
           label: '',
           value:
             config.soundSelection === 'playlist'
-              ? (playlistName?.trim() || SOURCE_LABELS.playlist)
+              ? playlistName?.trim() || SOURCE_LABELS.playlist
               : SOURCE_LABELS[config.soundSelection],
           className: SETTING_CHIP_NEUTRAL,
         },

@@ -87,7 +87,9 @@ export function stripExcludedFromFranchiseAnimes<T extends { id: number }>(
 }
 
 /** Remove excluded songs from manual-export / step-2 anime nodes. */
-export function stripExcludedSongsFromAnime<T extends { id?: number; songs?: Array<{ id?: number; videoKey?: string }> }>(
+export function stripExcludedSongsFromAnime<
+  T extends { id?: number; songs?: Array<{ id?: number; videoKey?: string }> },
+>(
   anime: T,
   exclusions: PipelineExclusions,
   resolveVideoKey?: (song: NonNullable<T['songs']>[number]) => string | null,

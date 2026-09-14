@@ -8,22 +8,22 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
 
 ## Glossary
 
-| Term | Definition | Where |
-|------|------------|-------|
-| **Franchise / Anime / Song** | Catalogue hierarchy: a Franchise groups Animes (seasons); a Song is one opening/ending with a video. | `prisma/schema.prisma` |
-| **Precision** | Gameplay answer target: `franchise` / `anime` / `artist`. Artist uses `Song.artist` + `artistNames`. | schema + shared |
-| **difficulty** | Per-song grade derived from AniList popularity (step 1); feeds medal thresholds. | `scripts/1_fetch_anilist.ts` |
-| **`videoKey`** | R2 object key for a song's MP4 (the canonical media identifier). | schema, `lib/r2-client` |
-| **`sourceUrl`** | AnimeThemes download URL while `PENDING`; becomes the public R2 URL once `COMPLETED`. | schema |
-| **status** | Song lifecycle: `PENDING` (metadata only) → `COMPLETED` (media on R2). | schema, step 4 |
-| **`artist` / `artistNames`** | Verified display credit vs structured people/units. Never rewrite `artist`; derive `artistNames` via `parse-artist-names.ts` (comma-in-name bands stay one entry). | schema, pipeline, `manual_edits.json` |
-| **`isLocked`** | Freeze flag on Franchise/Anime/Song — preserves manual edits (titles, difficulty) across re-fetches. | schema, `manual_edits.json` |
-| **manual_edits.json** | Source of truth for manual titles/tags/locks; exported from and imported back to the DB. | `data/` |
-| **Thematic playlist** | Staff music pack: JSON recipe resolved into a frozen `ThematicPlaylistSong` snapshot on publish (v26.5). | schema, `scripts/seed_thematic_playlists.ts` |
-| **SongHistory** | Aggregate pokédex row per `(profileId, songId)`: `playCount` (heard), `correctCount` (hits), `lastPlayedAt`. Server-only writes (match persist + daily heard clips). Distinct from `SongLike`. | schema, `songHistoryService.ts` |
-| **Daily challenge** | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; attempts and streak are server-only. Heard clips upsert `SongHistory`. | schema, `docs/game/daily-quiz.md` |
-| **pipeline_exclusions.json** | Permanent blocklist of anime ids / song ids / videoKeys to never re-add. | `data/` |
-| **Pipeline steps 1–4** | metadata → AnimeThemes match → upsert (PENDING) → download/compress/upload to R2 (COMPLETED). | `scripts/` |
+| Term                         | Definition                                                                                                                                                                                     | Where                                        |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| **Franchise / Anime / Song** | Catalogue hierarchy: a Franchise groups Animes (seasons); a Song is one opening/ending with a video.                                                                                           | `prisma/schema.prisma`                       |
+| **Precision**                | Gameplay answer target: `franchise` / `anime` / `artist`. Artist uses `Song.artist` + `artistNames`.                                                                                           | schema + shared                              |
+| **difficulty**               | Per-song grade derived from AniList popularity (step 1); feeds medal thresholds.                                                                                                               | `scripts/1_fetch_anilist.ts`                 |
+| **`videoKey`**               | R2 object key for a song's MP4 (the canonical media identifier).                                                                                                                               | schema, `lib/r2-client`                      |
+| **`sourceUrl`**              | AnimeThemes download URL while `PENDING`; becomes the public R2 URL once `COMPLETED`.                                                                                                          | schema                                       |
+| **status**                   | Song lifecycle: `PENDING` (metadata only) → `COMPLETED` (media on R2).                                                                                                                         | schema, step 4                               |
+| **`artist` / `artistNames`** | Verified display credit vs structured people/units. Never rewrite `artist`; derive `artistNames` via `parse-artist-names.ts` (comma-in-name bands stay one entry).                             | schema, pipeline, `manual_edits.json`        |
+| **`isLocked`**               | Freeze flag on Franchise/Anime/Song — preserves manual edits (titles, difficulty) across re-fetches.                                                                                           | schema, `manual_edits.json`                  |
+| **manual_edits.json**        | Source of truth for manual titles/tags/locks; exported from and imported back to the DB.                                                                                                       | `data/`                                      |
+| **Thematic playlist**        | Staff music pack: JSON recipe resolved into a frozen `ThematicPlaylistSong` snapshot on publish (v26.5).                                                                                       | schema, `scripts/seed_thematic_playlists.ts` |
+| **SongHistory**              | Aggregate pokédex row per `(profileId, songId)`: `playCount` (heard), `correctCount` (hits), `lastPlayedAt`. Server-only writes (match persist + daily heard clips). Distinct from `SongLike`. | schema, `songHistoryService.ts`              |
+| **Daily challenge**          | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; attempts and streak are server-only. Heard clips upsert `SongHistory`.                                       | schema, `docs/game/daily-quiz.md`            |
+| **pipeline_exclusions.json** | Permanent blocklist of anime ids / song ids / videoKeys to never re-add.                                                                                                                       | `data/`                                      |
+| **Pipeline steps 1–4**       | metadata → AnimeThemes match → upsert (PENDING) → download/compress/upload to R2 (COMPLETED).                                                                                                  | `scripts/`                                   |
 
 ## Known pitfalls
 

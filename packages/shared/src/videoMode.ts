@@ -27,7 +27,7 @@ export const VIDEO_MODE_LABELS: Record<VideoMode, string> = {
 
 export const VIDEO_MODE_DESCRIPTIONS: Record<VideoMode, string> = {
   hidden: 'Fond noir pendant le guess, audio seul.',
-  blurred: 'La vidéo joue mais reste floutée jusqu\'à la révélation.',
+  blurred: "La vidéo joue mais reste floutée jusqu'à la révélation.",
   peek: 'Petit carré net à position aléatoire ; le reste est masqué.',
 };
 

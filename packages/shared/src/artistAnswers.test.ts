@@ -25,9 +25,7 @@ describe('resolveArtistUnits', () => {
 
   it('keeps comma-in-name bands as a single unit', () => {
     expect(
-      resolveArtistUnits('Fear, and Loathing in Las Vegas', [
-        'Fear, and Loathing in Las Vegas',
-      ]),
+      resolveArtistUnits('Fear, and Loathing in Las Vegas', ['Fear, and Loathing in Las Vegas']),
     ).toEqual(['Fear, and Loathing in Las Vegas']);
   });
 
@@ -39,14 +37,9 @@ describe('resolveArtistUnits', () => {
 describe('resolveArtistQcmTarget', () => {
   it('uses the first billed unit, not the composite credit', () => {
     expect(resolveArtistQcmTarget(chicoHoney.artist, chicoHoney.artistNames)).toBe('CHiCO');
+    expect(resolveArtistQcmTarget('LiSA, Felix', ['LiSA', 'Felix'])).toBe('LiSA');
     expect(
-      resolveArtistQcmTarget('LiSA, Felix', ['LiSA', 'Felix']),
-    ).toBe('LiSA');
-    expect(
-      resolveArtistQcmTarget('The Seatbelts feat. Mai Yamane', [
-        'The Seatbelts',
-        'Mai Yamane',
-      ]),
+      resolveArtistQcmTarget('The Seatbelts feat. Mai Yamane', ['The Seatbelts', 'Mai Yamane']),
     ).toBe('The Seatbelts');
   });
 });

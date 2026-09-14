@@ -5,8 +5,17 @@ import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { OptionButton, FOCUS_RING } from './ConfigPrimitives';
 import { PLAYLISTS_COPY, playlistFlair } from './playlistsCopy';
-import { showWatchedFusionMode, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE } from './watchedSource';
-import { decadeStartYear, defaultDecadePack, effectivePlaylistSelection, pickerRows } from './playlistPickerModel';
+import {
+  showWatchedFusionMode,
+  WATCHED_ANILIST_BLOCKED_MESSAGE,
+  WATCHED_ANILIST_STALE_MESSAGE,
+} from './watchedSource';
+import {
+  decadeStartYear,
+  defaultDecadePack,
+  effectivePlaylistSelection,
+  pickerRows,
+} from './playlistPickerModel';
 
 interface PlaylistPickerProps {
   config: RoomConfig;
@@ -82,7 +91,10 @@ export function PlaylistPicker({
               <button
                 type="button"
                 onClick={onRetry}
-                className={cn('text-xs font-semibold text-primary underline-offset-2 hover:underline', FOCUS_RING)}
+                className={cn(
+                  'text-xs font-semibold text-primary underline-offset-2 hover:underline',
+                  FOCUS_RING,
+                )}
               >
                 {PLAYLISTS_COPY.retry}
               </button>
@@ -124,7 +136,10 @@ export function PlaylistPicker({
                       const next = defaultDecadePack(row.packs);
                       if (next) selectDecade(next.id);
                     }}
-                    className={cn('flex w-full items-start gap-3 px-3 py-2.5 text-left', FOCUS_RING)}
+                    className={cn(
+                      'flex w-full items-start gap-3 px-3 py-2.5 text-left',
+                      FOCUS_RING,
+                    )}
                   >
                     <span
                       aria-hidden="true"
@@ -194,8 +209,12 @@ export function PlaylistPicker({
                   {emoji}
                 </span>
                 <span className="min-w-0 pt-0.5">
-                  <span className="block text-sm font-bold leading-tight text-foreground">{pack.name}</span>
-                  <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">{blurb}</span>
+                  <span className="block text-sm font-bold leading-tight text-foreground">
+                    {pack.name}
+                  </span>
+                  <span className="mt-1 block text-[11px] leading-snug text-muted-foreground">
+                    {blurb}
+                  </span>
                 </span>
               </button>
             );
@@ -252,7 +271,9 @@ export function PlaylistPicker({
                   className="p-2 text-left"
                 >
                   <div className="text-xs font-bold">Union</div>
-                  <div className="text-[9px] text-muted-foreground">Les listes de tout le monde.</div>
+                  <div className="text-[9px] text-muted-foreground">
+                    Les listes de tout le monde.
+                  </div>
                 </OptionButton>
                 <OptionButton
                   active={config.watchedMode === 'intersection'}

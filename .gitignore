@@ -21,8 +21,16 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
-.cursor/
 .agents/
+
+# Cursor: ignore caches/debug; keep project rules so clones share graphify-first
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+
+# Historical schema notes (local only)
+SCHEMA-TARGET.md
+docs/progress-archive/
 
 # Logs
 logs/
@@ -54,19 +62,14 @@ test-results/
 playwright-report/
 blob-report/
 
-# Local planning / agent docs (kept on disk, not published)
-PLAN.md
-PROGRESS.md
-AGENTS.md
-SCHEMA-TARGET.md
-docs/agents/
-docs/progress-archive/
-
 # graphify knowledge graph outputs (generated locally)
 graphify-out/
 .graphify_detect.json
 .graphify_analysis.json
 .graphify_labels.json
+
+# Agent skills lockfile (machine-local install pins)
+skills-lock.json
 
 # Lighthouse raw JSON dumps (summaries live in docs/perf/baseline.md)
 docs/perf/baseline-*.json

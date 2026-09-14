@@ -58,9 +58,7 @@ export function parseAnimeThemesSelectionConfig(
   const idsRaw = env.ANIMETHEMES_TARGET_IDS?.trim();
 
   if (topRaw && idsRaw) {
-    throw new Error(
-      'ANIMETHEMES_TOP_LIMIT and ANIMETHEMES_TARGET_IDS cannot be combined.',
-    );
+    throw new Error('ANIMETHEMES_TOP_LIMIT and ANIMETHEMES_TARGET_IDS cannot be combined.');
   }
   if (topRaw) {
     return {

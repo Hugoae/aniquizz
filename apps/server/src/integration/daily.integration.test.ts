@@ -1,12 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { prisma } from '@aniquizz/database';
-import {
-  DAILY_LEAK_KEYS,
-  dailyCalendarDate,
-  dailyXp,
-  isDailyVictory,
-} from '@aniquizz/shared';
+import { DAILY_LEAK_KEYS, dailyCalendarDate, dailyXp, isDailyVictory } from '@aniquizz/shared';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
 import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
@@ -109,7 +104,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await bundle.close();
   });
 
-  const authHeaders = () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' });
+  const authHeaders = () => ({
+    Authorization: `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  });
 
   it('returns public today metadata without answers', async () => {
     const res = await fetch(`${bundle.url}/daily/today`);
@@ -138,12 +136,17 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
       if (key === 'cover') continue;
       expect(leak.includes(`"${key}"`)).toBe(false);
     }
-    const count = await prisma.dailyAttempt.count({ where: { challengeId, profileId: TEST_USER_IDS.admin } });
+    const count = await prisma.dailyAttempt.count({
+      where: { challengeId, profileId: TEST_USER_IDS.admin },
+    });
     expect(count).toBe(1);
   });
 
   it('rejects an answer that was not offered, then grades a valid one', async () => {
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     const bad = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
       method: 'POST',
@@ -175,7 +178,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     await prisma.dailyAttempt.update({
       where: { id: attempt.attemptId },
@@ -198,7 +204,14 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     });
     const prior = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
-      select: { gamesPlayed: true, gamesWon: true, totalGuesses: true, correctGuesses: true, currentWinStreak: true, xp: true },
+      select: {
+        gamesPlayed: true,
+        gamesWon: true,
+        totalGuesses: true,
+        correctGuesses: true,
+        currentWinStreak: true,
+        xp: true,
+      },
     });
     const anon = await fetch(`${bundle.url}/daily/leaderboard`);
     expect(anon.status).toBe(200);
@@ -206,7 +219,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     const beforeBody = await before.json();
     expect(beforeBody.entries).toEqual([]);
 
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     const forfeited = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
       method: 'POST',
@@ -225,7 +241,14 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
 
     const after = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
-      select: { gamesPlayed: true, gamesWon: true, totalGuesses: true, correctGuesses: true, currentWinStreak: true, xp: true },
+      select: {
+        gamesPlayed: true,
+        gamesWon: true,
+        totalGuesses: true,
+        correctGuesses: true,
+        currentWinStreak: true,
+        xp: true,
+      },
     });
     expect(after.gamesPlayed).toBe(prior.gamesPlayed);
     expect(after.gamesWon).toBe(prior.gamesWon);
@@ -251,7 +274,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
       method: 'POST',
@@ -268,13 +294,18 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
       },
     });
 
-    const abandoned = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const abandoned = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const body = await abandoned.json();
     expect(abandoned.status).toBe(200);
     expect(body.status).toBe('completed');
     expect(body.attempt).toBeNull();
     expect(body.result.recap).toHaveLength(5);
-    const answers = await prisma.dailyAttemptAnswer.count({ where: { attemptId: attempt.attemptId } });
+    const answers = await prisma.dailyAttemptAnswer.count({
+      where: { attemptId: attempt.attemptId },
+    });
     expect(answers).toBe(5);
   });
 
@@ -282,7 +313,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     await prisma.dailyAttempt.update({
       where: { id: attempt.attemptId },
@@ -297,7 +331,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
 
     await setModeration(TEST_USER_IDS.admin, { bannedUntil: new Date(Date.now() + 60_000) });
     try {
-      const banned = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+      const banned = await fetch(`${bundle.url}/daily/attempt`, {
+        method: 'POST',
+        headers: authHeaders(),
+      });
       expect(banned.status).toBe(403);
     } finally {
       await clearModeration(TEST_USER_IDS.admin);
@@ -310,19 +347,30 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     });
     await prisma.dailyPlayerStats.deleteMany({ where: { profileId: TEST_USER_IDS.admin } });
 
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
-    const priorXp = (await prisma.profile.findUniqueOrThrow({
-      where: { id: TEST_USER_IDS.admin },
-      select: { xp: true },
-    })).xp;
+    const priorXp = (
+      await prisma.profile.findUniqueOrThrow({
+        where: { id: TEST_USER_IDS.admin },
+        select: { xp: true },
+      })
+    ).xp;
     await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
       method: 'POST',
       headers: authHeaders(),
     });
     const settled = await prisma.dailyAttempt.findUniqueOrThrow({
       where: { id: attempt.attemptId },
-      select: { won: true, activeRoundCount: true, correctCount: true, rank: true, totalResponseMs: true },
+      select: {
+        won: true,
+        activeRoundCount: true,
+        correctCount: true,
+        rank: true,
+        totalResponseMs: true,
+      },
     });
     expect(settled.activeRoundCount).toBe(5);
     expect(settled.won).toBe(isDailyVictory(settled.correctCount, settled.activeRoundCount));
@@ -366,7 +414,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
       }),
     ).toBeNull();
 
-    const replay = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const replay = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     expect(replay.status).toBe(200);
     const replayBody = await replay.json();
     expect(replayBody.status).toBe('in_progress');
@@ -376,7 +427,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
       method: 'POST',
@@ -403,7 +457,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
       method: 'POST',
@@ -441,7 +498,9 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
       orderBy: { position: 'asc' },
       select: { position: true, songId: true, snapshot: true },
     });
-    const songIdOf = (round: { songId: number | null; snapshot: unknown } | undefined): number | null => {
+    const songIdOf = (
+      round: { songId: number | null; snapshot: unknown } | undefined,
+    ): number | null => {
       if (!round) return null;
       if (round.songId != null && round.songId > 0) return round.songId;
       const snap = round.snapshot as { id?: unknown } | null;
@@ -468,7 +527,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     const leftoverBefore =
       leftoverId && leftoverId !== heardId ? await historyKey(leftoverId) : null;
 
-    const started = await fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
     const { attempt } = await started.json();
     await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
       method: 'POST',

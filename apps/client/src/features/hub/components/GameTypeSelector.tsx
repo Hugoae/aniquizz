@@ -13,7 +13,8 @@ const GAME_TYPES: { id: GameType; icon: typeof Trophy; description: string }[] =
   {
     id: 'sprint',
     icon: Zap,
-    description: 'Comme Standard mais gagnez plus de points en répondant plus vite que vos adversaires',
+    description:
+      'Comme Standard mais gagnez plus de points en répondant plus vite que vos adversaires',
   },
 ];
 
@@ -25,7 +26,12 @@ interface GameTypeSelectorProps {
   className?: string;
 }
 
-export function GameTypeSelector({ value, onChange, soloOnly = false, className }: GameTypeSelectorProps) {
+export function GameTypeSelector({
+  value,
+  onChange,
+  soloOnly = false,
+  className,
+}: GameTypeSelectorProps) {
   const options = soloOnly ? GAME_TYPES.filter((t) => t.id === 'standard') : GAME_TYPES;
 
   return (
@@ -48,7 +54,11 @@ export function GameTypeSelector({ value, onChange, soloOnly = false, className 
           >
             <span className="flex items-center gap-2 text-sm font-bold text-foreground">
               <Icon
-                className={cn('h-4 w-4', active ? 'text-primary' : 'text-muted-foreground', id === 'standard' && active && 'fill-current')}
+                className={cn(
+                  'h-4 w-4',
+                  active ? 'text-primary' : 'text-muted-foreground',
+                  id === 'standard' && active && 'fill-current',
+                )}
                 aria-hidden="true"
               />
               {GAME_TYPE_LABELS[id]}

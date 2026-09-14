@@ -1,6 +1,12 @@
 import type { User } from '@supabase/supabase-js';
 import type { PlaylistPoolStats, RoomConfig } from '@aniquizz/shared';
-import { ANILIST_API_DOWN_MESSAGE, hasEnoughQcmNames, hasPlaylistSource, hasWatchedListLink, qcmPoolTooSmallReason } from '@aniquizz/shared';
+import {
+  ANILIST_API_DOWN_MESSAGE,
+  hasEnoughQcmNames,
+  hasPlaylistSource,
+  hasWatchedListLink,
+  qcmPoolTooSmallReason,
+} from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 import { PLAYLISTS_COPY } from './playlistsCopy';
 
@@ -55,7 +61,10 @@ export function checkPlaylistPoolLaunch(
     return { blocked: true, reason: PLAYLISTS_COPY.overlayEmpty };
   }
   if (stats.playlistWatched && stats.insufficient && !watchedAllowFallback) {
-    return { blocked: true, reason: PLAYLISTS_COPY.overlayInsufficient(stats.playableSongs, stats.soundCount) };
+    return {
+      blocked: true,
+      reason: PLAYLISTS_COPY.overlayInsufficient(stats.playableSongs, stats.soundCount),
+    };
   }
   if (!hasEnoughQcmNames(stats.distinctNames, responseType)) {
     return { blocked: true, reason: qcmPoolTooSmallReason(precision) };

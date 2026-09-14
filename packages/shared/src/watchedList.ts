@@ -41,13 +41,7 @@ export function watchedListProvider(fields: WatchedListFields): WatchedListProvi
 }
 
 export type ListFetchState =
-  | 'idle'
-  | 'ok'
-  | 'cache'
-  | 'stale'
-  | 'private_empty'
-  | 'unavailable'
-  | 'unlinked';
+  'idle' | 'ok' | 'cache' | 'stale' | 'private_empty' | 'unavailable' | 'unlinked';
 
 export interface ListProviderStatus {
   provider: WatchedListProvider;

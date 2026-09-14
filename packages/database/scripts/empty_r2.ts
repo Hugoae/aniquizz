@@ -8,15 +8,15 @@
  *
  * Refuses to run when NODE_ENV=production (media loss is destructive).
  */
-import { PrismaClient } from "@prisma/client";
-import path from "path";
-import dotenv from "dotenv";
-import { createR2Client, getR2Bucket, r2EmptyBucket } from "./lib/r2-client";
+import { PrismaClient } from '@prisma/client';
+import path from 'path';
+import dotenv from 'dotenv';
+import { createR2Client, getR2Bucket, r2EmptyBucket } from './lib/r2-client';
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-if (process.env.NODE_ENV === "production") {
-  console.error("❌ Refusing to empty the R2 bucket in production.");
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ Refusing to empty the R2 bucket in production.');
   process.exit(1);
 }
 
@@ -30,8 +30,8 @@ async function main() {
   console.log(`✅ Bucket emptied (${deleted} objects deleted).`);
 
   const requeued = await prisma.song.updateMany({
-    where: { downloadStatus: "COMPLETED" },
-    data: { downloadStatus: "PENDING", errorLog: null },
+    where: { downloadStatus: 'COMPLETED' },
+    data: { downloadStatus: 'PENDING', errorLog: null },
   });
   console.log(`♻️  Re-queued ${requeued.count} COMPLETED song(s) back to PENDING.`);
 

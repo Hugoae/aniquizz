@@ -22,21 +22,34 @@ export function LibraryHero({ meta }: LibraryHeroProps) {
         <div className="space-y-3 max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
             <span className="eq h-3 text-aqua" aria-hidden="true">
-              <i /><i /><i /><i />
+              <i />
+              <i />
+              <i />
+              <i />
             </span>
             {LIBRARY_COPY.heroEyebrow}
           </div>
           <h1 className="font-display text-3xl font-extrabold tracking-tight md:text-4xl gradient-text">
             {LIBRARY_COPY.heroTitle}
           </h1>
-          <p className="text-sm md:text-base text-muted-foreground text-pretty">{LIBRARY_COPY.heroSubtitle}</p>
+          <p className="text-sm md:text-base text-muted-foreground text-pretty">
+            {LIBRARY_COPY.heroSubtitle}
+          </p>
         </div>
 
         {meta && (
           <div className="grid grid-cols-3 gap-3 shrink-0">
-            <StatPill value={meta.totalSongs} label={LIBRARY_COPY.statSongs} accent="text-primary" />
+            <StatPill
+              value={meta.totalSongs}
+              label={LIBRARY_COPY.statSongs}
+              accent="text-primary"
+            />
             <StatPill value={meta.totalAnimes} label={LIBRARY_COPY.statAnimes} accent="text-aqua" />
-            <StatPill value={meta.totalFranchises} label={LIBRARY_COPY.statFranchises} accent="text-accent" />
+            <StatPill
+              value={meta.totalFranchises}
+              label={LIBRARY_COPY.statFranchises}
+              accent="text-accent"
+            />
             {meta.likedCount != null && (
               <div className="col-span-3">
                 <p className="text-center text-xs font-semibold text-muted-foreground">
@@ -59,8 +72,12 @@ export function LibraryHero({ meta }: LibraryHeroProps) {
 function StatPill({ value, label, accent }: { value: number; label: string; accent: string }) {
   return (
     <div className="glass-card rounded-xl px-3 py-2.5 text-center min-w-[5.5rem]">
-      <div className={`text-xl font-black tabular-nums ${accent}`}>{value.toLocaleString('fr-FR')}</div>
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-xl font-black tabular-nums ${accent}`}>
+        {value.toLocaleString('fr-FR')}
+      </div>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
     </div>
   );
 }

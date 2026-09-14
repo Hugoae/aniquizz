@@ -1,9 +1,5 @@
 import { answerIdentityKey } from './utils';
-import {
-  DAILY_GUESS_MS,
-  DAILY_GUESS_WALL_MS,
-  DAILY_REVEAL_MS,
-} from './dailyConstants';
+import { DAILY_GUESS_MS, DAILY_GUESS_WALL_MS, DAILY_REVEAL_MS } from './dailyConstants';
 import type { DailyTrackState } from './dailyTypes';
 
 export function clampDailyResponseMs(
@@ -110,7 +106,9 @@ export function dailyPlayTracks(input: {
   });
 }
 
-export function summarizeDailyRounds(rounds: Array<{ voided?: boolean; correct?: boolean | null }>): {
+export function summarizeDailyRounds(
+  rounds: Array<{ voided?: boolean; correct?: boolean | null }>,
+): {
   correctCount: number;
   activeRoundCount: number;
 } {

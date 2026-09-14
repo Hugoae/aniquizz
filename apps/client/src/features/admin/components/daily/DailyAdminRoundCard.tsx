@@ -120,7 +120,9 @@ export function DailyAdminRoundCard({
           )}
           {editable && (
             <div className="space-y-2">
-              <p className="text-[11px] font-medium text-muted-foreground">{DAILY_ADMIN_COPY.changeSong}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">
+                {DAILY_ADMIN_COPY.changeSong}
+              </p>
               <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
                 <DailySongSearch excludeIds={excludeIds} disabled={busy} onPick={onReplace} />
                 <div className="flex flex-wrap gap-1">
@@ -157,12 +159,24 @@ export function DailyAdminRoundCard({
             </div>
           )}
           {canVoid && !round.voided && (
-            <Button size="sm" variant="ghost" className="text-destructive" disabled={busy} onClick={onVoid}>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive"
+              disabled={busy}
+              onClick={onVoid}
+            >
               {DAILY_ADMIN_COPY.void}
             </Button>
           )}
           {canVoid && round.voided && (
-            <Button size="sm" variant="outline" disabled={busy} className="gap-1" onClick={onRestore}>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              className="gap-1"
+              onClick={onRestore}
+            >
               <Undo2 className="h-3.5 w-3.5" />
               {DAILY_ADMIN_COPY.restore}
             </Button>

@@ -34,10 +34,17 @@ function StatTile({ item }: { item: StatItem }) {
   const Icon = item.icon;
   return (
     <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-border bg-card/40 p-4 transition-colors hover:bg-card/60">
-      <div className={cn('absolute right-2.5 top-2.5 rounded-lg bg-secondary p-1.5 opacity-80 transition-all group-hover:scale-110 group-hover:opacity-100', item.color)}>
+      <div
+        className={cn(
+          'absolute right-2.5 top-2.5 rounded-lg bg-secondary p-1.5 opacity-80 transition-all group-hover:scale-110 group-hover:opacity-100',
+          item.color,
+        )}
+      >
         <Icon className="h-4 w-4" aria-hidden />
       </div>
-      <div className={cn('font-mono text-2xl font-bold leading-none', item.color)}>{item.value}</div>
+      <div className={cn('font-mono text-2xl font-bold leading-none', item.color)}>
+        {item.value}
+      </div>
       <div className="mt-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
         {item.label}
       </div>

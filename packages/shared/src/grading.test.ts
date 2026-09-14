@@ -1,10 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  computeMedal,
-  medalMarkerScores,
-  nextMedalGoal,
-  requiredScoreForTier,
-} from './grading';
+import { computeMedal, medalMarkerScores, nextMedalGoal, requiredScoreForTier } from './grading';
 
 const mediumSongs = (n: number): string[] => Array.from({ length: n }, () => 'medium');
 

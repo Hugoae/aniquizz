@@ -61,12 +61,34 @@ interface FriendsContextValue {
   incomingRequestFor: (userId: string) => string | undefined;
 }
 
-const FriendsStateContext = createContext<Omit<FriendsContextValue,
-  'sendRequest' | 'addById' | 'accept' | 'reject' | 'remove' | 'block' | 'unblock' | 'invite' | 'setPrivacy' | 'refreshRecent' | 'openProfile'
+const FriendsStateContext = createContext<Omit<
+  FriendsContextValue,
+  | 'sendRequest'
+  | 'addById'
+  | 'accept'
+  | 'reject'
+  | 'remove'
+  | 'block'
+  | 'unblock'
+  | 'invite'
+  | 'setPrivacy'
+  | 'refreshRecent'
+  | 'openProfile'
 > | null>(null);
 
-const FriendsActionsContext = createContext<Pick<FriendsContextValue,
-  'sendRequest' | 'addById' | 'accept' | 'reject' | 'remove' | 'block' | 'unblock' | 'invite' | 'setPrivacy' | 'refreshRecent' | 'openProfile'
+const FriendsActionsContext = createContext<Pick<
+  FriendsContextValue,
+  | 'sendRequest'
+  | 'addById'
+  | 'accept'
+  | 'reject'
+  | 'remove'
+  | 'block'
+  | 'unblock'
+  | 'invite'
+  | 'setPrivacy'
+  | 'refreshRecent'
+  | 'openProfile'
 > | null>(null);
 
 export function FriendsProvider({ children }: { children: ReactNode }) {
@@ -191,22 +213,32 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     },
     [state.incoming],
   );
-  const reject = useCallback((requestId: string) => socket.emit('friends:reject', { requestId }), []);
+  const reject = useCallback(
+    (requestId: string) => socket.emit('friends:reject', { requestId }),
+    [],
+  );
   const remove = useCallback((userId: string) => socket.emit('friends:remove', { userId }), []);
   const block = useCallback((userId: string) => socket.emit('friends:block', { userId }), []);
   const unblock = useCallback((userId: string) => socket.emit('friends:unblock', { userId }), []);
   const invite = useCallback((userId: string) => socket.emit('friends:invite', { userId }), []);
-  const setPrivacy = useCallback((allow: boolean) => socket.emit('friends:set_privacy', { allow }), []);
+  const setPrivacy = useCallback(
+    (allow: boolean) => socket.emit('friends:set_privacy', { allow }),
+    [],
+  );
   const refreshRecent = useCallback(() => socket.emit('friends:recent'), []);
 
-  const openProfile = useCallback((userId: string) => {
-    navigate(`/profile/${userId}`);
-  }, [navigate]);
+  const openProfile = useCallback(
+    (userId: string) => {
+      navigate(`/profile/${userId}`);
+    },
+    [navigate],
+  );
 
   const relationOf = useCallback(
     (userId: string): Relation => {
       if (user && userId === user.id) return 'self';
-      if (optimisticFriends.has(userId) || state.friends.some((f) => f.id === userId)) return 'friends';
+      if (optimisticFriends.has(userId) || state.friends.some((f) => f.id === userId))
+        return 'friends';
       if (state.blocked.some((f) => f.id === userId) || state.blockedByUserIds.includes(userId)) {
         return 'blocked';
       }

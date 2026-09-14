@@ -13,7 +13,10 @@ test.describe('player settings panel', () => {
     const panel = page.getByRole('region', { name: 'Panneau des paramètres' });
     await expect(panel).toBeVisible();
 
-    await expect(page.getByRole('tab', { name: 'Général' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: 'Général' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
     await expect(panel.getByRole('heading', { name: 'Audio' })).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'Animations' })).toBeVisible();
     await expect(panel.getByRole('heading', { name: 'En partie' })).toBeVisible();

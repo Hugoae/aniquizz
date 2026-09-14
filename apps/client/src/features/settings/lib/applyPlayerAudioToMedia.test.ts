@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  applyPlayerAudioToMedia,
-  readPlayerAudioFromMedia,
-} from './applyPlayerAudioToMedia';
+import { applyPlayerAudioToMedia, readPlayerAudioFromMedia } from './applyPlayerAudioToMedia';
 
 function fakeMedia(init?: Partial<Pick<HTMLMediaElement, 'volume' | 'muted'>>): HTMLMediaElement {
   return {

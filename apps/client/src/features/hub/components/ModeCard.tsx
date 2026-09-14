@@ -75,7 +75,8 @@ function ModeCardContent({ mode, interactive }: { mode: ModeCardData; interactiv
   );
 }
 
-const cardShellClass = 'glass-card relative flex h-full min-h-[300px] animate-fade-in flex-col overflow-hidden p-10 text-left';
+const cardShellClass =
+  'glass-card relative flex h-full min-h-[300px] animate-fade-in flex-col overflow-hidden p-10 text-left';
 
 export function ModeCard({ mode, index, onSelect, blocked = false, onBlocked }: ModeCardProps) {
   const animationStyle = { animationDelay: `${index * 0.1}s` };

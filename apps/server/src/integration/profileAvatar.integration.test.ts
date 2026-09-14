@@ -20,7 +20,7 @@ describe.skipIf(!hasIntegrationEnv)('profile avatar URL trust', () => {
     await bundle.close();
   });
 
-  it('rejects an avatar URL outside the caller\'s avatars object', async () => {
+  it("rejects an avatar URL outside the caller's avatars object", async () => {
     const before = await prisma.profile.findUnique({
       where: { id: TEST_USER_IDS.admin },
       select: { avatar: true },

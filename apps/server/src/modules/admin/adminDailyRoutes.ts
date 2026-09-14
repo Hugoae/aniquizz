@@ -81,7 +81,9 @@ export function registerAdminDailyRoutes(router: Router): void {
         res.status(400).json({ error: 'Statut invalide.' });
         return;
       }
-      res.json(await setDailyChallengeStatus(String(req.params.id), parsed.data.status, req.actor!.userId));
+      res.json(
+        await setDailyChallengeStatus(String(req.params.id), parsed.data.status, req.actor!.userId),
+      );
     }),
   );
 
@@ -107,7 +109,13 @@ export function registerAdminDailyRoutes(router: Router): void {
         res.status(400).json({ error: 'songId invalide.' });
         return;
       }
-      res.json(await replaceDailyRound(String(req.params.id), String(req.params.roundId), parsed.data.songId));
+      res.json(
+        await replaceDailyRound(
+          String(req.params.id),
+          String(req.params.roundId),
+          parsed.data.songId,
+        ),
+      );
     }),
   );
 

@@ -1,17 +1,17 @@
-import { PrismaClient } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
-import { createR2Client, getR2Bucket, r2EmptyBucket } from "./lib/r2-client";
+import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { createR2Client, getR2Bucket, r2EmptyBucket } from './lib/r2-client';
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
 const r2Client = createR2Client();
 const r2Bucket = getR2Bucket();
 
-const DATA_DIR = path.join(__dirname, "../data");
-const TEMP_DIR = path.join(__dirname, "../data/tmp");
+const DATA_DIR = path.join(__dirname, '../data');
+const TEMP_DIR = path.join(__dirname, '../data/tmp');
 
 async function emptyBucket() {
   console.log(`\n🌊 EMPTYING R2 BUCKET '${r2Bucket}'...`);
@@ -38,9 +38,9 @@ async function cleanDatabase() {
     const deletedFranchises = await prisma.franchise.deleteMany({});
     console.log(`   - Franchises deleted    : ${deletedFranchises.count}`);
 
-    console.log("✅ Database fully cleaned.");
+    console.log('✅ Database fully cleaned.');
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`❌ Database error: ${message}`);
   }
 }
@@ -48,7 +48,7 @@ async function cleanDatabase() {
 function cleanLocalFiles() {
   console.log(`\n📂 REMOVING LOCAL PIPELINE FILES...`);
 
-  for (const file of ["data_step1.json", "data_step2.json"]) {
+  for (const file of ['data_step1.json', 'data_step2.json']) {
     const filePath = path.join(DATA_DIR, file);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -58,10 +58,10 @@ function cleanLocalFiles() {
 
   if (fs.existsSync(TEMP_DIR)) {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
-    console.log("   - Temp directory cleaned.");
+    console.log('   - Temp directory cleaned.');
   }
 
-  console.log("✅ Local files cleaned.");
+  console.log('✅ Local files cleaned.');
 }
 
 async function main() {

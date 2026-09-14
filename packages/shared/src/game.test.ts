@@ -28,7 +28,9 @@ describe('toClientRoomSettings', () => {
   });
 
   it('keeps the password for the host', () => {
-    expect(toClientRoomSettings(settings(), { includePassword: true }).password).toBe('secret-room');
+    expect(toClientRoomSettings(settings(), { includePassword: true }).password).toBe(
+      'secret-room',
+    );
   });
 
   it('does not allocate when there is nothing to strip', () => {

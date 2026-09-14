@@ -5,7 +5,14 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
-import { watchedPoolModeLabel, showWatchedFusionMode, WATCHED_LIST_UNAVAILABLE, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE, WATCHED_SERVER_OFFLINE } from './watchedSource';
+import {
+  watchedPoolModeLabel,
+  showWatchedFusionMode,
+  WATCHED_LIST_UNAVAILABLE,
+  WATCHED_ANILIST_BLOCKED_MESSAGE,
+  WATCHED_ANILIST_STALE_MESSAGE,
+  WATCHED_SERVER_OFFLINE,
+} from './watchedSource';
 import { PlaylistPicker } from './PlaylistPicker';
 import { PLAYLISTS_COPY } from './playlistsCopy';
 import { openSettings } from '@/features/settings/lib/openSettings';
@@ -41,7 +48,9 @@ export function SourceSection({
   currentPlayersCount = 0,
 }: SourceSectionProps) {
   const source = config.soundSelection;
-  const [tab, setTab] = useState<SourceTab>(source === 'playlist' ? 'playlist' : source === 'watched' ? 'watched' : 'random');
+  const [tab, setTab] = useState<SourceTab>(
+    source === 'playlist' ? 'playlist' : source === 'watched' ? 'watched' : 'random',
+  );
 
   useEffect(() => {
     if (source === 'playlist') setTab('playlist');
@@ -113,7 +122,13 @@ export function SourceSection({
         aria-label="Source des musiques"
         className="flex shrink-0 gap-1 rounded-lg bg-secondary/30 p-1"
       >
-        <button type="button" role="tab" aria-selected={tab === 'random'} onClick={() => setSource('random')} className={tabClass(tab === 'random')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'random'}
+          onClick={() => setSource('random')}
+          className={tabClass(tab === 'random')}
+        >
           Aléatoire
         </button>
         <button
@@ -143,7 +158,9 @@ export function SourceSection({
               <Shuffle className="h-8 w-8 text-primary" aria-hidden="true" />
             </div>
             <p className="font-bold text-foreground">Mode aléatoire</p>
-            <p className="mt-1 text-xs">Pioche parmi toute la base de données selon les filtres et contraintes.</p>
+            <p className="mt-1 text-xs">
+              Pioche parmi toute la base de données selon les filtres et contraintes.
+            </p>
           </div>
         )}
 
@@ -153,9 +170,13 @@ export function SourceSection({
               <p className="mb-1 flex items-center gap-2 font-bold text-info">
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste anime
               </p>
-              Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b>,{' '}
-              <b className="text-foreground">Watching</b> et <b className="text-foreground">On-Hold</b> (AniList ou MyAnimeList).
-              {!watchedListLinked && !isRoom && ' Liez AniList ou MyAnimeList pour lancer une partie.'}
+              Pioche uniquement parmi les animes de vos listes{' '}
+              <b className="text-foreground">Completed</b>,{' '}
+              <b className="text-foreground">Watching</b> et{' '}
+              <b className="text-foreground">On-Hold</b> (AniList ou MyAnimeList).
+              {!watchedListLinked &&
+                !isRoom &&
+                ' Liez AniList ou MyAnimeList pour lancer une partie.'}
               <button
                 type="button"
                 className="mt-2 block font-semibold text-info underline-offset-2 hover:underline"
@@ -185,9 +206,15 @@ export function SourceSection({
                     <b className="text-foreground">{stats.playableSongs}</b> son
                     {stats.playableSongs > 1 ? 's' : ''} jouable{stats.playableSongs > 1 ? 's' : ''}
                     {showFusion ? ` (${modeLabel})` : ''}
-                    <span className="text-muted-foreground/70"> — {stats.animeCount} anime{stats.animeCount > 1 ? 's' : ''}</span>
+                    <span className="text-muted-foreground/70">
+                      {' '}
+                      — {stats.animeCount} anime{stats.animeCount > 1 ? 's' : ''}
+                    </span>
                     {stats.insufficient && !config.watchedAllowFallback && (
-                      <span className="text-warning"> — insuffisant pour {stats.soundCount} sons</span>
+                      <span className="text-warning">
+                        {' '}
+                        — insuffisant pour {stats.soundCount} sons
+                      </span>
                     )}
                     {stats.insufficient && config.watchedAllowFallback && (
                       <span className="text-info"> — complétion aléatoire activée</span>
@@ -200,24 +227,32 @@ export function SourceSection({
               </div>
             )}
 
-            {watchedEnabled && stats?.insufficient && stats.playableSongs > 0 && !config.watchedAllowFallback && (
-              <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
-                <p className="flex items-start gap-2 text-xs text-muted-foreground">
-                  <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning" aria-hidden="true" />
-                  Pas assez de sons dans la {modeLabel} pour {stats.soundCount} manches. Sans action, le lancement sera bloqué.
-                </p>
-                <OptionButton
-                  active={Boolean(config.watchedAllowFallback)}
-                  onClick={() => update({ watchedAllowFallback: !config.watchedAllowFallback })}
-                  className="w-full p-2 text-left"
-                >
-                  <div className="text-xs font-bold">Compléter avec l&apos;aléatoire</div>
-                  <div className="text-[9px] text-muted-foreground">
-                    Les manches manquantes seront tirées dans le catalogue global (choix explicite).
-                  </div>
-                </OptionButton>
-              </div>
-            )}
+            {watchedEnabled &&
+              stats?.insufficient &&
+              stats.playableSongs > 0 &&
+              !config.watchedAllowFallback && (
+                <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                  <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <AlertTriangle
+                      className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
+                      aria-hidden="true"
+                    />
+                    Pas assez de sons dans la {modeLabel} pour {stats.soundCount} manches. Sans
+                    action, le lancement sera bloqué.
+                  </p>
+                  <OptionButton
+                    active={Boolean(config.watchedAllowFallback)}
+                    onClick={() => update({ watchedAllowFallback: !config.watchedAllowFallback })}
+                    className="w-full p-2 text-left"
+                  >
+                    <div className="text-xs font-bold">Compléter avec l&apos;aléatoire</div>
+                    <div className="text-[9px] text-muted-foreground">
+                      Les manches manquantes seront tirées dans le catalogue global (choix
+                      explicite).
+                    </div>
+                  </OptionButton>
+                </div>
+              )}
 
             {showFusion && (
               <div className="space-y-2">
@@ -229,7 +264,9 @@ export function SourceSection({
                     className="p-2 text-left"
                   >
                     <div className="text-xs font-bold">Union</div>
-                    <div className="text-[9px] text-muted-foreground">Les listes de tout le monde.</div>
+                    <div className="text-[9px] text-muted-foreground">
+                      Les listes de tout le monde.
+                    </div>
                   </OptionButton>
                   <OptionButton
                     active={config.watchedMode === 'intersection'}
@@ -237,7 +274,9 @@ export function SourceSection({
                     className="p-2 text-left"
                   >
                     <div className="text-xs font-bold">Commun</div>
-                    <div className="text-[9px] text-muted-foreground">Vus par TOUS les joueurs.</div>
+                    <div className="text-[9px] text-muted-foreground">
+                      Vus par TOUS les joueurs.
+                    </div>
                   </OptionButton>
                 </div>
               </div>

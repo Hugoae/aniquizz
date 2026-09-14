@@ -1,19 +1,19 @@
-import { CorsOptions } from "cors";
-import { env } from "./env";
+import { CorsOptions } from 'cors';
+import { env } from './env';
 
 // CLIENT_URL may hold a comma-separated list of allowed origins.
-const clientOrigins = (env.CLIENT_URL ?? "")
-  .split(",")
+const clientOrigins = (env.CLIENT_URL ?? '')
+  .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-const IS_DEV = env.NODE_ENV !== "production";
+const IS_DEV = env.NODE_ENV !== 'production';
 
 // Always allowed in production (belt-and-suspenders alongside CLIENT_URL).
 const PRODUCTION_ORIGINS = [
-  "https://aniquizz.com",
-  "https://www.aniquizz.com",
-  "https://aniquizz.vercel.app",
+  'https://aniquizz.com',
+  'https://www.aniquizz.com',
+  'https://aniquizz.vercel.app',
 ] as const;
 
 const ALLOWED_ORIGINS = [
@@ -28,7 +28,7 @@ const isLocalhostOrigin = (origin: string): boolean =>
  * Origin check: the fixed whitelist always applies; in dev we additionally allow
  * any localhost port so the Vite dev server (whatever port) is never blocked.
  */
-const originCheck: CorsOptions["origin"] = (origin, callback) => {
+const originCheck: CorsOptions['origin'] = (origin, callback) => {
   // Non-browser clients / same-origin requests have no Origin header.
   if (!origin) return callback(null, true);
   if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
@@ -38,7 +38,7 @@ const originCheck: CorsOptions["origin"] = (origin, callback) => {
 
 export const securityConfig: CorsOptions = {
   origin: originCheck,
-  methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 };

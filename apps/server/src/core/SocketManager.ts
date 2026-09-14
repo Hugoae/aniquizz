@@ -13,7 +13,11 @@ import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
 import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
 import { registerListHandlers } from '../modules/lists/listHandlers';
-import { schedulePresenceBroadcast, isUserOnline, userRoom } from '../modules/friends/friendsPresence';
+import {
+  schedulePresenceBroadcast,
+  isUserOnline,
+  userRoom,
+} from '../modules/friends/friendsPresence';
 
 /**
  * Single entry point for Socket.io event wiring. Distributes each connection
@@ -23,11 +27,9 @@ import { schedulePresenceBroadcast, isUserOnline, userRoom } from '../modules/fr
 /** Presence heartbeat: best-effort, never blocks the socket lifecycle. */
 const touchLastSeen = (userId: string | null | undefined): void => {
   if (!userId) return;
-  prisma.profile
-    .update({ where: { id: userId }, data: { lastSeenAt: new Date() } })
-    .catch(() => {
-      /* profile may not exist yet (guest) — ignore */
-    });
+  prisma.profile.update({ where: { id: userId }, data: { lastSeenAt: new Date() } }).catch(() => {
+    /* profile may not exist yet (guest) — ignore */
+  });
 };
 
 export class SocketManager {
@@ -56,7 +58,7 @@ export class SocketManager {
       // stays "online" across a reconnect (the fresh socket is already in the
       // room when the old one leaves → no offline flicker).
       if (userId) {
-        socket.join(userRoom(userId));
+        void socket.join(userRoom(userId));
       }
 
       // Single active session per user. The client reconnects on identity
@@ -79,20 +81,18 @@ export class SocketManager {
       touchLastSeen(userId);
       instrumentSocket(socket);
 
-      logger.child({
-        context: 'Socket',
-        socketId: socket.id,
-        userId: userId ?? undefined,
-      }).info(
-        'socket:connected',
-        undefined,
-        {
+      logger
+        .child({
+          context: 'Socket',
+          socketId: socket.id,
+          userId: userId ?? undefined,
+        })
+        .info('socket:connected', undefined, {
           lifecycle: 'connect',
           username,
           isAuthenticated,
           authUserId: userId ?? undefined,
-        },
-      );
+        });
 
       registerChatHandlers(this.io, socket, this.gameManager);
       registerLobbyHandlers(this.io, socket, this.gameManager);
@@ -129,19 +129,17 @@ export class SocketManager {
         if (data.userId && !isUserOnline(this.io, data.userId)) {
           schedulePresenceBroadcast(this.io, this.gameManager, data.userId, { immediate: true });
         }
-        logger.child({
-          context: 'Socket',
-          socketId: socket.id,
-          userId: data.userId ?? undefined,
-        }).info(
-          'socket:disconnected',
-          undefined,
-          {
+        logger
+          .child({
+            context: 'Socket',
+            socketId: socket.id,
+            userId: data.userId ?? undefined,
+          })
+          .info('socket:disconnected', undefined, {
             lifecycle: 'disconnect',
             username: data.username ?? 'guest',
             reason,
-          },
-        );
+          });
       });
 
       // 5. Gestion des erreurs

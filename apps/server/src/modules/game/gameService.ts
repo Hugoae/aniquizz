@@ -1,6 +1,14 @@
 import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
-import { shuffleArray, buildChoiceCandidatePool, selectedPoolSongTypes, collectArtistSearchLabels, answerIdentityKey, type ArtistChoiceRow, type Precision } from '@aniquizz/shared';
+import {
+  shuffleArray,
+  buildChoiceCandidatePool,
+  selectedPoolSongTypes,
+  collectArtistSearchLabels,
+  answerIdentityKey,
+  type ArtistChoiceRow,
+  type Precision,
+} from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { playlistMembershipAnd } from './playlistQuery';
 
@@ -126,7 +134,12 @@ const buildSongWhere = (
   baseWhere: Record<string, unknown>,
   filters?: Pick<
     SongFilters,
-    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+    | 'difficulty'
+    | 'types'
+    | 'playlistSongIds'
+    | 'playlistIds'
+    | 'watchedIds'
+    | 'requirePlayableArtist'
   >,
 ): Record<string, unknown> => {
   const where = { ...baseWhere };
@@ -162,7 +175,7 @@ const isEmptyPlaylistConstraint = (
 ): boolean =>
   Boolean(
     (filters?.playlistIds && filters.playlistIds.length === 0) ||
-      (filters?.playlistSongIds && filters.playlistSongIds.length === 0),
+    (filters?.playlistSongIds && filters.playlistSongIds.length === 0),
   );
 
 /**
@@ -376,7 +389,12 @@ export const getRandomSongs = async (
 export const countPlayableSongs = async (
   filters: Pick<
     SongFilters,
-    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+    | 'difficulty'
+    | 'types'
+    | 'playlistSongIds'
+    | 'playlistIds'
+    | 'watchedIds'
+    | 'requirePlayableArtist'
   >,
 ): Promise<number> => {
   if (isEmptyPlaylistConstraint(filters)) return 0;
@@ -413,7 +431,12 @@ export const countDistinctChoiceNames = async (
 export const countDistinctArtistCredits = async (
   filters: Pick<
     SongFilters,
-    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+    | 'difficulty'
+    | 'types'
+    | 'playlistSongIds'
+    | 'playlistIds'
+    | 'watchedIds'
+    | 'requirePlayableArtist'
   >,
 ): Promise<number> => {
   if (isEmptyPlaylistConstraint(filters)) return 0;
@@ -435,7 +458,12 @@ export const countDistinctArtistCredits = async (
 export const listPlayableAnimeIds = async (
   filters: Pick<
     SongFilters,
-    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+    | 'difficulty'
+    | 'types'
+    | 'playlistSongIds'
+    | 'playlistIds'
+    | 'watchedIds'
+    | 'requirePlayableArtist'
   >,
 ): Promise<number[]> => {
   if (isEmptyPlaylistConstraint(filters)) return [];

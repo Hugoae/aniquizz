@@ -28,9 +28,7 @@ export const buildLibrarySongWhere = (
   const base: Prisma.SongWhereInput = {
     downloadStatus: 'COMPLETED',
     ...(opts.animeId !== undefined ? { animeId: opts.animeId } : {}),
-    ...(opts.franchiseId !== undefined
-      ? { anime: { franchiseId: opts.franchiseId } }
-      : {}),
+    ...(opts.franchiseId !== undefined ? { anime: { franchiseId: opts.franchiseId } } : {}),
     ...(songTypes?.length ? { songType: { in: songTypes } } : {}),
     ...(opts.difficulty?.length ? { difficulty: { in: opts.difficulty } } : {}),
   };
@@ -149,11 +147,7 @@ export const songSelect = {
 
 export type RawSong = Prisma.SongGetPayload<{ select: typeof songSelect }>;
 
-export const mapLibrarySong = (
-  row: RawSong,
-  discovered = false,
-  liked = false,
-): LibrarySong => ({
+export const mapLibrarySong = (row: RawSong, discovered = false, liked = false): LibrarySong => ({
   id: row.id,
   title: row.title,
   artist: row.artist,
@@ -220,17 +214,12 @@ export const applyDiscoveredToGroups = (
 ): void => {
   for (const group of groups) {
     for (const anime of group.animes) {
-      anime.songs = anime.songs.map((s) =>
-        discovered.has(s.id) ? { ...s, discovered: true } : s,
-      );
+      anime.songs = anime.songs.map((s) => (discovered.has(s.id) ? { ...s, discovered: true } : s));
     }
   }
 };
 
-export const applyLikedToGroups = (
-  groups: LibraryFranchiseGroup[],
-  liked: Set<number>,
-): void => {
+export const applyLikedToGroups = (groups: LibraryFranchiseGroup[], liked: Set<number>): void => {
   for (const group of groups) {
     for (const anime of group.animes) {
       anime.songs = anime.songs.map((s) => (liked.has(s.id) ? { ...s, liked: true } : s));

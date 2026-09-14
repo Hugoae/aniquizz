@@ -22,16 +22,28 @@ test.describe('daily quiz happy path', () => {
     }
 
     await page.goto('/daily');
-    await expect(page.getByRole('heading', { name: /quiz du jour/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('heading', { name: /quiz du jour/i })).toBeVisible({
+      timeout: 30_000,
+    });
 
     const start = page.getByRole('button', { name: /commencer|voir le résultat/i });
     await expect(start).toBeVisible();
-    if (await page.getByRole('button', { name: /^commencer$/i }).isVisible().catch(() => false)) {
+    if (
+      await page
+        .getByRole('button', { name: /^commencer$/i })
+        .isVisible()
+        .catch(() => false)
+    ) {
       await page.getByRole('button', { name: /^commencer$/i }).click();
-      await page.getByRole('alertdialog').getByRole('button', { name: /^commencer$/i }).click();
+      await page
+        .getByRole('alertdialog')
+        .getByRole('button', { name: /^commencer$/i })
+        .click();
       await expect(page.getByRole('group', { name: /choix/i })).toBeVisible({ timeout: 30_000 });
       await page.getByRole('group', { name: /choix/i }).getByRole('button').first().click();
-      await expect(page.getByRole('button', { name: /manche suivante/i })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('button', { name: /manche suivante/i })).toBeVisible({
+        timeout: 20_000,
+      });
     }
   });
 });

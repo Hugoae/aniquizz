@@ -69,7 +69,11 @@ const waitForLoadedMetadata = (el: HTMLVideoElement, signal?: AbortSignal): Prom
 };
 
 /** Seek and wait until the frame at `startTime` is ready — avoids audible playback at t=0. */
-const seekTo = async (el: HTMLVideoElement, startTime: number, signal?: AbortSignal): Promise<void> => {
+const seekTo = async (
+  el: HTMLVideoElement,
+  startTime: number,
+  signal?: AbortSignal,
+): Promise<void> => {
   if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
 
   const maxStart = Number.isFinite(el.duration) && el.duration > 0 ? el.duration - 0.25 : startTime;

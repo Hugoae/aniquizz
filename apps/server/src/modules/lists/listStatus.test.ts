@@ -26,9 +26,7 @@ describe('buildListsStatus', () => {
   });
 
   it('falls back when the stored active provider is no longer linked', () => {
-    const status = buildListsStatus(
-      row({ malUsername: 'MalUser', activeListProvider: 'anilist' }),
-    );
+    const status = buildListsStatus(row({ malUsername: 'MalUser', activeListProvider: 'anilist' }));
 
     expect(status.active).toBe('mal');
     expect(status.mal.active).toBe(true);

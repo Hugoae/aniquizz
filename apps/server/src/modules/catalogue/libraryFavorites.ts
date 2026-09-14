@@ -70,9 +70,7 @@ export const browseUserFavoriteSongs = async (
   });
 
   const usePinned = pinnedCount > 0;
-  const likeWhere = usePinned
-    ? { ...playableLike, pinOrder: { not: null } }
-    : playableLike;
+  const likeWhere = usePinned ? { ...playableLike, pinOrder: { not: null } } : playableLike;
 
   const [totalItems, likeRows] = await Promise.all([
     usePinned ? pinnedCount : prisma.songLike.count({ where: likeWhere }),

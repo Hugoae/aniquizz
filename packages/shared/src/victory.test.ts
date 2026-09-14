@@ -13,7 +13,12 @@ const base: Omit<VictoryInput, 'players'> = {
   songDifficulties: mediumSongs(10),
 };
 
-const player = (userId: string, score: number, correctCount = 0, totalCount = 10): VictoryPlayerInput => ({
+const player = (
+  userId: string,
+  score: number,
+  correctCount = 0,
+  totalCount = 10,
+): VictoryPlayerInput => ({
   userId,
   score,
   correctCount,
@@ -135,8 +140,9 @@ describe('computeVictory - multiplayer (no medals)', () => {
   });
 
   it('crowns a top-3 podium once the lobby is large enough', () => {
-    const players = Array.from({ length: GAME_CONFIG.VICTORY_CONDITIONS.MULTI.PODIUM_THRESHOLD }, (_, i) =>
-      player(`p${i}`, (i + 1) * 10, i + 1),
+    const players = Array.from(
+      { length: GAME_CONFIG.VICTORY_CONDITIONS.MULTI.PODIUM_THRESHOLD },
+      (_, i) => player(`p${i}`, (i + 1) * 10, i + 1),
     );
     const res = computeVictory({ ...base, players });
     expect(res.multiWinnerCount).toBe(3);

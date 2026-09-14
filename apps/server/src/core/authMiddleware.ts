@@ -3,7 +3,13 @@ import { prisma } from '@aniquizz/database';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { supabaseAdmin } from '../lib/supabase';
-import { levelFromXp, resolveActiveListProvider, type SocketData, type UserRole, type WatchedListProvider } from '@aniquizz/shared';
+import {
+  levelFromXp,
+  resolveActiveListProvider,
+  type SocketData,
+  type UserRole,
+  type WatchedListProvider,
+} from '@aniquizz/shared';
 import type { TypedSocket } from './socketTypes';
 
 /**
@@ -93,7 +99,15 @@ const loadModeration = async (userId: string): Promise<ModerationState | null> =
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-    select: { role: true, bannedUntil: true, mutedUntil: true, xp: true, anilistUsername: true, malUsername: true, activeListProvider: true },
+      select: {
+        role: true,
+        bannedUntil: true,
+        mutedUntil: true,
+        xp: true,
+        anilistUsername: true,
+        malUsername: true,
+        activeListProvider: true,
+      },
     });
     if (!profile) return null;
     return {
@@ -127,8 +141,7 @@ export const socketAuthMiddleware = async (
   next: (err?: Error) => void,
 ): Promise<void> => {
   const token = socket.handshake.auth?.token as string | undefined;
-  const displayName =
-    (socket.handshake.auth?.username as string | undefined)?.trim() || 'Anonyme';
+  const displayName = (socket.handshake.auth?.username as string | undefined)?.trim() || 'Anonyme';
 
   const data = socket.data;
   data.username = displayName;

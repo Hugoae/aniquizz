@@ -99,11 +99,7 @@ const toEntry = (metric: LeaderboardMetric, row: RankedRow): LeaderboardEntry =>
   }
 };
 
-const browseSql = (
-  metric: LeaderboardMetric,
-  offset: number,
-  pageSize: number,
-): Prisma.Sql => {
+const browseSql = (metric: LeaderboardMetric, offset: number, pageSize: number): Prisma.Sql => {
   const ranked = rankedCteSql(metric);
 
   return Prisma.sql`

@@ -1,11 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
-import {
-  connectSocket,
-  connectSocketExpectFail,
-  type TestSocket,
-} from '../test/socketHelpers';
+import { connectSocket, connectSocketExpectFail, type TestSocket } from '../test/socketHelpers';
 import { getTestAccessToken } from '../test/testJwt';
 
 describe.skipIf(!hasIntegrationEnv)('socket auth integration', () => {

@@ -13,9 +13,7 @@ const isDifficultyId = (value: string): value is DifficultyId =>
  */
 export function selectedPoolDifficulties(selected?: string[]): string[] | undefined {
   if (!selected?.length) return undefined;
-  const picked = new Set(
-    selected.map((value) => value.toLowerCase()).filter(isDifficultyId),
-  );
+  const picked = new Set(selected.map((value) => value.toLowerCase()).filter(isDifficultyId));
   if (!picked.size) return undefined;
   return DIFFICULTY_IDS.filter((id) => picked.has(id));
 }

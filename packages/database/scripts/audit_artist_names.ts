@@ -49,9 +49,7 @@ for (const [animeId, anime] of Object.entries(cache)) {
         ? theme.sequence
         : (fallbackSequence[type] = (fallbackSequence[type] ?? 0) + 1);
     const artistNames = normalizeArtistNames(
-      (theme.song?.artists ?? [])
-        .map((artist) => artist.name ?? '')
-        .filter(Boolean),
+      (theme.song?.artists ?? []).map((artist) => artist.name ?? '').filter(Boolean),
     );
     const key = `${animeId}|${type}|${sequence}`;
     const credits = sourceByKey.get(key) ?? [];
@@ -65,9 +63,7 @@ for (const [animeId, anime] of Object.entries(cache)) {
 }
 
 const songs = manual.flatMap((franchise) =>
-  (franchise.animes ?? []).flatMap((anime) =>
-    (anime.songs ?? []).map((song) => ({ anime, song })),
-  ),
+  (franchise.animes ?? []).flatMap((anime) => (anime.songs ?? []).map((song) => ({ anime, song }))),
 );
 
 const errors: string[] = [];
@@ -139,8 +135,7 @@ for (const { anime, song } of songs) {
   const source =
     withArtists.find((candidate) => normalizeString(candidate.title) === titleKey) ??
     withArtists.find(
-      (candidate) =>
-        JSON.stringify(candidate.artistNames) === JSON.stringify(song.artistNames),
+      (candidate) => JSON.stringify(candidate.artistNames) === JSON.stringify(song.artistNames),
     );
   if (!source) {
     warnings.push(

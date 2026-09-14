@@ -14,7 +14,10 @@ export async function recomputeChallengeResults(challengeId: string): Promise<vo
     include: attemptInclude,
   });
   for (const attempt of attempts) {
-    const totals = computeAttemptTotals(attempt.challenge.rounds as DailyRoundRow[], attempt.answers);
+    const totals = computeAttemptTotals(
+      attempt.challenge.rounds as DailyRoundRow[],
+      attempt.answers,
+    );
     const won = isDailyVictory(totals.correctCount, totals.activeRoundCount);
     const prevWon = attempt.won;
     await prisma.dailyAttempt.update({

@@ -57,7 +57,10 @@ export const likeSong = async (userId: string, songId: number): Promise<SongLike
   return { songId, liked: true };
 };
 
-export const unlikeSong = async (userId: string, songId: number): Promise<SongLikeToggleResponse> => {
+export const unlikeSong = async (
+  userId: string,
+  songId: number,
+): Promise<SongLikeToggleResponse> => {
   assertHumanUser(userId);
   if (!Number.isInteger(songId) || songId <= 0) {
     throw new SongLikeError('Identifiant de son invalide.', 'INVALID_SONG');

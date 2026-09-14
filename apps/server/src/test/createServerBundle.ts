@@ -4,11 +4,7 @@ import type { AddressInfo } from 'net';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import { prisma } from '@aniquizz/database';
-import type {
-  ClientToServerEvents,
-  ServerToClientEvents,
-  SocketData,
-} from '@aniquizz/shared';
+import type { ClientToServerEvents, ServerToClientEvents, SocketData } from '@aniquizz/shared';
 import { securityConfig } from '../config/security';
 import { GameManager } from '../modules/game/gameManager';
 import { SocketManager } from '../core/SocketManager';

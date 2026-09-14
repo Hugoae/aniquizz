@@ -34,7 +34,9 @@ export function RoomSettingsSection({
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <Globe2 className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-            <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">Salon</span>
+            <span className="text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              Salon
+            </span>
           </div>
           <div className="flex items-center gap-1.5">
             <Switch
@@ -118,7 +120,11 @@ export function RoomSettingsSection({
           tooltip="Nom affiché dans la liste, taille du salon et accès public ou protégé par mot de passe."
         />
         <div className="mb-2 flex items-center gap-2">
-          <Switch id="private-room" checked={config.isPrivate} onCheckedChange={(c) => update({ isPrivate: c })} />
+          <Switch
+            id="private-room"
+            checked={config.isPrivate}
+            onCheckedChange={(c) => update({ isPrivate: c })}
+          />
           <Label htmlFor="private-room">Salon privé</Label>
         </div>
       </div>

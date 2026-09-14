@@ -12,12 +12,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
  * reads `process.env`.
  */
 const envSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .optional(),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
 
   // Client origin(s) used for CORS. Comma-separated list allowed.
@@ -28,9 +24,7 @@ const envSchema = z.object({
 
   // Supabase identity: used to verify Socket.io handshakes via auth.getUser().
   SUPABASE_URL: z.string().url('SUPABASE_URL is required'),
-  SUPABASE_SERVICE_ROLE_KEY: z
-    .string()
-    .min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1, 'SUPABASE_SERVICE_ROLE_KEY is required'),
   // Optional legacy fallback for HS256 tokens (not needed with JWT Signing Keys).
   // CI/hosting often inject unset secrets as empty strings, so coerce '' → undefined.
   SUPABASE_JWT_SECRET: z.preprocess(
@@ -45,7 +39,6 @@ if (!parsed.success) {
   const issues = parsed.error.issues
     .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
     .join('\n');
-  // eslint-disable-next-line no-console
   console.error(`\n[env] Invalid server environment configuration:\n${issues}\n`);
   process.exit(1);
 }
@@ -54,7 +47,6 @@ const data = parsed.data;
 
 export const env = {
   ...data,
-  LOG_LEVEL:
-    data.LOG_LEVEL ?? (data.NODE_ENV === 'production' ? 'info' : 'debug'),
+  LOG_LEVEL: data.LOG_LEVEL ?? (data.NODE_ENV === 'production' ? 'info' : 'debug'),
 };
 export type Env = typeof env;

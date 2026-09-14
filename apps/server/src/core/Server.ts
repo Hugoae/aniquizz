@@ -6,11 +6,7 @@ import helmet from 'helmet';
 import { env } from '../config/env';
 import { configureTrustedProxy } from './httpClientIp';
 import { securityConfig } from '../config/security';
-import type {
-  ClientToServerEvents,
-  ServerToClientEvents,
-  SocketData,
-} from '@aniquizz/shared';
+import type { ClientToServerEvents, ServerToClientEvents, SocketData } from '@aniquizz/shared';
 
 export const app = express();
 configureTrustedProxy(app, env.NODE_ENV);

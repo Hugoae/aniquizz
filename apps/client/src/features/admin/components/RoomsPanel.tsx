@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   ArrowDown,
   ArrowUp,
@@ -14,14 +14,14 @@ import {
   Music2,
   Users,
   X,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { UserAvatar } from "@/components/ui/UserAvatar";
-import { ProfileView } from "@/features/profile/components/ProfileView";
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { UserAvatar } from '@/components/ui/UserAvatar';
+import { ProfileView } from '@/features/profile/components/ProfileView';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,23 +31,13 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import {
-  adminApi,
-  AdminApiError,
-  type AdminRoom,
-  type AdminUserProfile,
-} from "@/lib/adminApi";
+} from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { adminApi, AdminApiError, type AdminRoom, type AdminUserProfile } from '@/lib/adminApi';
 
 const errorMessage = (e: unknown): string =>
-  e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
+  e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
 
 const REFRESH_MS = 5000;
 
@@ -57,48 +47,56 @@ const STATUS_META: Record<
   string,
   { label: string; className: string; dot: string; pulse?: boolean }
 > = {
-  waiting: { label: "En attente", className: "bg-secondary text-foreground", dot: "bg-muted-foreground/40" },
+  waiting: {
+    label: 'En attente',
+    className: 'bg-secondary text-foreground',
+    dot: 'bg-muted-foreground/40',
+  },
   playing: {
-    label: "En partie",
-    className: "bg-success/20 text-success",
-    dot: "bg-success",
+    label: 'En partie',
+    className: 'bg-success/20 text-success',
+    dot: 'bg-success',
     pulse: true,
   },
-  paused: { label: "En pause", className: "bg-warning/20 text-warning", dot: "bg-warning" },
-  finished: { label: "Terminé", className: "bg-info/20 text-info", dot: "bg-info" },
+  paused: { label: 'En pause', className: 'bg-warning/20 text-warning', dot: 'bg-warning' },
+  finished: { label: 'Terminé', className: 'bg-info/20 text-info', dot: 'bg-info' },
 };
 
 const statusMeta = (status: string) =>
-  STATUS_META[status] ?? { label: status, className: "bg-secondary text-foreground", dot: "bg-muted-foreground/40" };
+  STATUS_META[status] ?? {
+    label: status,
+    className: 'bg-secondary text-foreground',
+    dot: 'bg-muted-foreground/40',
+  };
 
 const MODE_LABELS: Record<string, string> = {
-  solo: "Solo",
-  multiplayer: "Standard",
-  competitive: "Compétitif",
+  solo: 'Solo',
+  multiplayer: 'Standard',
+  competitive: 'Compétitif',
 };
 
 const RESPONSE_LABELS: Record<string, string> = {
-  typing: "Typing",
-  qcm: "QCM",
-  mix: "Typing & QCM",
+  typing: 'Typing',
+  qcm: 'QCM',
+  mix: 'Typing & QCM',
 };
 
 const SELECTION_LABELS: Record<string, string> = {
-  random: "Aléatoire",
-  mix: "Mixte",
-  watched: "Watched",
-  playlist: "Playlist",
+  random: 'Aléatoire',
+  mix: 'Mixte',
+  watched: 'Watched',
+  playlist: 'Playlist',
 };
 
 const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: "Facile",
-  medium: "Moyen",
-  hard: "Difficile",
+  easy: 'Facile',
+  medium: 'Moyen',
+  hard: 'Difficile',
 };
 
 const formatDifficulties = (diffs: string[]): string => {
-  if (!diffs.length) return "Mixte";
-  return diffs.map((d) => DIFFICULTY_LABELS[d] ?? d).join(", ");
+  if (!diffs.length) return 'Mixte';
+  return diffs.map((d) => DIFFICULTY_LABELS[d] ?? d).join(', ');
 };
 
 /** Human-readable "open since" from an ISO timestamp. */
@@ -116,28 +114,27 @@ const formatOpenSince = (iso: string): string => {
 
 // --- FILTERS / SORTS --------------------------------------------------------
 
-type FilterKey = "all" | "waiting" | "playing" | "public" | "private";
-type SortKey = "created" | "players" | "status";
+type FilterKey = 'all' | 'waiting' | 'playing' | 'public' | 'private';
+type SortKey = 'created' | 'players' | 'status';
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "waiting", label: "En attente" },
-  { key: "playing", label: "En partie" },
-  { key: "public", label: "Publics" },
-  { key: "private", label: "Privés" },
+  { key: 'all', label: 'Tous' },
+  { key: 'waiting', label: 'En attente' },
+  { key: 'playing', label: 'En partie' },
+  { key: 'public', label: 'Publics' },
+  { key: 'private', label: 'Privés' },
 ];
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: "created", label: "Ancienneté" },
-  { key: "players", label: "Joueurs" },
-  { key: "status", label: "Statut" },
+  { key: 'created', label: 'Ancienneté' },
+  { key: 'players', label: 'Joueurs' },
+  { key: 'status', label: 'Statut' },
 ];
 
 const STATUS_ORDER: Record<string, number> = { playing: 0, paused: 1, waiting: 2, finished: 3 };
 
-const isPlaying = (r: AdminRoom) => r.status === "playing" || r.status === "paused";
-const connectedHumans = (r: AdminRoom) =>
-  r.players.filter((p) => !p.isBot && p.isConnected).length;
+const isPlaying = (r: AdminRoom) => r.status === 'playing' || r.status === 'paused';
+const connectedHumans = (r: AdminRoom) => r.players.filter((p) => !p.isBot && p.isConnected).length;
 
 interface PendingConfirm {
   title: string;
@@ -199,8 +196,8 @@ function PlayerProfileDialog({
             role={profile.role}
             anilistUsername={profile.anilistUsername}
             malUsername={profile.malUsername}
-            presenceLabel={player.connected ? "Dans le salon" : "Déconnecté"}
-            presenceColor={player.connected ? "bg-success" : "bg-muted-foreground/30"}
+            presenceLabel={player.connected ? 'Dans le salon' : 'Déconnecté'}
+            presenceColor={player.connected ? 'bg-success' : 'bg-muted-foreground/30'}
             presenceOnline={player.connected}
             stats={profile.stats}
           />
@@ -246,10 +243,10 @@ function RoomSkeleton() {
 export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | null }) {
   const [rooms, setRooms] = useState<AdminRoom[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("created");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<FilterKey>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('created');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [detail, setDetail] = useState<{ userId: string; connected: boolean } | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -282,14 +279,14 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
   // Coming from a "current room" link: make sure the room is visible, then scroll.
   useEffect(() => {
     if (highlightRoomId) {
-      setFilter("all");
-      setQuery("");
+      setFilter('all');
+      setQuery('');
     }
   }, [highlightRoomId]);
 
   useEffect(() => {
     if (highlightRoomId && highlightRef.current) {
-      highlightRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   }, [highlightRoomId, rooms]);
 
@@ -312,10 +309,10 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortDir("desc");
+      setSortDir('desc');
     }
   };
 
@@ -332,7 +329,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
       await navigator.clipboard.writeText(text);
       toast.success(msg);
     } catch {
-      toast.error("Copie impossible.");
+      toast.error('Copie impossible.');
     }
   };
 
@@ -342,7 +339,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
     let players = 0;
     for (const r of rooms) {
       if (isPlaying(r)) playing += 1;
-      if (r.status === "waiting") waiting += 1;
+      if (r.status === 'waiting') waiting += 1;
       players += r.humanCount;
     }
     return { total: rooms.length, playing, waiting, players };
@@ -353,27 +350,27 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
     let list = rooms.filter((r) => {
       if (q && !r.name.toLowerCase().includes(q) && !r.id.toLowerCase().includes(q)) return false;
       switch (filter) {
-        case "waiting":
-          return r.status === "waiting";
-        case "playing":
+        case 'waiting':
+          return r.status === 'waiting';
+        case 'playing':
           return isPlaying(r);
-        case "public":
+        case 'public':
           return !r.isPrivate;
-        case "private":
+        case 'private':
           return r.isPrivate;
         default:
           return true;
       }
     });
 
-    const dir = sortDir === "asc" ? 1 : -1;
+    const dir = sortDir === 'asc' ? 1 : -1;
     list = [...list].sort((a, b) => {
       switch (sortKey) {
-        case "players":
+        case 'players':
           return (a.playerCount - b.playerCount) * dir;
-        case "status":
+        case 'status':
           return ((STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9)) * dir;
-        case "created":
+        case 'created':
         default:
           return (new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()) * dir;
       }
@@ -392,7 +389,8 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
           <span className="h-2 w-2 rounded-full bg-success" /> {counts.playing} en partie
         </span>
         <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-muted-foreground/40" /> {counts.waiting} en attente
+          <span className="h-2 w-2 rounded-full bg-muted-foreground/40" /> {counts.waiting} en
+          attente
         </span>
         <span className="flex items-center gap-2 text-muted-foreground">
           {counts.players} joueur(s) au total
@@ -413,9 +411,9 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
           <Button
             key={f.key}
             size="sm"
-            variant={filter === f.key ? "default" : "outline"}
+            variant={filter === f.key ? 'default' : 'outline'}
             onClick={() => setFilter(f.key)}
-            className={cn("rounded-full", filter !== f.key && "border-border")}
+            className={cn('rounded-full', filter !== f.key && 'border-border')}
           >
             {f.label}
           </Button>
@@ -432,10 +430,18 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
               size="sm"
               variant="ghost"
               onClick={() => toggleSort(s.key)}
-              className={cn("h-7 gap-1 px-2 text-xs", active ? "text-primary" : "text-muted-foreground")}
+              className={cn(
+                'h-7 gap-1 px-2 text-xs',
+                active ? 'text-primary' : 'text-muted-foreground',
+              )}
             >
               {s.label}
-              {active && (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+              {active &&
+                (sortDir === 'asc' ? (
+                  <ArrowUp className="h-3 w-3" />
+                ) : (
+                  <ArrowDown className="h-3 w-3" />
+                ))}
             </Button>
           );
         })}
@@ -451,7 +457,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
 
       {loaded && !visibleRooms.length && (
         <div className="glass-card p-6 text-center text-muted-foreground">
-          {rooms.length ? "Aucun salon ne correspond aux filtres." : "Aucun salon en cours."}
+          {rooms.length ? 'Aucun salon ne correspond aux filtres.' : 'Aucun salon en cours.'}
         </div>
       )}
 
@@ -459,20 +465,20 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
         const meta = statusMeta(room.status);
         const botCount = room.playerCount - room.humanCount;
         const ghost = connectedHumans(room) === 0;
-        const sortedPlayers = [...room.players].sort(
-          (a, b) => Number(b.isHost) - Number(a.isHost),
-        );
+        const sortedPlayers = [...room.players].sort((a, b) => Number(b.isHost) - Number(a.isHost));
         const showPw = revealed.has(room.id);
-        const remainingMs = room.progress?.endsAt ? Math.max(0, room.progress.endsAt - Date.now()) : null;
+        const remainingMs = room.progress?.endsAt
+          ? Math.max(0, room.progress.endsAt - Date.now())
+          : null;
 
         return (
           <div
             key={room.id}
             ref={room.id === highlightRoomId ? highlightRef : undefined}
             className={cn(
-              "glass-card p-4 space-y-3 transition-all animate-in fade-in-0 duration-300",
-              room.id === highlightRoomId && "ring-2 ring-primary/60",
-              ghost && "opacity-80",
+              'glass-card p-4 space-y-3 transition-all animate-in fade-in-0 duration-300',
+              room.id === highlightRoomId && 'ring-2 ring-primary/60',
+              ghost && 'opacity-80',
             )}
           >
             {/* Header */}
@@ -484,12 +490,18 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                   <button
                     className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
                     title="Copier le code du salon"
-                    onClick={() => void copy(room.id, "Code du salon copié.")}
+                    onClick={() => void copy(room.id, 'Code du salon copié.')}
                   >
                     #{room.id} <Copy className="h-3 w-3" />
                   </button>
-                  <Badge className={cn("gap-1.5", meta.className)}>
-                    <span className={cn("h-1.5 w-1.5 rounded-full", meta.dot, meta.pulse && "animate-pulse")} />
+                  <Badge className={cn('gap-1.5', meta.className)}>
+                    <span
+                      className={cn(
+                        'h-1.5 w-1.5 rounded-full',
+                        meta.dot,
+                        meta.pulse && 'animate-pulse',
+                      )}
+                    />
                     {meta.label}
                   </Badge>
                   {ghost && (
@@ -526,10 +538,10 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                   {room.isPrivate && (
                     <ConfigBadge>
                       <Lock className="h-3 w-3" />
-                      {showPw ? room.password || "(vide)" : "••••••"}
+                      {showPw ? room.password || '(vide)' : '••••••'}
                       <button
                         className="hover:text-foreground"
-                        title={showPw ? "Masquer" : "Afficher le mot de passe"}
+                        title={showPw ? 'Masquer' : 'Afficher le mot de passe'}
                         onClick={() => toggleReveal(room.id)}
                       >
                         {showPw ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
@@ -538,7 +550,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                         <button
                           className="hover:text-foreground"
                           title="Copier le mot de passe"
-                          onClick={() => void copy(room.password, "Mot de passe copié.")}
+                          onClick={() => void copy(room.password, 'Mot de passe copié.')}
                         >
                           <Copy className="h-3 w-3" />
                         </button>
@@ -557,10 +569,10 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     setPending({
                       title: `Terminer la partie de "${room.name}" ?`,
                       description:
-                        "La partie en cours sera arrêtée et les joueurs renvoyés au salon.",
-                      confirmLabel: "Terminer",
+                        'La partie en cours sera arrêtée et les joueurs renvoyés au salon.',
+                      confirmLabel: 'Terminer',
                       action: () => adminApi.endMatch(room.id),
-                      successMsg: "Partie terminée.",
+                      successMsg: 'Partie terminée.',
                     })
                   }
                 >
@@ -573,11 +585,11 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     setPending({
                       title: `Fermer le salon "${room.name}" ?`,
                       description:
-                        "Le salon sera définitivement fermé et tous les joueurs en seront expulsés.",
-                      confirmLabel: "Fermer",
+                        'Le salon sera définitivement fermé et tous les joueurs en seront expulsés.',
+                      confirmLabel: 'Fermer',
                       destructive: true,
                       action: () => adminApi.closeRoom(room.id),
-                      successMsg: "Salon fermé.",
+                      successMsg: 'Salon fermé.',
                     })
                   }
                 >
@@ -594,11 +606,11 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     Round {room.progress.currentRound}/{room.progress.totalRounds}
                     {room.progress.phase && (
                       <span className="ml-2 text-muted-foreground">
-                        {room.progress.phase === "guessing"
-                          ? "· manche"
-                          : room.progress.phase === "reveal"
-                            ? "· révélation"
-                            : "· intro"}
+                        {room.progress.phase === 'guessing'
+                          ? '· manche'
+                          : room.progress.phase === 'reveal'
+                            ? '· révélation'
+                            : '· intro'}
                       </span>
                     )}
                   </span>
@@ -631,26 +643,28 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                 <div
                   key={p.userId}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg bg-secondary/50 px-2 py-1 text-xs transition-colors",
-                    !p.isBot && "cursor-pointer hover:bg-secondary",
+                    'flex items-center gap-2 rounded-lg bg-secondary/50 px-2 py-1 text-xs transition-colors',
+                    !p.isBot && 'cursor-pointer hover:bg-secondary',
                   )}
                   onClick={
                     p.isBot
                       ? undefined
                       : () => setDetail({ userId: p.userId, connected: p.isConnected })
                   }
-                  title={p.isBot ? undefined : "Voir le profil"}
+                  title={p.isBot ? undefined : 'Voir le profil'}
                 >
                   <span className="relative">
                     <UserAvatar avatar={p.avatar} username={p.username} className="h-6 w-6" />
                     <span
                       className={cn(
-                        "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background",
-                        p.isConnected ? "bg-success" : "bg-muted-foreground/40",
+                        'absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background',
+                        p.isConnected ? 'bg-success' : 'bg-muted-foreground/40',
                       )}
                     />
                   </span>
-                  <span className={cn("font-medium", !p.isConnected && "opacity-60")}>{p.username}</span>
+                  <span className={cn('font-medium', !p.isConnected && 'opacity-60')}>
+                    {p.username}
+                  </span>
                   {p.isHost && <Badge className="bg-primary/20 text-primary">Hôte</Badge>}
                   {p.isBot && (
                     <Badge className="gap-1 bg-accent/15 text-accent">
@@ -666,10 +680,10 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                       setPending({
                         title: `Expulser ${p.username} ?`,
                         description: `${p.username} sera retiré du salon "${room.name}".`,
-                        confirmLabel: "Expulser",
+                        confirmLabel: 'Expulser',
                         destructive: true,
                         action: () => adminApi.kick(room.id, p.userId),
-                        successMsg: "Joueur expulsé.",
+                        successMsg: 'Joueur expulsé.',
                       });
                     }}
                   >
@@ -694,7 +708,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void confirmPending()}
-              className={pending?.destructive ? "bg-destructive hover:bg-destructive/90" : ""}
+              className={pending?.destructive ? 'bg-destructive hover:bg-destructive/90' : ''}
             >
               {pending?.confirmLabel}
             </AlertDialogAction>

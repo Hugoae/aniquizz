@@ -8,11 +8,7 @@ import {
   SUGGESTION_TITLE_MAX,
 } from '@aniquizz/shared';
 import { optionalAuth, requireRole, type AuthedRequest } from '../core/httpAuth';
-import {
-  clientIp,
-  enforceHttpRateLimit,
-  HTTP_RATE_LIMITS,
-} from '../core/httpRateLimit';
+import { clientIp, enforceHttpRateLimit, HTTP_RATE_LIMITS } from '../core/httpRateLimit';
 import {
   browseSuggestions,
   createSuggestion,

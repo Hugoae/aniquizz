@@ -88,10 +88,7 @@ const usesWatchedFallback = (settings: RoomSettings): boolean =>
   (settings.soundSelection === 'playlist' && Boolean(settings.playlistWatched));
 
 /** Merge a settings patch onto existing settings (host edits), re-validated. */
-export const mergeRoomSettings = (
-  current: RoomSettings,
-  patch: unknown,
-): RoomSettings => {
+export const mergeRoomSettings = (current: RoomSettings, patch: unknown): RoomSettings => {
   const merged = { ...current, ...(patch as Record<string, unknown>) };
   const next = normalizeRoomSettings(merged, {
     roomName: (merged as RoomSettings).roomName,

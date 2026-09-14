@@ -57,7 +57,8 @@ export function SoloMasteryBar({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-4">
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct =
+              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
             const earned = score >= required;
             const meta = getMedalMeta(tier);
             if (!meta) return null;
@@ -87,14 +88,17 @@ export function SoloMasteryBar({
 
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct =
+              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
             const earned = score >= required;
             return (
               <div
                 key={tier}
                 className={cn(
                   'absolute bottom-0 top-0 z-20 w-px',
-                  earned ? 'bg-foreground/90 shadow-[0_0_8px_hsl(var(--foreground)/0.5)]' : 'bg-muted-foreground/35',
+                  earned
+                    ? 'bg-foreground/90 shadow-[0_0_8px_hsl(var(--foreground)/0.5)]'
+                    : 'bg-muted-foreground/35',
                 )}
                 style={{ left: `${pct}%` }}
                 aria-hidden
@@ -109,7 +113,8 @@ export function SoloMasteryBar({
           </span>
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct = maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct =
+              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
             const earned = score >= required;
             const meta = getMedalMeta(tier);
             return (

@@ -21,9 +21,7 @@ export function parseGameNavState(state: unknown): GameNavState {
     roomId: typeof s.roomId === 'string' ? s.roomId : undefined,
     players: Array.isArray(s.players) ? (s.players as GamePlayer[]) : undefined,
     settings:
-      settings && typeof settings === 'object'
-        ? (settings as Partial<RoomSettings>)
-        : undefined,
+      settings && typeof settings === 'object' ? (settings as Partial<RoomSettings>) : undefined,
     mode: s.mode === 'solo' || s.mode === 'multiplayer' ? s.mode : undefined,
     gameData:
       gameData && typeof gameData === 'object'

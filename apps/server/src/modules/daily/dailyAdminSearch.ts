@@ -55,7 +55,10 @@ export async function searchDailyPlayableSongs(
   });
 
   return rows
-    .filter((row): row is typeof row & { songType: 'OP' | 'ED' } => row.songType === 'OP' || row.songType === 'ED')
+    .filter(
+      (row): row is typeof row & { songType: 'OP' | 'ED' } =>
+        row.songType === 'OP' || row.songType === 'ED',
+    )
     .map((row) => ({
       id: row.id,
       title: row.title,

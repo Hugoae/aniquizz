@@ -80,13 +80,18 @@ export interface EngineHarness {
   repo: MatchRepository;
 }
 
-export function createEngineHarness(opts: {
-  settings?: Partial<RoomSettings>;
-  playlist?: PlaylistItem[];
-  playerIds?: string[];
-  scoring?: ScoringStrategy;
-} = {}): EngineHarness {
-  const playlist = opts.playlist ?? [makePlaylistItem({ id: 1 }), makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'] })];
+export function createEngineHarness(
+  opts: {
+    settings?: Partial<RoomSettings>;
+    playlist?: PlaylistItem[];
+    playerIds?: string[];
+    scoring?: ScoringStrategy;
+  } = {},
+): EngineHarness {
+  const playlist = opts.playlist ?? [
+    makePlaylistItem({ id: 1 }),
+    makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'] }),
+  ];
   const settings = makeSettings(opts.settings);
   const { io, emitted } = createMockIo();
   const room = new Room('test-room', io, 'player-1', settings);

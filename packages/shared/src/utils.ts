@@ -567,7 +567,8 @@ export function animeMatchesLibrarySearch(candidate: FuzzyAnimeCandidate, query:
 
   const allowFuzzy = term.length >= GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_FOR_FUZZY;
   if (bestScoreForCandidate(term, candidate, 'anime', allowFuzzy, trimmed)) return true;
-  if (candidate.franchise && scoreField(term, candidate.franchise, allowFuzzy, trimmed)) return true;
+  if (candidate.franchise && scoreField(term, candidate.franchise, allowFuzzy, trimmed))
+    return true;
   return false;
 }
 
@@ -594,10 +595,10 @@ export const getFuzzySuggestions = (
   const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
   const franchiseCounts =
     labelMode === 'franchise'
-      ? franchiseCountsCache ??
+      ? (franchiseCountsCache ??
         (list[0] && isPreparedFuzzyCandidate(list[0])
           ? new Map<string, number>()
-          : buildFranchiseCounts(list))
+          : buildFranchiseCounts(list)))
       : new Map<string, number>();
 
   const byLabel = new Map<string, AnimeSuggestion>();

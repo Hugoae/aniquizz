@@ -26,10 +26,8 @@ export function SongLikeButton({
   if (!Number.isInteger(songId) || songId <= 0) return null;
   const liked = ready ? isLiked(songId) : initialLiked;
 
-  const iconSize =
-    size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
-  const buttonSize =
-    size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-10 w-10' : 'h-9 w-9';
+  const iconSize = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
+  const buttonSize = size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-10 w-10' : 'h-9 w-9';
 
   return (
     <Button

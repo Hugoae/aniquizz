@@ -22,17 +22,14 @@ export function signTestToken(userId: string, username: string): string {
   if (!env.SUPABASE_JWT_SECRET) {
     throw new Error('SUPABASE_JWT_SECRET is required for HS256 test tokens');
   }
-  return jwt.sign(
-    { sub: userId, user_metadata: { username } },
-    env.SUPABASE_JWT_SECRET,
-    { algorithm: 'HS256', expiresIn: '1h' },
-  );
+  return jwt.sign({ sub: userId, user_metadata: { username } }, env.SUPABASE_JWT_SECRET, {
+    algorithm: 'HS256',
+    expiresIn: '1h',
+  });
 }
 
 const anonKey = (): string =>
-  process.env.SUPABASE_ANON_KEY?.trim() ||
-  process.env.VITE_SUPABASE_ANON_KEY?.trim() ||
-  '';
+  process.env.SUPABASE_ANON_KEY?.trim() || process.env.VITE_SUPABASE_ANON_KEY?.trim() || '';
 
 /** Real Supabase access token via sign-in (preferred — no JWT secret needed). */
 export async function getTestAccessToken(userKey: TestUserKey = 'admin'): Promise<string> {

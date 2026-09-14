@@ -35,13 +35,19 @@ type Planned = {
   artistNames: string[];
 };
 
-function planArtistNames(song: { id: number; artist: string }): { planned: Planned; error?: string } {
+function planArtistNames(song: { id: number; artist: string }): {
+  planned: Planned;
+  error?: string;
+} {
   const artistNames = parseArtistNames(song.artist);
   const planned = { id: song.id, artist: song.artist, artistNames };
 
   if (isUnknownArtistCredit(song.artist)) {
     if (artistNames.length !== 0) {
-      return { planned, error: `#${song.id} unknown artist produced names: ${JSON.stringify(artistNames)}` };
+      return {
+        planned,
+        error: `#${song.id} unknown artist produced names: ${JSON.stringify(artistNames)}`,
+      };
     }
     return { planned };
   }
@@ -58,7 +64,10 @@ function planArtistNames(song: { id: number; artist: string }): { planned: Plann
 
   if (hasArtistCreditOverride(song.artist)) {
     if (artistNames.length < 2) {
-      return { planned, error: `#${song.id} curated collaboration was not split: "${song.artist}"` };
+      return {
+        planned,
+        error: `#${song.id} curated collaboration was not split: "${song.artist}"`,
+      };
     }
   } else if (song.artist.includes(',')) {
     if (artistNames.length < 2) {
@@ -73,7 +82,9 @@ function planArtistNames(song: { id: number; artist: string }): { planned: Plann
 
   const fragment =
     artistNames.length > 1
-      ? artistNames.find((name) => FORBIDDEN_FRAGMENTS.has(name.toLowerCase()) || /^and\s/i.test(name))
+      ? artistNames.find(
+          (name) => FORBIDDEN_FRAGMENTS.has(name.toLowerCase()) || /^and\s/i.test(name),
+        )
       : undefined;
   if (fragment) {
     return {
@@ -83,7 +94,10 @@ function planArtistNames(song: { id: number; artist: string }): { planned: Plann
   }
 
   if (artistNames.length === 0) {
-    return { planned, error: `#${song.id} non-unknown artist produced an empty list: "${song.artist}"` };
+    return {
+      planned,
+      error: `#${song.id} non-unknown artist produced an empty list: "${song.artist}"`,
+    };
   }
 
   return { planned };
@@ -133,7 +147,9 @@ async function main() {
     );
   }
 
-  const written = await prisma.$queryRaw<Array<{ id: number; artist: string; artistNames: string[] }>>`
+  const written = await prisma.$queryRaw<
+    Array<{ id: number; artist: string; artistNames: string[] }>
+  >`
     SELECT id, artist, "artistNames" FROM "Song" ORDER BY id
   `;
   const mismatches = written.filter((row, index) => {
@@ -145,7 +161,9 @@ async function main() {
     );
   });
   if (mismatches.length) {
-    console.error(`❌ ${mismatches.length} row(s) did not match the planned artistNames after write`);
+    console.error(
+      `❌ ${mismatches.length} row(s) did not match the planned artistNames after write`,
+    );
     for (const row of mismatches.slice(0, 20)) {
       console.error(`   #${row.id} "${row.artist}" → ${JSON.stringify(row.artistNames)}`);
     }

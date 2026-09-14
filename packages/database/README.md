@@ -140,14 +140,14 @@ Step 2 is unlocked-only by default, preserving the historical full-pipeline
 behavior. Explicit selection modes may enrich locked anime without unlocking or
 overwriting their metadata:
 
-| Goal | Environment |
-|------|-------------|
-| All unlocked anime (default) | no selector |
-| All anime, including locked | `ANIMETHEMES_INCLUDE_LOCKED=1` |
-| Exact AniList ids | `ANIMETHEMES_TARGET_IDS=16498,101922` |
-| Live AniList top N | `ANIMETHEMES_TOP_LIMIT=100` |
+| Goal                                  | Environment                                |
+| ------------------------------------- | ------------------------------------------ |
+| All unlocked anime (default)          | no selector                                |
+| All anime, including locked           | `ANIMETHEMES_INCLUDE_LOCKED=1`             |
+| Exact AniList ids                     | `ANIMETHEMES_TARGET_IDS=16498,101922`      |
+| Live AniList top N                    | `ANIMETHEMES_TOP_LIMIT=100`                |
 | Current exported DB snapshot as input | `ANIMETHEMES_INPUT_FILE=manual_edits.json` |
-| Preview only | `ANIMETHEMES_DRY_RUN=1` |
+| Preview only                          | `ANIMETHEMES_DRY_RUN=1`                    |
 
 `ANIMETHEMES_TOP_LIMIT` queries AniList live with `POPULARITY_DESC`, then keeps
 the first N eligible anime present in the selected input. Intentionally excluded

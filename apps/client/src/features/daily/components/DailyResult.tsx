@@ -56,7 +56,12 @@ export function DailyResult({ result, username, avatar, onBack }: DailyResultPro
           <span className="font-mono text-sm font-bold tabular-nums">
             {result.correctCount}/{result.activeRoundCount}
           </span>
-          <span className={cn('text-xs font-black uppercase', isSuccess ? 'text-success' : 'text-destructive')}>
+          <span
+            className={cn(
+              'text-xs font-black uppercase',
+              isSuccess ? 'text-success' : 'text-destructive',
+            )}
+          >
             {isSuccess ? DAILY_COPY.victory : DAILY_COPY.defeat}
           </span>
         </div>

@@ -1,10 +1,10 @@
-import fs from "fs";
-import axios from "axios";
-import https from "https";
-import ffmpeg from "fluent-ffmpeg";
-import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
-import ffprobeInstaller from "@ffprobe-installer/ffprobe";
-import { parseRetryAfterMs } from "./progress";
+import fs from 'fs';
+import axios from 'axios';
+import https from 'https';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
+import ffprobeInstaller from '@ffprobe-installer/ffprobe';
+import { parseRetryAfterMs } from './progress';
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
@@ -31,7 +31,11 @@ export interface DownloadOptions {
   onRetry?: (info: DownloadRetryInfo) => void;
 }
 
-function classifyDownloadError(err: unknown): { retry: boolean; status?: number; headers?: unknown } {
+function classifyDownloadError(err: unknown): {
+  retry: boolean;
+  status?: number;
+  headers?: unknown;
+} {
   if (axios.isAxiosError(err)) {
     const status = err.response?.status;
     if (status && RETRYABLE_STATUS.has(status)) {
@@ -42,7 +46,7 @@ function classifyDownloadError(err: unknown): { retry: boolean; status?: number;
     return { retry: false, status };
   }
   // Our own timeout marker (see attemptDownload) is transient.
-  if (err instanceof Error && err.message.startsWith("TIMEOUT")) return { retry: true };
+  if (err instanceof Error && err.message.startsWith('TIMEOUT')) return { retry: true };
   return { retry: false };
 }
 
@@ -58,19 +62,19 @@ async function attemptDownload(url: string, outPath: string, timeoutMs: number):
   try {
     const response = await axios({
       url,
-      method: "GET",
-      responseType: "stream",
+      method: 'GET',
+      responseType: 'stream',
       signal: controller.signal,
       httpsAgent,
-      headers: { Connection: "close" },
+      headers: { Connection: 'close' },
     });
 
     response.data.pipe(writer);
 
     await new Promise<void>((resolve, reject) => {
-      writer.on("finish", resolve);
-      writer.on("error", reject);
-      response.data.on("error", reject);
+      writer.on('finish', resolve);
+      writer.on('error', reject);
+      response.data.on('error', reject);
     });
   } catch (err: unknown) {
     if (axios.isCancel(err) || controller.signal.aborted) {
@@ -147,7 +151,7 @@ export async function downloadToFile(
         attempt: attempt + 1,
         status,
         waitMs: wait,
-        error: err instanceof Error ? err.message : "Unknown error",
+        error: err instanceof Error ? err.message : 'Unknown error',
       });
 
       await new Promise((resolve) => setTimeout(resolve, wait));
@@ -164,46 +168,46 @@ export async function compressMp4(
   // without a larger mux queue ffmpeg fails with "Too many packets buffered".
   const strategies: string[][] = [
     [
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-crf",
-      "28",
-      "-pix_fmt",
-      "yuv420p",
-      "-c:a",
-      "aac",
-      "-b:a",
-      "128k",
-      "-movflags",
-      "+faststart",
-      "-avoid_negative_ts",
-      "make_zero",
-      "-max_muxing_queue_size",
-      "1024",
-      "-vf",
-      "scale=-2:720",
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '28',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '128k',
+      '-movflags',
+      '+faststart',
+      '-avoid_negative_ts',
+      'make_zero',
+      '-max_muxing_queue_size',
+      '1024',
+      '-vf',
+      'scale=-2:720',
     ],
     [
-      "-c:v",
-      "libx264",
-      "-preset",
-      "veryfast",
-      "-crf",
-      "28",
-      "-pix_fmt",
-      "yuv420p",
-      "-c:a",
-      "aac",
-      "-b:a",
-      "128k",
-      "-movflags",
-      "+faststart",
-      "-avoid_negative_ts",
-      "make_zero",
-      "-max_muxing_queue_size",
-      "1024",
+      '-c:v',
+      'libx264',
+      '-preset',
+      'veryfast',
+      '-crf',
+      '28',
+      '-pix_fmt',
+      'yuv420p',
+      '-c:a',
+      'aac',
+      '-b:a',
+      '128k',
+      '-movflags',
+      '+faststart',
+      '-avoid_negative_ts',
+      'make_zero',
+      '-max_muxing_queue_size',
+      '1024',
     ],
   ];
 
@@ -218,7 +222,7 @@ export async function compressMp4(
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error("Compression failed");
+  throw lastError instanceof Error ? lastError : new Error('Compression failed');
 }
 
 function runFfmpegCompress(
@@ -228,15 +232,15 @@ function runFfmpegCompress(
   timeoutMs: number,
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const safetyTimeout = setTimeout(() => reject(new Error("Compression Timeout")), timeoutMs);
+    const safetyTimeout = setTimeout(() => reject(new Error('Compression Timeout')), timeoutMs);
 
     ffmpeg(inputPath)
       .outputOptions(outputOptions)
-      .on("end", () => {
+      .on('end', () => {
         clearTimeout(safetyTimeout);
         resolve();
       })
-      .on("error", (err: unknown) => {
+      .on('error', (err: unknown) => {
         clearTimeout(safetyTimeout);
         reject(err);
       })

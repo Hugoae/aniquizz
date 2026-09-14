@@ -32,9 +32,13 @@ export function validateDailySnapshots(
     if (diff in diffs) diffs[diff] += 1;
     if (row.songType === 'ED') types.ED += 1;
     else types.OP += 1;
-    if (!row.videoKey) warnings.push({ code: 'missing_video', message: `Round song ${row.id} has no video key.` });
+    if (!row.videoKey)
+      warnings.push({ code: 'missing_video', message: `Round song ${row.id} has no video key.` });
     if (row.choices.includes('???')) {
-      warnings.push({ code: 'placeholder_choice', message: `Round ${row.id} fell back to a placeholder QCM choice.` });
+      warnings.push({
+        code: 'placeholder_choice',
+        message: `Round ${row.id} fell back to a placeholder QCM choice.`,
+      });
     }
     if (opts.recentSongIds.has(row.id)) recentSong = true;
     const franchiseKey = row.franchiseId != null ? `f:${row.franchiseId}` : `a:${row.animeId}`;
@@ -44,7 +48,10 @@ export function validateDailySnapshots(
     warnings.push({ code: 'recent_song', message: 'A song appeared in the last 60 days.' });
   }
   if (recentFranchise) {
-    warnings.push({ code: 'recent_franchise', message: 'A franchise appeared in the last 14 days.' });
+    warnings.push({
+      code: 'recent_franchise',
+      message: 'A franchise appeared in the last 14 days.',
+    });
   }
 
   if (diffs.easy !== 2 || diffs.medium !== 2 || diffs.hard !== 1) {

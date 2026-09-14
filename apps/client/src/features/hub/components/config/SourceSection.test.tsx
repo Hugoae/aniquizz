@@ -31,7 +31,6 @@ const baseConfig: RoomConfig = {
   password: '',
   maxPlayers: 1,
   roomName: 'Test',
-  name: 'Test',
   hostName: 'Host',
   hostAvatar: 'player1',
 };

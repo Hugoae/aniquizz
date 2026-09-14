@@ -105,13 +105,9 @@ export function registerAdminRoutes(
   };
 
   // Identity/role probe used by the client to gate the /admin UI.
-  router.get(
-    '/me',
-    requireRole('MODERATOR'),
-    (req: AuthedRequest, res: Response) => {
-      res.json({ userId: req.actor!.userId, username: req.actor!.username, role: req.actor!.role });
-    },
-  );
+  router.get('/me', requireRole('MODERATOR'), (req: AuthedRequest, res: Response) => {
+    res.json({ userId: req.actor!.userId, username: req.actor!.username, role: req.actor!.role });
+  });
 
   // --- USERS ----------------------------------------------------------------
 
@@ -136,7 +132,14 @@ export function registerAdminRoutes(
       const inGameIds = [...inGame];
 
       const allowedFilters = new Set([
-        'all', 'players', 'moderators', 'admins', 'muted', 'banned', 'online', 'in_game',
+        'all',
+        'players',
+        'moderators',
+        'admins',
+        'muted',
+        'banned',
+        'online',
+        'in_game',
       ]);
       const allowedSorts = new Set(['username', 'xp', 'games', 'created', 'seen']);
 
@@ -204,7 +207,10 @@ export function registerAdminRoutes(
         return;
       }
       const result = await adminService.setUserRole(pid(req), parsed.data.role as UserRole);
-      logger.info(`Admin ${req.actor!.username} set role ${parsed.data.role} on ${pid(req)}`, 'Admin');
+      logger.info(
+        `Admin ${req.actor!.username} set role ${parsed.data.role} on ${pid(req)}`,
+        'Admin',
+      );
       res.json(result);
     }),
   );
@@ -236,7 +242,10 @@ export function registerAdminRoutes(
           s.disconnect(true);
         });
       }
-      logger.info(`Admin ${req.actor!.username} ban(${parsed.data.minutes}) on ${targetId}`, 'Admin');
+      logger.info(
+        `Admin ${req.actor!.username} ban(${parsed.data.minutes}) on ${targetId}`,
+        'Admin',
+      );
       res.json(result);
     }),
   );
@@ -254,7 +263,10 @@ export function registerAdminRoutes(
       if (!(await guardProtectedTarget(req, res, targetId))) return;
       const result = await adminService.setUserMute(targetId, parsed.data.minutes);
       pushSanctionToSockets(targetId, result);
-      logger.info(`Admin ${req.actor!.username} mute(${parsed.data.minutes}) on ${targetId}`, 'Admin');
+      logger.info(
+        `Admin ${req.actor!.username} mute(${parsed.data.minutes}) on ${targetId}`,
+        'Admin',
+      );
       res.json(result);
     }),
   );
@@ -302,7 +314,10 @@ export function registerAdminRoutes(
         s.emit('force_logout', { reason: 'Vous avez été déconnecté par la modération.' });
         count += 1;
       });
-      logger.info(`Admin ${req.actor!.username} forced logout of ${targetId} (${count} socket(s))`, 'Admin');
+      logger.info(
+        `Admin ${req.actor!.username} forced logout of ${targetId} (${count} socket(s))`,
+        'Admin',
+      );
       res.json({ disconnected: count });
     }),
   );
@@ -333,21 +348,28 @@ export function registerAdminRoutes(
     res.json({ ok: true });
   });
 
-  router.post('/rooms/:id/kick', requireRole('MODERATOR'), wrap(async (req, res) => {
-    const parsed = z.object({ userId: z.string().min(1) }).safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: 'Missing userId.' });
-      return;
-    }
-    if (!(await guardProtectedTarget(req, res, parsed.data.userId))) return;
-    const ok = gameManager.kickPlayer(pid(req), parsed.data.userId);
-    if (!ok) {
-      res.status(404).json({ error: 'Room not found.' });
-      return;
-    }
-    logger.info(`Admin ${req.actor!.username} kicked ${parsed.data.userId} from ${pid(req)}`, 'Admin');
-    res.json({ ok: true });
-  }));
+  router.post(
+    '/rooms/:id/kick',
+    requireRole('MODERATOR'),
+    wrap(async (req, res) => {
+      const parsed = z.object({ userId: z.string().min(1) }).safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Missing userId.' });
+        return;
+      }
+      if (!(await guardProtectedTarget(req, res, parsed.data.userId))) return;
+      const ok = gameManager.kickPlayer(pid(req), parsed.data.userId);
+      if (!ok) {
+        res.status(404).json({ error: 'Room not found.' });
+        return;
+      }
+      logger.info(
+        `Admin ${req.actor!.username} kicked ${parsed.data.userId} from ${pid(req)}`,
+        'Admin',
+      );
+      res.json({ ok: true });
+    }),
+  );
 
   // --- CATALOGUE ------------------------------------------------------------
 
@@ -498,10 +520,7 @@ export function registerAdminRoutes(
         return;
       }
       const result = await adminService.bulkUpdateSongs(parsed.data.ids, parsed.data.data);
-      logger.info(
-        `Admin ${req.actor!.username} bulk-updated ${result.count} songs`,
-        'Catalogue',
-      );
+      logger.info(`Admin ${req.actor!.username} bulk-updated ${result.count} songs`, 'Catalogue');
       res.json({ count: result.count });
     }),
   );
@@ -812,7 +831,10 @@ export function registerAdminRoutes(
       return;
     }
     const parsed = z
-      .object({ count: z.coerce.number().int().min(1).max(BOT_PROFILES.length), config: botConfigSchema })
+      .object({
+        count: z.coerce.number().int().min(1).max(BOT_PROFILES.length),
+        config: botConfigSchema,
+      })
       .safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: 'Invalid payload.' });
@@ -862,9 +884,7 @@ export function registerAdminRoutes(
       const result = await gameManager.createBotScenario({
         botCount: d.botCount,
         autoStart: d.autoStart,
-        host: d.join
-          ? { userId: req.actor!.userId, username: req.actor!.username }
-          : undefined,
+        host: d.join ? { userId: req.actor!.userId, username: req.actor!.username } : undefined,
         settings: {
           soundCount: d.soundCount,
           responseType: d.responseType,
@@ -902,7 +922,11 @@ export function registerAdminRoutes(
   });
 
   router.get('/dev/info', requireRole('ADMIN'), (_req, res) => {
-    res.json({ devEnabled: isDevEnv(), botRosterSize: BOT_PROFILES.length, isBotId: isBotId('bot-0001') });
+    res.json({
+      devEnabled: isDevEnv(),
+      botRosterSize: BOT_PROFILES.length,
+      isBotId: isBotId('bot-0001'),
+    });
   });
 
   /**

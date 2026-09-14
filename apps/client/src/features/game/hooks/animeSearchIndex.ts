@@ -8,8 +8,10 @@ import {
 type PrefixIndex = Map<string, FuzzyAnimeCandidate[]>;
 
 let cachedIndex: { catalogue: FuzzyAnimeCandidate[]; index: PrefixIndex } | null = null;
-let cachedFranchiseCounts: { catalogue: FuzzyAnimeCandidate[]; counts: Map<string, number> } | null =
-  null;
+let cachedFranchiseCounts: {
+  catalogue: FuzzyAnimeCandidate[];
+  counts: Map<string, number>;
+} | null = null;
 
 function addToIndex(index: PrefixIndex, key: string, anime: FuzzyAnimeCandidate) {
   if (!key) return;
@@ -21,7 +23,7 @@ function addToIndex(index: PrefixIndex, key: string, anime: FuzzyAnimeCandidate)
   index.set(key, [anime]);
 }
 
-function registerPrefixKeys(keys: Set<string>, raw: string | undefined) {
+function registerPrefixKeys(keys: Set<string>, raw: string | null | undefined) {
   if (!raw) return;
 
   const norm = normalizeString(raw);

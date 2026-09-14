@@ -1,5 +1,5 @@
 import { prisma } from '@aniquizz/database';
-import type { CreateLobbyInput, JoinLobbyInput } from '@aniquizz/shared';
+import type { CreateLobbyInput, JoinLobbyInput, RoomSettings } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
@@ -7,8 +7,14 @@ import type { Room } from '../game/engine/Room';
 import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
 import { assertPublishedPlaylistSource } from '../game/playlistRecipeService';
 import { resolvePlayerCatalogueIds } from '../lists/listResolver';
-import { hasWatchedListLink, resolveActiveListProvider, toClientRoomSettings } from '@aniquizz/shared';
+import {
+  hasWatchedListLink,
+  resolveActiveListProvider,
+  toClientRoomSettings,
+  updateRoomSettingsInputSchema,
+} from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
+import { parseSocketPayload } from '../../core/parseSocketPayload';
 import type { BotConfig } from '../game/engine/types';
 import { LOBBY_LIST_ROOM } from './lobbyRooms';
 
@@ -81,7 +87,7 @@ export const registerLobbyHandlers = (
       }
 
       const room = gameManager.createRoom(uid(), settings);
-      socket.join(room.id);
+      void socket.join(room.id);
       room.addOrReconnect(uid(), username, avatar, socket.id, {
         asHost: true,
         role: socket.data.role,
@@ -141,7 +147,7 @@ export const registerLobbyHandlers = (
         return socket.emit('error', { message: 'Le salon est complet.' });
       }
 
-      socket.join(room.id);
+      void socket.join(room.id);
       gameManager.cancelCleanup(room.id);
       room.addOrReconnect(uid(), username, avatar, socket.id, {
         asHost: uid() === room.hostId,
@@ -177,9 +183,17 @@ export const registerLobbyHandlers = (
   };
 
   const updateRoomSettings = async (payload: { roomId: string; settings: unknown }) => {
-    const room = gameManager.getRoom(payload.roomId);
+    const parsed = parseSocketPayload(socket, updateRoomSettingsInputSchema, payload);
+    if (!parsed) return;
+    const room = gameManager.getRoom(parsed.roomId);
     if (!room || uid() !== room.hostId) return;
-    const next = mergeRoomSettings(room.settings, payload.settings);
+    let next: RoomSettings;
+    try {
+      next = mergeRoomSettings(room.settings, parsed.settings);
+    } catch {
+      socket.emit('error', { message: 'Paramètres invalides.' });
+      return;
+    }
 
     // Never shrink capacity below the players already in the room. Clamp up to
     // the current occupancy and tell the host why their choice was overridden.
@@ -226,7 +240,13 @@ export const registerLobbyHandlers = (
     if (!room || uid() !== room.hostId) return;
     if (!payload.targetId || payload.targetId === room.hostId) return;
     if (room.status !== 'waiting') return;
-    if (gameManager.kickPlayer(payload.roomId, payload.targetId, "Vous avez été exclu du salon par l'hôte.")) {
+    if (
+      gameManager.kickPlayer(
+        payload.roomId,
+        payload.targetId,
+        "Vous avez été exclu du salon par l'hôte.",
+      )
+    ) {
       logger.info(`[Lobby] Host kicked ${payload.targetId} from room ${room.id}`, 'Lobby');
       broadcastRooms();
     }
@@ -250,7 +270,7 @@ export const registerLobbyHandlers = (
     const room = gameManager.getRoom(payload.roomId);
     if (!room) return;
     const player = room.players.get(uid());
-    socket.leave(payload.roomId);
+    void socket.leave(payload.roomId);
     logger.info(`[Lobby] "${player?.username ?? uid()}" left room ${payload.roomId}.`, 'Lobby');
 
     const isEmpty = room.removePlayer(uid());
@@ -261,17 +281,17 @@ export const registerLobbyHandlers = (
   };
 
   const getRooms = () => {
-    socket.join(LOBBY_LIST_ROOM);
+    void socket.join(LOBBY_LIST_ROOM);
     gameManager.sendRoomListTo(socket.id);
   };
 
   const subscribeRoomList = () => {
-    socket.join(LOBBY_LIST_ROOM);
+    void socket.join(LOBBY_LIST_ROOM);
     gameManager.sendRoomListTo(socket.id);
   };
 
   const unsubscribeRoomList = () => {
-    socket.leave(LOBBY_LIST_ROOM);
+    void socket.leave(LOBBY_LIST_ROOM);
   };
 
   const toggleReady = (payload: { roomId: string }) => {
@@ -279,7 +299,10 @@ export const registerLobbyHandlers = (
   };
 
   socket.on('lobby:create', guard(socket, 'lobby:create', RATE_LIMITS.createLobby, createLobby));
-  socket.on('lobby:join', guard(socket, 'lobby:join', RATE_LIMITS.joinLobby, joinLobby, { byIp: true }));
+  socket.on(
+    'lobby:join',
+    guard(socket, 'lobby:join', RATE_LIMITS.joinLobby, joinLobby, { byIp: true }),
+  );
   socket.on('get_rooms', getRooms);
   socket.on('lobby:subscribe_list', subscribeRoomList);
   socket.on('lobby:unsubscribe_list', unsubscribeRoomList);

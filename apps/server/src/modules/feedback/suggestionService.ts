@@ -88,7 +88,10 @@ const mapSuggestion = (row: SuggestionRow, votedIds: ReadonlySet<string>): Sugge
   updatedAt: row.updatedAt.toISOString(),
 });
 
-const resolveVotedIds = async (profileId: string, suggestionIds: string[]): Promise<Set<string>> => {
+const resolveVotedIds = async (
+  profileId: string,
+  suggestionIds: string[],
+): Promise<Set<string>> => {
   if (!suggestionIds.length) return new Set();
   const votes = await prisma.suggestionVote.findMany({
     where: { profileId, suggestionId: { in: suggestionIds } },
@@ -102,7 +105,10 @@ export const browseSuggestions = async (
   viewerId?: string | null,
 ): Promise<SuggestionsResponse> => {
   const page = Math.max(1, Math.floor(opts.page ?? 1));
-  const pageSize = Math.min(Math.max(1, Math.floor(opts.pageSize ?? DEFAULT_PAGE_SIZE)), MAX_PAGE_SIZE);
+  const pageSize = Math.min(
+    Math.max(1, Math.floor(opts.pageSize ?? DEFAULT_PAGE_SIZE)),
+    MAX_PAGE_SIZE,
+  );
   const queryTerms = opts.q?.trim().split(/\s+/).filter(Boolean).slice(0, 8) ?? [];
   const searchTerm = (term: string): Prisma.SuggestionWhereInput => ({
     OR: [
@@ -176,7 +182,10 @@ export const createSuggestion = async (
   }
   if (input.category === 'CORRECTION') {
     if (!input.songId || !input.correctionField || !input.proposedValue?.trim()) {
-      throw new SuggestionError('La correction doit préciser le son, le champ et la valeur.', 'INVALID');
+      throw new SuggestionError(
+        'La correction doit préciser le son, le champ et la valeur.',
+        'INVALID',
+      );
     }
     const song = await prisma.song.findFirst({
       where: { id: input.songId, downloadStatus: 'COMPLETED' },
@@ -280,7 +289,10 @@ export const unvoteSuggestion = async (
   return { suggestionId, voted: false, voteCount: result };
 };
 
-export const deleteOwnSuggestion = async (authorId: string, suggestionId: string): Promise<void> => {
+export const deleteOwnSuggestion = async (
+  authorId: string,
+  suggestionId: string,
+): Promise<void> => {
   const deleted = await prisma.suggestion.deleteMany({
     where: { id: suggestionId, authorId, staffTreatedAt: null },
   });
@@ -291,7 +303,10 @@ export const deleteOwnSuggestion = async (authorId: string, suggestionId: string
     select: { id: true },
   });
   if (existing) {
-    throw new SuggestionError('Cette suggestion a déjà été traitée et ne peut plus être supprimée.', 'FORBIDDEN');
+    throw new SuggestionError(
+      'Cette suggestion a déjà été traitée et ne peut plus être supprimée.',
+      'FORBIDDEN',
+    );
   }
   throw new SuggestionError('Suggestion introuvable.', 'NOT_FOUND');
 };
@@ -325,8 +340,7 @@ export const updateSuggestionByStaff = async (
   }
 
   const shouldLock =
-    (input.status !== undefined && input.status !== 'OPEN') ||
-    Boolean(input.adminReply?.trim());
+    (input.status !== undefined && input.status !== 'OPEN') || Boolean(input.adminReply?.trim());
   if (shouldLock && !existing.staffTreatedAt) {
     data.staffTreatedAt = new Date();
   }

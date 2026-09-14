@@ -57,7 +57,9 @@ export const CatalogueSongRow = memo(function CatalogueSongRow({
         <select
           className={selectCls}
           value={song.difficulty}
-          onChange={(e) => void onQuickPatch(song, { difficulty: e.target.value as SongDifficulty })}
+          onChange={(e) =>
+            void onQuickPatch(song, { difficulty: e.target.value as SongDifficulty })
+          }
         >
           {DIFFICULTIES.map((d) => (
             <option key={d} value={d}>

@@ -3,12 +3,7 @@ import type { GameSyncState, LobbyJoinedPayload, RoundStartPayload } from '@aniq
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { countPlayableSongs } from '../test/dbHelpers';
 import { hasIntegrationEnv } from '../test/env';
-import {
-  connectSocket,
-  onceEvent,
-  type TestSocket,
-  waitForEvent,
-} from '../test/socketHelpers';
+import { connectSocket, onceEvent, type TestSocket, waitForEvent } from '../test/socketHelpers';
 import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
 
 describe.skipIf(!hasIntegrationEnv)('anti-cheat integration', () => {

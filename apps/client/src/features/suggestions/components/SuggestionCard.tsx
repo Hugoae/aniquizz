@@ -11,7 +11,12 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import type { LibraryDifficulty, SuggestionCategory, SuggestionItem, SuggestionStatus } from '@aniquizz/shared';
+import type {
+  LibraryDifficulty,
+  SuggestionCategory,
+  SuggestionItem,
+  SuggestionStatus,
+} from '@aniquizz/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/UserAvatar';

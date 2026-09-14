@@ -76,14 +76,12 @@ describe('useLeaderboard', () => {
 
   it('does not keep previous metric rows while the next tab loads', async () => {
     let resolveAccuracy: ((value: LeaderboardResponse) => void) | undefined;
-    browse
-      .mockResolvedValueOnce(payload('xp'))
-      .mockImplementationOnce(
-        () =>
-          new Promise((resolve) => {
-            resolveAccuracy = resolve;
-          }),
-      );
+    browse.mockResolvedValueOnce(payload('xp')).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveAccuracy = resolve;
+        }),
+    );
 
     const { result } = renderHook(() => useLeaderboard(), {
       wrapper: ({ children }) => wrapper({ children, initial: '/leaderboard' }),

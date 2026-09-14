@@ -20,8 +20,12 @@ export function CookieConsentBanner() {
       </h2>
       <p id="cookie-banner-desc" className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Nous utilisons des cookies strictement nécessaires à la connexion et au jeu. Les cookies
-        d&apos;analyse (s&apos;ils sont activés plus tard) ne seront chargés qu&apos;avec votre accord.{' '}
-        <Link to="/legal/confidentialite" className="text-primary underline-offset-2 hover:underline">
+        d&apos;analyse (s&apos;ils sont activés plus tard) ne seront chargés qu&apos;avec votre
+        accord.{' '}
+        <Link
+          to="/legal/confidentialite"
+          className="text-primary underline-offset-2 hover:underline"
+        >
           Politique de confidentialité
         </Link>
       </p>
@@ -32,7 +36,13 @@ export function CookieConsentBanner() {
         <Button type="button" size="sm" variant="secondary" onClick={rejectOptional}>
           Refuser l&apos;optionnel
         </Button>
-        <Button type="button" size="sm" variant="ghost" onClick={closeBanner} className="text-muted-foreground">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={closeBanner}
+          className="text-muted-foreground"
+        >
           Fermer
         </Button>
       </div>

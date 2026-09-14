@@ -92,8 +92,7 @@ export function ProfilePinnedFavoritesDialog({
         return next;
       });
     } catch (e) {
-      const message =
-        e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
+      const message = e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
       toast.error(message);
     } finally {
       setBrowseLoading(false);
@@ -123,8 +122,7 @@ export function ProfilePinnedFavoritesDialog({
       setSongCatalog(catalog);
       setInitialized(true);
     } catch (e) {
-      const message =
-        e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
+      const message = e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
       toast.error(message);
       onOpenChange(false);
     } finally {
@@ -265,8 +263,7 @@ export function ProfilePinnedFavoritesDialog({
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      const message =
-        e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
+      const message = e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
       toast.error(message);
     } finally {
       setSaving(false);
@@ -281,8 +278,7 @@ export function ProfilePinnedFavoritesDialog({
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      const message =
-        e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
+      const message = e instanceof LibraryApiError ? e.message : PROFILE_COPY.customizeErrorToast;
       toast.error(message);
     } finally {
       setSaving(false);
@@ -533,9 +529,7 @@ export function ProfilePinnedFavoritesDialog({
                           size="sm"
                           className="gap-1"
                           disabled={browsePage >= browseTotalPages || browseLoading}
-                          onClick={() =>
-                            setBrowsePage((p) => Math.min(browseTotalPages, p + 1))
-                          }
+                          onClick={() => setBrowsePage((p) => Math.min(browseTotalPages, p + 1))}
                         >
                           {PROFILE_COPY.customizeNextPage}
                           <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -561,7 +555,12 @@ export function ProfilePinnedFavoritesDialog({
             {PROFILE_COPY.customizeReset}
           </Button>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
               Annuler
             </Button>
             <Button type="button" onClick={() => void save()} disabled={saving || loading}>

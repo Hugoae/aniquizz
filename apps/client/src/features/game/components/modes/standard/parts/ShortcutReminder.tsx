@@ -31,7 +31,11 @@ export function ShortcutReminder({ enabled, submitOnEnter }: ShortcutReminderPro
   if (!show) return null;
 
   return (
-    <p className={cn('flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground')}>
+    <p
+      className={cn(
+        'flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[11px] text-muted-foreground',
+      )}
+    >
       {submitOnEnter ? (
         <span className="inline-flex items-center gap-1">
           <Kbd>Entrée</Kbd> valider

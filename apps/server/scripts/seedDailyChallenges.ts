@@ -7,9 +7,15 @@ import { logger } from '../src/utils/logger';
 
 async function main() {
   const results = await ensureDailyHorizon();
-  logger.info(`Daily horizon: ${results.length} days (${results.filter((row) => row.created).length} created)`, 'Daily');
+  logger.info(
+    `Daily horizon: ${results.length} days (${results.filter((row) => row.created).length} created)`,
+    'Daily',
+  );
   for (const row of results) {
-    logger.info(`  ${row.challengeDate} #${row.challengeNumber} ${row.status} warnings=${row.warnings.length}`, 'Daily');
+    logger.info(
+      `  ${row.challengeDate} #${row.challengeNumber} ${row.status} warnings=${row.warnings.length}`,
+      'Daily',
+    );
   }
 }
 

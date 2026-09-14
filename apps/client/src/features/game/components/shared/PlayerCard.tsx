@@ -12,7 +12,16 @@ interface PlayerCardProps {
   hideScore?: boolean;
 }
 
-export function PlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick, hideScore }: PlayerCardProps) {
+export function PlayerCard({
+  player,
+  isCurrentUser,
+  showResult,
+  rank,
+  rankPending,
+  flash,
+  onClick,
+  hideScore,
+}: PlayerCardProps) {
   return (
     <StandardPlayerCard
       player={player}

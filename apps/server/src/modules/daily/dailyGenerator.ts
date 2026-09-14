@@ -82,10 +82,7 @@ const nextChallengeNumber = async (tx: Prisma.TransactionClient): Promise<number
   return (last?.challengeNumber ?? 0) + 1;
 };
 
-const buildSnapshots = async (
-  songs: DailySongRow[],
-  rng: Rng,
-): Promise<DailyRoundSnapshot[]> => {
+const buildSnapshots = async (songs: DailySongRow[], rng: Rng): Promise<DailyRoundSnapshot[]> => {
   const choicePool = await getChoiceCandidates('anime');
   return songs.map((song) => snapshotFromSong(song, choicePool, rng));
 };
@@ -131,7 +128,9 @@ export async function generateDailyChallenge(
     recentFranchiseKeys: recent.franchiseKeys,
   });
   const byId = new Map(pool.map((row) => [row.id, row]));
-  const fullSongs = picked.songs.map((row) => byId.get(row.songId)).filter((row): row is DailySongRow => Boolean(row));
+  const fullSongs = picked.songs
+    .map((row) => byId.get(row.songId))
+    .filter((row): row is DailySongRow => Boolean(row));
   const snapshots = await buildSnapshots(fullSongs, rng);
   const warnings = validateDailySnapshots(snapshots, {
     challengeNumber: pickedNumber,
@@ -147,7 +146,11 @@ export async function generateDailyChallenge(
         await tx.dailyChallengeRound.deleteMany({ where: { challengeId: existing.id } });
         await tx.dailyChallenge.update({
           where: { id: existing.id },
-          data: { status, rulesVersion: DAILY_RULES_VERSION, generatedAt: options.now ?? new Date() },
+          data: {
+            status,
+            rulesVersion: DAILY_RULES_VERSION,
+            generatedAt: options.now ?? new Date(),
+          },
         });
         await tx.dailyChallengeRound.createMany({
           data: snapshots.map((snapshot, index) => ({

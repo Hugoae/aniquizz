@@ -9,11 +9,11 @@ import { syncPipelineSerialSequences } from './lib/sync-serial-sequences';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
-const INPUT_FILE = path.join(__dirname, "../data/manual_edits.json");
+const INPUT_FILE = path.join(__dirname, '../data/manual_edits.json');
 
 async function main() {
-  console.log("📥 IMPORTATION DES MODIFICATIONS MANUELLES (JSON -> DATABASE)...");
-  console.log("   ⚠️  ATTENTION : Écrase les métadonnées de la BDD avec le contenu du JSON.");
+  console.log('📥 IMPORTATION DES MODIFICATIONS MANUELLES (JSON -> DATABASE)...');
+  console.log('   ⚠️  ATTENTION : Écrase les métadonnées de la BDD avec le contenu du JSON.');
 
   if (!fs.existsSync(INPUT_FILE)) {
     console.error(`❌ Fichier introuvable : ${INPUT_FILE}`);
@@ -25,7 +25,6 @@ async function main() {
   console.log(`📦 Analyse de ${franchisesData.length} franchises...`);
 
   for (const fr of franchisesData) {
-
     // --- 1. GESTION FRANCHISE ---
 
     // Known id -> upsert (create if missing, else update)
@@ -40,19 +39,19 @@ async function main() {
           id: fr.id,
           name: fr.name,
           isLocked: fr.isLocked ?? false,
-          genres: fr.genres || []
+          genres: fr.genres || [],
         },
         update: {
           name: fr.name,
           isLocked: fr.isLocked,
-          genres: fr.genres || []
-        }
+          genres: fr.genres || [],
+        },
       });
     }
     // No id -> find by name or create
     else {
       const existingFranchise = await prisma.franchise.findUnique({
-        where: { name: fr.name }
+        where: { name: fr.name },
       });
 
       if (existingFranchise) {
@@ -61,8 +60,8 @@ async function main() {
           where: { id: existingFranchise.id },
           data: {
             isLocked: true,
-            genres: fr.genres || []
-          }
+            genres: fr.genres || [],
+          },
         });
         fr.id = existingFranchise.id;
       } else {
@@ -71,8 +70,8 @@ async function main() {
           data: {
             name: fr.name,
             isLocked: true,
-            genres: fr.genres || []
-          }
+            genres: fr.genres || [],
+          },
         });
         fr.id = newFr.id;
       }
@@ -89,8 +88,8 @@ async function main() {
             tags: anime.tags || [],
             seasonYear: anime.seasonYear,
             isLocked: anime.isLocked,
-            franchiseId: fr.id
-          }
+            franchiseId: fr.id,
+          },
         });
       } else {
         await prisma.anime.create({
@@ -99,8 +98,8 @@ async function main() {
             altNames: anime.altNames || [],
             tags: anime.tags || [],
             franchiseId: fr.id,
-            isLocked: true
-          }
+            isLocked: true,
+          },
         });
       }
 
@@ -119,8 +118,8 @@ async function main() {
               sequence,
               tags: song.tags || [],
               isLocked: song.isLocked,
-              animeId: anime.id
-            }
+              animeId: anime.id,
+            },
           });
         }
       }

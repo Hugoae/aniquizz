@@ -22,8 +22,7 @@ export interface WatchedPoolStats {
 }
 
 /** Shown when Watched pool is empty because AniList's API is down, not the player's list. */
-export const ANILIST_API_DOWN_MESSAGE =
-  "L'API AniList est down. Réessaie plus tard.";
+export const ANILIST_API_DOWN_MESSAGE = "L'API AniList est down. Réessaie plus tard.";
 
 export const isWatchedPoolInsufficient = (playableSongs: number, soundCount: number): boolean =>
   playableSongs < soundCount;

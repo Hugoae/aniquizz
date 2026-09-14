@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   ChevronDown,
   ChevronRight,
@@ -10,10 +10,10 @@ import {
   Plus,
   Trash2,
   X,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,7 +23,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   adminApi,
   AdminApiError,
@@ -33,27 +33,27 @@ import {
   type CatalogueTree,
   type SongDifficulty,
   type SongStatus,
-} from "@/lib/adminApi";
+} from '@/lib/adminApi';
 import {
   AnimeEditDialog,
   FranchiseEditDialog,
   SongEditDialog,
   VideoPreviewDialog,
-} from "./catalogue/EditDialogs";
-import { CatalogueSongRow } from "./catalogue/CatalogueSongRow";
-import { VirtualScroll } from "@/components/ui/VirtualScroll";
+} from './catalogue/EditDialogs';
+import { CatalogueSongRow } from './catalogue/CatalogueSongRow';
+import { VirtualScroll } from '@/components/ui/VirtualScroll';
 
-const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : "Erreur.");
+const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : 'Erreur.');
 
-const DIFFICULTIES: SongDifficulty[] = ["EASY", "MEDIUM", "HARD"];
-const STATUSES: SongStatus[] = ["PENDING", "PROCESSING", "COMPLETED", "ERROR", "SKIPPED"];
+const DIFFICULTIES: SongDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
+const STATUSES: SongStatus[] = ['PENDING', 'PROCESSING', 'COMPLETED', 'ERROR', 'SKIPPED'];
 
-const selectCls = "rounded border border-border bg-background px-2 py-1 text-xs";
+const selectCls = 'rounded border border-border bg-background px-2 py-1 text-xs';
 
 type Confirm =
-  | { kind: "song"; id: number; label: string }
-  | { kind: "anime"; id: number; label: string }
-  | { kind: "franchise"; id: number; label: string }
+  | { kind: 'song'; id: number; label: string }
+  | { kind: 'anime'; id: number; label: string }
+  | { kind: 'franchise'; id: number; label: string }
   | null;
 
 export function CataloguePanel({ canManage }: { canManage: boolean }) {
@@ -62,17 +62,17 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
   const loadAbortRef = useRef<AbortController | null>(null);
   const loadRef = useRef<() => Promise<void>>(async () => {});
 
-  const [rawQuery, setRawQuery] = useState("");
-  const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<SongStatus | "">("");
-  const [difficulty, setDifficulty] = useState<SongDifficulty | "">("");
-  const [locked, setLocked] = useState<"" | "true" | "false">("");
+  const [rawQuery, setRawQuery] = useState('');
+  const [query, setQuery] = useState('');
+  const [status, setStatus] = useState<SongStatus | ''>('');
+  const [difficulty, setDifficulty] = useState<SongDifficulty | ''>('');
+  const [locked, setLocked] = useState<'' | 'true' | 'false'>('');
   const [page, setPage] = useState(1);
 
   const topRef = useRef<HTMLDivElement>(null);
   const goToPage = (next: number) => {
     setPage(next);
-    topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    topRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const [expandedF, setExpandedF] = useState<Set<string>>(new Set());
@@ -114,7 +114,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
         query: query || undefined,
         status: status || undefined,
         difficulty: difficulty || undefined,
-        locked: locked === "" ? undefined : locked === "true",
+        locked: locked === '' ? undefined : locked === 'true',
         page,
         signal: ac.signal,
       });
@@ -123,8 +123,8 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
     } catch (e) {
       if (
         ac.signal.aborted ||
-        (e instanceof DOMException && e.name === "AbortError") ||
-        (e instanceof Error && e.name === "AbortError")
+        (e instanceof DOMException && e.name === 'AbortError') ||
+        (e instanceof Error && e.name === 'AbortError')
       ) {
         return;
       }
@@ -145,7 +145,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
 
   const searching = query.length > 0;
 
-  const groupKey = (g: CatalogueFranchiseGroup) => (g.id === null ? "orphan" : String(g.id));
+  const groupKey = (g: CatalogueFranchiseGroup) => (g.id === null ? 'orphan' : String(g.id));
   const isFOpen = (g: CatalogueFranchiseGroup) => searching || expandedF.has(groupKey(g));
   const isAOpen = (id: number) => searching || expandedA.has(id);
 
@@ -207,7 +207,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
     [],
   );
   const handleDeleteSong = useCallback(
-    (song: CatalogueSong) => setConfirm({ kind: "song", id: song.id, label: song.title }),
+    (song: CatalogueSong) => setConfirm({ kind: 'song', id: song.id, label: song.title }),
     [],
   );
 
@@ -231,10 +231,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
   const doDelete = async () => {
     if (!confirm) return;
     try {
-      if (confirm.kind === "song") await adminApi.deleteSong(confirm.id);
-      else if (confirm.kind === "anime") await adminApi.deleteAnime(confirm.id);
+      if (confirm.kind === 'song') await adminApi.deleteSong(confirm.id);
+      else if (confirm.kind === 'anime') await adminApi.deleteAnime(confirm.id);
       else await adminApi.deleteFranchise(confirm.id);
-      toast.success("Supprimé.");
+      toast.success('Supprimé.');
       setConfirm(null);
       await load();
     } catch (e) {
@@ -243,14 +243,15 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
   };
 
   const counts = tree?.counts;
-  const coverage = counts && counts.songs > 0 ? Math.round((counts.completedSongs / counts.songs) * 100) : 0;
+  const coverage =
+    counts && counts.songs > 0 ? Math.round((counts.completedSongs / counts.songs) * 100) : 0;
   const pagination = tree?.pagination;
 
   const confirmText = useMemo(() => {
-    if (!confirm) return "";
-    if (confirm.kind === "franchise")
+    if (!confirm) return '';
+    if (confirm.kind === 'franchise')
       return `Supprimer la franchise « ${confirm.label} » ? Ses animes seront détachés (non supprimés).`;
-    if (confirm.kind === "anime")
+    if (confirm.kind === 'anime')
       return `Supprimer l'anime « ${confirm.label} » ? Tous ses sons seront supprimés.`;
     return `Supprimer le son « ${confirm.label} » ?`;
   }, [confirm]);
@@ -266,10 +267,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           className="max-w-sm"
         />
         <select
-          className={selectCls + " py-2"}
+          className={selectCls + ' py-2'}
           value={status}
           onChange={(e) => {
-            setStatus(e.target.value as SongStatus | "");
+            setStatus(e.target.value as SongStatus | '');
             setPage(1);
           }}
         >
@@ -281,10 +282,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           ))}
         </select>
         <select
-          className={selectCls + " py-2"}
+          className={selectCls + ' py-2'}
           value={difficulty}
           onChange={(e) => {
-            setDifficulty(e.target.value as SongDifficulty | "");
+            setDifficulty(e.target.value as SongDifficulty | '');
             setPage(1);
           }}
         >
@@ -296,10 +297,10 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           ))}
         </select>
         <select
-          className={selectCls + " py-2"}
+          className={selectCls + ' py-2'}
           value={locked}
           onChange={(e) => {
-            setLocked(e.target.value as "" | "true" | "false");
+            setLocked(e.target.value as '' | 'true' | 'false');
             setPage(1);
           }}
         >
@@ -333,7 +334,9 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <select
             className={selectCls}
             defaultValue=""
-            onChange={(e) => e.target.value && void bulkApply({ difficulty: e.target.value as SongDifficulty })}
+            onChange={(e) =>
+              e.target.value && void bulkApply({ difficulty: e.target.value as SongDifficulty })
+            }
           >
             <option value="">Difficulté…</option>
             {DIFFICULTIES.map((d) => (
@@ -345,7 +348,9 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <select
             className={selectCls}
             defaultValue=""
-            onChange={(e) => e.target.value && void bulkApply({ downloadStatus: e.target.value as SongStatus })}
+            onChange={(e) =>
+              e.target.value && void bulkApply({ downloadStatus: e.target.value as SongStatus })
+            }
           >
             <option value="">Statut…</option>
             {STATUSES.map((s) => (
@@ -360,7 +365,12 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <Button size="sm" variant="outline" onClick={() => void bulkApply({ isLocked: false })}>
             <LockOpen className="mr-1 h-3.5 w-3.5" /> Déverrouiller
           </Button>
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => setSelected(new Set())}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="ml-auto"
+            onClick={() => setSelected(new Set())}
+          >
             <X className="mr-1 h-3.5 w-3.5" /> Effacer
           </Button>
         </div>
@@ -373,160 +383,183 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
         <p className="p-6 text-center text-sm text-muted-foreground">Aucun résultat.</p>
       )}
 
-      <div className={loading && tree ? "relative opacity-60 pointer-events-none" : undefined}>
+      <div className={loading && tree ? 'relative opacity-60 pointer-events-none' : undefined}>
         {loading && tree && (
           <p className="absolute inset-x-0 top-2 z-10 text-center text-xs text-muted-foreground">
             Actualisation…
           </p>
         )}
-      <div className="space-y-2">
-        {tree?.groups.map((g) => (
-          <div key={groupKey(g)} className="glass-card overflow-hidden">
-            {/* Franchise header */}
-            <div className="flex items-center gap-2 px-3 py-2">
-              <button
-                type="button"
-                onClick={() => toggleF(g)}
-                aria-expanded={isFOpen(g)}
-                aria-label={`${isFOpen(g) ? 'Réduire' : 'Développer'} la franchise ${g.name}`}
-                className="text-muted-foreground"
-              >
-                {isFOpen(g) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </button>
-              <span className="font-semibold">{g.name}</span>
-              {g.isLocked && <Lock className="h-3.5 w-3.5 text-warning" />}
-              <Badge className="bg-secondary">{g.animes.length} animes</Badge>
-              {g.genres.slice(0, 3).map((gen) => (
-                <Badge key={gen} className="bg-secondary/50 text-muted-foreground">
-                  {gen}
-                </Badge>
-              ))}
-              {canManage && g.id !== null && (
-                <div className="ml-auto flex items-center gap-1">
-                  <Button size="sm" variant="ghost" onClick={() => setAnimeDialog({ franchiseId: g.id })}>
-                    <Plus className="h-3.5 w-3.5" /> Anime
-                  </Button>
-                  <Button size="sm" variant="ghost" aria-label={`Modifier la franchise ${g.name}`} onClick={() => setFranchiseDialog({ franchise: g })}>
-                    <Pencil className="h-3.5 w-3.5" aria-hidden />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive"
-                    aria-label={`Supprimer la franchise ${g.name}`}
-                    onClick={() => setConfirm({ kind: "franchise", id: g.id!, label: g.name })}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                  </Button>
-                </div>
-              )}
-            </div>
+        <div className="space-y-2">
+          {tree?.groups.map((g) => (
+            <div key={groupKey(g)} className="glass-card overflow-hidden">
+              {/* Franchise header */}
+              <div className="flex items-center gap-2 px-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => toggleF(g)}
+                  aria-expanded={isFOpen(g)}
+                  aria-label={`${isFOpen(g) ? 'Réduire' : 'Développer'} la franchise ${g.name}`}
+                  className="text-muted-foreground"
+                >
+                  {isFOpen(g) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+                <span className="font-semibold">{g.name}</span>
+                {g.isLocked && <Lock className="h-3.5 w-3.5 text-warning" />}
+                <Badge className="bg-secondary">{g.animes.length} animes</Badge>
+                {g.genres.slice(0, 3).map((gen) => (
+                  <Badge key={gen} className="bg-secondary/50 text-muted-foreground">
+                    {gen}
+                  </Badge>
+                ))}
+                {canManage && g.id !== null && (
+                  <div className="ml-auto flex items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setAnimeDialog({ franchiseId: g.id })}
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Anime
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Modifier la franchise ${g.name}`}
+                      onClick={() => setFranchiseDialog({ franchise: g })}
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      aria-label={`Supprimer la franchise ${g.name}`}
+                      onClick={() => setConfirm({ kind: 'franchise', id: g.id!, label: g.name })}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    </Button>
+                  </div>
+                )}
+              </div>
 
-            {/* Animes */}
-            {isFOpen(g) && (
-              <div className="border-t border-border/50">
-                {g.animes.map((a) => (
-                  <div key={a.id} className="border-b border-border/50 last:border-0">
-                    <div className="flex items-center gap-2 bg-secondary/20 px-3 py-2 pl-8">
-                      <button
-                        type="button"
-                        onClick={() => toggleA(a.id)}
-                        aria-expanded={isAOpen(a.id)}
-                        aria-label={`${isAOpen(a.id) ? 'Réduire' : 'Développer'} ${a.name}`}
-                        className="text-muted-foreground"
-                      >
-                        {isAOpen(a.id) ? (
-                          <ChevronDown className="h-4 w-4" />
+              {/* Animes */}
+              {isFOpen(g) && (
+                <div className="border-t border-border/50">
+                  {g.animes.map((a) => (
+                    <div key={a.id} className="border-b border-border/50 last:border-0">
+                      <div className="flex items-center gap-2 bg-secondary/20 px-3 py-2 pl-8">
+                        <button
+                          type="button"
+                          onClick={() => toggleA(a.id)}
+                          aria-expanded={isAOpen(a.id)}
+                          aria-label={`${isAOpen(a.id) ? 'Réduire' : 'Développer'} ${a.name}`}
+                          className="text-muted-foreground"
+                        >
+                          {isAOpen(a.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                        {a.coverImage ? (
+                          <img
+                            src={a.coverImage}
+                            alt={`Couverture de ${a.name}`}
+                            className="h-8 w-6 rounded object-cover"
+                            loading="lazy"
+                            decoding="async"
+                            width={24}
+                            height={32}
+                          />
                         ) : (
-                          <ChevronRight className="h-4 w-4" />
+                          <div className="flex h-8 w-6 items-center justify-center rounded bg-secondary/50">
+                            <Film className="h-3 w-3 text-muted-foreground" />
+                          </div>
                         )}
-                      </button>
-                      {a.coverImage ? (
-                        <img src={a.coverImage} alt={`Couverture de ${a.name}`} className="h-8 w-6 rounded object-cover" loading="lazy" decoding="async" width={24} height={32} />
-                      ) : (
-                        <div className="flex h-8 w-6 items-center justify-center rounded bg-secondary/50">
-                          <Film className="h-3 w-3 text-muted-foreground" />
-                        </div>
-                      )}
-                      <span className="font-medium">{a.name}</span>
-                      {a.seasonYear && (
-                        <span className="text-xs text-muted-foreground">{a.seasonYear}</span>
-                      )}
-                      {a.isLocked && <Lock className="h-3 w-3 text-warning" />}
-                      <Badge className="bg-secondary">{a.songs.length} sons</Badge>
-                      {canManage && (
-                        <div className="ml-auto flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSongDialog({ animeId: a.id })}
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Son
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            aria-label={`Modifier ${a.name}`}
-                            onClick={() => setAnimeDialog({ anime: a, franchiseId: a.franchiseId })}
-                          >
-                            <Pencil className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            aria-label={`Supprimer ${a.name}`}
-                            onClick={() => setConfirm({ kind: "anime", id: a.id, label: a.name })}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-                          </Button>
+                        <span className="font-medium">{a.name}</span>
+                        {a.seasonYear && (
+                          <span className="text-xs text-muted-foreground">{a.seasonYear}</span>
+                        )}
+                        {a.isLocked && <Lock className="h-3 w-3 text-warning" />}
+                        <Badge className="bg-secondary">{a.songs.length} sons</Badge>
+                        {canManage && (
+                          <div className="ml-auto flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSongDialog({ animeId: a.id })}
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Son
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              aria-label={`Modifier ${a.name}`}
+                              onClick={() =>
+                                setAnimeDialog({ anime: a, franchiseId: a.franchiseId })
+                              }
+                            >
+                              <Pencil className="h-3.5 w-3.5" aria-hidden />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-destructive"
+                              aria-label={`Supprimer ${a.name}`}
+                              onClick={() => setConfirm({ kind: 'anime', id: a.id, label: a.name })}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Songs */}
+                      {isAOpen(a.id) && a.songs.length > 0 && (
+                        <div className="overflow-x-auto pl-12">
+                          <div className="flex items-center border-t border-border/50 px-2 py-1 text-xs font-medium text-muted-foreground">
+                            <div className="w-10 shrink-0" />
+                            <div className="min-w-0 flex-1">Son</div>
+                            <div className="w-28 shrink-0">Diff.</div>
+                            <div className="w-36 shrink-0">Statut</div>
+                            <div className="w-12 shrink-0">Lock</div>
+                            <div className="w-32 shrink-0 text-right">Actions</div>
+                          </div>
+                          <VirtualScroll
+                            items={a.songs}
+                            estimateSize={56}
+                            maxHeight={420}
+                            threshold={24}
+                            getKey={(s) => s.id}
+                            renderItem={(s) => (
+                              <CatalogueSongRow
+                                song={s}
+                                animeId={a.id}
+                                canManage={canManage}
+                                selected={selected.has(s.id)}
+                                onToggleSelect={handleToggleSelect}
+                                onQuickPatch={quickPatch}
+                                onPreview={handlePreview}
+                                onEdit={handleEditSong}
+                                onDelete={handleDeleteSong}
+                              />
+                            )}
+                          />
                         </div>
                       )}
                     </div>
-
-                    {/* Songs */}
-                    {isAOpen(a.id) && a.songs.length > 0 && (
-                      <div className="overflow-x-auto pl-12">
-                        <div className="flex items-center border-t border-border/50 px-2 py-1 text-xs font-medium text-muted-foreground">
-                          <div className="w-10 shrink-0" />
-                          <div className="min-w-0 flex-1">Son</div>
-                          <div className="w-28 shrink-0">Diff.</div>
-                          <div className="w-36 shrink-0">Statut</div>
-                          <div className="w-12 shrink-0">Lock</div>
-                          <div className="w-32 shrink-0 text-right">Actions</div>
-                        </div>
-                        <VirtualScroll
-                          items={a.songs}
-                          estimateSize={56}
-                          maxHeight={420}
-                          threshold={24}
-                          getKey={(s) => s.id}
-                          renderItem={(s) => (
-                            <CatalogueSongRow
-                              song={s}
-                              animeId={a.id}
-                              canManage={canManage}
-                              selected={selected.has(s.id)}
-                              onToggleSelect={handleToggleSelect}
-                              onQuickPatch={quickPatch}
-                              onPreview={handlePreview}
-                              onEdit={handleEditSong}
-                              onDelete={handleDeleteSong}
-                            />
-                          )}
-                        />
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {!g.animes.length && (
-                  <p className="px-8 py-3 text-xs text-muted-foreground">Aucun anime.</p>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+                  ))}
+                  {!g.animes.length && (
+                    <p className="px-8 py-3 text-xs text-muted-foreground">Aucun anime.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Pagination */}

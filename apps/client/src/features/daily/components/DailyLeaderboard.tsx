@@ -55,11 +55,15 @@ export function DailyLeaderboard({ activeRoundCount, viewerId, className }: Dail
       </div>
       <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-2.5">
         {failed ? (
-          <p className="px-1 py-6 text-center text-sm text-muted-foreground">{DAILY_COPY.leaderboardUnavailable}</p>
+          <p className="px-1 py-6 text-center text-sm text-muted-foreground">
+            {DAILY_COPY.leaderboardUnavailable}
+          </p>
         ) : !board ? (
           <p className="px-1 py-6 text-center text-sm text-muted-foreground">…</p>
         ) : board.entries.length === 0 ? (
-          <p className="px-1 py-6 text-center text-sm text-muted-foreground">{DAILY_COPY.leaderboardEmpty}</p>
+          <p className="px-1 py-6 text-center text-sm text-muted-foreground">
+            {DAILY_COPY.leaderboardEmpty}
+          </p>
         ) : (
           <ol className="space-y-1.5">
             {board.entries.map((entry) => {
@@ -74,7 +78,9 @@ export function DailyLeaderboard({ activeRoundCount, viewerId, className }: Dail
                 >
                   <RankPill rank={entry.rank} size="sm" />
                   <UserAvatar username={entry.username} avatar={entry.avatar} className="h-7 w-7" />
-                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">{entry.username}</span>
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+                    {entry.username}
+                  </span>
                   <span className="shrink-0 font-mono text-sm font-bold tabular-nums">
                     {entry.correctCount}/{activeRoundCount}
                   </span>

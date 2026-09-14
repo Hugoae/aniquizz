@@ -156,20 +156,22 @@ describe('daily XP and scoring', () => {
 
   it('interleaves daily and match rows by recency', () => {
     const merged = mergeProfileHistory(
-      [{
-        id: 'm1',
-        playedAt: '2026-09-13T11:00:00.000Z',
-        mode: 'STANDARD',
-        answerMode: 'QCM',
-        totalRounds: 10,
-        score: 12,
-        rank: null,
-        isWinner: true,
-        correctCount: 6,
-        xpEarned: 20,
-        playerCount: 1,
-        durationMs: 120000,
-      }],
+      [
+        {
+          id: 'm1',
+          playedAt: '2026-09-13T11:00:00.000Z',
+          mode: 'STANDARD',
+          answerMode: 'QCM',
+          totalRounds: 10,
+          score: 12,
+          rank: null,
+          isWinner: true,
+          correctCount: 6,
+          xpEarned: 20,
+          playerCount: 1,
+          durationMs: 120000,
+        },
+      ],
       [
         toDailyHistoryEntry({
           id: 'd1',
@@ -318,7 +320,9 @@ describe('daily round timing and grading', () => {
     expect(decideDailySettle(base)).toEqual({ type: 'start_unanswered' });
     expect(decideDailySettle({ ...base, allowAdvance: false })).toEqual({ type: 'noop' });
     expect(decideDailySettle({ ...base, revealUntilMs: 25_000 })).toEqual({ type: 'wait_reveal' });
-    expect(decideDailySettle({ ...base, unansweredPosition: 1, nowMs: DAILY_GUESS_WALL_MS + 500 })).toEqual({
+    expect(
+      decideDailySettle({ ...base, unansweredPosition: 1, nowMs: DAILY_GUESS_WALL_MS + 500 }),
+    ).toEqual({
       type: 'timeout_guess',
       enterReveal: true,
     });
@@ -332,10 +336,24 @@ describe('daily round timing and grading', () => {
       type: 'timeout_guess',
       enterReveal: false,
     });
-    expect(decideDailySettle({ ...base, unansweredPosition: 1, nowMs: 15 * 60_000, allowAdvance: false })).toEqual({
+    expect(
+      decideDailySettle({
+        ...base,
+        unansweredPosition: 1,
+        nowMs: 15 * 60_000,
+        allowAdvance: false,
+      }),
+    ).toEqual({
       type: 'noop',
     });
-    expect(decideDailySettle({ ...base, unansweredPosition: null, revealUntilMs: null, allowAdvance: false })).toEqual({
+    expect(
+      decideDailySettle({
+        ...base,
+        unansweredPosition: null,
+        revealUntilMs: null,
+        allowAdvance: false,
+      }),
+    ).toEqual({
       type: 'complete',
     });
   });

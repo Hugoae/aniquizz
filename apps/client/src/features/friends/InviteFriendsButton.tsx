@@ -47,14 +47,19 @@ export function InviteFriendsButton({ excludeIds = [] }: InviteFriendsButtonProp
           </div>
         ) : (
           online.map((f) => (
-            <div key={f.id} className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/5">
+            <div
+              key={f.id}
+              className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-white/5"
+            >
               <UserAvatar avatar={f.avatar} username={f.username} className="h-8 w-8" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="truncate text-sm font-medium">{f.username}</span>
                   <RoleBadge role={f.role} size={14} />
                 </div>
-                <div className="truncate text-[11px] text-muted-foreground">{presenceLabel(f.status)}</div>
+                <div className="truncate text-[11px] text-muted-foreground">
+                  {presenceLabel(f.status)}
+                </div>
               </div>
               <Button
                 variant="ghost"

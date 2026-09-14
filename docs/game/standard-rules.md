@@ -8,32 +8,32 @@ Explain how the **current** room will play before launch — without opening the
 
 ## Client modules
 
-| File | Role |
-|------|------|
-| `apps/client/.../lobby/lobbyRulesCopy.ts` | `buildLobbyRulesSections(config, context)` — French UI strings |
-| `apps/client/.../lobby/LobbyRulesDialog.tsx` | Scrollable modal + `LobbyRulesTrigger` button |
-| `apps/client/.../lobby/lobbyRulesCopy.test.ts` | Copy regression tests (11 cases) |
+| File                                           | Role                                                           |
+| ---------------------------------------------- | -------------------------------------------------------------- |
+| `apps/client/.../lobby/lobbyRulesCopy.ts`      | `buildLobbyRulesSections(config, context)` — French UI strings |
+| `apps/client/.../lobby/LobbyRulesDialog.tsx`   | Scrollable modal + `LobbyRulesTrigger` button                  |
+| `apps/client/.../lobby/lobbyRulesCopy.test.ts` | Copy regression tests (11 cases)                               |
 
 ## Sections
 
-| Section | Title | Content |
-|---------|-------|---------|
-| `summary` | Résumé de la partie | Intro blindtest + colored setting chips only (no duplicate text lines) |
-| `flow` | Déroulement | Audio + hidden video; precision (Franchise vs Anime / season example); reveal with video |
-| `scoring` | Points par réponse | Depends on `responseType` — see below |
-| `source` | Source musicale | Random / Watched / Playlist placeholder |
-| `victory` | Victoire | Solo medals or multi podium |
-| `lobby` | Salon multijoueur | Multi only — ready, host controls, pause/skip majority votes |
+| Section   | Title               | Content                                                                                  |
+| --------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| `summary` | Résumé de la partie | Intro blindtest + colored setting chips only (no duplicate text lines)                   |
+| `flow`    | Déroulement         | Audio + hidden video; precision (Franchise vs Anime / season example); reveal with video |
+| `scoring` | Points par réponse  | Depends on `responseType` — see below                                                    |
+| `source`  | Source musicale     | Random / Watched / Playlist placeholder                                                  |
+| `victory` | Victoire            | Solo medals or multi podium                                                              |
+| `lobby`   | Salon multijoueur   | Multi only — ready, host controls, pause/skip majority votes                             |
 
-Modal title: **Règles de la partie** + subtitle *(selon la config actuelle)*.
+Modal title: **Règles de la partie** + subtitle _(selon la config actuelle)_.
 
 ## Scoring copy (`responseType`)
 
-| Mode | Lines |
-|------|-------|
-| **typing** | Typing pts · autocomplétion (menu au-dessus du champ) · typo tolerance |
-| **qcm** | Carré only (4 propositions) — **no Duo line** (Duo is Mix-only via switch) |
-| **mix** | Mix choice intro · Typing + autocomplétion · Carré · Duo (joker) |
+| Mode       | Lines                                                                      |
+| ---------- | -------------------------------------------------------------------------- |
+| **typing** | Typing pts · autocomplétion (menu au-dessus du champ) · typo tolerance     |
+| **qcm**    | Carré only (4 propositions) — **no Duo line** (Duo is Mix-only via switch) |
+| **mix**    | Mix choice intro · Typing + autocomplétion · Carré · Duo (joker)           |
 
 Values from `GAME_CONFIG.SCORING`.
 
@@ -50,9 +50,9 @@ Uses the same section title as multi: **Victoire** (not « Objectif & médailles
 
 Bronze threshold copy uses `effectiveMedalThresholds()` from `@aniquizz/shared` (same as `computeMedal` / mastery bar):
 
-| Config | Display |
-|--------|---------|
-| Single difficulty | e.g. `Seuil Bronze (Moyen) : 50 % minimum…` |
+| Config                | Display                                                           |
+| --------------------- | ----------------------------------------------------------------- |
+| Single difficulty     | e.g. `Seuil Bronze (Moyen) : 50 % minimum…`                       |
 | Multiple difficulties | Blended % + breakdown, e.g. Facile 55 % + Moyen 50 % → **52,5 %** |
 
 Per-difficulty constants: `GAME_CONFIG.MEDALS.THRESHOLDS` (easy 55 % · medium 50 % · hard 45 % bronze).
@@ -74,11 +74,11 @@ interface LobbyRulesContext {
 
 ## Related lobby UX (not in rules modal)
 
-| Feature | Where |
-|---------|--------|
-| Watched pool banner (host) | `MultiplayerLobby` — `resolveWatchedPoolBanner()` |
-| Live pool refetch on settings/roster | `useWatchedPoolStats` + `withWatchedPoolSoundCount()` |
-| Fallback opt-in auto-clear | `MultiplayerLobby` / `SourceSection` when pool becomes sufficient |
+| Feature                              | Where                                                             |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| Watched pool banner (host)           | `MultiplayerLobby` — `resolveWatchedPoolBanner()`                 |
+| Live pool refetch on settings/roster | `useWatchedPoolStats` + `withWatchedPoolSoundCount()`             |
+| Fallback opt-in auto-clear           | `MultiplayerLobby` / `SourceSection` when pool becomes sufficient |
 
 See `docs/game/watched-pool-threshold.md` · `docs/game/solo-medals.md`.
 

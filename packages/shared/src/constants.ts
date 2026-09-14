@@ -43,7 +43,11 @@ export const GAME_CONFIG = {
     TIERS: ['platinum', 'gold', 'silver', 'bronze'] as const,
     // Display metadata (labels are user-facing FR).
     META: {
-      bronze: { label: 'Bronze', textClass: 'text-medal-bronze', borderClass: 'border-medal-bronze' },
+      bronze: {
+        label: 'Bronze',
+        textClass: 'text-medal-bronze',
+        borderClass: 'border-medal-bronze',
+      },
       silver: { label: 'Argent', textClass: 'text-silver', borderClass: 'border-silver' },
       gold: { label: 'Or', textClass: 'text-warning', borderClass: 'border-warning' },
       platinum: { label: 'Platine', textClass: 'text-accent', borderClass: 'border-accent' },
@@ -120,6 +124,10 @@ export const GAME_CONFIG = {
     CHAT_HISTORY: 50,
     MAX_USERNAME_LENGTH: 16,
     MAX_CHAT_LENGTH: 200,
+    /** Typing answers (franchise / anime / artist). Oversized payloads are dropped. */
+    MAX_ANSWER_LENGTH: 256,
+    /** Lobby codes are 6 A–Z0–9 chars; allow slack without accepting huge strings. */
+    MAX_ROOM_ID_LENGTH: 16,
   },
 
   // --- SCORE GRADES ---

@@ -26,7 +26,7 @@ export function Header() {
           alt=""
           width={32}
           height={32}
-          fetchpriority="high"
+          fetchPriority="high"
           decoding="async"
           className="h-8 w-8 shrink-0 transition-transform group-hover:scale-110"
           aria-hidden
@@ -70,9 +70,7 @@ export function Header() {
             <span className="hidden md:inline text-sm font-semibold">Admin</span>
           </Button>
         )}
-        {user && profile && (
-          <div className="h-6 w-px bg-border/70" aria-hidden="true" />
-        )}
+        {user && profile && <div className="h-6 w-px bg-border/70" aria-hidden="true" />}
         {showProfileLoading ? (
           <ProfileButton loading />
         ) : user && profile ? (
@@ -84,11 +82,7 @@ export function Header() {
             onPrefetch={() => prefetchRoute('profile')}
           />
         ) : (
-          <Button
-            onClick={() => setShowAuthModal(true)}
-            variant="default"
-            className="font-bold"
-          >
+          <Button onClick={() => setShowAuthModal(true)} variant="default" className="font-bold">
             <LogIn className="mr-2 h-4 w-4" aria-hidden />
             Se connecter
           </Button>

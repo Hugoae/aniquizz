@@ -125,73 +125,75 @@ export function DailySongSearch({ excludeIds, disabled, onPick }: DailySongSearc
               maxHeight: panelBox.maxHeight,
             }}
           >
-          <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-            {loading || pending
-              ? DAILY_ADMIN_COPY.searchHint
-              : `${DAILY_ADMIN_COPY.searchCount(hits.length)} · ${DAILY_ADMIN_COPY.searchHint}`}
-          </p>
-          {(loading || pending) && (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {showEmpty && (
-            <p className="px-2 py-4 text-sm text-muted-foreground">{DAILY_ADMIN_COPY.searchEmpty}</p>
-          )}
-          {!loading &&
-            !pending &&
-            hits.map((song) => {
-              const difficulty = toLibraryDifficulty(song.difficulty);
-              return (
-                <button
-                  key={song.id}
-                  type="button"
-                  role="option"
-                  className={cn(
-                    'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-secondary/60',
-                    FOCUS_RING,
-                  )}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    onPick(song);
-                    setQuery('');
-                    setOpen(false);
-                  }}
-                >
-                  {song.cover ? (
-                    <img
-                      src={song.cover}
-                      alt=""
-                      className="h-12 w-8 shrink-0 rounded object-cover"
-                      loading="lazy"
-                    />
-                  ) : (
-                    <div className="h-12 w-8 shrink-0 rounded bg-secondary" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="rounded border border-border/60 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-black uppercase">
-                        {song.typeLabel}
-                      </span>
-                      <span
-                        className={cn(
-                          'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase',
-                          libraryDifficultyClass(difficulty),
-                        )}
-                      >
-                        {libraryDifficultyLabel(difficulty)}
-                      </span>
+            <p className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+              {loading || pending
+                ? DAILY_ADMIN_COPY.searchHint
+                : `${DAILY_ADMIN_COPY.searchCount(hits.length)} · ${DAILY_ADMIN_COPY.searchHint}`}
+            </p>
+            {(loading || pending) && (
+              <div className="flex justify-center py-6">
+                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+            {showEmpty && (
+              <p className="px-2 py-4 text-sm text-muted-foreground">
+                {DAILY_ADMIN_COPY.searchEmpty}
+              </p>
+            )}
+            {!loading &&
+              !pending &&
+              hits.map((song) => {
+                const difficulty = toLibraryDifficulty(song.difficulty);
+                return (
+                  <button
+                    key={song.id}
+                    type="button"
+                    role="option"
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-secondary/60',
+                      FOCUS_RING,
+                    )}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => {
+                      onPick(song);
+                      setQuery('');
+                      setOpen(false);
+                    }}
+                  >
+                    {song.cover ? (
+                      <img
+                        src={song.cover}
+                        alt=""
+                        className="h-12 w-8 shrink-0 rounded object-cover"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="h-12 w-8 shrink-0 rounded bg-secondary" />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="rounded border border-border/60 bg-secondary/40 px-1.5 py-0.5 text-[10px] font-black uppercase">
+                          {song.typeLabel}
+                        </span>
+                        <span
+                          className={cn(
+                            'rounded px-1.5 py-0.5 text-[10px] font-bold uppercase',
+                            libraryDifficultyClass(difficulty),
+                          )}
+                        >
+                          {libraryDifficultyLabel(difficulty)}
+                        </span>
+                      </div>
+                      <p className="truncate text-sm font-medium">{song.title}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {song.artist}
+                        <span className="text-muted-foreground/50"> · </span>
+                        {song.anime}
+                      </p>
                     </div>
-                    <p className="truncate text-sm font-medium">{song.title}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {song.artist}
-                      <span className="text-muted-foreground/50"> · </span>
-                      {song.anime}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
           </div>,
           document.body,
         )

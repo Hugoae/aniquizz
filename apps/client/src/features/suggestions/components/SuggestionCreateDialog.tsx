@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { Loader2, Send } from 'lucide-react';
 import type { SuggestionCategory, SuggestionItem } from '@aniquizz/shared';
-import {
-  SUGGESTION_BODY_MAX,
-  SUGGESTION_TITLE_MAX,
-} from '@aniquizz/shared';
+import { SUGGESTION_BODY_MAX, SUGGESTION_TITLE_MAX } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -46,7 +43,9 @@ export function SuggestionCreateDialog({
     onCreated,
     onClose: () => onOpenChange(false),
   });
-  const songSearch = useSuggestionSongSearch(open && form.category === 'CORRECTION' && !form.selectedSong);
+  const songSearch = useSuggestionSongSearch(
+    open && form.category === 'CORRECTION' && !form.selectedSong,
+  );
 
   const handleOpenChange = (next: boolean) => {
     if (!next && !form.saving) {
@@ -72,7 +71,9 @@ export function SuggestionCreateDialog({
 
         <div className="space-y-5 py-2">
           <fieldset>
-            <legend className="mb-2 text-sm font-semibold">{SUGGESTIONS_COPY.categoryLegend}</legend>
+            <legend className="mb-2 text-sm font-semibold">
+              {SUGGESTIONS_COPY.categoryLegend}
+            </legend>
             <div className="grid grid-cols-2 gap-2">
               {categories.map((value) => (
                 <Button
@@ -171,7 +172,11 @@ export function SuggestionCreateDialog({
               disabled={!form.valid || form.saving}
               className="gap-2"
             >
-              {form.saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {form.saving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
               {SUGGESTIONS_COPY.publish}
             </Button>
           </DialogFooter>

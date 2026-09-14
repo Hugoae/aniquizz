@@ -1,25 +1,25 @@
-import { useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { SeoHead } from "@/components/seo/SeoHead";
-import { PAGE_TITLES } from "@/lib/site";
-import { toast } from "sonner";
-import { hasRole } from "@aniquizz/shared";
-import { Header } from "@/components/layout/Header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft, Shield } from "lucide-react";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { ProfileRouteSkeleton } from "@/components/layout/RouteSkeletonFallback";
-import { adminApi, AdminApiError } from "@/lib/adminApi";
-import { UsersPanel } from "@/features/admin/components/UsersPanel";
-import { RoomsPanel } from "@/features/admin/components/RoomsPanel";
-import { CataloguePanel } from "@/features/admin/components/CataloguePanel";
-import { DevToolsPanel } from "@/features/admin/components/DevToolsPanel";
-import { StatsPanel } from "@/features/admin/components/StatsPanel";
-import { SuggestionsPanel } from "@/features/admin/components/SuggestionsPanel";
-import { PlaylistsPanel } from "@/features/admin/components/PlaylistsPanel";
-import { DailyAdminPanel } from "@/features/admin/components/DailyAdminPanel";
-import { getAdminPanelState } from "@/features/admin/adminNavigation";
+import { useState } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { SeoHead } from '@/components/seo/SeoHead';
+import { PAGE_TITLES } from '@/lib/site';
+import { toast } from 'sonner';
+import { hasRole } from '@aniquizz/shared';
+import { Header } from '@/components/layout/Header';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { ArrowLeft, Shield } from 'lucide-react';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { ProfileRouteSkeleton } from '@/components/layout/RouteSkeletonFallback';
+import { adminApi, AdminApiError } from '@/lib/adminApi';
+import { UsersPanel } from '@/features/admin/components/UsersPanel';
+import { RoomsPanel } from '@/features/admin/components/RoomsPanel';
+import { CataloguePanel } from '@/features/admin/components/CataloguePanel';
+import { DevToolsPanel } from '@/features/admin/components/DevToolsPanel';
+import { StatsPanel } from '@/features/admin/components/StatsPanel';
+import { SuggestionsPanel } from '@/features/admin/components/SuggestionsPanel';
+import { PlaylistsPanel } from '@/features/admin/components/PlaylistsPanel';
+import { DailyAdminPanel } from '@/features/admin/components/DailyAdminPanel';
+import { getAdminPanelState } from '@/features/admin/adminNavigation';
 
 const IS_DEV = import.meta.env.DEV;
 
@@ -29,12 +29,14 @@ export default function Admin() {
   const location = useLocation();
   const restored = getAdminPanelState(location.state);
   const [claiming, setClaiming] = useState(false);
-  const [tab, setTab] = useState(restored?.tab ?? "users");
-  const [highlightRoomId, setHighlightRoomId] = useState<string | null>(restored?.highlightRoomId ?? null);
+  const [tab, setTab] = useState(restored?.tab ?? 'users');
+  const [highlightRoomId, setHighlightRoomId] = useState<string | null>(
+    restored?.highlightRoomId ?? null,
+  );
 
   const goToRoom = (roomId: string) => {
     setHighlightRoomId(roomId);
-    setTab("rooms");
+    setTab('rooms');
   };
 
   if (!authReady) return <ProfileRouteSkeleton />;
@@ -42,15 +44,15 @@ export default function Admin() {
   if (!profile) return <ProfileRouteSkeleton />;
 
   const role = profile?.role;
-  const isStaff = hasRole(role, "MODERATOR");
-  const canManage = hasRole(role, "ADMIN");
+  const isStaff = hasRole(role, 'MODERATOR');
+  const canManage = hasRole(role, 'ADMIN');
 
   const claimAdmin = async () => {
     setClaiming(true);
     try {
       await adminApi.claimAdmin();
       await refreshProfile();
-      toast.success("Vous êtes désormais administrateur.");
+      toast.success('Vous êtes désormais administrateur.');
     } catch (e) {
       toast.error(e instanceof AdminApiError ? e.message : "Échec de l'élévation.");
     } finally {

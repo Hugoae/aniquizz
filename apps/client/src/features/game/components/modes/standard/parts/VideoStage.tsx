@@ -73,14 +73,13 @@ export const VideoStage = memo(function VideoStage({
   const isRevealed = phase === 'revealed' && isVideoReady && hasPaintedFrame;
   const isGuessing = phase === 'guessing';
   const visualGuessMode = videoMode === 'blurred' || videoMode === 'peek';
-  const useCenterTimer = phase === 'loading' || phase === 'ready' || (isGuessing && !visualGuessMode);
+  const useCenterTimer =
+    phase === 'loading' || phase === 'ready' || (isGuessing && !visualGuessMode);
   const useBottomBar = isGuessing && visualGuessMode;
 
-  const peekWindow = currentSong && 'peekWindow' in currentSong ? currentSong.peekWindow : undefined;
-  const peekRect = useMemo(
-    () => (peekWindow ? peekWindowRect(peekWindow) : null),
-    [peekWindow],
-  );
+  const peekWindow =
+    currentSong && 'peekWindow' in currentSong ? currentSong.peekWindow : undefined;
+  const peekRect = useMemo(() => (peekWindow ? peekWindowRect(peekWindow) : null), [peekWindow]);
 
   const videoClassName = useMemo(() => {
     if (isRevealed) {
@@ -234,7 +233,8 @@ export const VideoStage = memo(function VideoStage({
       {phase === 'revealed' && (
         <div className="absolute bottom-4 right-4 z-30">
           <Button variant="default" onClick={onVoteSkip} className="gap-2 shadow-glow">
-            <SkipForward className="h-4 w-4" /> Suivant {playersCount > 1 && ` (${skipVotes}/${skipRequired})`}
+            <SkipForward className="h-4 w-4" /> Suivant{' '}
+            {playersCount > 1 && ` (${skipVotes}/${skipRequired})`}
           </Button>
         </div>
       )}

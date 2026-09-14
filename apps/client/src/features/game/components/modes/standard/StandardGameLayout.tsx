@@ -88,13 +88,47 @@ interface StandardGameLayoutProps {
 export const StandardGameLayout = memo(StandardGameLayoutInner);
 
 function StandardGameLayoutInner({
-  phase, players, currentRound, totalRounds, phaseEndsAt, phaseDurationSeconds,
-  volume, isMuted, onVolumeChange, onToggleMute, videoRef, autoplayBlocked, onSafePlay,
-  isGamePaused, isPausePending, resumeCountdown, onVotePause, pauseVotes, pauseRequired, skipVotes, skipRequired, onVoteSkip,
-  currentSong, myWatchedIds,
-  inputMode, submittedAnswer, choices, onAction, onSwitchCarre, onSwitchDuo,
-  myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, onShowSettings, showPointsAnimation, pointsEarned,
-  currentUserId, gameMode, roomId,
+  phase,
+  players,
+  currentRound,
+  totalRounds,
+  phaseEndsAt,
+  phaseDurationSeconds,
+  volume,
+  isMuted,
+  onVolumeChange,
+  onToggleMute,
+  videoRef,
+  autoplayBlocked,
+  onSafePlay,
+  isGamePaused,
+  isPausePending,
+  resumeCountdown,
+  onVotePause,
+  pauseVotes,
+  pauseRequired,
+  skipVotes,
+  skipRequired,
+  onVoteSkip,
+  currentSong,
+  myWatchedIds,
+  inputMode,
+  submittedAnswer,
+  choices,
+  onAction,
+  onSwitchCarre,
+  onSwitchDuo,
+  myProfile,
+  sidebarCollapsed,
+  setSidebarCollapsed,
+  onShowLeave,
+  onShowProfile,
+  onShowSettings,
+  showPointsAnimation,
+  pointsEarned,
+  currentUserId,
+  gameMode,
+  roomId,
   responseType = 'mix',
   configBadges,
   videoMode,
@@ -112,7 +146,8 @@ function StandardGameLayoutInner({
   showRoundProgress = true,
   hideScores = false,
 }: StandardGameLayoutProps) {
-  const revealSong = phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
+  const revealSong =
+    phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
 
   // Bumped on each "open roster" request; a change while already open triggers a
@@ -192,103 +227,111 @@ function StandardGameLayoutInner({
           )}
 
           <div className="relative flex h-full min-h-0 w-full max-w-[1400px] animate-fade-in flex-col items-stretch justify-center gap-3">
-            {roundMeter ? (
-              <div className="flex shrink-0 justify-center">{roundMeter}</div>
-            ) : null}
+            {roundMeter ? <div className="flex shrink-0 justify-center">{roundMeter}</div> : null}
             <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
               {/* Left stack: video, answer slot, players floor. */}
               <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-hidden">
-              <VideoStage
-                videoRef={videoRef}
-                phase={phase}
-                currentSong={currentSong}
-                videoMode={videoMode}
-                autoplayBlocked={autoplayBlocked}
-                onSafePlay={onSafePlay}
-                isGamePaused={isGamePaused}
-                resumeCountdown={resumeCountdown}
-                isMuted={isMuted}
-                volume={volume}
-                onToggleMute={onToggleMute}
-                onVolumeChange={onVolumeChange}
-                phaseEndsAt={phaseEndsAt}
-                phaseDurationSeconds={phaseDurationSeconds}
-                gameMode={gameMode}
-                isPausePending={isPausePending}
-                submittedAnswer={submittedAnswer}
-                onSoloSkip={handleSoloSkip}
-                playersCount={activeRosterCount}
-                skipVotes={skipVotes}
-                skipRequired={skipRequired}
-                onVoteSkip={onVoteSkip}
-              />
+                <VideoStage
+                  videoRef={videoRef}
+                  phase={phase}
+                  currentSong={currentSong}
+                  videoMode={videoMode}
+                  autoplayBlocked={autoplayBlocked}
+                  onSafePlay={onSafePlay}
+                  isGamePaused={isGamePaused}
+                  resumeCountdown={resumeCountdown}
+                  isMuted={isMuted}
+                  volume={volume}
+                  onToggleMute={onToggleMute}
+                  onVolumeChange={onVolumeChange}
+                  phaseEndsAt={phaseEndsAt}
+                  phaseDurationSeconds={phaseDurationSeconds}
+                  gameMode={gameMode}
+                  isPausePending={isPausePending}
+                  submittedAnswer={submittedAnswer}
+                  onSoloSkip={handleSoloSkip}
+                  playersCount={activeRosterCount}
+                  skipVotes={skipVotes}
+                  skipRequired={skipRequired}
+                  onVoteSkip={onVoteSkip}
+                />
 
-              {/* Slot under the video: answer input while guessing; on small screens
+                {/* Slot under the video: answer input while guessing; on small screens
                   the reveal info shows here as a band (the big side card is hidden). */}
-              <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
-                {(phase === 'guessing' || phase === 'ready') ? (
-                  <AnswerInput
-                    responseType={responseType}
-                    inputMode={inputMode}
-                    submittedAnswer={submittedAnswer}
-                    choices={choices}
-                    onAction={onAction}
-                    onSwitchCarre={onSwitchCarre}
-                    onSwitchDuo={onSwitchDuo}
-                    precision={precision}
-                    roundKey={currentRound}
-                    disabled={phase === 'ready' || answerDisabled}
-                    pointsBadge={pointsBadge}
-                    autoFocusEnabled={autofocusAnswer}
-                    submitOnEnter={submitOnEnter}
-                    showShortcutReminder={showShortcutReminder}
+                <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
+                  {phase === 'guessing' || phase === 'ready' ? (
+                    <AnswerInput
+                      responseType={responseType}
+                      inputMode={inputMode}
+                      submittedAnswer={submittedAnswer}
+                      choices={choices}
+                      onAction={onAction}
+                      onSwitchCarre={onSwitchCarre}
+                      onSwitchDuo={onSwitchDuo}
+                      precision={precision}
+                      roundKey={currentRound}
+                      disabled={phase === 'ready' || answerDisabled}
+                      pointsBadge={pointsBadge}
+                      autoFocusEnabled={autofocusAnswer}
+                      submitOnEnter={submitOnEnter}
+                      showShortcutReminder={showShortcutReminder}
+                    />
+                  ) : songInfoProps ? (
+                    <div className="flex w-full flex-col gap-3 lg:hidden">
+                      <SongInfoCard variant="band" isRevealed {...songInfoProps} />
+                      {showSprintBoard && sprintLeaderboard && (
+                        <SprintLeaderboard
+                          data={sprintLeaderboard}
+                          currentUserId={currentUserId}
+                          myAvatar={myProfile.avatar}
+                          compact
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
+                      Chargement de la réponse…
+                    </div>
+                  )}
+                </div>
+
+                <PlayersFloor
+                  players={players}
+                  currentUserId={currentUserId}
+                  showResult={phase === 'revealed'}
+                  showPointsAnimation={!hideScores && showPointsAnimation}
+                  pointsEarned={hideScores ? null : pointsEarned}
+                  showRank={gameMode !== 'solo'}
+                  onOpenRoster={handleOpenRoster}
+                  hideScore={hideScores}
+                />
+              </div>
+
+              {/* Right column: song info card + Sprint speed board (aligned with player cards). */}
+              <div className="hidden shrink-0 flex-col self-start lg:flex lg:w-[440px] xl:w-[520px]">
+                <div className="h-[34vh] shrink-0">
+                  <SongInfoCard
+                    variant="card"
+                    isRevealed={phase === 'revealed'}
+                    {...(songInfoProps ?? {
+                      animeName: '',
+                      songTitle: '',
+                      artist: '',
+                      type: '',
+                      difficulty: '',
+                    })}
                   />
-                ) : songInfoProps ? (
-                  <div className="flex w-full flex-col gap-3 lg:hidden">
-                    <SongInfoCard variant="band" isRevealed {...songInfoProps} />
-                    {showSprintBoard && sprintLeaderboard && (
-                      <SprintLeaderboard
-                        data={sprintLeaderboard}
-                        currentUserId={currentUserId}
-                        myAvatar={myProfile.avatar}
-                        compact
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
-                    Chargement de la réponse…
+                </div>
+                {showSprintBoard && sprintLeaderboard && (
+                  <div className="mt-[calc(8vh+4.25rem)]">
+                    <SprintLeaderboard
+                      data={sprintLeaderboard}
+                      currentUserId={currentUserId}
+                      myAvatar={myProfile.avatar}
+                    />
                   </div>
                 )}
               </div>
-
-              <PlayersFloor
-                players={players}
-                currentUserId={currentUserId}
-                showResult={phase === 'revealed'}
-                showPointsAnimation={!hideScores && showPointsAnimation}
-                pointsEarned={hideScores ? null : pointsEarned}
-                showRank={gameMode !== 'solo'}
-                onOpenRoster={handleOpenRoster}
-                hideScore={hideScores}
-              />
-            </div>
-
-            {/* Right column: song info card + Sprint speed board (aligned with player cards). */}
-            <div className="hidden shrink-0 flex-col self-start lg:flex lg:w-[440px] xl:w-[520px]">
-              <div className="h-[34vh] shrink-0">
-                <SongInfoCard variant="card" isRevealed={phase === 'revealed'} {...(songInfoProps ?? { animeName: '', songTitle: '', artist: '', type: '', difficulty: '' })} />
-              </div>
-              {showSprintBoard && sprintLeaderboard && (
-                <div className="mt-[calc(8vh+4.25rem)]">
-                  <SprintLeaderboard
-                    data={sprintLeaderboard}
-                    currentUserId={currentUserId}
-                    myAvatar={myProfile.avatar}
-                  />
-                </div>
-              )}
-            </div>
             </div>
           </div>
         </main>

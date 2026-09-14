@@ -4,13 +4,13 @@ Players can guess the **performer** instead of the anime. The next precision aft
 
 ## Accepted answers
 
-| Input | Typing | Autocomplete | QCM / Duo |
-|-------|--------|--------------|-----------|
-| Any unit in `Song.artistNames` | Yes | Yes (that unit only) | Correct option = **first billed unit**; other units of the same song are not distractors |
-| Full display credit (`Song.artist`) | Yes, as extra free-type tolerance on collabs | No (never listed when it is a composite `A, B`) | No |
-| Song title | No | — | — |
-| Anime / franchise name | No | — | — |
-| Empty / unknown / punctuation-only credit | Unplayable — song is excluded | — | — |
+| Input                                     | Typing                                       | Autocomplete                                    | QCM / Duo                                                                                |
+| ----------------------------------------- | -------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Any unit in `Song.artistNames`            | Yes                                          | Yes (that unit only)                            | Correct option = **first billed unit**; other units of the same song are not distractors |
+| Full display credit (`Song.artist`)       | Yes, as extra free-type tolerance on collabs | No (never listed when it is a composite `A, B`) | No                                                                                       |
+| Song title                                | No                                           | —                                               | —                                                                                        |
+| Anime / franchise name                    | No                                           | —                                               | —                                                                                        |
+| Empty / unknown / punctuation-only credit | Unplayable — song is excluded                | —                                               | —                                                                                        |
 
 Examples: a collab `CHiCO, HoneyWorks` accepts `CHiCO`, `HoneyWorks`, or the full string if typed by hand. QCM shows `CHiCO` (first billed), never `CHiCO, HoneyWorks`. `Fear, and Loathing in Las Vegas` stays one atomic name in every mode. `μ` matches as a unit.
 

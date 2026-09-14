@@ -14,12 +14,8 @@ const INPUT_SETTING = process.env.ENDING_DIFFICULTY_FILE?.trim() || 'manual_edit
 const INPUT_FILE = path.isAbsolute(INPUT_SETTING)
   ? INPUT_SETTING
   : path.join(DATA_DIR, INPUT_SETTING);
-const DRY_RUN = ['1', 'true', 'yes'].includes(
-  process.env.DRY_RUN?.trim().toLowerCase() ?? '',
-);
-const APPLY_DB = ['1', 'true', 'yes'].includes(
-  process.env.APPLY_DB?.trim().toLowerCase() ?? '',
-);
+const DRY_RUN = ['1', 'true', 'yes'].includes(process.env.DRY_RUN?.trim().toLowerCase() ?? '');
+const APPLY_DB = ['1', 'true', 'yes'].includes(process.env.APPLY_DB?.trim().toLowerCase() ?? '');
 
 const printReport = (report: RecalibrateEndingReport): void => {
   const byTransition = new Map<string, number>();

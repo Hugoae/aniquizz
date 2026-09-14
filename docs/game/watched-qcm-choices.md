@@ -7,7 +7,7 @@ In **Watched** (`soundSelection: 'watched'`), songs are drawn from players' reso
 - Playlist songs: filtered by `watchedIds` ✅
 - QCM distractors: full catalogue via `getChoiceCandidates(precision)` ❌
 
-A player could eliminate wrong answers without listening: *« I haven't seen this anime on my list → it's not the answer. »* The round tested list meta-knowledge, not audio recognition.
+A player could eliminate wrong answers without listening: _« I haven't seen this anime on my list → it's not the answer. »_ The round tested list meta-knowledge, not audio recognition.
 
 Affected modes: `responseType: 'qcm'` and `'mix'` (when the player uses Carré or Duo). Typing-only rooms are unaffected (`needsChoices = false`).
 
@@ -15,9 +15,9 @@ Affected modes: `responseType: 'qcm'` and `'mix'` (when the player uses Carré o
 
 **When `soundSelection === 'watched'`, restrict the choice candidate pool to the same `watchedIds` used for song selection.**
 
-| Mode | Song pool | Distractor pool |
-|------|-----------|-----------------|
-| Random | Global catalogue | Global catalogue (unchanged) |
+| Mode    | Song pool            | Distractor pool               |
+| ------- | -------------------- | ----------------------------- |
+| Random  | Global catalogue     | Global catalogue (unchanged)  |
 | Watched | Resolved AniList ids | **Same resolved AniList ids** |
 
 Multiplayer uses the lobby's resolved ids:
@@ -29,13 +29,13 @@ Precision (`anime` vs `franchise` vs `artist`, legacy wire value `exact` → `an
 
 ## Source of truth
 
-| Layer | Module | Role |
-|-------|--------|------|
-| Pure pool builder | `packages/shared/src/selection.ts` — `buildChoiceCandidatePool()` | Filter rows by `watchedIds`, dedupe display names |
-| Choice assembly | `packages/shared/src/selection.ts` — `buildChoices()`, `buildDuo()` | Pick wrong answers + shuffle (unchanged API) |
-| Catalogue cache | `apps/server/.../gameService.ts` — `getAllAnimeNames()` | Anime rows now include `id` for filtering |
-| Candidate API | `apps/server/.../gameService.ts` — `getChoiceCandidates(precision, watchedIds?)` | Global pool cached per precision; watched pool filtered in memory (not cached per user) |
-| Match start | `apps/server/.../PlaylistBuilder.ts` | Passes `watchedIds` to `getChoiceCandidates` when `isWatchedMode` |
+| Layer             | Module                                                                           | Role                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Pure pool builder | `packages/shared/src/selection.ts` — `buildChoiceCandidatePool()`                | Filter rows by `watchedIds`, dedupe display names                                       |
+| Choice assembly   | `packages/shared/src/selection.ts` — `buildChoices()`, `buildDuo()`              | Pick wrong answers + shuffle (unchanged API)                                            |
+| Catalogue cache   | `apps/server/.../gameService.ts` — `getAllAnimeNames()`                          | Anime rows now include `id` for filtering                                               |
+| Candidate API     | `apps/server/.../gameService.ts` — `getChoiceCandidates(precision, watchedIds?)` | Global pool cached per precision; watched pool filtered in memory (not cached per user) |
+| Match start       | `apps/server/.../PlaylistBuilder.ts`                                             | Passes `watchedIds` to `getChoiceCandidates` when `isWatchedMode`                       |
 
 Choices are pre-generated at playlist build time (one set per round) and sent on `round_start` — the client never builds distractors.
 
@@ -48,12 +48,12 @@ Thematic playlists (v26.5) use the same helper with **snapshot anime ids** (opti
 
 ## Edge cases & follow-up
 
-| Case | Current behaviour | Backlog |
-|------|-------------------|---------|
-| List has &lt; 4 distinct names (QCM / Mix) | Lobby + `validateWatchedStart` block via `hasEnoughQcmNames` (same gate as playlists). Typing-only rooms skip the gate. | — |
-| List has &lt; 2 distinct names (Duo) | Duo still pads with `???` if Mix/QCM somehow starts; Mix/QCM is already blocked at 4 names | Optional Duo-only threshold |
-| Anime on AniList but no song in catalogue | Excluded from both song and choice pools (no row in cache) | — |
-| Typing-only room | No choices built or sent | — |
+| Case                                       | Current behaviour                                                                                                       | Backlog                     |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| List has &lt; 4 distinct names (QCM / Mix) | Lobby + `validateWatchedStart` block via `hasEnoughQcmNames` (same gate as playlists). Typing-only rooms skip the gate. | —                           |
+| List has &lt; 2 distinct names (Duo)       | Duo still pads with `???` if Mix/QCM somehow starts; Mix/QCM is already blocked at 4 names                              | Optional Duo-only threshold |
+| Anime on AniList but no song in catalogue  | Excluded from both song and choice pools (no row in cache)                                                              | —                           |
+| Typing-only room                           | No choices built or sent                                                                                                | —                           |
 
 ## Tests
 

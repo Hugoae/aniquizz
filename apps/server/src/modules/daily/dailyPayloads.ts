@@ -47,7 +47,8 @@ export interface DailyAnswerRow {
   responseMs: number;
 }
 
-export const snapshotOf = (round: DailyRoundRow): DailyRoundSnapshot => parseDailySnapshot(round.snapshot);
+export const snapshotOf = (round: DailyRoundRow): DailyRoundSnapshot =>
+  parseDailySnapshot(round.snapshot);
 
 export const catalogueSongId = (round: DailyRoundRow): number | null => {
   if (round.songId != null && round.songId > 0) return round.songId;
@@ -98,11 +99,14 @@ export const computeAttemptTotals = (rounds: DailyRoundRow[], answers: DailyAnsw
   const totalResponseMs = rounds.reduce((sum, round) => {
     if (round.voided) return sum;
     const answer = byRound.get(round.id);
-    return sum + dailyRoundTimeMs({
-      answered: Boolean(answer),
-      responseMs: answer?.responseMs ?? null,
-      guessMs: DAILY_GUESS_MS,
-    });
+    return (
+      sum +
+      dailyRoundTimeMs({
+        answered: Boolean(answer),
+        responseMs: answer?.responseMs ?? null,
+        guessMs: DAILY_GUESS_MS,
+      })
+    );
   }, 0);
   return {
     ...summary,
@@ -121,7 +125,11 @@ export const toResultDto = (input: {
   const tracks = dailyTrackStates(
     input.rounds.map((round) => {
       const answer = input.answers.find((row) => row.roundId === round.id);
-      return { position: round.position, voided: round.voided, correct: answer?.isCorrect ?? false };
+      return {
+        position: round.position,
+        voided: round.voided,
+        correct: answer?.isCorrect ?? false,
+      };
     }),
   );
   const recap = [...input.rounds]
@@ -180,7 +188,10 @@ export const toSafeRound = (input: {
   };
 };
 
-export const tracksForAttempt = (rounds: DailyRoundRow[], answers: DailyAnswerRow[]): DailyTrackState[] =>
+export const tracksForAttempt = (
+  rounds: DailyRoundRow[],
+  answers: DailyAnswerRow[],
+): DailyTrackState[] =>
   dailyTrackStates(
     rounds.map((round) => {
       const answer = answers.find((item) => item.roundId === round.id);
@@ -232,12 +243,22 @@ export const publicToday = (input: {
   openAttemptId: null,
 });
 
-export const statusFromAttempt = (state: DailyAttemptState | null, available: boolean): DailyPlayerStatusKind => {
+export const statusFromAttempt = (
+  state: DailyAttemptState | null,
+  available: boolean,
+): DailyPlayerStatusKind => {
   if (!available) return 'unavailable';
   if (!state) return 'available';
   if (state === 'in_progress') return 'in_progress';
   return 'completed';
 };
 
-export { dailyCalendarDate, clampDailyResponseMs, offeredDailyChoice, isDailyQcmCorrect, dailyXp, dailyPlayTracks };
+export {
+  dailyCalendarDate,
+  clampDailyResponseMs,
+  offeredDailyChoice,
+  isDailyQcmCorrect,
+  dailyXp,
+  dailyPlayTracks,
+};
 export type { DailyStreakDto, DailyLeaderboardEntry, DailyLeaderboardResponse, DailyTrackState };

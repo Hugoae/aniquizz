@@ -91,7 +91,8 @@ export function nextDailyStreak(input: {
     };
   }
   const continued = Boolean(
-    input.lastCompletionDate && addCalendarDays(input.lastCompletionDate, 1) === input.challengeDate,
+    input.lastCompletionDate &&
+    addCalendarDays(input.lastCompletionDate, 1) === input.challengeDate,
   );
   const currentStreak = continued ? input.currentStreak + 1 : 1;
   return {

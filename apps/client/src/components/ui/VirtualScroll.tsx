@@ -52,10 +52,7 @@ export function VirtualScroll<T>({
       className={cn('overflow-y-auto custom-scrollbar', className)}
       style={{ maxHeight }}
     >
-      <div
-        className="relative w-full"
-        style={{ height: virtualizer.getTotalSize() }}
-      >
+      <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualItems.map((virtualRow) => {
           const item = items[virtualRow.index];
           const style: CSSProperties = {

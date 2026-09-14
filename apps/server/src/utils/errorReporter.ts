@@ -13,9 +13,7 @@ export type ErrorContext = LogBindings & {
  */
 export function captureError(error: unknown, context: ErrorContext = {}): void {
   const normalized =
-    error instanceof Error
-      ? error
-      : new Error(typeof error === 'string' ? error : 'Unknown error');
+    error instanceof Error ? error : new Error(typeof error === 'string' ? error : 'Unknown error');
 
   const payload: Record<string, unknown> = {
     ...context,

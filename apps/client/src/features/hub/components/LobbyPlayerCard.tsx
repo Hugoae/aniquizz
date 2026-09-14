@@ -38,7 +38,15 @@ interface LobbyPlayerCardProps {
 /** Whether a player id refers to a simulated bot (no friend action for those). */
 const isBotId = (id: string | number) => typeof id === 'string' && id.startsWith('bot-');
 
-export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isSolo, canManage, needsWatchedList, onTransferHost, onKick }: LobbyPlayerCardProps) {
+export const LobbyPlayerCard = memo(function LobbyPlayerCard({
+  player,
+  isMe,
+  isSolo,
+  canManage,
+  needsWatchedList,
+  onTransferHost,
+  onKick,
+}: LobbyPlayerCardProps) {
   const { isInGame, isReady, isHost, isBot, level } = player;
 
   return (
@@ -60,7 +68,10 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isS
             type="button"
             onClick={() => onTransferHost(player.id)}
             aria-label={`Nommer ${player.name} hôte`}
-            className={cn('rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-warning', FOCUS_RING)}
+            className={cn(
+              'rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-warning',
+              FOCUS_RING,
+            )}
           >
             <Crown className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -68,7 +79,10 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isS
             type="button"
             onClick={() => onKick(player.id)}
             aria-label={`Exclure ${player.name} du salon`}
-            className={cn('rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive', FOCUS_RING)}
+            className={cn(
+              'rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive',
+              FOCUS_RING,
+            )}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
@@ -108,10 +122,13 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({ player, isMe, isS
       </div>
 
       <div className="w-full text-center">
-        <h3 className={cn('flex items-center justify-center gap-1.5 truncate text-lg font-bold', isMe && 'text-primary')}>
-          <span className="truncate">
-            {player.name}
-          </span>
+        <h3
+          className={cn(
+            'flex items-center justify-center gap-1.5 truncate text-lg font-bold',
+            isMe && 'text-primary',
+          )}
+        >
+          <span className="truncate">{player.name}</span>
           {isBot ? (
             <span className="inline-flex items-center gap-1 rounded bg-secondary/60 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               <Bot className="h-3 w-3" aria-hidden="true" /> Bot

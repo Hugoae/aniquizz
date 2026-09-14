@@ -4,23 +4,23 @@ Guessing-phase presentation for OP/ED clips. **Reveal** always shows the full sh
 
 ## Modes
 
-| `videoMode` | Guessing phase | Reveal |
-|-------------|----------------|--------|
+| `videoMode`        | Guessing phase                                                       | Reveal             |
+| ------------------ | -------------------------------------------------------------------- | ------------------ |
 | `hidden` (default) | Black stage, audio only — current `VideoStage` `opacity-0` behaviour | Full video fade-in |
-| `blurred` | Video plays under a strong CSS blur | Full sharp video |
-| `peek` | Small **clear** square; rest of frame masked (black) | Full sharp video |
+| `blurred`          | Video plays under a strong CSS blur                                  | Full sharp video   |
+| `peek`             | Small **clear** square; rest of frame masked (black)                 | Full sharp video   |
 
 No **full visible video during guess** in v1.
 
 ## Peek geometry (product spec)
 
-| Constant | Value | Notes |
-|----------|-------|-------|
-| Window size | **22 %** of the **short side** of the 16:9 stage | Square aperture |
-| Edge margin | **≥ 8 %** from each border | Avoids a window always centred |
-| Position | Random **once per round** at `round_start` | Fixed for the whole guess phase |
-| Multiplayer | **Same** `{ x, y, size }` for every player in the room | Server-authoritative |
-| Between rounds | New random position each round | |
+| Constant       | Value                                                  | Notes                           |
+| -------------- | ------------------------------------------------------ | ------------------------------- |
+| Window size    | **22 %** of the **short side** of the 16:9 stage       | Square aperture                 |
+| Edge margin    | **≥ 8 %** from each border                             | Avoids a window always centred  |
+| Position       | Random **once per round** at `round_start`             | Fixed for the whole guess phase |
+| Multiplayer    | **Same** `{ x, y, size }` for every player in the room | Server-authoritative            |
+| Between rounds | New random position each round                         |                                 |
 
 ### Server payload (anti-cheat baseline)
 
@@ -35,46 +35,46 @@ Client-side DOM inspection remains possible (same class as today); geometry timi
 
 Tabs **above** the sons / timer row (solo + multi configuration modal):
 
-| Tab | Content |
-|-----|---------|
+| Tab         | Content                                                                                |
+| ----------- | -------------------------------------------------------------------------------------- |
 | **Général** | Current form: `RoomSettingsSection`, `RulesSection`, `SourceSection`, `FiltersSection` |
-| **Avancé** | **Affichage vidéo** — 3-option picker (radio cards) |
+| **Avancé**  | **Affichage vidéo** — 3-option picker (radio cards)                                    |
 
 French labels (UI):
 
-- **Audio seul** — `hidden` — *Fond noir pendant le guess, comme aujourd'hui.*
+- **Audio seul** — `hidden` — _Fond noir pendant le guess, comme aujourd'hui._
 - **Vidéo floutée** — `blurred`
-- **Fenêtre aléatoire** — `peek` — *Petit carré net, position différente à chaque manche.*
+- **Fenêtre aléatoire** — `peek` — _Petit carré net, position différente à chaque manche._
 
 Default: **Audio seul** (`hidden`). Host can change in solo; host only in multi (guests read rules).
 
 ## Lobby rules copy (`lobbyRulesCopy.ts`)
 
-Replace the hardcoded flow line *« vidéo cachée »* with a mode-aware line in section **Déroulement**:
+Replace the hardcoded flow line _« vidéo cachée »_ with a mode-aware line in section **Déroulement**:
 
-| Mode | French line |
-|------|-------------|
-| `hidden` | Chaque manche : extrait audio diffusé, **vidéo cachée** (fond noir), tu devines avant la fin du chrono. |
-| `blurred` | Chaque manche : extrait audio et **vidéo floutée** pendant le guess, tu devines avant la fin du chrono. |
-| `peek` | Chaque manche : extrait audio et **une petite fenêtre vidéo** (position aléatoire, nouvelle à chaque manche) ; le reste de l'image est masqué. Tu devines avant la fin du chrono. |
+| Mode      | French line                                                                                                                                                                       |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hidden`  | Chaque manche : extrait audio diffusé, **vidéo cachée** (fond noir), tu devines avant la fin du chrono.                                                                           |
+| `blurred` | Chaque manche : extrait audio et **vidéo floutée** pendant le guess, tu devines avant la fin du chrono.                                                                           |
+| `peek`    | Chaque manche : extrait audio et **une petite fenêtre vidéo** (position aléatoire, nouvelle à chaque manche) ; le reste de l'image est masqué. Tu devines avant la fin du chrono. |
 
 Shared tail (all modes):
 
 - `precisionFlowLine(config.precision)`
 - Révélation de la bonne réponse **avec la vidéo complète**, puis manche suivante jusqu'à la fin de la playlist.
 
-Optional summary chip (Résumé): **Vidéo** → *Audio seul* / *Floutée* / *Fenêtre*.
+Optional summary chip (Résumé): **Vidéo** → _Audio seul_ / _Floutée_ / _Fenêtre_.
 
 ## Implementation touchpoints
 
-| Layer | Work |
-|-------|------|
-| `packages/shared` | `videoMode` on `GameConfig` / `RoomSettings`; zod in `settings.ts`; peek constants |
-| Server | Generate `peekWindow` on `round_start`; persist in `MatchRound` or round payload only |
-| Client `VideoStage` | Render hidden / blur filter / clip-path mask for peek |
-| `GameConfigForm` | Tab shell Général \| Avancé + `VideoDisplaySection` |
-| `lobbyRulesCopy.ts` | `videoFlowLine(videoMode)` + optional chip |
-| Tests | Shared zod · rules copy · peek rect bounds unit test on server helper |
+| Layer               | Work                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `packages/shared`   | `videoMode` on `GameConfig` / `RoomSettings`; zod in `settings.ts`; peek constants    |
+| Server              | Generate `peekWindow` on `round_start`; persist in `MatchRound` or round payload only |
+| Client `VideoStage` | Render hidden / blur filter / clip-path mask for peek                                 |
+| `GameConfigForm`    | Tab shell Général \| Avancé + `VideoDisplaySection`                                   |
+| `lobbyRulesCopy.ts` | `videoFlowLine(videoMode)` + optional chip                                            |
+| Tests               | Shared zod · rules copy · peek rect bounds unit test on server helper                 |
 
 ## Out of scope v1
 

@@ -30,14 +30,23 @@ assert.equal(isSongExcluded(all, { videoKey: 'FOO-1-OP1.mp4' }), true);
 assert.equal(isSongExcluded(all, { songId: 1, videoKey: 'other.mp4' }), false);
 
 const stripped = stripExcludedFromFranchiseAnimes(
-  [{ id: 1, name: 'a' }, { id: 2, name: 'b' }],
+  [
+    { id: 1, name: 'a' },
+    { id: 2, name: 'b' },
+  ],
   new Set([2]),
 );
 assert.equal(stripped.length, 1);
 assert.equal(stripped[0].id, 1);
 
 const animeStripped = stripExcludedSongsFromAnime(
-  { id: 21, songs: [{ id: 99, videoKey: 'FOO-1-OP1.mp4' }, { id: 100, videoKey: 'BAR-1-OP1.mp4' }] },
+  {
+    id: 21,
+    songs: [
+      { id: 99, videoKey: 'FOO-1-OP1.mp4' },
+      { id: 100, videoKey: 'BAR-1-OP1.mp4' },
+    ],
+  },
   all,
 );
 assert.equal(animeStripped.songs?.length, 1);

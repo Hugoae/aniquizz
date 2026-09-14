@@ -41,7 +41,10 @@ export const isTrustedSupabaseAvatarUrl = (
     return candidate.pathname === avatarObjectPath(ownerUserId);
   }
 
-  if (!candidate.pathname.startsWith(PUBLIC_PREFIX) || !candidate.pathname.endsWith(`/${AVATAR_OBJECT}`)) {
+  if (
+    !candidate.pathname.startsWith(PUBLIC_PREFIX) ||
+    !candidate.pathname.endsWith(`/${AVATAR_OBJECT}`)
+  ) {
     return false;
   }
   const owner = candidate.pathname.slice(PUBLIC_PREFIX.length, -(AVATAR_OBJECT.length + 1));

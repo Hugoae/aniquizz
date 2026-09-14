@@ -8,7 +8,11 @@ interface AudioVisualizerProps {
 }
 
 /** CSS-only equalizer — no setState tick loop during guessing. */
-export function AudioVisualizer({ isPlaying = true, className, barCount = 32 }: AudioVisualizerProps) {
+export function AudioVisualizer({
+  isPlaying = true,
+  className,
+  barCount = 32,
+}: AudioVisualizerProps) {
   const reduceMotion = useMotionReduced();
   const animate = isPlaying && !reduceMotion;
 

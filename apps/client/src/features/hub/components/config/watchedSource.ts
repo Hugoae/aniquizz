@@ -1,6 +1,11 @@
 import type { User } from '@supabase/supabase-js';
 import type { RoomConfig } from '@aniquizz/shared';
-import { ANILIST_API_DOWN_MESSAGE, hasEnoughQcmNames, hasWatchedListLink, qcmPoolTooSmallReason } from '@aniquizz/shared';
+import {
+  ANILIST_API_DOWN_MESSAGE,
+  hasEnoughQcmNames,
+  hasWatchedListLink,
+  qcmPoolTooSmallReason,
+} from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 /** Watched source is selectable in the UI but cannot launch until a list provider is linked. */
@@ -24,7 +29,7 @@ export const WATCHED_LIST_UNAVAILABLE =
 export const WATCHED_ANILIST_BLOCKED_MESSAGE = ANILIST_API_DOWN_MESSAGE;
 
 export const WATCHED_ANILIST_STALE_MESSAGE =
-  "AniList est instable : la liste affichée peut dater de quelques minutes.";
+  'AniList est instable : la liste affichée peut dater de quelques minutes.';
 
 export const WATCHED_QCM_TOO_SMALL_MESSAGE = qcmPoolTooSmallReason('franchise');
 
@@ -42,15 +47,18 @@ export interface WatchedPoolLaunchCheck {
  */
 export function checkWatchedPoolLaunch(
   soundSelection: RoomConfig['soundSelection'],
-  stats: {
-    playableSongs: number;
-    soundCount: number;
-    insufficient: boolean;
-    watchedMode?: 'union' | 'intersection';
-    animeCount?: number;
-    distinctNames?: number;
-    listError?: 'anilist_blocked';
-  } | null,
+  stats:
+    | {
+        playableSongs: number;
+        soundCount: number;
+        insufficient: boolean;
+        watchedMode?: 'union' | 'intersection';
+        animeCount?: number;
+        distinctNames?: number;
+        listError?: 'anilist_blocked';
+      }
+    | null
+    | undefined,
   watchedAllowFallback?: boolean,
   responseType: RoomConfig['responseType'] = 'mix',
   precision?: RoomConfig['precision'],
@@ -66,10 +74,7 @@ export function checkWatchedPoolLaunch(
     if (stats.animeCount === 0) {
       return { blocked: true, reason: WATCHED_LIST_UNAVAILABLE };
     }
-    const modeHint =
-      stats.watchedMode === 'intersection'
-        ? ' en mode Commun'
-        : '';
+    const modeHint = stats.watchedMode === 'intersection' ? ' en mode Commun' : '';
     return {
       blocked: true,
       reason: `Aucun son jouable${modeHint} pour ces filtres. Changez la source ou les filtres.`,
@@ -77,13 +82,12 @@ export function checkWatchedPoolLaunch(
   }
 
   if (stats.insufficient && !watchedAllowFallback) {
-    const modeHint =
-      stats.watchedMode === 'intersection' ? ' (Commun)' : '';
+    const modeHint = stats.watchedMode === 'intersection' ? ' (Commun)' : '';
     return {
       blocked: true,
       reason:
         `Seulement ${stats.playableSongs} son${stats.playableSongs > 1 ? 's' : ''} jouable${stats.playableSongs > 1 ? 's' : ''}${modeHint} pour ${stats.soundCount} demandé${stats.soundCount > 1 ? 's' : ''}. ` +
-        'Activez « Compléter avec l\'aléatoire » ou réduisez le nombre de sons.',
+        "Activez « Compléter avec l'aléatoire » ou réduisez le nombre de sons.",
     };
   }
 
@@ -115,7 +119,8 @@ export function watchedModeDisplayLabel(mode?: 'union' | 'intersection'): string
   return mode === 'intersection' ? 'Commun' : 'Union';
 }
 
-export type WatchedPoolBannerVariant = 'loading' | 'empty' | 'insufficient' | 'fallback' | 'sufficient';
+export type WatchedPoolBannerVariant =
+  'loading' | 'empty' | 'insufficient' | 'fallback' | 'sufficient';
 
 export interface WatchedPoolBannerStats {
   playableSongs: number;

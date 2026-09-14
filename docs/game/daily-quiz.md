@@ -81,13 +81,13 @@ Staff review the rolling horizon in the admin Daily tab. Today stays editable
 until the first attempt; past days are read-only. A live broken round can be
 voided (today only). There is no “cancel the whole quiz” control.
 
-| Tool | Behaviour |
-|------|-----------|
-| Search | Same matching as the library, plus type tokens (`bleach ED5`, `naruto OP1`). Suggestions portal to `document.body` and open **above** the field when there is no room below. |
-| Replace / shuffle | Pick another playable OP/ED; shuffle avoids other rounds’ franchises. |
-| Nouveau passage | Re-rolls `videoStartTime` with `pickDailyClipStart`. |
-| Lineup warnings | Duplicate franchise, missing video, placeholders, recent song/franchise, difficulty/type mix. |
-| Reset player | Deletes **today’s** attempt (answers cascade), reverts that attempt’s XP/level, rewinds dedicated daily streak/completions if the day counted, recomputes ranks. Previous days, likes, and match stats stay. |
+| Tool              | Behaviour                                                                                                                                                                                                    |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Search            | Same matching as the library, plus type tokens (`bleach ED5`, `naruto OP1`). Suggestions portal to `document.body` and open **above** the field when there is no room below.                                 |
+| Replace / shuffle | Pick another playable OP/ED; shuffle avoids other rounds’ franchises.                                                                                                                                        |
+| Nouveau passage   | Re-rolls `videoStartTime` with `pickDailyClipStart`.                                                                                                                                                         |
+| Lineup warnings   | Duplicate franchise, missing video, placeholders, recent song/franchise, difficulty/type mix.                                                                                                                |
+| Reset player      | Deletes **today’s** attempt (answers cascade), reverts that attempt’s XP/level, rewinds dedicated daily streak/completions if the day counted, recomputes ranks. Previous days, likes, and match stats stay. |
 
 ## Play loop
 

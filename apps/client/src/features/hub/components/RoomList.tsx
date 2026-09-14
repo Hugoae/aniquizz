@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { useFriends } from '@/features/friends/FriendsContext';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
-import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
+import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
@@ -36,7 +36,8 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
     [friends],
   );
 
-  const isJoinable = (room: RoomListItem) => room.status === 'waiting' && room.players < room.maxPlayers;
+  const isJoinable = (room: RoomListItem) =>
+    room.status === 'waiting' && room.players < room.maxPlayers;
 
   const visibleRooms = useMemo(() => {
     const filtered = rooms.filter((room) => {
@@ -45,14 +46,19 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
       if (filter === 'friends') return friendRoomIds.has(room.id);
       return true;
     });
-    const rank = (room: RoomListItem) => (isJoinable(room) ? 0 : 2) + (friendRoomIds.has(room.id) ? 0 : 1);
+    const rank = (room: RoomListItem) =>
+      (isJoinable(room) ? 0 : 2) + (friendRoomIds.has(room.id) ? 0 : 1);
     return [...filtered].sort((a, b) => rank(a) - rank(b));
   }, [rooms, filter, friendRoomIds]);
 
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div role="group" aria-label="Filtrer les salons" className="bg-secondary/30 p-1 rounded-lg flex gap-1 border border-border/50">
+        <div
+          role="group"
+          aria-label="Filtrer les salons"
+          className="bg-secondary/30 p-1 rounded-lg flex gap-1 border border-border/50"
+        >
           {FILTER_BUTTONS.map((btn) => (
             <button
               key={btn.id}
@@ -73,7 +79,8 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
 
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            {rooms.length} salon{rooms.length > 1 ? 's' : ''} disponible{rooms.length > 1 ? 's' : ''}
+            {rooms.length} salon{rooms.length > 1 ? 's' : ''} disponible
+            {rooms.length > 1 ? 's' : ''}
           </span>
           <Button
             variant="ghost"
@@ -129,7 +136,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
 
                   <SettingChipList>
                     {settingChips.map((spec) => (
-                      <SettingChip key={spec.key} {...spec} />
+                      <SettingChipItem key={spec.key} spec={spec} />
                     ))}
                   </SettingChipList>
                 </div>
@@ -137,25 +144,41 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                 <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-border/50 pt-4 md:pt-0">
                   <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
-                      <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Hébergé par</div>
+                      <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        Hébergé par
+                      </div>
                       <div className="text-sm font-bold">{room.host}</div>
                     </div>
-                    <UserAvatar avatar={room.hostAvatar} username={room.host} className="h-10 w-10 border-2 border-border/50" />
+                    <UserAvatar
+                      avatar={room.hostAvatar}
+                      username={room.host}
+                      className="h-10 w-10 border-2 border-border/50"
+                    />
                     <div className="text-left md:hidden">
-                      <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Hôte</div>
+                      <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+                        Hôte
+                      </div>
                       <div className="text-sm font-bold">{room.host}</div>
                     </div>
                   </div>
 
                   <div className="flex flex-col items-end gap-1 min-w-[100px]">
-                    <div className={cn('flex items-center gap-1.5 text-xs font-bold mb-1', isFull ? 'text-destructive' : 'text-success')}>
+                    <div
+                      className={cn(
+                        'flex items-center gap-1.5 text-xs font-bold mb-1',
+                        isFull ? 'text-destructive' : 'text-success',
+                      )}
+                    >
                       <Users className="h-3.5 w-3.5" />
                       {room.players} / {room.maxPlayers}
                     </div>
                     <Button
                       variant="glow"
                       size="sm"
-                      className={cn('w-full transition-all font-bold rounded-lg', isFull && 'opacity-50')}
+                      className={cn(
+                        'w-full transition-all font-bold rounded-lg',
+                        isFull && 'opacity-50',
+                      )}
                       disabled={isFull}
                       onClick={() => onJoin(room.id)}
                     >
@@ -175,7 +198,9 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
             <Search className="h-8 w-8 opacity-50" />
           </div>
           <p className="text-lg font-bold">Aucun salon trouvé</p>
-          <p className="text-sm opacity-50">Essayez de modifier les filtres ou créez votre propre partie !</p>
+          <p className="text-sm opacity-50">
+            Essayez de modifier les filtres ou créez votre propre partie !
+          </p>
         </div>
       )}
     </div>

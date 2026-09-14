@@ -11,7 +11,13 @@ export interface ConfigBadgesData {
 }
 
 /** In-game corner badges — same chip system as lobby, value-only for compact overlay. */
-export function ConfigBadges({ data, positionClassName }: { data: ConfigBadgesData; positionClassName?: string }) {
+export function ConfigBadges({
+  data,
+  positionClassName,
+}: {
+  data: ConfigBadgesData;
+  positionClassName?: string;
+}) {
   const chips: { key: string; icon: LucideIcon; value: string }[] = [
     { key: 'diff', icon: Gauge, value: data.difficultyLabel },
     { key: 'source', icon: Shuffle, value: data.sourceLabel },

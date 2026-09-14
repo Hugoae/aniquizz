@@ -13,7 +13,9 @@ export function SettingsAudioSection() {
       <h3 id="settings-audio-heading" className="text-sm font-bold text-foreground">
         {SETTINGS_COPY.audioHeading}
       </h3>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{SETTINGS_COPY.audioHint}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        {SETTINGS_COPY.audioHint}
+      </p>
 
       <div className="mt-4 rounded-lg border border-border/50 bg-secondary/20 px-3 py-3">
         <div className="flex items-center gap-2">

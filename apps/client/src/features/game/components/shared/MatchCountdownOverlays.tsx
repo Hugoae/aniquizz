@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { cn } from '@/lib/utils';import { useMatchCountdown } from '@/features/game/hooks/useMatchCountdown';
+import { cn } from '@/lib/utils';
+import { useMatchCountdown } from '@/features/game/hooks/useMatchCountdown';
 import { CircularGameTimer } from './CircularGameTimer';
 import type { GamePhase } from '@/features/game/components/modes/standard/parts/types';
 
@@ -8,17 +9,12 @@ interface MatchCountdownOverlaysProps {
   phaseEndsAt: number;
   phaseDurationSeconds: number;
   isGamePaused: boolean;
-  useCenterTimer: boolean;  useBottomBar: boolean;
+  useCenterTimer: boolean;
+  useBottomBar: boolean;
 }
 
 /** Bottom progress bar when the video is visible during guessing (blurred / peek). */
-function StageBottomTimer({
-  timeLeft,
-  progress,
-}: {
-  timeLeft: number;
-  progress: number;
-}) {
+function StageBottomTimer({ timeLeft, progress }: { timeLeft: number; progress: number }) {
   const isUrgent = timeLeft <= 3 && timeLeft >= 0;
 
   return (
@@ -27,26 +23,26 @@ function StageBottomTimer({
       aria-label={`Temps restant : ${timeLeft} secondes`}
       className="absolute inset-x-0 bottom-0 z-30 border-t border-border/60 bg-background/95"
     >
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
-            <div
-              className={cn(
-                'h-full rounded-full transition-[width] duration-100 ease-linear',
-                isUrgent ? 'bg-destructive' : 'bg-primary',
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <span
+      <div className="flex items-center gap-3 px-4 py-2.5">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-secondary">
+          <div
             className={cn(
-              'min-w-[2.5rem] text-right font-mono text-sm font-bold tabular-nums',
-              isUrgent && 'text-destructive',
+              'h-full rounded-full transition-[width] duration-100 ease-linear',
+              isUrgent ? 'bg-destructive' : 'bg-primary',
             )}
-          >
-            {timeLeft}s
-          </span>
+            style={{ width: `${progress}%` }}
+          />
         </div>
+        <span
+          className={cn(
+            'min-w-[2.5rem] text-right font-mono text-sm font-bold tabular-nums',
+            isUrgent && 'text-destructive',
+          )}
+        >
+          {timeLeft}s
+        </span>
       </div>
+    </div>
   );
 }
 
@@ -58,7 +54,8 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
   phaseEndsAt,
   phaseDurationSeconds,
   isGamePaused,
-  useCenterTimer,  useBottomBar,
+  useCenterTimer,
+  useBottomBar,
 }: MatchCountdownOverlaysProps) {
   const { timeLeft, progress } = useMatchCountdown({
     phase,
@@ -89,9 +86,7 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
         />
       )}
 
-      {useBottomBar && (
-        <StageBottomTimer timeLeft={timeLeft} progress={progress} />
-      )}
+      {useBottomBar && <StageBottomTimer timeLeft={timeLeft} progress={progress} />}
     </>
   );
 });

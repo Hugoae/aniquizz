@@ -22,10 +22,8 @@ export function resolveNotificationFeedback(
   kind: InternalNotificationKind,
   prefs: NotificationPrefs,
 ): NotificationFeedbackDecision {
-  const visual =
-    kind === 'friend_request' ? prefs.friendRequestVisual : prefs.lobbyInviteVisual;
-  const soundPref =
-    kind === 'friend_request' ? prefs.friendRequestSound : prefs.lobbyInviteSound;
+  const visual = kind === 'friend_request' ? prefs.friendRequestVisual : prefs.lobbyInviteVisual;
+  const soundPref = kind === 'friend_request' ? prefs.friendRequestSound : prefs.lobbyInviteSound;
   const masterOn = !prefs.audioMuted && prefs.audioVolume > 0;
   return {
     toast: visual,

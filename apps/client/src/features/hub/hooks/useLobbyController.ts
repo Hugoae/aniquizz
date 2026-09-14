@@ -51,11 +51,28 @@ type ServerLobbyPlayer = Partial<GamePlayer> & {
 type WireRoomSettings = Partial<RoomSettings> & { name?: string; password?: string };
 
 export const defaultConfig: GameConfig = {
-  mode: 'solo', gameType: 'standard', responseType: 'mix', soundCount: 20, soundTypes: ['opening'], difficulty: ['medium'],
-  guessDuration: 15, soundSelection: 'random', precision: 'franchise', watchedMode: 'union', videoMode: 'hidden', songStartMode: 'random',
+  mode: 'solo',
+  gameType: 'standard',
+  responseType: 'mix',
+  soundCount: 20,
+  soundTypes: ['opening'],
+  difficulty: ['medium'],
+  guessDuration: 15,
+  soundSelection: 'random',
+  precision: 'franchise',
+  watchedMode: 'union',
+  videoMode: 'hidden',
+  songStartMode: 'random',
 };
 
-export const defaultRoomConfig: RoomConfig = { ...defaultConfig, mode: 'multiplayer', roomName: '', isPrivate: false, password: '', maxPlayers: 16 };
+export const defaultRoomConfig: RoomConfig = {
+  ...defaultConfig,
+  mode: 'multiplayer',
+  roomName: '',
+  isPrivate: false,
+  password: '',
+  maxPlayers: 16,
+};
 
 const mapServerPlayersToLobby = (
   serverPlayers: ServerLobbyPlayer[],
@@ -67,7 +84,7 @@ const mapServerPlayersToLobby = (
     name: p.username || p.name || `Joueur ${String(p.id).substring(0, 4)}`,
     avatar: p.avatar || 'player1',
     isReady: p.isReady || false,
-    isHost: (currentHostId && String(p.id) === String(currentHostId)) ? true : (p.isHost || false),
+    isHost: currentHostId && String(p.id) === String(currentHostId) ? true : p.isHost || false,
     isInGame: p.isInGame,
     isBot: typeof p.id === 'string' && p.id.startsWith('bot-'),
     role: p.role,
@@ -101,7 +118,11 @@ export function useLobbyController() {
   /** Keep room identity across socket replace so reconnect can re-join the IO channel. */
   const currentRoomIdRef = useRef('');
   const gameStatusRef = useRef<GameStatus>('waiting');
-  const identityRef = useRef({ userId: user?.id as string | undefined, username: 'Invité', avatar: 'player1' });
+  const identityRef = useRef({
+    userId: user?.id as string | undefined,
+    username: 'Invité',
+    avatar: 'player1',
+  });
 
   const [view, setView] = useState<LobbyView>(() => {
     if (locationState?.returnToLobby && locationState?.roomId) return 'lobby';
@@ -131,7 +152,11 @@ export function useLobbyController() {
   const [multiplayerCount, setMultiplayerCount] = useState(0);
 
   const getPlayerIdentity = useCallback(
-    () => ({ userId: user?.id, username: profile?.username || 'Invité', avatar: profile?.avatar || 'player1' }),
+    () => ({
+      userId: user?.id,
+      username: profile?.username || 'Invité',
+      avatar: profile?.avatar || 'player1',
+    }),
     [user, profile],
   );
   currentRoomIdRef.current = currentRoomId;
@@ -163,7 +188,9 @@ export function useLobbyController() {
 
   useEffect(() => {
     const onStats = (s: { inMultiplayer: number }) => setMultiplayerCount(s.inMultiplayer);
-    const fetchStats = () => { if (socket.connected) socket.emit('get_home_stats'); };
+    const fetchStats = () => {
+      if (socket.connected) socket.emit('get_home_stats');
+    };
     socket.on('home_stats', onStats);
     socket.on('connect', fetchStats);
     fetchStats();
@@ -178,7 +205,7 @@ export function useLobbyController() {
   useEffect(() => {
     if (locationState?.createSolo && !hasAutoCreatedRef.current) {
       hasAutoCreatedRef.current = true;
-      if (locationState.settings) setConfig(prev => ({ ...prev, ...locationState.settings }));
+      if (locationState.settings) setConfig((prev) => ({ ...prev, ...locationState.settings }));
 
       const pseudo = profile?.username || 'Joueur';
       const soloRoomName = `${pseudo}'s Solo`;
@@ -216,7 +243,10 @@ export function useLobbyController() {
 
     const myUserId = user?.id || '';
 
-    const onRoomCreated = (data: { roomId: string; room: { players?: ServerLobbyPlayer[]; status?: GameStatus; settings?: WireRoomSettings } }) => {
+    const onRoomCreated = (data: {
+      roomId: string;
+      room: { players?: ServerLobbyPlayer[]; status?: GameStatus; settings?: WireRoomSettings };
+    }) => {
       const isSolo = data.room.settings?.maxPlayers === 1;
       isSoloRoomRef.current = isSolo;
       prevHostIdRef.current = myUserId || null;
@@ -227,7 +257,7 @@ export function useLobbyController() {
       if (data.room.status) setGameStatus(data.room.status);
 
       if (data.room.settings) {
-        setRoomConfig(prev => ({
+        setRoomConfig((prev) => ({
           ...prev,
           ...data.room.settings,
           roomName: data.room.settings?.name || prev.roomName,
@@ -242,7 +272,13 @@ export function useLobbyController() {
       leaveConfigRoute();
     };
 
-    const onRoomJoined = (data: { roomId: string; players?: ServerLobbyPlayer[]; hostId?: string; settings?: WireRoomSettings; status?: GameStatus }) => {
+    const onRoomJoined = (data: {
+      roomId: string;
+      players?: ServerLobbyPlayer[];
+      hostId?: string;
+      settings?: WireRoomSettings;
+      status?: GameStatus;
+    }) => {
       isSoloRoomRef.current = data.settings?.maxPlayers === 1;
       prevHostIdRef.current = data.hostId ? String(data.hostId) : null;
       setCurrentRoomId(data.roomId);
@@ -250,7 +286,7 @@ export function useLobbyController() {
       setLobbyPlayers(mapServerPlayersToLobby(data.players ?? [], data.hostId));
 
       if (data.settings) {
-        setRoomConfig(prev => ({
+        setRoomConfig((prev) => ({
           ...prev,
           ...data.settings,
           roomName: data.settings?.name || prev.roomName,
@@ -261,7 +297,9 @@ export function useLobbyController() {
 
       if (data.status) setGameStatus(data.status);
       if (data.status !== 'waiting') setIsLaunchPending(false);
-      setShowPasswordModal(false); setPasswordInput(''); setJoinCode('');
+      setShowPasswordModal(false);
+      setPasswordInput('');
+      setJoinCode('');
       setView('lobby');
       if (pathnameRef.current.endsWith('/join')) {
         navigate('/play', { replace: true });
@@ -269,7 +307,7 @@ export function useLobbyController() {
     };
 
     const onRoomUpdated = (data: RoomUpdatedPayload) => {
-      setRoomConfig(prev => ({
+      setRoomConfig((prev) => ({
         ...prev,
         ...data.roomSettings,
         roomName: data.roomName,
@@ -301,7 +339,11 @@ export function useLobbyController() {
       }
       navigate('/play/join', { replace: true });
     };
-    const onPasswordRequired = (data: { roomId: string }) => { setPendingRoomId(data.roomId); setPasswordInput(''); setShowPasswordModal(true); };
+    const onPasswordRequired = (data: { roomId: string }) => {
+      setPendingRoomId(data.roomId);
+      setPasswordInput('');
+      setShowPasswordModal(true);
+    };
 
     const onUpdatePlayers = (data: PlayersUpdatePayload) => {
       if (data.hostId && myUserId) {
@@ -323,9 +365,15 @@ export function useLobbyController() {
       setLobbyPlayers(mapServerPlayersToLobby(data.players, data.hostId));
     };
 
-    const onGameStarted = (data: GameStartedPayload & { firstChoices?: string[]; firstDuoChoices?: string[] }) => {
+    const onGameStarted = (
+      data: GameStartedPayload & { firstChoices?: string[]; firstDuoChoices?: string[] },
+    ) => {
       const isSolo = data.settings?.maxPlayers === 1;
-      const gameDataConstructed = { firstVideo: data.firstVideo, firstChoices: data.firstChoices, firstDuoChoices: data.firstDuoChoices };
+      const gameDataConstructed = {
+        firstVideo: data.firstVideo,
+        firstChoices: data.firstChoices,
+        firstDuoChoices: data.firstDuoChoices,
+      };
       setIsLaunchPending(false);
       setGameStatus('playing');
       const safePlayers = mapServerPlayersToLobby(data.players || lobbyPlayers, undefined);
@@ -333,14 +381,20 @@ export function useLobbyController() {
       const mergedSettings = {
         ...data.settings,
         videoMode: normalizeVideoMode(
-          data.settings?.videoMode ?? roomConfigRef.current.videoMode ?? configRef.current.videoMode,
+          data.settings?.videoMode ??
+            roomConfigRef.current.videoMode ??
+            configRef.current.videoMode,
         ),
       };
 
       navigate('/game', {
         state: {
-          roomId: data.roomId, gameData: gameDataConstructed, players: safePlayers,
-          settings: mergedSettings, mode: isSolo ? 'solo' : 'multiplayer', gameStartTime: localStartTime,
+          roomId: data.roomId,
+          gameData: gameDataConstructed,
+          players: safePlayers,
+          settings: mergedSettings,
+          mode: isSolo ? 'solo' : 'multiplayer',
+          gameStartTime: localStartTime,
         },
       });
     };
@@ -354,25 +408,44 @@ export function useLobbyController() {
       if (msg.includes('introuvable') || msg.includes('fermé') || msg.includes('complet')) {
         setJoinCode('');
         if (pathnameRef.current.endsWith('/join')) return;
-        setCurrentRoomId(''); setLobbyPlayers([]); setGameStatus('waiting'); setView('modes');
+        setCurrentRoomId('');
+        setLobbyPlayers([]);
+        setGameStatus('waiting');
+        setView('modes');
         window.history.replaceState({}, document.title);
       }
     };
 
-    socket.on('connect', onConnect); socket.on('rooms_update', onRoomsUpdate);
+    socket.on('connect', onConnect);
+    socket.on('rooms_update', onRoomsUpdate);
     // Host create → onRoomCreated (leaves /play/create). Host reconnect to the
     // same roomId → onRoomJoined so mid-edit does not get force-kicked to lobby.
     socket.on('lobby:joined', (data) => {
       const isSameRoom = currentRoomIdRef.current === data.roomId;
       if (data.isHost && !isSameRoom) {
-        onRoomCreated({ roomId: data.roomId, room: { players: [], ...data } });
+        onRoomCreated({ roomId: data.roomId, room: { ...data } });
       } else {
         onRoomJoined(data);
       }
     });
-    socket.on('room_updated', onRoomUpdated); socket.on('room_closed', onRoomClosed); socket.on('password_required', onPasswordRequired); socket.on('update_players', onUpdatePlayers); socket.on('game_started', onGameStarted); socket.on('error', onError);
+    socket.on('room_updated', onRoomUpdated);
+    socket.on('room_closed', onRoomClosed);
+    socket.on('password_required', onPasswordRequired);
+    socket.on('update_players', onUpdatePlayers);
+    socket.on('game_started', onGameStarted);
+    socket.on('error', onError);
 
-    return () => { socket.off('connect', onConnect); socket.off('rooms_update', onRoomsUpdate); socket.off('lobby:joined'); socket.off('room_updated', onRoomUpdated); socket.off('room_closed', onRoomClosed); socket.off('password_required', onPasswordRequired); socket.off('update_players', onUpdatePlayers); socket.off('game_started', onGameStarted); socket.off('error', onError); };
+    return () => {
+      socket.off('connect', onConnect);
+      socket.off('rooms_update', onRoomsUpdate);
+      socket.off('lobby:joined');
+      socket.off('room_updated', onRoomUpdated);
+      socket.off('room_closed', onRoomClosed);
+      socket.off('password_required', onPasswordRequired);
+      socket.off('update_players', onUpdatePlayers);
+      socket.off('game_started', onGameStarted);
+      socket.off('error', onError);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameStatus, view, leaveConfigRoute, navigate, location.pathname]);
 
@@ -396,16 +469,19 @@ export function useLobbyController() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
 
-  const selectMode = useCallback((mode: GameMode) => {
-    if (mode === 'competitive') return;
-    if (isSanctionActive(profile?.bannedUntil)) {
-      toast.error(getPlayBannedMessage(profile?.bannedUntil));
-      return;
-    }
-    setConfig(prev => ({ ...prev, mode }));
-    if (mode === 'multiplayer') navigate('/play/join');
-    else navigate('/play/create', { state: { intent: 'solo' } });
-  }, [profile?.bannedUntil, navigate]);
+  const selectMode = useCallback(
+    (mode: GameMode) => {
+      if (mode === 'competitive') return;
+      if (isSanctionActive(profile?.bannedUntil)) {
+        toast.error(getPlayBannedMessage(profile?.bannedUntil));
+        return;
+      }
+      setConfig((prev) => ({ ...prev, mode }));
+      if (mode === 'multiplayer') navigate('/play/join');
+      else navigate('/play/create', { state: { intent: 'solo' } });
+    },
+    [profile?.bannedUntil, navigate],
+  );
 
   const openCreateRoom = useCallback(() => {
     setRoomConfig({ ...defaultRoomConfig });
@@ -418,35 +494,50 @@ export function useLobbyController() {
     });
   }, [navigate]);
 
-  const emitSolo = useCallback((soloConfig: GameConfig) => {
-    const pseudo = profile?.username || 'Joueur';
-    socket.emit('lobby:create', {
-      roomName: `${pseudo}'s Solo`,
-      ...getPlayerIdentity(),
-      settings: { ...soloConfig, isPrivate: true, maxPlayers: 1, password: '' },
-    });
-  }, [profile, getPlayerIdentity]);
+  const emitSolo = useCallback(
+    (soloConfig: GameConfig) => {
+      const pseudo = profile?.username || 'Joueur';
+      socket.emit('lobby:create', {
+        roomName: `${pseudo}'s Solo`,
+        ...getPlayerIdentity(),
+        settings: { ...soloConfig, isPrivate: true, maxPlayers: 1, password: '' },
+      });
+    },
+    [profile, getPlayerIdentity],
+  );
 
-  const startSolo = useCallback(() => { emitSolo(config); }, [config, emitSolo]);
+  const startSolo = useCallback(() => {
+    emitSolo(config);
+  }, [config, emitSolo]);
 
-  const createOrUpdateRoom = useCallback((override?: RoomConfig) => {
-    const cfg = override ?? roomConfig;
-    if (view === 'lobby' && currentRoomId) {
-      socket.emit('update_room_settings', { roomId: currentRoomId, settings: cfg });
-      // Don't wait for room_updated — host may be off the Socket.IO channel after
-      // a session replace; settings still apply server-side via roomId lookup.
-      leaveConfigRoute();
-    } else {
-      const payload = { roomName: cfg.roomName?.trim() || '', ...getPlayerIdentity(), settings: cfg };
-      socket.emit('lobby:create', payload);
-    }
-  }, [view, currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute]);
+  const createOrUpdateRoom = useCallback(
+    (override?: RoomConfig) => {
+      const cfg = override ?? roomConfig;
+      if (view === 'lobby' && currentRoomId) {
+        socket.emit('update_room_settings', { roomId: currentRoomId, settings: cfg });
+        // Don't wait for room_updated — host may be off the Socket.IO channel after
+        // a session replace; settings still apply server-side via roomId lookup.
+        leaveConfigRoute();
+      } else {
+        const payload = {
+          roomName: cfg.roomName?.trim() || '',
+          ...getPlayerIdentity(),
+          settings: cfg,
+        };
+        socket.emit('lobby:create', payload);
+      }
+    },
+    [view, currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute],
+  );
 
-  const patchRoomSettings = useCallback((patch: Partial<RoomConfig>, silent = false) => {
-    if (!currentRoomId || !isAmIHost) return;
-    silentSettingsPatchRef.current = silent;
-    socket.emit('update_room_settings', { roomId: currentRoomId, settings: patch });
-  }, [currentRoomId, isAmIHost]);
+  const patchRoomSettings = useCallback(
+    (patch: Partial<RoomConfig>, silent = false) => {
+      if (!currentRoomId || !isAmIHost) return;
+      silentSettingsPatchRef.current = silent;
+      socket.emit('update_room_settings', { roomId: currentRoomId, settings: patch });
+    },
+    [currentRoomId, isAmIHost],
+  );
 
   const isLaunchStarting = isLaunchPending || gameStatus === 'starting';
 
@@ -455,13 +546,47 @@ export function useLobbyController() {
     setIsLaunchPending(true);
     socket.emit('start_game', { roomId: currentRoomId });
   }, [currentRoomId, isAmIHost, isLaunchStarting]);
-  const toggleReady = useCallback(() => { if (currentRoomId) socket.emit('toggle_ready', { roomId: currentRoomId }); }, [currentRoomId]);
-  const transferHost = useCallback((targetId: string | number) => { if (currentRoomId && isAmIHost) socket.emit('transfer_host', { roomId: currentRoomId, targetId: String(targetId) }); }, [currentRoomId, isAmIHost]);
-  const kickPlayer = useCallback((targetId: string | number) => { if (currentRoomId && isAmIHost) socket.emit('lobby:kick', { roomId: currentRoomId, targetId: String(targetId) }); }, [currentRoomId, isAmIHost]);
-  const addBots = useCallback((count: number) => { if (currentRoomId && isAmIHost) socket.emit('dev:add_bots', { roomId: currentRoomId, count }); }, [currentRoomId, isAmIHost]);
-  const joinRoom = useCallback((roomId: string) => { const targetRoomId = roomId || joinCode; if (targetRoomId) socket.emit('lobby:join', { roomId: targetRoomId, ...getPlayerIdentity() }); }, [joinCode, getPlayerIdentity]);
-  const refreshRooms = useCallback(() => { if (socket.connected) socket.emit('get_rooms'); }, []);
-  const submitPassword = useCallback(() => { if (!pendingRoomId || !passwordInput) return; socket.emit('lobby:join', { roomId: pendingRoomId, password: passwordInput, ...getPlayerIdentity() }); }, [pendingRoomId, passwordInput, getPlayerIdentity]);
+  const toggleReady = useCallback(() => {
+    if (currentRoomId) socket.emit('toggle_ready', { roomId: currentRoomId });
+  }, [currentRoomId]);
+  const transferHost = useCallback(
+    (targetId: string | number) => {
+      if (currentRoomId && isAmIHost)
+        socket.emit('transfer_host', { roomId: currentRoomId, targetId: String(targetId) });
+    },
+    [currentRoomId, isAmIHost],
+  );
+  const kickPlayer = useCallback(
+    (targetId: string | number) => {
+      if (currentRoomId && isAmIHost)
+        socket.emit('lobby:kick', { roomId: currentRoomId, targetId: String(targetId) });
+    },
+    [currentRoomId, isAmIHost],
+  );
+  const addBots = useCallback(
+    (count: number) => {
+      if (currentRoomId && isAmIHost) socket.emit('dev:add_bots', { roomId: currentRoomId, count });
+    },
+    [currentRoomId, isAmIHost],
+  );
+  const joinRoom = useCallback(
+    (roomId: string) => {
+      const targetRoomId = roomId || joinCode;
+      if (targetRoomId) socket.emit('lobby:join', { roomId: targetRoomId, ...getPlayerIdentity() });
+    },
+    [joinCode, getPlayerIdentity],
+  );
+  const refreshRooms = useCallback(() => {
+    if (socket.connected) socket.emit('get_rooms');
+  }, []);
+  const submitPassword = useCallback(() => {
+    if (!pendingRoomId || !passwordInput) return;
+    socket.emit('lobby:join', {
+      roomId: pendingRoomId,
+      password: passwordInput,
+      ...getPlayerIdentity(),
+    });
+  }, [pendingRoomId, passwordInput, getPlayerIdentity]);
 
   const goBack = useCallback(() => {
     if (view === 'lobby' && currentRoomId) {
@@ -475,15 +600,42 @@ export function useLobbyController() {
   }, [view, currentRoomId, navigate]);
 
   return {
-    user, profile,
-    view, setView, navigate,
-    lobbyPlayers, currentRoomId, isAmIHost, gameStatus, isLaunchStarting, availableRooms,
+    user,
+    profile,
+    view,
+    setView,
+    navigate,
+    lobbyPlayers,
+    currentRoomId,
+    isAmIHost,
+    gameStatus,
+    isLaunchStarting,
+    availableRooms,
     multiplayerCount,
-    config, setConfig, roomConfig, setRoomConfig,
-    showPasswordModal, setShowPasswordModal,
-    passwordInput, setPasswordInput,
-    joinCode, setJoinCode,
-    selectMode, openCreateRoom, openLobbySettings, startSolo, createOrUpdateRoom, patchRoomSettings,
-    startLobbyGame, toggleReady, transferHost, kickPlayer, addBots, joinRoom, submitPassword, goBack, refreshRooms,
+    config,
+    setConfig,
+    roomConfig,
+    setRoomConfig,
+    showPasswordModal,
+    setShowPasswordModal,
+    passwordInput,
+    setPasswordInput,
+    joinCode,
+    setJoinCode,
+    selectMode,
+    openCreateRoom,
+    openLobbySettings,
+    startSolo,
+    createOrUpdateRoom,
+    patchRoomSettings,
+    startLobbyGame,
+    toggleReady,
+    transferHost,
+    kickPlayer,
+    addBots,
+    joinRoom,
+    submitPassword,
+    goBack,
+    refreshRooms,
   };
 }

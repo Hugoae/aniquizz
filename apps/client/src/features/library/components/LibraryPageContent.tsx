@@ -65,8 +65,7 @@ export function LibraryPageContent() {
         ? (browse.animes?.animes.length ?? 0) > 0
         : (browse.tree?.groups.length ?? 0) > 0;
 
-  const showInitialSkeleton =
-    browse.loading && !browse.tree && !browse.songs && !browse.animes;
+  const showInitialSkeleton = browse.loading && !browse.tree && !browse.songs && !browse.animes;
   const showEmpty = !browse.loading && !hasContent;
 
   return (

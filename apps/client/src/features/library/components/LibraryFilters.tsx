@@ -155,7 +155,11 @@ export function LibraryFilters({
       </div>
 
       <FilterSection title={LIBRARY_COPY.filterSectionView}>
-        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={LIBRARY_COPY.filterSectionView}>
+        <div
+          className="flex flex-wrap gap-1.5"
+          role="radiogroup"
+          aria-label={LIBRARY_COPY.filterSectionView}
+        >
           {LIBRARY_VIEW_OPTIONS.map((opt) => {
             const active = view === opt.value;
             return (

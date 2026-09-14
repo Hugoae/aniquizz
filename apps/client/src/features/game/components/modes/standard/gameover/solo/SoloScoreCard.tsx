@@ -44,7 +44,10 @@ export function SoloScoreCard({
           aria-hidden
         />
       ) : (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden>
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+          aria-hidden
+        >
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-destructive/15 via-destructive/5 to-transparent" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--destructive)/0.08),transparent_55%)]" />
         </div>
@@ -71,7 +74,9 @@ export function SoloScoreCard({
         <h1
           className={cn(
             'font-display text-4xl font-black uppercase italic tracking-tight',
-            isSuccess ? 'text-success drop-shadow-[0_0_12px_hsl(var(--success)/0.45)]' : 'text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.35)]',
+            isSuccess
+              ? 'text-success drop-shadow-[0_0_12px_hsl(var(--success)/0.45)]'
+              : 'text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.35)]',
           )}
         >
           {isSuccess ? 'Victoire' : 'Défaite'}
@@ -94,7 +99,9 @@ export function SoloScoreCard({
       <div className="z-10 w-full text-center">
         <h2 className="font-display text-5xl font-black tracking-tight">
           {score}{' '}
-          <span className="text-lg font-medium text-muted-foreground">/ {maxPossibleScore} pts</span>
+          <span className="text-lg font-medium text-muted-foreground">
+            / {maxPossibleScore} pts
+          </span>
         </h2>
       </div>
 

@@ -21,11 +21,7 @@ export class PlaylistApiError extends Error {
 export const playlistApi = {
   listPublished: async (opts?: { force?: boolean }): Promise<ThematicPlaylistSummary[]> => {
     const now = Date.now();
-    if (
-      !opts?.force &&
-      publishedCache &&
-      now - publishedCache.at < PUBLISHED_TTL_MS
-    ) {
+    if (!opts?.force && publishedCache && now - publishedCache.at < PUBLISHED_TTL_MS) {
       return publishedCache.playlists;
     }
     let res: Response;

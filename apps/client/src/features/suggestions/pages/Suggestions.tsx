@@ -58,7 +58,10 @@ export default function Suggestions() {
     const controller = new AbortController();
     setLoading(true);
     void suggestionsApi
-      .browse({ q: query, sort, category, status, page, pageSize: 20 }, { signal: controller.signal })
+      .browse(
+        { q: query, sort, category, status, page, pageSize: 20 },
+        { signal: controller.signal },
+      )
       .then((result) => {
         if (controller.signal.aborted) return;
         setData(result);
@@ -196,9 +199,7 @@ export default function Suggestions() {
                 <h1 className="font-display text-4xl font-extrabold tracking-tight sm:text-5xl">
                   <span className="gradient-text">{SUGGESTIONS_COPY.title}</span>
                 </h1>
-                <p className="mt-3 max-w-2xl text-muted-foreground">
-                  {SUGGESTIONS_COPY.subtitle}
-                </p>
+                <p className="mt-3 max-w-2xl text-muted-foreground">{SUGGESTIONS_COPY.subtitle}</p>
               </div>
               <Button variant="glow" size="lg" onClick={openCreate} className="shrink-0 gap-2">
                 <Plus className="h-5 w-5" />
@@ -252,7 +253,9 @@ export default function Suggestions() {
                 <select
                   value={category ?? ''}
                   onChange={(event) => {
-                    setCategory((event.target.value || undefined) as SuggestionCategory | undefined);
+                    setCategory(
+                      (event.target.value || undefined) as SuggestionCategory | undefined,
+                    );
                     setPage(1);
                   }}
                   className={selectClass}
@@ -287,7 +290,10 @@ export default function Suggestions() {
 
           {loading ? (
             <div className="flex min-h-64 items-center justify-center">
-              <Loader2 className="h-7 w-7 animate-spin text-primary" aria-label={SUGGESTIONS_COPY.loadingAria} />
+              <Loader2
+                className="h-7 w-7 animate-spin text-primary"
+                aria-label={SUGGESTIONS_COPY.loadingAria}
+              />
             </div>
           ) : data?.suggestions.length ? (
             <div className="space-y-4">

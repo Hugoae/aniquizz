@@ -1,10 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlaylistPoolStats } from '@aniquizz/shared';
-import {
-  PLAYLIST_POOL_STATS_DEBOUNCE_MS,
-  usePlaylistPoolStats,
-} from './usePlaylistPoolStats';
+import { PLAYLIST_POOL_STATS_DEBOUNCE_MS, usePlaylistPoolStats } from './usePlaylistPoolStats';
 
 const socketMock = vi.hoisted(() => {
   const handlers = new Map<string, (payload: PlaylistPoolStats) => void>();

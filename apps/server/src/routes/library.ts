@@ -2,19 +2,16 @@ import type { Application, Response } from 'express';
 import { z } from 'zod';
 import type { AuthedRequest } from '../core/httpAuth';
 import { optionalAuth, requireRole } from '../core/httpAuth';
-import {
-  clientIp,
-  enforceHttpRateLimit,
-  HTTP_RATE_LIMITS,
-} from '../core/httpRateLimit';
+import { clientIp, enforceHttpRateLimit, HTTP_RATE_LIMITS } from '../core/httpRateLimit';
 import { logger } from '../utils/logger';
-import { browseLibraryAnimes, browseLibrarySongs, getLibrarySongById } from '../modules/catalogue/libraryBrowse';
+import {
+  browseLibraryAnimes,
+  browseLibrarySongs,
+  getLibrarySongById,
+} from '../modules/catalogue/libraryBrowse';
 import { browseLibraryTree } from '../modules/catalogue/libraryTree';
 import { getLibraryMeta } from '../modules/catalogue/libraryMeta';
-import {
-  browseUserFavoriteSongs,
-  UserFavoritesError,
-} from '../modules/catalogue/libraryFavorites';
+import { browseUserFavoriteSongs, UserFavoritesError } from '../modules/catalogue/libraryFavorites';
 import {
   SongLikeError,
   getLikedSongIds,
@@ -38,8 +35,7 @@ const SORTS = [
 const DISCOVERED = ['heard', 'unheard'] as const;
 const LIKED = ['liked', 'unliked'] as const;
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const favoritesQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),

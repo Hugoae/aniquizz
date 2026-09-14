@@ -31,10 +31,7 @@ function pushUniqueCredit(raw: string, seen: Set<string>, out: string[]): void {
  * when `artistNames` already lists the billed units. `artistNames[0]` is first
  * billed (left-hand display token), not a curated lead vocalist.
  */
-export function resolveArtistUnits(
-  artist: string,
-  artistNames: readonly string[] = [],
-): string[] {
+export function resolveArtistUnits(artist: string, artistNames: readonly string[] = []): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const name of artistNames) pushUniqueCredit(name, seen, out);
@@ -82,10 +79,7 @@ export function hasPlayableArtistCredit(
 }
 
 /** True when two credits share any accepted identity (collab overlap). */
-export function artistCreditsOverlap(
-  left: readonly string[],
-  right: readonly string[],
-): boolean {
+export function artistCreditsOverlap(left: readonly string[], right: readonly string[]): boolean {
   const leftKeys = new Set(left.map(answerIdentityKey).filter((key) => key.length > 0));
   if (!leftKeys.size) return false;
   return right.some((name) => leftKeys.has(answerIdentityKey(name)));
@@ -125,8 +119,8 @@ export function resolveRoundAnswerSet(input: {
     };
   }
 
-  const baseAnswers = [input.animeName, ...(input.altNames ?? [])].filter(
-    (name): name is string => Boolean(name && name.trim()),
+  const baseAnswers = [input.animeName, ...(input.altNames ?? [])].filter((name): name is string =>
+    Boolean(name && name.trim()),
   );
   const franchise = input.franchise?.trim() || null;
   if (precision === 'franchise' && franchise) {

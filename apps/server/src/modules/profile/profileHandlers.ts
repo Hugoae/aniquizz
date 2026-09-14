@@ -100,7 +100,9 @@ export const registerProfileHandlers = (
         return;
       }
       logger.error('Erreur suppression compte', 'Profile', error);
-      socket.emit('profile:error', { message: 'Impossible de supprimer le compte. Réessaie plus tard.' });
+      socket.emit('profile:error', {
+        message: 'Impossible de supprimer le compte. Réessaie plus tard.',
+      });
     }
   };
 

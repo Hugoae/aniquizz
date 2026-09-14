@@ -82,7 +82,13 @@ function SanctionMenu({
           size="sm"
           variant="outline"
           disabled={disabled}
-          className={active ? (isMute ? 'border-warning/40 text-warning' : 'border-destructive/40 text-destructive') : ''}
+          className={
+            active
+              ? isMute
+                ? 'border-warning/40 text-warning'
+                : 'border-destructive/40 text-destructive'
+              : ''
+          }
         >
           <Icon className="h-3.5 w-3.5 mr-1" />
           {isMute ? 'Mute' : 'Ban'}
@@ -112,26 +118,26 @@ function adminUserRowEqual(prev: AdminUserRowProps, next: AdminUserRowProps): bo
   const a = prev.user;
   const b = next.user;
   return (
-    prev.canManage === next.canManage
-    && prev.isSelf === next.isSelf
-    && a.id === b.id
-    && a.username === b.username
-    && a.email === b.email
-    && a.avatar === b.avatar
-    && a.role === b.role
-    && a.presence === b.presence
-    && a.gamesPlayed === b.gamesPlayed
-    && a.level === b.level
-    && a.bannedUntil === b.bannedUntil
-    && a.mutedUntil === b.mutedUntil
-    && a.lastSeenAt === b.lastSeenAt
-    && a.createdAt === b.createdAt
-    && a.currentRoom?.id === b.currentRoom?.id
-    && a.currentRoom?.name === b.currentRoom?.name
-    && prev.onOpenDetail === next.onOpenDetail
-    && prev.onGoToRoom === next.onGoToRoom
-    && prev.onSetPending === next.onSetPending
-    && prev.onRoleChange === next.onRoleChange
+    prev.canManage === next.canManage &&
+    prev.isSelf === next.isSelf &&
+    a.id === b.id &&
+    a.username === b.username &&
+    a.email === b.email &&
+    a.avatar === b.avatar &&
+    a.role === b.role &&
+    a.presence === b.presence &&
+    a.gamesPlayed === b.gamesPlayed &&
+    a.level === b.level &&
+    a.bannedUntil === b.bannedUntil &&
+    a.mutedUntil === b.mutedUntil &&
+    a.lastSeenAt === b.lastSeenAt &&
+    a.createdAt === b.createdAt &&
+    a.currentRoom?.id === b.currentRoom?.id &&
+    a.currentRoom?.name === b.currentRoom?.name &&
+    prev.onOpenDetail === next.onOpenDetail &&
+    prev.onGoToRoom === next.onGoToRoom &&
+    prev.onSetPending === next.onSetPending &&
+    prev.onRoleChange === next.onRoleChange
   );
 }
 
@@ -159,12 +165,16 @@ export const AdminUserRow = memo(function AdminUserRow({
         isSelf ? 'cursor-default' : 'hover:bg-secondary/50 cursor-pointer',
       )}
       onClick={openProfile}
-      onKeyDown={isSelf ? undefined : (e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpenDetail(u);
-        }
-      }}
+      onKeyDown={
+        isSelf
+          ? undefined
+          : (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onOpenDetail(u);
+              }
+            }
+      }
       tabIndex={isSelf ? undefined : 0}
       aria-label={isSelf ? undefined : `Voir le profil de ${u.username}`}
     >
@@ -230,7 +240,12 @@ export const AdminUserRow = memo(function AdminUserRow({
 
       <td className="p-3">
         <div className="flex flex-col gap-1.5">
-          <span className={cn('flex items-center gap-2 text-xs font-medium', PRESENCE_META[u.presence].text)}>
+          <span
+            className={cn(
+              'flex items-center gap-2 text-xs font-medium',
+              PRESENCE_META[u.presence].text,
+            )}
+          >
             <span className={cn('h-2 w-2 rounded-full', PRESENCE_META[u.presence].dot)} />
             {PRESENCE_META[u.presence].label}
           </span>

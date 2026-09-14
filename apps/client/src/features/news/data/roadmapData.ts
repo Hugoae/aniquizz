@@ -58,8 +58,7 @@ export const roadmapData: RoadmapItem[] = [
   },
   {
     title: 'Endings',
-    description:
-      'Plus de 1800 endings dans le catalogue, 3000 sons au total.',
+    description: 'Plus de 1800 endings dans le catalogue, 3000 sons au total.',
     status: 'done',
     date: '5 septembre 2026, v26.5',
   },
@@ -80,7 +79,7 @@ export const roadmapData: RoadmapItem[] = [
   {
     title: 'Refonte du profil',
     description:
-      'Refonte de l\'historique de jeu, des statistiques et ajout de stats complémentaires.',
+      "Refonte de l'historique de jeu, des statistiques et ajout de stats complémentaires.",
     status: 'planned',
     date: 'Q4 2026',
   },
@@ -92,7 +91,8 @@ export const roadmapData: RoadmapItem[] = [
   },
   {
     title: 'Mode Compétitif',
-    description: 'Parties classées avec ladder et saisons : montez en grade et affrontez les meilleurs.',
+    description:
+      'Parties classées avec ladder et saisons : montez en grade et affrontez les meilleurs.',
     status: 'planned',
     date: '2027',
   },

@@ -50,11 +50,7 @@ export const buildChoiceCandidatePool = (
  * Build a multiple-choice set containing the correct answer plus `count - 1`
  * distinct wrong answers drawn at random from `pool`.
  */
-export const buildChoices = (
-  correctTarget: string,
-  pool: string[],
-  count = 4,
-): string[] => {
+export const buildChoices = (correctTarget: string, pool: string[], count = 4): string[] => {
   const correctNorm = answerIdentityKey(correctTarget);
 
   const uniqueWrong = Array.from(

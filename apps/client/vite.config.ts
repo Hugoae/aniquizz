@@ -1,14 +1,13 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import fs from "fs";
-import { componentTagger } from "lovable-tagger";
-import { visualizer } from "rollup-plugin-visualizer";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
+import fs from 'fs';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
   server: {
-    host: "::",
+    host: '::',
     port: 8080,
   },
   plugins: [
@@ -18,17 +17,17 @@ export default defineConfig(({ mode }) => ({
       // is fully styled on the very first paint with zero extra round-trip.
       // A separate <link href="/app-shell.css"> is a second request that paints
       // the raw shell HTML unstyled for ~0.2s on warm connections (cold-load FOUC).
-      name: "app-shell-inline-css",
+      name: 'app-shell-inline-css',
       transformIndexHtml: {
-        order: "post",
+        order: 'post',
         handler(html) {
           let next = html;
 
           // 1. Inline public/app-shell.css (single source of truth) into <head>.
           //    CSP allows this: style-src includes 'unsafe-inline'.
-          const shellCssPath = path.resolve(__dirname, "public/app-shell.css");
+          const shellCssPath = path.resolve(__dirname, 'public/app-shell.css');
           if (fs.existsSync(shellCssPath)) {
-            const shellCss = fs.readFileSync(shellCssPath, "utf8").trimEnd();
+            const shellCss = fs.readFileSync(shellCssPath, 'utf8').trimEnd();
             next = next.replace(
               /<link rel="stylesheet" href="\/app-shell\.css" \/>/,
               `<style id="app-shell-critical">\n${shellCss}\n    </style>`,
@@ -41,7 +40,7 @@ export default defineConfig(({ mode }) => ({
           );
           if (cssLink) {
             const tag = cssLink[0];
-            next = next.replace(tag, "");
+            next = next.replace(tag, '');
             next = next.replace(
               /(<style id="app-shell-critical">[\s\S]*?<\/style>)/,
               `$1\n    ${tag}`,
@@ -54,9 +53,9 @@ export default defineConfig(({ mode }) => ({
           );
           if (moduleScript) {
             const tag = moduleScript[0];
-            next = next.replace(tag, "");
+            next = next.replace(tag, '');
             if (!next.includes(tag)) {
-              next = next.replace("</body>", `    ${tag}\n  </body>`);
+              next = next.replace('</body>', `    ${tag}\n  </body>`);
             }
           }
 
@@ -65,13 +64,13 @@ export default defineConfig(({ mode }) => ({
       },
     },
     {
-      name: "perf-preloads",
-      apply: "build",
+      name: 'perf-preloads',
+      apply: 'build',
       closeBundle() {
-        const indexPath = path.resolve(__dirname, "dist/index.html");
+        const indexPath = path.resolve(__dirname, 'dist/index.html');
         if (!fs.existsSync(indexPath)) return;
-        const assetsDir = path.resolve(__dirname, "dist/assets");
-        const html = fs.readFileSync(indexPath, "utf8");
+        const assetsDir = path.resolve(__dirname, 'dist/assets');
+        const html = fs.readFileSync(indexPath, 'utf8');
         const tags: string[] = [];
 
         for (const file of fs.readdirSync(assetsDir)) {
@@ -85,52 +84,51 @@ export default defineConfig(({ mode }) => ({
         if (!tags.length) return;
         let next = html.replace(
           /<link rel="modulepreload" crossorigin href="\/assets\/vendor-supabase[^"]+">\n?/g,
-          "",
+          '',
         );
         next = next.replace(
           /<link rel="modulepreload" crossorigin href="\/assets\/vendor-recharts[^"]+">\n?/g,
-          "",
+          '',
         );
-        next = next.replace("</head>", `    ${tags.join("\n    ")}\n  </head>`);
+        next = next.replace('</head>', `    ${tags.join('\n    ')}\n  </head>`);
         fs.writeFileSync(indexPath, next);
       },
     },
-    mode === "development" && componentTagger(),
-    process.env.ANALYZE === "1" &&
+    process.env.ANALYZE === '1' &&
       visualizer({
-        filename: "dist/bundle-stats.html",
+        filename: 'dist/bundle-stats.html',
         gzipSize: true,
         open: false,
       }),
   ].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@aniquizz/shared": path.resolve(__dirname, "../../packages/shared/src/index.ts"),
+      '@': path.resolve(__dirname, './src'),
+      '@aniquizz/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     },
   },
   build: {
     rollupOptions: {
       output: {
         manualChunks(id) {
-          if (!id.includes("node_modules")) return;
+          if (!id.includes('node_modules')) return;
 
-          if (id.includes("recharts") || id.includes("d3-")) return "vendor-recharts";
-          if (id.includes("framer-motion")) return "vendor-motion";
-          if (id.includes("@supabase")) return "vendor-supabase";
-          if (id.includes("socket.io")) return "vendor-socket";
+          if (id.includes('recharts') || id.includes('d3-')) return 'vendor-recharts';
+          if (id.includes('framer-motion')) return 'vendor-motion';
+          if (id.includes('@supabase')) return 'vendor-supabase';
+          if (id.includes('socket.io')) return 'vendor-socket';
           // Keep Radix in the React chunk — a separate vendor-radix chunk creates a
           // circular import with vendor-react and crashes prod (forwardRef undefined).
           if (
-            id.includes("@radix-ui") ||
-            id.includes("react-dom") ||
-            id.includes("react-router") ||
-            id.includes("/react/")
+            id.includes('@radix-ui') ||
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            id.includes('/react/')
           ) {
-            return "vendor-react";
+            return 'vendor-react';
           }
         },
       },
     },
   },
-}));
+});

@@ -5,7 +5,11 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PasswordField } from '@/components/ui/PasswordField';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 
@@ -16,7 +20,11 @@ interface PasswordDialogProps {
 }
 
 const isPasswordValid = (pw: string) =>
-  pw.length >= 8 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+  pw.length >= 8 &&
+  /[a-z]/.test(pw) &&
+  /[A-Z]/.test(pw) &&
+  /[0-9]/.test(pw) &&
+  /[^A-Za-z0-9]/.test(pw);
 
 /** Self-contained "change password" modal (owns its fields + submit logic). */
 export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialogProps) {
@@ -26,21 +34,31 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
   const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const reset = () => {
-    setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
   };
 
-  const close = () => { reset(); onOpenChange(false); };
+  const close = () => {
+    reset();
+    onOpenChange(false);
+  };
 
   const handleChangePassword = async () => {
     if (!userEmail) return;
     if (!currentPassword || !newPassword || !confirmPassword) {
-      toast.error('Veuillez remplir tous les champs.'); return;
+      toast.error('Veuillez remplir tous les champs.');
+      return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('Les nouveaux mots de passe ne correspondent pas.'); return;
+      toast.error('Les nouveaux mots de passe ne correspondent pas.');
+      return;
     }
     if (!isPasswordValid(newPassword)) {
-      toast.error('Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.'); return;
+      toast.error(
+        'Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
+      );
+      return;
     }
     setIsChangingPassword(true);
     try {
@@ -53,7 +71,7 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
       if (error) {
         const msg = error.message || '';
         if (/different from the old|should be different|same.*password/i.test(msg)) {
-          toast.error('Le nouveau mot de passe doit être différent de l\'ancien.');
+          toast.error("Le nouveau mot de passe doit être différent de l'ancien.");
         } else if (/current password|invalid|incorrect|credential/i.test(msg)) {
           toast.error('Mot de passe actuel incorrect.');
         } else if (/weak|at least|character|requirement|pwned|leaked/i.test(msg)) {
@@ -67,16 +85,26 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
       toast.success('Mot de passe mis à jour !');
       close();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe.');
+      toast.error(
+        err instanceof Error ? err.message : 'Erreur lors du changement de mot de passe.',
+      );
     } finally {
       setIsChangingPassword(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { onOpenChange(next); if (!next) reset(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) reset();
+      }}
+    >
       <DialogContent className="sm:max-w-md bg-card border-border">
-        <DialogHeader><DialogTitle>Changer de mot de passe</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Changer de mot de passe</DialogTitle>
+        </DialogHeader>
         <div className="space-y-4 py-2">
           <PasswordField
             id="current-password"
@@ -100,11 +128,14 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
             onChange={setConfirmPassword}
           />
           <p className="text-xs text-muted-foreground">
-            Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+            Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère
+            spécial.
           </p>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={close}>Annuler</Button>
+          <Button variant="ghost" onClick={close}>
+            Annuler
+          </Button>
           <Button onClick={handleChangePassword} disabled={isChangingPassword}>
             {isChangingPassword ? <Loader2 className="animate-spin h-4 w-4" /> : 'Mettre à jour'}
           </Button>

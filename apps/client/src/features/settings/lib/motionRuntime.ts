@@ -1,7 +1,10 @@
 import { normalizePlayerPrefs, resolveMotionReduced, type MotionMode } from '@aniquizz/shared';
 import { readPlayerPrefs } from '@/features/settings/lib/playerPrefsStorage';
 
-export function resolvedMotionValue(mode: MotionMode, osPrefersReduced: boolean): 'reduced' | 'full' {
+export function resolvedMotionValue(
+  mode: MotionMode,
+  osPrefersReduced: boolean,
+): 'reduced' | 'full' {
   return resolveMotionReduced(mode, osPrefersReduced) ? 'reduced' : 'full';
 }
 

@@ -29,7 +29,9 @@ export function VideoDisplaySection({ config, update }: VideoDisplaySectionProps
             className="flex flex-col items-start gap-1 p-3 text-left"
           >
             <span className="text-[11px] font-bold uppercase">{VIDEO_MODE_LABELS[id]}</span>
-            <span className="text-[10px] leading-snug text-muted-foreground">{VIDEO_MODE_DESCRIPTIONS[id]}</span>
+            <span className="text-[10px] leading-snug text-muted-foreground">
+              {VIDEO_MODE_DESCRIPTIONS[id]}
+            </span>
           </OptionButton>
         ))}
       </div>

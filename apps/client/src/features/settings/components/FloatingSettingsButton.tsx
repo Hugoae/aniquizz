@@ -76,9 +76,8 @@ export function FloatingSettingsButton() {
       restoreFocusRef.current = null;
       return;
     }
-    restoreFocusRef.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : triggerRef.current;
+    restoreFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : triggerRef.current;
     const first = panel?.querySelector<HTMLElement>(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
     );
@@ -123,7 +122,12 @@ export function FloatingSettingsButton() {
             open ? 'gap-3 border-t border-border/60 px-4' : 'justify-center',
           )}
         >
-          <Settings className={cn('floating-settings-morph h-6 w-6 shrink-0 transition-transform', open && 'rotate-90')} />
+          <Settings
+            className={cn(
+              'floating-settings-morph h-6 w-6 shrink-0 transition-transform',
+              open && 'rotate-90',
+            )}
+          />
           <span
             className={cn(
               'overflow-hidden whitespace-nowrap text-left text-base font-bold text-foreground transition-[opacity,width] duration-200',

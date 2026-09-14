@@ -46,11 +46,7 @@ export function ComingSoonPage({
 
   return (
     <>
-      <SeoHead
-        title={helmetTitle}
-        description={helmetDescription}
-        path={canonicalPath}
-      />
+      <SeoHead title={helmetTitle} description={helmetDescription} path={canonicalPath} />
 
       <div className="relative flex min-h-screen flex-col overflow-hidden bg-background">
         {showHeader && <Header />}
@@ -74,12 +70,18 @@ export function ComingSoonPage({
           )}
         >
           <div className="relative">
-            <div className={cn('absolute inset-0 rounded-full blur-xl animate-pulse', glowClassName)} aria-hidden />
+            <div
+              className={cn('absolute inset-0 rounded-full blur-xl animate-pulse', glowClassName)}
+              aria-hidden
+            />
             <div className="relative animate-bounce rounded-full border border-border/60 bg-secondary/30 p-8">
               <Icon className={cn('h-16 w-16', iconClassName)} aria-hidden />
               {SecondaryIcon && (
                 <SecondaryIcon
-                  className={cn('absolute -right-1 -top-1 h-6 w-6 animate-pulse', secondaryIconClassName)}
+                  className={cn(
+                    'absolute -right-1 -top-1 h-6 w-6 animate-pulse',
+                    secondaryIconClassName,
+                  )}
                   aria-hidden
                 />
               )}

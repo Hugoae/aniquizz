@@ -48,7 +48,9 @@ export default function News() {
     if (!exists) return;
     setFilter('all');
     const t = window.setTimeout(() => {
-      document.getElementById(`news-${focusedId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document
+        .getElementById(`news-${focusedId}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
     return () => window.clearTimeout(t);
   }, [focusedId]);
@@ -118,7 +120,9 @@ export default function News() {
                     >
                       <Icon className={cn('h-3.5 w-3.5', config.text)} aria-hidden />
                       {config.label}
-                      <span className="font-mono text-[10px] opacity-70">{counts.get(type) ?? 0}</span>
+                      <span className="font-mono text-[10px] opacity-70">
+                        {counts.get(type) ?? 0}
+                      </span>
                     </button>
                   );
                 })}

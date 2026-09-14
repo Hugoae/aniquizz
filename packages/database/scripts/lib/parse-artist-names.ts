@@ -40,10 +40,7 @@ export const ARTIST_CREDIT_OVERRIDES: Readonly<Record<string, readonly string[]>
   'The Seatbelts feat. Mai Yamane': ['The Seatbelts', 'Mai Yamane'],
   'Team.Nekokan [Neko] featuring. atsuko': ['Team.Nekokan [Neko]', 'atsuko'],
   'Team.Nekokan [Neko] featuring. Junca Amaoto': ['Team.Nekokan [Neko]', 'Junca Amaoto'],
-  'Team.Nekokan [Neko] featuring. Rekka Katakiri': [
-    'Team.Nekokan [Neko]',
-    'Rekka Katakiri',
-  ],
+  'Team.Nekokan [Neko] featuring. Rekka Katakiri': ['Team.Nekokan [Neko]', 'Rekka Katakiri'],
   'Toshinobu Kubota feat. Naomi Campbell': ['Toshinobu Kubota', 'Naomi Campbell'],
   'Tsu Terakado ♀ with Houkago Happy Hour': ['Tsu Terakado ♀', 'Houkago Happy Hour'],
   'Velvet.kodhy and Velvet.kodhy and μ and μ': ['Velvet.kodhy', 'μ'],

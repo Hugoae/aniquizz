@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import {
   Bot,
   Eye,
@@ -12,25 +12,20 @@ import {
   Rocket,
   Trash2,
   Users,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { cn } from "@/lib/utils";
-import {
-  adminApi,
-  AdminApiError,
-  type AdminRoom,
-  type BotConfig,
-} from "@/lib/adminApi";
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
+import { adminApi, AdminApiError, type AdminRoom, type BotConfig } from '@/lib/adminApi';
 
 const errorMessage = (e: unknown): string =>
-  e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
+  e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
 
-import type { Precision, ResponseType, SoundSelection } from "@aniquizz/shared";
-import { getPrecisionLabel } from "@aniquizz/shared";
+import type { Precision, ResponseType, SoundSelection } from '@aniquizz/shared';
+import { getPrecisionLabel } from '@aniquizz/shared';
 
 interface ScenarioConfig {
   botCount: number;
@@ -46,18 +41,18 @@ interface ScenarioConfig {
 const DEFAULT_CONFIG: ScenarioConfig = {
   botCount: 3,
   soundCount: 5,
-  responseType: "mix",
-  difficulty: ["medium"],
-  soundTypes: ["opening"],
+  responseType: 'mix',
+  difficulty: ['medium'],
+  soundTypes: ['opening'],
   guessDuration: 15,
-  precision: "franchise",
-  soundSelection: "random",
+  precision: 'franchise',
+  soundSelection: 'random',
 };
 
 const SCENARIO_PRESETS: { key: string; label: string; botCount: number }[] = [
-  { key: "solo", label: "Solo test (1 bot)", botCount: 1 },
-  { key: "duel", label: "Duel (2 bots)", botCount: 2 },
-  { key: "full", label: "Lobby plein (16 bots)", botCount: 16 },
+  { key: 'solo', label: 'Solo test (1 bot)', botCount: 1 },
+  { key: 'duel', label: 'Duel (2 bots)', botCount: 2 },
+  { key: 'full', label: 'Lobby plein (16 bots)', botCount: 16 },
 ];
 
 const BOT_PRESETS: {
@@ -66,27 +61,27 @@ const BOT_PRESETS: {
   accuracy: number;
   delay: [number, number];
 }[] = [
-  { key: "perfect", label: "Parfaits", accuracy: 1, delay: [800, 2500] },
-  { key: "average", label: "Moyens", accuracy: 0.7, delay: [2000, 8000] },
-  { key: "slow", label: "Lents / imprécis", accuracy: 0.4, delay: [6000, 14000] },
+  { key: 'perfect', label: 'Parfaits', accuracy: 1, delay: [800, 2500] },
+  { key: 'average', label: 'Moyens', accuracy: 0.7, delay: [2000, 8000] },
+  { key: 'slow', label: 'Lents / imprécis', accuracy: 0.4, delay: [6000, 14000] },
 ];
 
 const DIFFICULTIES = [
-  { id: "easy", label: "Facile" },
-  { id: "medium", label: "Moyen" },
-  { id: "hard", label: "Difficile" },
+  { id: 'easy', label: 'Facile' },
+  { id: 'medium', label: 'Moyen' },
+  { id: 'hard', label: 'Difficile' },
 ];
 
 const SOUND_TYPES = [
-  { id: "opening", label: "Openings" },
-  { id: "ending", label: "Endings" },
-  { id: "insert", label: "Inserts" },
+  { id: 'opening', label: 'Openings' },
+  { id: 'ending', label: 'Endings' },
+  { id: 'insert', label: 'Inserts' },
 ];
 
-const RESPONSE_TYPES: ResponseType[] = ["mix", "qcm", "typing"];
+const RESPONSE_TYPES: ResponseType[] = ['mix', 'qcm', 'typing'];
 const SELECTIONS: { id: SoundSelection; label: string }[] = [
-  { id: "random", label: "Aléatoire" },
-  { id: "watched", label: "Watched" },
+  { id: 'random', label: 'Aléatoire' },
+  { id: 'watched', label: 'Watched' },
 ];
 
 // --- small building blocks --------------------------------------------------
@@ -114,10 +109,10 @@ function Chip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-3 py-1 text-xs transition-colors",
+        'rounded-full border px-3 py-1 text-xs transition-colors',
         active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-muted-foreground hover:border-primary/50",
+          ? 'border-primary bg-primary text-primary-foreground'
+          : 'border-border bg-card text-muted-foreground hover:border-primary/50',
       )}
     >
       {children}
@@ -125,7 +120,15 @@ function Chip({
   );
 }
 
-function SectionTitle({ icon: Icon, title, hint }: { icon: typeof Bot; title: string; hint?: string }) {
+function SectionTitle({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: typeof Bot;
+  title: string;
+  hint?: string;
+}) {
   return (
     <div className="flex items-baseline gap-2">
       <Icon className="h-5 w-5 shrink-0 translate-y-1 text-primary" />
@@ -193,7 +196,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
     return () => clearInterval(id);
   }, [loadRooms]);
 
-  const toggleInArray = (key: "difficulty" | "soundTypes", value: string) => {
+  const toggleInArray = (key: 'difficulty' | 'soundTypes', value: string) => {
     setCfg((prev) => {
       const arr = prev[key];
       const next = arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value];
@@ -218,7 +221,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
         ...scenarioSettings(),
       });
       toast.success(`Salon créé avec ${res.botsAdded} bot(s). Redirection…`);
-      navigate("/play", { state: { returnToLobby: true, roomId: res.roomId } });
+      navigate('/play', { state: { returnToLobby: true, roomId: res.roomId } });
     } catch (e) {
       toast.error(errorMessage(e));
     } finally {
@@ -258,7 +261,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
     const tick = async () => {
       if (loopRunning.current) return;
       const active = rooms.some(
-        (r) => r.humanCount === 0 && (r.status === "playing" || r.status === "paused"),
+        (r) => r.humanCount === 0 && (r.status === 'playing' || r.status === 'paused'),
       );
       if (active) return;
       loopRunning.current = true;
@@ -291,7 +294,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
   };
 
   const joinRoom = (roomId: string) =>
-    navigate("/play", { state: { returnToLobby: true, roomId } });
+    navigate('/play', { state: { returnToLobby: true, roomId } });
 
   const activeBots = rooms.reduce((sum, r) => sum + (r.playerCount - r.humanCount), 0);
 
@@ -413,7 +416,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
                 <Chip
                   key={d.id}
                   active={cfg.difficulty.includes(d.id)}
-                  onClick={() => toggleInArray("difficulty", d.id)}
+                  onClick={() => toggleInArray('difficulty', d.id)}
                 >
                   {d.label}
                 </Chip>
@@ -427,7 +430,7 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
                 <Chip
                   key={t.id}
                   active={cfg.soundTypes.includes(t.id)}
-                  onClick={() => toggleInArray("soundTypes", t.id)}
+                  onClick={() => toggleInArray('soundTypes', t.id)}
                 >
                   {t.label}
                 </Chip>
@@ -445,7 +448,9 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
             {BOT_PRESETS.map((p) => (
               <Chip
                 key={p.key}
-                active={accuracy === p.accuracy && delay[0] === p.delay[0] && delay[1] === p.delay[1]}
+                active={
+                  accuracy === p.accuracy && delay[0] === p.delay[0] && delay[1] === p.delay[1]
+                }
                 onClick={() => applyBotPreset(p)}
               >
                 {p.label}
@@ -509,10 +514,20 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
             <span className="text-muted-foreground">
               Dernier scénario headless : <span className="font-mono">#{lastRoomId}</span>
             </span>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => onGoToRoom?.(lastRoomId)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => onGoToRoom?.(lastRoomId)}
+            >
               <Eye className="h-3.5 w-3.5" /> Voir dans Salons
             </Button>
-            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => joinRoom(lastRoomId)}>
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              onClick={() => joinRoom(lastRoomId)}
+            >
               <LogIn className="h-3.5 w-3.5" /> Rejoindre
             </Button>
           </div>
@@ -535,11 +550,11 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
               className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-secondary/50 px-3 py-2"
             >
               <div className="text-sm">
-                <span className="font-medium">{room.name}</span>{" "}
+                <span className="font-medium">{room.name}</span>{' '}
                 <span className="text-muted-foreground">
                   #{room.id} — {room.playerCount}/{room.maxPlayers}
-                </span>{" "}
-                <Badge className="bg-secondary">{room.status}</Badge>{" "}
+                </span>{' '}
+                <Badge className="bg-secondary">{room.status}</Badge>{' '}
                 {botCount > 0 && (
                   <Badge className="gap-1 bg-accent/15 text-accent">
                     <Bot className="h-3 w-3" /> {botCount}
@@ -574,10 +589,20 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
                 >
                   <Trash2 className="h-3.5 w-3.5" /> Vider
                 </Button>
-                <Button size="sm" variant="ghost" className="gap-1" onClick={() => onGoToRoom?.(room.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1"
+                  onClick={() => onGoToRoom?.(room.id)}
+                >
                   <Eye className="h-3.5 w-3.5" /> Salons
                 </Button>
-                <Button size="sm" variant="ghost" className="gap-1" onClick={() => joinRoom(room.id)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="gap-1"
+                  onClick={() => joinRoom(room.id)}
+                >
                   <LogIn className="h-3.5 w-3.5" /> Rejoindre
                 </Button>
               </div>
@@ -592,13 +617,13 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
         <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-muted-foreground">
           <span className="flex items-center gap-2">
             <Play className="h-3.5 w-3.5" />
-            Dev tooling :{" "}
-            <span className={devInfo?.devEnabled ? "text-success" : "text-destructive"}>
-              {devInfo ? (devInfo.devEnabled ? "actif" : "désactivé") : "…"}
+            Dev tooling :{' '}
+            <span className={devInfo?.devEnabled ? 'text-success' : 'text-destructive'}>
+              {devInfo ? (devInfo.devEnabled ? 'actif' : 'désactivé') : '…'}
             </span>
           </span>
           <span className="flex items-center gap-2">
-            <Bot className="h-3.5 w-3.5" /> Roster de bots : {devInfo?.botRosterSize ?? "…"}
+            <Bot className="h-3.5 w-3.5" /> Roster de bots : {devInfo?.botRosterSize ?? '…'}
           </span>
           <span className="flex items-center gap-2">
             <Users className="h-3.5 w-3.5" /> Bots actifs : {activeBots}

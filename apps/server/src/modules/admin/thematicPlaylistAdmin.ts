@@ -19,18 +19,36 @@ export { refreshPlaylistSnapshot } from '../game/playlistRecipeService';
 
 export const playlistRecipeSchema = z
   .object({
-    genres: z.array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax)).max(PLAYLIST_RECIPE_LIMITS.genres).optional(),
-    tags: z.array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax)).max(PLAYLIST_RECIPE_LIMITS.tags).optional(),
+    genres: z
+      .array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax))
+      .max(PLAYLIST_RECIPE_LIMITS.genres)
+      .optional(),
+    tags: z
+      .array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax))
+      .max(PLAYLIST_RECIPE_LIMITS.tags)
+      .optional(),
     yearMin: z.number().int().optional(),
     yearMax: z.number().int().optional(),
-    formats: z.array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax)).max(PLAYLIST_RECIPE_LIMITS.formats).optional(),
-    songTypes: z.array(z.enum(['OP', 'ED'])).max(PLAYLIST_RECIPE_LIMITS.songTypes).optional(),
+    formats: z
+      .array(z.string().max(PLAYLIST_RECIPE_LIMITS.stringMax))
+      .max(PLAYLIST_RECIPE_LIMITS.formats)
+      .optional(),
+    songTypes: z
+      .array(z.enum(['OP', 'ED']))
+      .max(PLAYLIST_RECIPE_LIMITS.songTypes)
+      .optional(),
     difficulties: z
       .array(z.enum(['EASY', 'MEDIUM', 'HARD']))
       .max(PLAYLIST_RECIPE_LIMITS.difficulties)
       .optional(),
-    includeSongIds: z.array(z.number().int().positive()).max(PLAYLIST_RECIPE_LIMITS.includeSongIds).optional(),
-    excludeSongIds: z.array(z.number().int().positive()).max(PLAYLIST_RECIPE_LIMITS.excludeSongIds).optional(),
+    includeSongIds: z
+      .array(z.number().int().positive())
+      .max(PLAYLIST_RECIPE_LIMITS.includeSongIds)
+      .optional(),
+    excludeSongIds: z
+      .array(z.number().int().positive())
+      .max(PLAYLIST_RECIPE_LIMITS.excludeSongIds)
+      .optional(),
   })
   .superRefine((raw, ctx) => {
     const recipe = parsePlaylistRecipe(raw);
@@ -50,7 +68,11 @@ export const playlistRecipeSchema = z
   });
 
 export const playlistUpsertSchema = z.object({
-  slug: z.string().min(2).max(64).regex(/^[a-z0-9-]+$/),
+  slug: z
+    .string()
+    .min(2)
+    .max(64)
+    .regex(/^[a-z0-9-]+$/),
   name: z.string().min(1).max(80),
   description: z.string().max(400).default(''),
   category: z.enum(['genre', 'tag', 'decade', 'format', 'theme']).default('theme'),
@@ -69,7 +91,10 @@ export const previewRecipe = async (raw: unknown) => {
   return previewPlaylistRecipe(recipe);
 };
 
-export const upsertPlaylist = async (id: string | undefined, input: z.infer<typeof playlistUpsertSchema>) => {
+export const upsertPlaylist = async (
+  id: string | undefined,
+  input: z.infer<typeof playlistUpsertSchema>,
+) => {
   const recipe = parsePlaylistRecipe(input.recipe);
   if (id) {
     const existing = await prisma.thematicPlaylist.findUnique({ where: { id } });

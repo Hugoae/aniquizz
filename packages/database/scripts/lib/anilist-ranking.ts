@@ -4,8 +4,7 @@ import { formatDuration, parseRetryAfterMs } from './progress';
 const ANILIST_API = 'https://graphql.anilist.co';
 const PAGE_SIZE = 50;
 
-const delay = (ms: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
 export interface EligibleAniListRanking {
   selectedIds: number[];

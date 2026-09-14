@@ -1,6 +1,7 @@
 /** Canonical production site URL (no trailing slash). */
-export const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '')
-  || 'https://aniquizz.com';
+export const SITE_URL =
+  (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '') ||
+  'https://aniquizz.com';
 
 export const SITE_NAME = 'AniQuizz';
 
@@ -21,7 +22,7 @@ export const DEFAULT_OG_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
  * the static app-shell HTML, and no keyword lists.
  */
 export const HOME_DESCRIPTION =
-  'Blindtest anime en ligne. Devinez l\'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !';
+  "Blindtest anime en ligne. Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !";
 
 /** Default meta description for inner pages. Keep under ~160 chars. */
 export const DEFAULT_DESCRIPTION = HOME_DESCRIPTION;

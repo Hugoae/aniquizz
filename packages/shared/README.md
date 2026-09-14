@@ -4,20 +4,20 @@ Framework-agnostic code shared by the client and server.
 
 ## Contents
 
-| Module | Purpose |
-| ------ | ------- |
-| `events.ts` | Typed Socket.io contract (client ↔ server) |
-| `game.ts` | Game config, room settings, payloads, public profile types |
-| `types.ts` | Core domain types (`GamePlayer`, etc.) |
-| `constants.ts` | Shared constants |
-| `roles.ts` | `UserRole`, `hasRole()` |
-| `utils.ts` | Fuzzy anime matching (`getFuzzySuggestions`) |
-| `scoring.ts` | Round scoring |
-| `grading.ts` | Solo medals (Bronze → Platinum) |
-| `victory.ts` | Victory / game-over computation |
-| `ranking.ts` | Multiplayer ranking |
-| `leveling.ts` | XP → level |
-| `selection.ts` | Fisher–Yates shuffle |
+| Module         | Purpose                                                    |
+| -------------- | ---------------------------------------------------------- |
+| `events.ts`    | Typed Socket.io contract (client ↔ server)                 |
+| `game.ts`      | Game config, room settings, payloads, public profile types |
+| `types.ts`     | Core domain types (`GamePlayer`, etc.)                     |
+| `constants.ts` | Shared constants                                           |
+| `roles.ts`     | `UserRole`, `hasRole()`                                    |
+| `utils.ts`     | Fuzzy anime matching (`getFuzzySuggestions`)               |
+| `scoring.ts`   | Round scoring                                              |
+| `grading.ts`   | Solo medals (Bronze → Platinum)                            |
+| `victory.ts`   | Victory / game-over computation                            |
+| `ranking.ts`   | Multiplayer ranking                                        |
+| `leveling.ts`  | XP → level                                                 |
+| `selection.ts` | Fisher–Yates shuffle                                       |
 
 ## Usage
 
@@ -43,4 +43,4 @@ TypeScript compilation only — no runtime dependencies beyond dev/build tooling
 pnpm --filter @aniquizz/shared build
 ```
 
-Server and client import from `@aniquizz/shared` after the package is built (`turbo` handles `^build` ordering).
+Server and client import from `@aniquizz/shared` after the package is built (`turbo` handles `^build` ordering). In development, `pnpm dev` runs `tsc --watch` here so the server's `dist/` copy stays current.

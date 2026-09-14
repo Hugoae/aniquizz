@@ -1,8 +1,16 @@
-import { createContext, useContext, useEffect, useState, useMemo, useCallback, useRef } from "react";
-import type { Session, User, SupabaseClient } from "@supabase/supabase-js";
-import { captureClientError } from "@/lib/errorReporter";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
+import type { Session, User, SupabaseClient } from '@supabase/supabase-js';
+import { captureClientError } from '@/lib/errorReporter';
 
-const loadSupabase = () => import("@/lib/supabase").then((m) => m.supabase);
+const loadSupabase = () => import('@/lib/supabase').then((m) => m.supabase);
 
 // ------------------------------------------------------------------
 // TYPES
@@ -14,7 +22,7 @@ export type Profile = {
   avatar: string;
   level: number;
   xp: number;
-  role: "USER" | "ADMIN" | "MODERATOR";
+  role: 'USER' | 'ADMIN' | 'MODERATOR';
   gamesPlayed: number;
   gamesWon: number;
   bannedUntil?: string | null;
@@ -76,11 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchProfile = useCallback(async (userId: string, client: SupabaseClient) => {
     setProfileLoading(true);
     try {
-      const { data, error } = await client
-        .from("Profile")
-        .select("*")
-        .eq("id", userId)
-        .single();
+      const { data, error } = await client.from('Profile').select('*').eq('id', userId).single();
 
       if (error) {
         captureClientError(error, { source: 'auth_fetch_profile' });
@@ -103,7 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const supabase = await loadSupabase();
         supabaseRef.current = supabase;
-        const { data: { session: initialSession } } = await supabase.auth.getSession();
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession();
 
         if (mounted) {
           setSession(initialSession);
@@ -112,7 +118,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        const { data: { subscription: sub } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        const {
+          data: { subscription: sub },
+        } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
           if (!mounted) return;
 
           setSession(newSession);
@@ -152,25 +160,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let cleanupSanction: (() => void) | undefined;
     let disposed = false;
 
-    void import('@/lib/socketLifecycle').then(({ syncSocketSession, registerLevelUpHandler, registerSanctionHandler }) => {
-      if (disposed) return;
-      syncSocketSession(session, profile?.username || 'Anonyme');
-      if (!session?.user) return;
-      cleanupLevelUp = registerLevelUpHandler(session, () => {
-        if (session.user && supabaseRef.current) void fetchProfile(session.user.id, supabaseRef.current);
-      });
-      cleanupSanction = registerSanctionHandler((payload) => {
-        setProfile((prev) =>
-          prev
-            ? {
-                ...prev,
-                bannedUntil: payload.bannedUntil,
-                mutedUntil: payload.mutedUntil,
-              }
-            : prev,
-        );
-      });
-    });
+    void import('@/lib/socketLifecycle').then(
+      ({ syncSocketSession, registerLevelUpHandler, registerSanctionHandler }) => {
+        if (disposed) return;
+        syncSocketSession(session, profile?.username || 'Anonyme');
+        if (!session?.user) return;
+        cleanupLevelUp = registerLevelUpHandler(session, () => {
+          if (session.user && supabaseRef.current)
+            void fetchProfile(session.user.id, supabaseRef.current);
+        });
+        cleanupSanction = registerSanctionHandler((payload) => {
+          setProfile((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  bannedUntil: payload.bannedUntil,
+                  mutedUntil: payload.mutedUntil,
+                }
+              : prev,
+          );
+        });
+      },
+    );
 
     return () => {
       disposed = true;
@@ -209,32 +220,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const isAdmin = profile?.role === "ADMIN";
+  const isAdmin = profile?.role === 'ADMIN';
 
-  const value = useMemo(() => ({
-    session,
-    user: session?.user ?? null,
-    profile,
-    authReady,
-    loading: !authReady,
-    profileLoading,
-    isAdmin,
-    signOut,
-    refreshProfile,
-    patchProfile,
-  }), [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile, patchProfile]);
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      session,
+      user: session?.user ?? null,
+      profile,
+      authReady,
+      loading: !authReady,
+      profileLoading,
+      isAdmin,
+      signOut,
+      refreshProfile,
+      patchProfile,
+    }),
+    [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile, patchProfile],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }

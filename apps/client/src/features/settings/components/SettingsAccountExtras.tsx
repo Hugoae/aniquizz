@@ -36,14 +36,19 @@ export function SettingsAccountExtras() {
         </ul>
       </section>
 
-      <section aria-labelledby="settings-cookies-heading" className="border-t border-border/60 pt-5">
+      <section
+        aria-labelledby="settings-cookies-heading"
+        className="border-t border-border/60 pt-5"
+      >
         <div className="flex items-center gap-2">
           <Cookie className="h-4 w-4 text-primary" aria-hidden />
           <h3 id="settings-cookies-heading" className="font-bold text-foreground text-sm">
             {SETTINGS_COPY.cookiesHeading}
           </h3>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{SETTINGS_COPY.cookiesBody}</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          {SETTINGS_COPY.cookiesBody}
+        </p>
 
         <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-border/50 bg-secondary/20 px-3 py-3">
           <Label htmlFor="cookie-analytics" className="text-sm font-medium leading-snug">

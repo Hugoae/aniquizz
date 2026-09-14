@@ -9,7 +9,7 @@ corepack enable
 pnpm install
 # Create apps/client/.env, apps/server/.env, packages/database/.env from the examples
 pnpm db:generate
-pnpm dev
+pnpm dev                 # client + server + shared tsc --watch
 ```
 
 Integration and e2e tests need Supabase test accounts:
@@ -41,9 +41,12 @@ list a single human author.
 
 ### Code style
 
-- TypeScript `strict` mode; avoid `any`.
-- Prettier: `pnpm format` before committing.
+- TypeScript `strict` mode on shared, server, and client; avoid `any`. Client `tsc` runs in CI.
+- Prettier: `pnpm format` before committing. CI runs `pnpm format:check` (fail-fast, after the English-code check).
 - Business logic that can be pure → `packages/shared` with unit tests.
+- Mutating Socket.io payloads are Zod-parsed (`socketPayloads.ts`); do not trust the typed event signature at runtime.
+- Package imports: client ↛ server/database; shared ↛ react/express/prisma; server ↛ react/client. ESLint enforces this.
+- Client `jsx-a11y` is warn until a cleanup pass.
 
 ### Security
 
@@ -56,6 +59,8 @@ list a single human author.
 ```bash
 pnpm test           # unit + component + server integration (needs DATABASE_URL)
 pnpm test:e2e       # Playwright (needs E2E_EMAIL / E2E_PASSWORD)
+pnpm typecheck      # tsc across packages (client included)
+pnpm format:check   # Prettier; run `pnpm format` to fix
 pnpm check:english  # no French accents in server/shared comments
 ```
 

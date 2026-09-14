@@ -26,7 +26,9 @@ export function loadExpandedAnimes(): Set<number> {
     if (!raw) return new Set();
     const parsed = JSON.parse(raw) as unknown;
     return new Set(
-      Array.isArray(parsed) ? parsed.filter((v) => typeof v === 'number' && Number.isFinite(v)) : [],
+      Array.isArray(parsed)
+        ? parsed.filter((v) => typeof v === 'number' && Number.isFinite(v))
+        : [],
     );
   } catch {
     return new Set();

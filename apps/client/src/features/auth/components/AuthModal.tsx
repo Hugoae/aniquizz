@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -59,7 +65,9 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (error) throw error;
-        toast.success('Si un compte existe pour cet email, un lien de réinitialisation vient d\'être envoyé.');
+        toast.success(
+          "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé.",
+        );
         setMode('login');
       }
     } catch (err: unknown) {
@@ -69,10 +77,13 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
     }
   };
 
-  const title = mode === 'login' ? 'CONNEXION' : mode === 'signup' ? 'INSCRIPTION' : 'MOT DE PASSE OUBLIÉ';
+  const title =
+    mode === 'login' ? 'CONNEXION' : mode === 'signup' ? 'INSCRIPTION' : 'MOT DE PASSE OUBLIÉ';
   const description =
-    mode === 'login' ? 'Connectez-vous pour sauvegarder votre progression.'
-      : mode === 'signup' ? 'Rejoignez la communauté AniQuizz !'
+    mode === 'login'
+      ? 'Connectez-vous pour sauvegarder votre progression.'
+      : mode === 'signup'
+        ? 'Rejoignez la communauté AniQuizz !'
         : 'Entrez votre email pour recevoir un lien de réinitialisation.';
 
   return (
@@ -82,13 +93,10 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           <DialogTitle className="text-2xl font-black text-center gradient-text">
             {title}
           </DialogTitle>
-          <DialogDescription className="text-center">
-            {description}
-          </DialogDescription>
+          <DialogDescription className="text-center">{description}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-
           {mode === 'signup' && (
             <div className="space-y-2">
               <Label htmlFor="username">Pseudo</Label>
@@ -129,7 +137,10 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 {mode === 'login' && (
                   <button
                     type="button"
-                    onClick={() => { setMode('forgot'); setError(null); }}
+                    onClick={() => {
+                      setMode('forgot');
+                      setError(null);
+                    }}
                     className="text-xs text-primary hover:underline"
                   >
                     Mot de passe oublié ?
@@ -152,15 +163,22 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
               {mode === 'signup' && (
                 <>
                   <p className="text-xs text-muted-foreground">
-                    Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+                    Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un
+                    caractère spécial.
                   </p>
                   <p className="text-xs text-muted-foreground">
                     En créant un compte, vous acceptez nos{' '}
-                    <Link to="/legal/cgu" className="text-primary underline-offset-2 hover:underline">
+                    <Link
+                      to="/legal/cgu"
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
                       conditions d&apos;utilisation
                     </Link>{' '}
                     et notre{' '}
-                    <Link to="/legal/confidentialite" className="text-primary underline-offset-2 hover:underline">
+                    <Link
+                      to="/legal/confidentialite"
+                      className="text-primary underline-offset-2 hover:underline"
+                    >
                       politique de confidentialité
                     </Link>
                     .
@@ -179,27 +197,37 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
 
           <Button type="submit" className="w-full font-bold" disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            {mode === 'login' ? 'Se connecter' : mode === 'signup' ? "S'inscrire" : 'Envoyer le lien'}
+            {mode === 'login'
+              ? 'Se connecter'
+              : mode === 'signup'
+                ? "S'inscrire"
+                : 'Envoyer le lien'}
           </Button>
 
           <div className="text-center text-sm text-muted-foreground mt-4">
             {mode === 'forgot' ? (
               <button
                 type="button"
-                onClick={() => { setMode('login'); setError(null); }}
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                }}
                 className="text-primary hover:underline font-semibold"
               >
                 Retour à la connexion
               </button>
             ) : (
               <>
-                {mode === 'login' ? "Pas encore de compte ? " : "Déjà un compte ? "}
+                {mode === 'login' ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
                 <button
                   type="button"
-                  onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(null); }}
+                  onClick={() => {
+                    setMode(mode === 'login' ? 'signup' : 'login');
+                    setError(null);
+                  }}
                   className="text-primary hover:underline font-semibold"
                 >
-                  {mode === 'login' ? "Créer un compte" : "Se connecter"}
+                  {mode === 'login' ? 'Créer un compte' : 'Se connecter'}
                 </button>
               </>
             )}

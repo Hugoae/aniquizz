@@ -1,6 +1,12 @@
 import { Trophy, Zap, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
-import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasWatchedListLink, hasPlaylistSource, playlistSourceDisplayName } from '@aniquizz/shared';
+import {
+  withPlaylistPoolSoundCount,
+  withWatchedPoolSoundCount,
+  hasWatchedListLink,
+  hasPlaylistSource,
+  playlistSourceDisplayName,
+} from '@aniquizz/shared';
 
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -8,8 +14,15 @@ import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/features/auth/context/AuthContext';
-import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE } from '@/features/hub/components/config/watchedSource';
-import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from '@/features/hub/components/config/playlistSource';
+import {
+  isWatchedSourceBlocked,
+  checkWatchedPoolLaunch,
+  WATCHED_SOURCE_BLOCK_MESSAGE,
+} from '@/features/hub/components/config/watchedSource';
+import {
+  checkPlaylistPoolLaunch,
+  isPlaylistSourceBlocked,
+} from '@/features/hub/components/config/playlistSource';
 import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
@@ -90,7 +103,8 @@ export function SoloReady({
     allowFallback: gameSettings?.watchedAllowFallback,
     enabled: gameSettings?.soundSelection === 'playlist' && hasPlaylistSource(gameSettings ?? {}),
   });
-  const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
+  const playlistStats =
+    withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
   const playlistPoolCheck = checkPlaylistPoolLaunch(
     gameSettings?.soundSelection ?? 'random',
     gameSettings?.responseType ?? 'mix',
@@ -99,7 +113,11 @@ export function SoloReady({
     gameSettings?.precision,
   );
   const canPlay =
-    !isLaunchStarting && !watchedBlocked && !playlistBlocked && !poolCheck.blocked && !playlistPoolCheck.blocked;
+    !isLaunchStarting &&
+    !watchedBlocked &&
+    !playlistBlocked &&
+    !poolCheck.blocked &&
+    !playlistPoolCheck.blocked;
   const modeBadge = gameSettings ? soloLobbyModeBadge(gameSettings) : 'Standard · Solo';
   const ModeIcon = gameSettings?.gameType === 'sprint' ? Zap : Trophy;
 
@@ -141,7 +159,9 @@ export function SoloReady({
               />
 
               <div className="space-y-1">
-                <h1 className="text-2xl font-bold uppercase tracking-tight md:text-3xl">{playerName}</h1>
+                <h1 className="text-2xl font-bold uppercase tracking-tight md:text-3xl">
+                  {playerName}
+                </h1>
                 <p className="text-sm text-muted-foreground">Prêt à lancer votre blindtest ?</p>
               </div>
             </div>
@@ -196,11 +216,14 @@ export function SoloReady({
                     {poolCheck.reason}
                   </p>
                 )}
-                {!watchedBlocked && !playlistBlocked && playlistPoolCheck.blocked && playlistPoolCheck.reason && (
-                  <p className="text-center text-sm font-medium text-destructive" role="alert">
-                    {playlistPoolCheck.reason}
-                  </p>
-                )}
+                {!watchedBlocked &&
+                  !playlistBlocked &&
+                  playlistPoolCheck.blocked &&
+                  playlistPoolCheck.reason && (
+                    <p className="text-center text-sm font-medium text-destructive" role="alert">
+                      {playlistPoolCheck.reason}
+                    </p>
+                  )}
 
                 <Button variant="outline" onClick={onOpenSettings} className="gap-2 rounded-lg">
                   <Settings className="h-4 w-4" aria-hidden="true" />

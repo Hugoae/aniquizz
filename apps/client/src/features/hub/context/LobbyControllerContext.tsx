@@ -8,7 +8,9 @@ const LobbyControllerContext = createContext<LobbyController | null>(null);
 /** Single socket-backed lobby controller shared across all `/play/*` routes. */
 export function LobbyControllerProvider({ children }: { children: ReactNode }) {
   const value = useLobbyController();
-  return <LobbyControllerContext.Provider value={value}>{children}</LobbyControllerContext.Provider>;
+  return (
+    <LobbyControllerContext.Provider value={value}>{children}</LobbyControllerContext.Provider>
+  );
 }
 
 export function useLobbyControllerContext(): LobbyController {

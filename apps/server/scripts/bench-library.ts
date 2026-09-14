@@ -40,7 +40,9 @@ async function main(): Promise<void> {
     }
     const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
     console.log(path);
-    console.log(`  avg ${avg.toFixed(1)}ms · p50 ${percentile(samples, 50).toFixed(1)}ms · p95 ${percentile(samples, 95).toFixed(1)}ms`);
+    console.log(
+      `  avg ${avg.toFixed(1)}ms · p50 ${percentile(samples, 50).toFixed(1)}ms · p95 ${percentile(samples, 95).toFixed(1)}ms`,
+    );
   }
 }
 

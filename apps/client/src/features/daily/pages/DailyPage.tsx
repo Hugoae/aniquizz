@@ -71,7 +71,9 @@ export default function DailyPage() {
       if (payload.result) {
         playingRef.current = false;
         setResult(payload.result);
-        setToday((prev) => (prev ? { ...prev, status: 'completed', result: payload.result } : prev));
+        setToday((prev) =>
+          prev ? { ...prev, status: 'completed', result: payload.result } : prev,
+        );
         setView('result');
         invalidateDailyToday();
         return;
@@ -112,7 +114,10 @@ export default function DailyPage() {
       <SeoHead title={PAGE_TITLES.daily} path="/daily" />
       <Header />
       {view === 'result' && result ? (
-        <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-16">
+        <main
+          id="main-content"
+          className="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-16"
+        >
           <DailyResult
             result={result}
             username={profile?.username ?? 'Joueur'}
@@ -121,7 +126,10 @@ export default function DailyPage() {
           />
         </main>
       ) : (
-        <main id="main-content" className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-20 md:px-6">
+        <main
+          id="main-content"
+          className="relative flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-20 md:px-6"
+        >
           <div className="relative mx-auto flex min-h-0 w-full max-w-[90rem] flex-1 flex-col gap-3">
             <Button
               asChild

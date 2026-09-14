@@ -24,6 +24,8 @@ describe('leaderboard navigation state', () => {
     expect(getLeaderboardReturnMetric(null, '?from=leaderboard&metric=games')).toBe('games');
     expect(getLeaderboardReturnMetric(null, '?from=leaderboard')).toBe('xp');
     expect(getLeaderboardReturnMetric(null, '')).toBeNull();
-    expect(getLeaderboardReturnMetric(profileFromLeaderboardState('accuracy'), '')).toBe('accuracy');
+    expect(getLeaderboardReturnMetric(profileFromLeaderboardState('accuracy'), '')).toBe(
+      'accuracy',
+    );
   });
 });

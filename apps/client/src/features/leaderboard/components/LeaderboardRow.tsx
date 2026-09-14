@@ -11,7 +11,10 @@ import {
 } from '@/features/leaderboard/copy/leaderboardCopy';
 import type { ProfileFromLeaderboardState } from '@/features/leaderboard/lib/leaderboardNavigation';
 import { LEADERBOARD_METRIC_UI } from '@/features/leaderboard/lib/leaderboardMetricUi';
-import { podiumScoreClass, rowRankFrameClass } from '@/features/leaderboard/lib/leaderboardPodiumStyles';
+import {
+  podiumScoreClass,
+  rowRankFrameClass,
+} from '@/features/leaderboard/lib/leaderboardPodiumStyles';
 import { cn } from '@/lib/utils';
 
 interface LeaderboardRowProps {
@@ -22,7 +25,13 @@ interface LeaderboardRowProps {
   onSelect?: (entry: LeaderboardEntry) => void;
 }
 
-export function LeaderboardRow({ entry, isViewer, href, linkState, onSelect }: LeaderboardRowProps) {
+export function LeaderboardRow({
+  entry,
+  isViewer,
+  href,
+  linkState,
+  onSelect,
+}: LeaderboardRowProps) {
   const detail = formatLeaderboardDetail(entry);
   const MetricIcon = LEADERBOARD_METRIC_UI[entry.metric].icon;
   const topThree = entry.rank <= 3;

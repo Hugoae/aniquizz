@@ -65,8 +65,7 @@ function isTruthyEnv(value: string | undefined): boolean {
 const SKIP_ALL_SEQUELS = isTruthyEnv(process.env.ANILIST_SKIP_SEQUELS);
 const SKIP_LOCKED_SEQUELS =
   SKIP_ALL_SEQUELS || isTruthyEnv(process.env.ANILIST_SKIP_LOCKED_SEQUELS);
-const SKIP_NEW_SEQUELS =
-  SKIP_ALL_SEQUELS || isTruthyEnv(process.env.ANILIST_SKIP_NEW_SEQUELS);
+const SKIP_NEW_SEQUELS = SKIP_ALL_SEQUELS || isTruthyEnv(process.env.ANILIST_SKIP_NEW_SEQUELS);
 
 // Paths relative to database/scripts/
 const OUTPUT_DIR = path.join(__dirname, '../data');
@@ -138,7 +137,7 @@ function isValidStatus(status: string): boolean {
 }
 
 async function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const ANILIST_TIMEOUT_MS = 20_000;
@@ -171,7 +170,10 @@ async function fetchWithRetry(id: number, retries = 3): Promise<any> {
         label = 'HTTP 403 (blocked?)';
       } else {
         wait = 5_000;
-        label = e.code === 'ECONNABORTED' ? `timeout ${ANILIST_TIMEOUT_MS / 1000}s` : `${status ?? e.code ?? 'network error'}`;
+        label =
+          e.code === 'ECONNABORTED'
+            ? `timeout ${ANILIST_TIMEOUT_MS / 1000}s`
+            : `${status ?? e.code ?? 'network error'}`;
       }
       console.log(`\n🛑 AniList ${label} (id=${id}). Retry dans ${formatDuration(wait)}...`);
       await delay(wait);
@@ -222,7 +224,7 @@ function normalizeSeason(s: any) {
     siteUrl: `https://anilist.co/anime/${s.id}`,
     studio: studioName,
     isLocked: false,
-    songs: []
+    songs: [],
   };
 }
 
@@ -275,7 +277,8 @@ async function generateCompleteTree() {
   }
 
   if (lockedFranchises.length > 0) {
-    const sourceLabel = lockResult.source === 'database' ? 'database fallback' : 'manual_edits.json';
+    const sourceLabel =
+      lockResult.source === 'database' ? 'database fallback' : 'manual_edits.json';
     console.log(`🔐 ${lockedFranchises.length} locked franchise(s) loaded (${sourceLabel}).`);
   }
 
@@ -284,7 +287,9 @@ async function generateCompleteTree() {
       `Database has ${dbLockedFranchises} locked franchise(s) but none were loaded. Aborting protects manual edits. Continue anyway?`,
     );
     if (!proceed) {
-      console.error('❌ Step 1 aborted. Export locks with export_db_to_json.ts or set PIPELINE_ALLOW_UNPROTECTED=1.');
+      console.error(
+        '❌ Step 1 aborted. Export locks with export_db_to_json.ts or set PIPELINE_ALLOW_UNPROTECTED=1.',
+      );
       process.exit(1);
     }
   }
@@ -295,7 +300,7 @@ async function generateCompleteTree() {
   // the normal pipeline. Their ids are added to lockedAnimeIds so they are not
   // fetched again as a separate franchise during the top pass.
   if (lockedFranchises.length > 0 && !SKIP_LOCKED_SEQUELS) {
-    console.log("🔓 Recherche de nouvelles saisons pour les franchises verrouillées...");
+    console.log('🔓 Recherche de nouvelles saisons pour les franchises verrouillées...');
     let newlyAdded = 0;
     const lockedTotal = lockedFranchises.length;
 
@@ -353,7 +358,7 @@ async function generateCompleteTree() {
     let allAnimesRaw: any[] = [];
     let currentPage = 1;
 
-    console.log("📡 Téléchargement du Top Popularité...");
+    console.log('📡 Téléchargement du Top Popularité...');
     while (allAnimesRaw.length < ANIME_LIMIT) {
       try {
         process.stdout.write(`   Page ${currentPage}... `);
@@ -368,8 +373,9 @@ async function generateCompleteTree() {
         const media = response.data.data.Page.media;
         if (!media || media.length === 0) break;
 
-        const validMedia = media.filter((m: any) =>
-          isValidStatus(m.status) && !lockedAnimeIds.has(m.id) && !excludedAnimeIds.has(m.id)
+        const validMedia = media.filter(
+          (m: any) =>
+            isValidStatus(m.status) && !lockedAnimeIds.has(m.id) && !excludedAnimeIds.has(m.id),
         );
 
         allAnimesRaw = [...allAnimesRaw, ...validMedia];
@@ -380,7 +386,7 @@ async function generateCompleteTree() {
         }
 
         if (!response.data.data.Page.pageInfo.hasNextPage) break;
-        console.log("OK");
+        console.log('OK');
         currentPage++;
         await delay(DELAY_MS);
       } catch (e: any) {
@@ -390,24 +396,24 @@ async function generateCompleteTree() {
           await delay(wait);
           continue;
         }
-        console.error("\n❌ Erreur:", e.message);
+        console.error('\n❌ Erreur:', e.message);
         break;
       }
     }
     console.log(`\n✅ ${allAnimesRaw.length} NOUVEAUX animes racines récupérés.`);
 
-    allAnimesRaw.forEach(a => animeMap.set(a.id, a));
+    allAnimesRaw.forEach((a) => animeMap.set(a.id, a));
   }
 
   // 2b. Prequel expansion (symmetric to sequel walk): fetch earlier seasons missing
   // from the top list so a franchise is not broken when only season 2+ is popular.
-  console.log("🔙 Expansion des préquelles...");
+  console.log('🔙 Expansion des préquelles...');
   for (const seed of [...animeMap.values()]) {
     let current = seed;
     let depth = 0;
     while (depth < 15) {
-      const prequelEdge = current.relations.edges.find((e: any) =>
-        e.relationType === 'PREQUEL' && e.node.type === 'ANIME'
+      const prequelEdge = current.relations.edges.find(
+        (e: any) => e.relationType === 'PREQUEL' && e.node.type === 'ANIME',
       );
       if (!prequelEdge) break;
 
@@ -423,7 +429,7 @@ async function generateCompleteTree() {
           prequel = fetched;
           animeMap.set(prequelId, fetched);
         } else {
-          console.log(fetched ? `Stop (Statut: ${fetched.status})` : "Stop (Erreur/Non trouvé)");
+          console.log(fetched ? `Stop (Statut: ${fetched.status})` : 'Stop (Erreur/Non trouvé)');
           break;
         }
       }
@@ -434,7 +440,7 @@ async function generateCompleteTree() {
   }
 
   // 3. Build franchise groupings (extended set: top + prequels)
-  console.log("🧩 Identification des Franchises...");
+  console.log('🧩 Identification des Franchises...');
   const franchises: Record<string, any[]> = {};
 
   for (const anime of animeMap.values()) {
@@ -446,8 +452,8 @@ async function generateCompleteTree() {
 
     // Walk prequels to the root — all nodes are in animeMap now.
     while (depth < 15) {
-      const prequel = current.relations.edges.find((e: any) =>
-        e.relationType === 'PREQUEL' && e.node.type === 'ANIME'
+      const prequel = current.relations.edges.find(
+        (e: any) => e.relationType === 'PREQUEL' && e.node.type === 'ANIME',
       );
 
       if (prequel && animeMap.has(prequel.node.id)) {
@@ -461,14 +467,14 @@ async function generateCompleteTree() {
 
     const franchiseName = root.title.romaji;
     if (!franchises[franchiseName]) franchises[franchiseName] = [];
-    if (!franchises[franchiseName].find(a => a.id === anime.id)) {
+    if (!franchises[franchiseName].find((a) => a.id === anime.id)) {
       franchises[franchiseName].push(anime);
     }
   }
 
   // 4. Expansion des suites (Sequels)
   if (!SKIP_NEW_SEQUELS) {
-    console.log("🕵️ Expansion des suites...");
+    console.log('🕵️ Expansion des suites...');
     const franchiseNames = Object.keys(franchises);
 
     for (const fName of franchiseNames) {
@@ -512,10 +518,10 @@ async function generateCompleteTree() {
     console.log('⏭️  Expansion des suites (nouvelles franchises) ignorée.');
   }
 
-  console.log("\n💾 Traitement final et Fusion...");
+  console.log('\n💾 Traitement final et Fusion...');
 
   // 5. Normalize output rows
-  const processedNewFranchises = Object.keys(franchises).map(fName => {
+  const processedNewFranchises = Object.keys(franchises).map((fName) => {
     const seasons = franchises[fName];
     seasons.sort((a, b) => (a.seasonYear || 0) - (b.seasonYear || 0));
     const rootAnime = seasons[0];
@@ -530,7 +536,7 @@ async function generateCompleteTree() {
       isLocked: false,
       genres: rootAnime.genres,
       tags: rootAnime.tags.slice(0, 5).map((t: any) => t.name),
-      animes: cleanSeasons
+      animes: cleanSeasons,
     };
   });
 
@@ -542,7 +548,7 @@ async function generateCompleteTree() {
     finalMap.set(franchiseDisplayName(f), f);
   });
 
-  processedNewFranchises.forEach(f => {
+  processedNewFranchises.forEach((f) => {
     if (!finalMap.has(f.franchiseName)) {
       finalMap.set(f.franchiseName, f);
     }

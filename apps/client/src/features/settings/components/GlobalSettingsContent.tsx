@@ -37,13 +37,31 @@ export function GlobalSettingsContent({
       className={cn(isFloating ? 'px-4 pb-4 pt-2' : 'py-2')}
     >
       <TabsList className={cn(SETTINGS_SEGMENTED_TRACK, 'grid-cols-3')}>
-        <TabsTrigger value="general" className={cn(SETTINGS_SEGMENTED_OPTION, 'shadow-none data-[state=active]:shadow-none sm:text-sm')}>
+        <TabsTrigger
+          value="general"
+          className={cn(
+            SETTINGS_SEGMENTED_OPTION,
+            'shadow-none data-[state=active]:shadow-none sm:text-sm',
+          )}
+        >
           {SETTINGS_COPY.tabs.general}
         </TabsTrigger>
-        <TabsTrigger value="social" className={cn(SETTINGS_SEGMENTED_OPTION, 'shadow-none data-[state=active]:shadow-none sm:text-sm')}>
+        <TabsTrigger
+          value="social"
+          className={cn(
+            SETTINGS_SEGMENTED_OPTION,
+            'shadow-none data-[state=active]:shadow-none sm:text-sm',
+          )}
+        >
           {SETTINGS_COPY.tabs.social}
         </TabsTrigger>
-        <TabsTrigger value="account" className={cn(SETTINGS_SEGMENTED_OPTION, 'shadow-none data-[state=active]:shadow-none sm:text-sm')}>
+        <TabsTrigger
+          value="account"
+          className={cn(
+            SETTINGS_SEGMENTED_OPTION,
+            'shadow-none data-[state=active]:shadow-none sm:text-sm',
+          )}
+        >
           {SETTINGS_COPY.tabs.account}
         </TabsTrigger>
       </TabsList>

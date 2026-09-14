@@ -4,7 +4,12 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
-import { RESPONSE_MODES, PRECISION_OPTIONS, PRECISION_HELP, estimateMatchMinutes } from './formOptions';
+import {
+  RESPONSE_MODES,
+  PRECISION_OPTIONS,
+  PRECISION_HELP,
+  estimateMatchMinutes,
+} from './formOptions';
 import { FiltersSection } from './FiltersSection';
 
 interface RulesSectionProps {
@@ -14,10 +19,17 @@ interface RulesSectionProps {
   toggleDifficulty: (id: string) => void;
 }
 
-export function RulesSection({ config, update, toggleSoundType, toggleDifficulty }: RulesSectionProps) {
+export function RulesSection({
+  config,
+  update,
+  toggleSoundType,
+  toggleDifficulty,
+}: RulesSectionProps) {
   const estimatedMinutes = estimateMatchMinutes(config);
   const isSprint = config.gameType === 'sprint';
-  const responseModes = isSprint ? RESPONSE_MODES.filter((mode) => mode.id === 'typing') : RESPONSE_MODES;
+  const responseModes = isSprint
+    ? RESPONSE_MODES.filter((mode) => mode.id === 'typing')
+    : RESPONSE_MODES;
 
   return (
     <div className="space-y-3">
@@ -60,14 +72,21 @@ export function RulesSection({ config, update, toggleSoundType, toggleDifficulty
       </div>
 
       <div className="space-y-2">
-        <SectionHeader icon={Keyboard} title="Mode de réponse" tooltip="Comment les joueurs saisissent leur réponse." />
+        <SectionHeader
+          icon={Keyboard}
+          title="Mode de réponse"
+          tooltip="Comment les joueurs saisissent leur réponse."
+        />
         <div className={cn('grid gap-2', isSprint ? 'grid-cols-1 max-w-[11rem]' : 'grid-cols-3')}>
           {responseModes.map(({ id, label, description, icon: Icon }) => (
             <OptionButton
               key={id}
               active={isSprint ? true : config.responseType === id}
               onClick={isSprint ? undefined : () => update({ responseType: id })}
-              className={cn('flex flex-col items-center gap-1 p-2 text-center', isSprint && 'cursor-default')}
+              className={cn(
+                'flex flex-col items-center gap-1 p-2 text-center',
+                isSprint && 'cursor-default',
+              )}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               <span className="text-[11px] font-bold uppercase">{label}</span>
@@ -78,22 +97,18 @@ export function RulesSection({ config, update, toggleSoundType, toggleDifficulty
       </div>
 
       <div className="space-y-2">
-        <SectionHeader
-          icon={Target}
-          title="Précision"
-          tooltip={PRECISION_HELP}
-        />
+        <SectionHeader icon={Target} title="Précision" tooltip={PRECISION_HELP} />
         <div className="grid grid-cols-3 gap-2">
           {PRECISION_OPTIONS.map(({ id, label, description, icon: Icon }) => (
-              <OptionButton
-                key={id}
-                active={config.precision === id}
-                onClick={() => update({ precision: id })}
-                className="p-2.5 text-left"
-              >
-                <div className="flex items-center gap-2 text-xs font-bold">
-                  <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
-                </div>
+            <OptionButton
+              key={id}
+              active={config.precision === id}
+              onClick={() => update({ precision: id })}
+              className="p-2.5 text-left"
+            >
+              <div className="flex items-center gap-2 text-xs font-bold">
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
+              </div>
               <div className="mt-0.5 text-[10px] text-muted-foreground">{description}</div>
             </OptionButton>
           ))}

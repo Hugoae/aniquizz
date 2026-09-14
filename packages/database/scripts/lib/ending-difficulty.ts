@@ -65,7 +65,8 @@ export const medianDifficulty = (values: string[]): PipelineDifficulty | null =>
 };
 
 export const openingsFromSongs = (
-  songs: Array<{ songType?: string; type?: string; sequence?: number; difficulty?: string }> | undefined,
+  songs:
+    Array<{ songType?: string; type?: string; sequence?: number; difficulty?: string }> | undefined,
 ): OpeningRef[] => {
   if (!songs?.length) return [];
   return songs
@@ -76,21 +77,26 @@ export const openingsFromSongs = (
     }));
 };
 
-export const resolveEndingDifficulty = (
-  input: EndingDifficultyInput,
-): PipelineDifficulty | null => resolveEndingDifficultyWithSource(input)?.difficulty ?? null;
+export const resolveEndingDifficulty = (input: EndingDifficultyInput): PipelineDifficulty | null =>
+  resolveEndingDifficultyWithSource(input)?.difficulty ?? null;
 
 export const resolveEndingDifficultyWithSource = (
   input: EndingDifficultyInput,
 ): { difficulty: PipelineDifficulty; source: EndingDifficultySource } | null => {
-  const sameSequence = input.sameAnimeOpenings.find((opening) => opening.sequence === input.sequence);
+  const sameSequence = input.sameAnimeOpenings.find(
+    (opening) => opening.sequence === input.sequence,
+  );
   if (sameSequence) {
     const difficulty = toPipelineDifficulty(sameSequence.difficulty);
     return difficulty ? { difficulty, source: 'same-sequence' } : null;
   }
-  const seasonMedian = medianDifficulty(input.sameAnimeOpenings.map((opening) => opening.difficulty));
+  const seasonMedian = medianDifficulty(
+    input.sameAnimeOpenings.map((opening) => opening.difficulty),
+  );
   if (seasonMedian) return { difficulty: seasonMedian, source: 'same-anime' };
-  const franchiseMedian = medianDifficulty(input.franchiseOpenings.map((opening) => opening.difficulty));
+  const franchiseMedian = medianDifficulty(
+    input.franchiseOpenings.map((opening) => opening.difficulty),
+  );
   if (franchiseMedian) return { difficulty: franchiseMedian, source: 'franchise' };
   return null;
 };

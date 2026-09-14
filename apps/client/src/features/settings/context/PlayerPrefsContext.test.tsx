@@ -38,11 +38,7 @@ vi.mock('@/features/auth/context/AuthContext', () => ({
   useAuth: () => ({ user: authMock.user, profile: authMock.profile }),
 }));
 
-import {
-  PLAYER_PREFS_SYNC_MS,
-  PlayerPrefsProvider,
-  usePlayerPrefs,
-} from './PlayerPrefsContext';
+import { PLAYER_PREFS_SYNC_MS, PlayerPrefsProvider, usePlayerPrefs } from './PlayerPrefsContext';
 
 const wrapper = ({ children }: { children: ReactNode }) => (
   <PlayerPrefsProvider>{children}</PlayerPrefsProvider>
@@ -151,8 +147,7 @@ describe('PlayerPrefsProvider', () => {
 
     act(() => {
       const onPrefs = socketMock.handlers.get('profile:prefs') as
-        | ((payload: PlayerPrefs) => void)
-        | undefined;
+        ((payload: PlayerPrefs) => void) | undefined;
       onPrefs?.({ ...PLAYER_PREFS_DEFAULTS, audioVolume: 20, audioMuted: false });
     });
 

@@ -75,7 +75,11 @@ describe('getFuzzySuggestions', () => {
     { name: 'Naruto', franchise: 'Naruto', altNames: ['NARUTO'] },
     { name: 'Naruto Shippuden', franchise: 'Naruto', altNames: [] },
     { name: 'Bleach', franchise: 'Bleach', altNames: [] },
-    { name: 'Fullmetal Alchemist', franchise: 'Fullmetal Alchemist', altNames: ['Hagane no Renkinjutsushi'] },
+    {
+      name: 'Fullmetal Alchemist',
+      franchise: 'Fullmetal Alchemist',
+      altNames: ['Hagane no Renkinjutsushi'],
+    },
     { name: "Darwin's Game", franchise: "Darwin's Game", altNames: [] },
     { name: 'Steins Gate', franchise: 'Steins Gate', altNames: [] },
   ];
@@ -107,7 +111,11 @@ describe('getFuzzySuggestions', () => {
     const res = labels(
       getFuzzySuggestions(
         [
-          { name: 'Shingeki no Kyojin', franchise: 'Shingeki no Kyojin', altNames: ['Attack on Titan'] },
+          {
+            name: 'Shingeki no Kyojin',
+            franchise: 'Shingeki no Kyojin',
+            altNames: ['Attack on Titan'],
+          },
           { name: 'Shingeki no Kyojin OVA', franchise: null, altNames: [] },
           { name: 'Shingeki no Kyojin: LOST GIRLS', franchise: null, altNames: [] },
         ],
@@ -143,7 +151,9 @@ describe('getFuzzySuggestions', () => {
         altNames: ['Ijiranaide, Nagatoro-san 2nd Attack'],
       },
     ];
-    expect(labels(getFuzzySuggestions(snkCatalogue, 'attack', 'franchise'))).toEqual(['Attack on Titan']);
+    expect(labels(getFuzzySuggestions(snkCatalogue, 'attack', 'franchise'))).toEqual([
+      'Attack on Titan',
+    ]);
   });
 
   it('franchise mode keeps single-anime franchises with non-latin alt names', () => {
@@ -156,7 +166,9 @@ describe('getFuzzySuggestions', () => {
         altNames: ['Black Clover', 'ブラッククローバー', 'Чёрный клевер'],
       },
     ];
-    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual(['Black Clover']);
+    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual([
+      'Black Clover',
+    ]);
     expect(labels(getFuzzySuggestions(catalogue, 'black', 'franchise'))).toContain('Black Clover');
   });
 
@@ -174,7 +186,9 @@ describe('getFuzzySuggestions', () => {
     expect(labels(getFuzzySuggestions(catalogue, 'lie in april', 'franchise'))).toEqual([
       'Your Lie in April',
     ]);
-    expect(labels(getFuzzySuggestions(catalogue, 'april', 'franchise'))).toEqual(['Your Lie in April']);
+    expect(labels(getFuzzySuggestions(catalogue, 'april', 'franchise'))).toEqual([
+      'Your Lie in April',
+    ]);
   });
 
   it('matches single-word titles like Parasyte', () => {
@@ -197,20 +211,31 @@ describe('getFuzzySuggestions', () => {
       {
         name: 'Cyberpunk: Edgerunners',
         franchise: 'Cyberpunk: Edgerunners',
-        altNames: ['Cyberpunk: Edgerunners', 'サイバーパンク エッジランナーズ', 'Киберпанк: Бегущие по краю'],
+        altNames: [
+          'Cyberpunk: Edgerunners',
+          'サイバーパンク エッジランナーズ',
+          'Киберпанк: Бегущие по краю',
+        ],
       },
       {
         name: 'Fullmetal Alchemist: Brotherhood',
         franchise: 'Fullmetal Alchemist: Brotherhood',
-        altNames: ['Fullmetal Alchemist: Brotherhood', 'Hagane no Renkinjutsushi: Fullmetal Alchemist'],
+        altNames: [
+          'Fullmetal Alchemist: Brotherhood',
+          'Hagane no Renkinjutsushi: Fullmetal Alchemist',
+        ],
       },
     ];
 
-    expect(labels(getFuzzySuggestions(catalogue, 'cyberpunk', 'franchise'))).toEqual(['Cyberpunk: Edgerunners']);
+    expect(labels(getFuzzySuggestions(catalogue, 'cyberpunk', 'franchise'))).toEqual([
+      'Cyberpunk: Edgerunners',
+    ]);
     expect(labels(getFuzzySuggestions(catalogue, 'cyberpunk edgerunners', 'franchise'))).toEqual([
       'Cyberpunk: Edgerunners',
     ]);
-    expect(labels(getFuzzySuggestions(catalogue, 'edgerunner', 'franchise'))).toEqual(['Cyberpunk: Edgerunners']);
+    expect(labels(getFuzzySuggestions(catalogue, 'edgerunner', 'franchise'))).toEqual([
+      'Cyberpunk: Edgerunners',
+    ]);
     expect(labels(getFuzzySuggestions(catalogue, 'brotherhood', 'franchise'))).toEqual([
       'Fullmetal Alchemist: Brotherhood',
     ]);
@@ -218,7 +243,11 @@ describe('getFuzzySuggestions', () => {
 
   it('franchise mode does not bubble to a parent via empty normalized alt names', () => {
     const catalogue: FuzzyAnimeCandidate[] = [
-      { name: 'Kizumonogatari I: Tekketsu-hen', franchise: 'Kizumonogatari I: Tekketsu-hen', altNames: [] },
+      {
+        name: 'Kizumonogatari I: Tekketsu-hen',
+        franchise: 'Kizumonogatari I: Tekketsu-hen',
+        altNames: [],
+      },
       { name: 'Kizumonogatari II', franchise: 'Kizumonogatari I: Tekketsu-hen', altNames: [] },
       {
         name: 'Black Clover',
@@ -227,7 +256,9 @@ describe('getFuzzySuggestions', () => {
       },
     ];
 
-    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual(['Black Clover']);
+    expect(labels(getFuzzySuggestions(catalogue, 'black clover', 'franchise'))).toEqual([
+      'Black Clover',
+    ]);
     expect(labels(getFuzzySuggestions(catalogue, 'black', 'franchise'))).not.toEqual([
       'Kizumonogatari I: Tekketsu-hen',
     ]);
@@ -305,7 +336,13 @@ describe('getFuzzySuggestions', () => {
 
   it('matches via alt names but displays the primary title only', () => {
     const res = getFuzzySuggestions(
-      [{ name: 'Shingeki no Kyojin', franchise: 'Shingeki no Kyojin', altNames: ["L'Attaque des Titans", 'SNK'] }],
+      [
+        {
+          name: 'Shingeki no Kyojin',
+          franchise: 'Shingeki no Kyojin',
+          altNames: ["L'Attaque des Titans", 'SNK'],
+        },
+      ],
       'attaque',
       'anime',
     );
@@ -323,7 +360,13 @@ describe('getFuzzySuggestions', () => {
 
   it('never uses alt names as the suggestion label', () => {
     const res = getFuzzySuggestions(
-      [{ name: 'Fullmetal Alchemist', franchise: 'Fullmetal Alchemist', altNames: ['Hagane no Renkinjutsushi'] }],
+      [
+        {
+          name: 'Fullmetal Alchemist',
+          franchise: 'Fullmetal Alchemist',
+          altNames: ['Hagane no Renkinjutsushi'],
+        },
+      ],
       'hagane',
       'anime',
     );

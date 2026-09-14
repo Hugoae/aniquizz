@@ -13,7 +13,8 @@ export const SETTINGS_COPY = {
   analyticsAria: "Active ou désactive les cookies d'analyse optionnels.",
   reopenBanner: 'Rouvrir le bandeau cookies',
   audioHeading: 'Audio',
-  audioHint: 'Ce réglage s’applique partout : parties, librairie, aperçus du profil et notifications.',
+  audioHint:
+    'Ce réglage s’applique partout : parties, librairie, aperçus du profil et notifications.',
   muteOn: 'Son coupé',
   muteOff: 'Son activé',
   muteAriaOn: 'Activer le son',
@@ -23,7 +24,8 @@ export const SETTINGS_COPY = {
   mutedHint: (n: number) => `Le volume est à ${n} %, mais le son est coupé.`,
   signInToSync: 'Connectez-vous pour retrouver ces réglages sur tous vos appareils.',
   motionHeading: 'Animations',
-  motionHint: 'Auto suit le système. Réduit coupe les animations. Complet les force, même si le système les réduit.',
+  motionHint:
+    'Auto suit le système. Réduit coupe les animations. Complet les force, même si le système les réduit.',
   motionAuto: 'Auto',
   motionReduced: 'Réduit',
   motionFull: 'Complet',
@@ -62,7 +64,8 @@ export const SETTINGS_COPY = {
   blockedConfirmBody: (username: string) =>
     `${username} pourra à nouveau voir votre profil et vous envoyer une demande d’ami.`,
   integrationsHeading: 'Listes AniList / MAL',
-  integrationsHint: 'Les deux comptes peuvent rester liés. Une seule source est active pour le mode Watched.',
+  integrationsHint:
+    'Les deux comptes peuvent rester liés. Une seule source est active pour le mode Watched.',
   integrationsManage: 'Gérer dans les paramètres',
   listActive: 'Source active',
   listInactive: 'Lié, inactif',

@@ -53,7 +53,13 @@ describe('tracksFromPrior', () => {
         finished: false,
       },
     });
-    expect(tracksFromPrior(previous, next)).toEqual(['correct', 'correct', 'empty', 'empty', 'empty']);
+    expect(tracksFromPrior(previous, next)).toEqual([
+      'correct',
+      'correct',
+      'empty',
+      'empty',
+      'empty',
+    ]);
   });
 
   it('rebuilds tracks from the previous round when the next payload has none', () => {

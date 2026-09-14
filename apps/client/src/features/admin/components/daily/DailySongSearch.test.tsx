@@ -65,9 +65,7 @@ describe('DailySongSearch', () => {
     await user.type(screen.getByPlaceholderText(/titre, artiste ou anime/i), 'naruto');
 
     await waitFor(() => {
-      expect(searchDailySongs).toHaveBeenCalledWith(
-        expect.objectContaining({ query: 'naruto' }),
-      );
+      expect(searchDailySongs).toHaveBeenCalledWith(expect.objectContaining({ query: 'naruto' }));
     });
     expect(await screen.findByRole('option', { name: /remember/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: /silhouette/i })).toBeInTheDocument();

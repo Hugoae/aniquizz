@@ -8,7 +8,11 @@ vi.mock('@aniquizz/database', () => ({
   prisma: { song: { findMany: mocks.findMany } },
 }));
 
-import { DAILY_PLAYABLE_POOL_TTL_MS, invalidateDailyPlayablePool, loadPlayablePool } from './dailyPlayablePool';
+import {
+  DAILY_PLAYABLE_POOL_TTL_MS,
+  invalidateDailyPlayablePool,
+  loadPlayablePool,
+} from './dailyPlayablePool';
 
 describe('loadPlayablePool', () => {
   beforeEach(() => {

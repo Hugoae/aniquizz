@@ -71,7 +71,10 @@ export function summarizeSocketPayload(
 
   if (direction === 'outbound' && event === 'anime:search_results') {
     const p = payload as { results?: unknown[] } | undefined;
-    return { _summary: 'anime_search_results', count: Array.isArray(p?.results) ? p.results.length : undefined };
+    return {
+      _summary: 'anime_search_results',
+      count: Array.isArray(p?.results) ? p.results.length : undefined,
+    };
   }
 
   if (direction === 'outbound' && event === 'game_state_sync') {

@@ -9,16 +9,19 @@ describe('resolvePoolQueryFilters', () => {
   });
 
   it('keeps Moyen distinct from Facile so both-checked is a real union', () => {
-    expect(
-      resolvePoolQueryFilters({ types: ['ending'], difficulty: ['medium'] }),
-    ).toEqual({ types: ['ending'], difficulty: ['medium'] });
+    expect(resolvePoolQueryFilters({ types: ['ending'], difficulty: ['medium'] })).toEqual({
+      types: ['ending'],
+      difficulty: ['medium'],
+    });
 
-    expect(
-      resolvePoolQueryFilters({ types: ['ending'], difficulty: ['easy'] }),
-    ).toEqual({ types: ['ending'], difficulty: ['easy'] });
+    expect(resolvePoolQueryFilters({ types: ['ending'], difficulty: ['easy'] })).toEqual({
+      types: ['ending'],
+      difficulty: ['easy'],
+    });
 
-    expect(
-      resolvePoolQueryFilters({ types: ['ending'], difficulty: ['easy', 'medium'] }),
-    ).toEqual({ types: ['ending'], difficulty: ['medium', 'easy'] });
+    expect(resolvePoolQueryFilters({ types: ['ending'], difficulty: ['easy', 'medium'] })).toEqual({
+      types: ['ending'],
+      difficulty: ['medium', 'easy'],
+    });
   });
 });

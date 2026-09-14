@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
-import { Ban, MicOff } from "lucide-react";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { formatRemaining, isSanctionActive } from "@/lib/suspension";
+import { useEffect, useState } from 'react';
+import { Ban, MicOff } from 'lucide-react';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { formatRemaining, isSanctionActive } from '@/lib/suspension';
 
 /**
  * Header indicator shown to a player who is currently banned or muted.
@@ -43,9 +43,7 @@ export function SuspensionBadge() {
       title="Vous êtes réduit au silence : le chat est désactivé."
     >
       <MicOff className="h-4 w-4" />
-      <span className="text-xs font-semibold">
-        Muet — {formatRemaining(profile.mutedUntil)}
-      </span>
+      <span className="text-xs font-semibold">Muet — {formatRemaining(profile.mutedUntil)}</span>
     </div>
   );
 }

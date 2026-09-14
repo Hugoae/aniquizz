@@ -80,11 +80,7 @@ export const consumeRateLimitBucket = async (
   };
 };
 
-const applyRateLimitHeaders = (
-  res: Response,
-  max: number,
-  decision: RateLimitDecision,
-): void => {
+const applyRateLimitHeaders = (res: Response, max: number, decision: RateLimitDecision): void => {
   const remaining = Math.max(0, max - decision.count);
   res.setHeader('RateLimit-Limit', String(max));
   res.setHeader('RateLimit-Remaining', String(remaining));

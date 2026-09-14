@@ -1,8 +1,8 @@
-import path from "path";
-import dotenv from "dotenv";
-import { createR2Client, getR2Bucket, r2BackfillCacheControl } from "./lib/r2-client";
+import path from 'path';
+import dotenv from 'dotenv';
+import { createR2Client, getR2Bucket, r2BackfillCacheControl } from './lib/r2-client';
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 /**
  * One-off backfill: set an immutable Cache-Control on every existing R2 video so
@@ -19,6 +19,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-  console.error("Cache-Control backfill failed:", error);
+  console.error('Cache-Control backfill failed:', error);
   process.exit(1);
 });

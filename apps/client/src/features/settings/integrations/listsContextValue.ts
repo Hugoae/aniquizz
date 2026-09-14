@@ -1,9 +1,5 @@
 import { createContext, useContext } from 'react';
-import type {
-  ListOperation,
-  ListsStatusPayload,
-  WatchedListProvider,
-} from '@aniquizz/shared';
+import type { ListOperation, ListsStatusPayload, WatchedListProvider } from '@aniquizz/shared';
 
 export interface PendingListOperation {
   requestId: string;

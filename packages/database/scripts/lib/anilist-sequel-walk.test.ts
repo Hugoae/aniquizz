@@ -7,28 +7,20 @@ import {
   type AniListMedia,
 } from './anilist-sequel-walk';
 
-function media(
-  id: number,
-  sequelId: number | null,
-  status = 'FINISHED',
-): AniListMedia {
+function media(id: number, sequelId: number | null, status = 'FINISHED'): AniListMedia {
   return {
     id,
     status,
     title: { romaji: `Anime ${id}` },
     relations: {
-      edges: sequelId
-        ? [{ relationType: 'SEQUEL', node: { id: sequelId, type: 'ANIME' } }]
-        : [],
+      edges: sequelId ? [{ relationType: 'SEQUEL', node: { id: sequelId, type: 'ANIME' } }] : [],
     },
   };
 }
 
 describe('findSequelEdge', () => {
   it('returns the first anime SEQUEL edge', () => {
-    const edge = findSequelEdge(
-      media(1, 2),
-    );
+    const edge = findSequelEdge(media(1, 2));
     assert.equal(edge?.node.id, 2);
   });
 
@@ -131,12 +123,7 @@ describe('expandLockedFranchiseSequels', () => {
     });
     const franchise = { franchiseName: 'Excluded', animes: [{ id: 1 }] };
 
-    await expandLockedFranchiseSequels(
-      franchise,
-      new Set([50]),
-      new Set([1]),
-      fetchMedia,
-    );
+    await expandLockedFranchiseSequels(franchise, new Set([50]), new Set([1]), fetchMedia);
 
     assert.deepEqual(calls, [1]);
   });

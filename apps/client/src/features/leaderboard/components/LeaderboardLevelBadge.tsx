@@ -12,7 +12,9 @@ export function LeaderboardLevelBadge({ level, size = 'md' }: LeaderboardLevelBa
     <span
       className={cn(
         'absolute -bottom-1 left-1/2 flex -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border-2 border-card bg-gradient-to-br from-primary to-accent font-black tabular-nums text-primary-foreground shadow-md',
-        size === 'sm' ? 'h-5 min-w-[1.85rem] px-1 text-[9px]' : 'h-6 min-w-[2.25rem] px-1.5 text-[11px]',
+        size === 'sm'
+          ? 'h-5 min-w-[1.85rem] px-1 text-[9px]'
+          : 'h-6 min-w-[2.25rem] px-1.5 text-[11px]',
       )}
       title={LEADERBOARD_COPY.level(level)}
     >

@@ -43,7 +43,6 @@ const baseConfig: RoomConfig = {
   password: '',
   maxPlayers: 1,
   roomName: 'Test',
-  name: 'Test',
   hostName: 'Host',
   hostAvatar: 'player1',
 };
@@ -140,10 +139,16 @@ describe('GameConfigForm', () => {
 
     expect(screen.getByText(/disponible/i)).toBeInTheDocument();
     expect(
-      screen.getByText((_, el) => el?.tagName === 'P' && (el.textContent ?? '').replace(/\s/g, '').startsWith('3002')),
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'P' && (el.textContent ?? '').replace(/\s/g, '').startsWith('3002'),
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText((_, el) => el?.tagName === 'P' && (el.textContent ?? '').replace(/\s/g, '').startsWith('846')),
+      screen.getByText(
+        (_, el) =>
+          el?.tagName === 'P' && (el.textContent ?? '').replace(/\s/g, '').startsWith('846'),
+      ),
     ).toBeInTheDocument();
     expect(screen.getByText(/uniquement les cases cochées/i)).toBeInTheDocument();
   });

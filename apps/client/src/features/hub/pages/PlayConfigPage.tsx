@@ -12,10 +12,7 @@ import type { GameType, RoomConfig } from '@aniquizz/shared';
 import { GameConfigForm } from '@/features/hub/components/GameConfigForm';
 import { GameTypeSelector } from '@/features/hub/components/GameTypeSelector';
 import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
-import {
-  defaultConfig,
-  defaultRoomConfig,
-} from '@/features/hub/hooks/useLobbyController';
+import { defaultConfig, defaultRoomConfig } from '@/features/hub/hooks/useLobbyController';
 import { useLobbyControllerContext } from '@/features/hub/context/LobbyControllerContext';
 
 export type PlayConfigIntent = 'solo' | 'create' | 'edit';
@@ -38,7 +35,10 @@ function intentCopy(intent: PlayConfigIntent) {
   }
 }
 
-function intentTitle(intent: PlayConfigIntent, isSoloEdit: boolean): { lead: string; accent: string } {
+function intentTitle(
+  intent: PlayConfigIntent,
+  isSoloEdit: boolean,
+): { lead: string; accent: string } {
   switch (intent) {
     case 'solo':
       return { lead: 'Partie', accent: 'solo' };
@@ -84,7 +84,11 @@ export function PlayConfigPage() {
     }
   }, [isEdit, locationState?.draft]);
 
-  const formConfig = isSolo ? config : isEdit ? (editDraft ?? roomConfig) : roomConfig;
+  const formConfig: RoomConfig = isSolo
+    ? (config as RoomConfig)
+    : isEdit
+      ? (editDraft ?? roomConfig)
+      : roomConfig;
   const formSetter: Dispatch<SetStateAction<RoomConfig>> = isSolo
     ? (setConfig as Dispatch<SetStateAction<RoomConfig>>)
     : isEdit
@@ -96,16 +100,18 @@ export function PlayConfigPage() {
       : setRoomConfig;
 
   const copy = intentCopy(intent);
-  const titleParts = intentTitle(intent, isEdit && formConfig.maxPlayers === 1);
-  const hideRoomSettings = isEdit && formConfig.maxPlayers === 1;
+  const formMaxPlayers = 'maxPlayers' in formConfig ? formConfig.maxPlayers : 1;
+  const titleParts = intentTitle(intent, isEdit && formMaxPlayers === 1);
+  const hideRoomSettings = isEdit && formMaxPlayers === 1;
   const soloOnlyModes = isSolo || hideRoomSettings;
 
   const watchedKey = useMemo(
-    () => lobbyPlayers
-      .filter((p) => !p.isBot)
-      .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
-      .sort()
-      .join(','),
+    () =>
+      lobbyPlayers
+        .filter((p) => !p.isBot)
+        .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
+        .sort()
+        .join(','),
     [lobbyPlayers],
   );
 
@@ -162,8 +168,7 @@ export function PlayConfigPage() {
                     Configuration
                   </p>
                   <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
-                    {titleParts.lead}{' '}
-                    <span className="gradient-text">{titleParts.accent}</span>
+                    {titleParts.lead} <span className="gradient-text">{titleParts.accent}</span>
                   </h1>
                 </div>
 

@@ -25,7 +25,10 @@ function pickRepresentative(players: GamePlayer[]): GamePlayer {
 }
 
 /** Group sorted players by competition rank and pick up to 3 distinct rank tiers for the podium. */
-export function buildPodiumLayout(sortedPlayers: GamePlayer[], ranks: Map<string, number>): PodiumLayout {
+export function buildPodiumLayout(
+  sortedPlayers: GamePlayer[],
+  ranks: Map<string, number>,
+): PodiumLayout {
   const distinctRanks = getDistinctRanks(sortedPlayers, ranks);
 
   const slots: PodiumSlot[] = distinctRanks.slice(0, 3).map((rank, index) => {
@@ -49,7 +52,10 @@ export function buildPodiumLayout(sortedPlayers: GamePlayer[], ranks: Map<string
 }
 
 /** Competition ranks in score order (e.g. [1, 2, 5, 6] when ties skip slots). */
-export function getDistinctRanks(sortedPlayers: GamePlayer[], ranks: Map<string, number>): number[] {
+export function getDistinctRanks(
+  sortedPlayers: GamePlayer[],
+  ranks: Map<string, number>,
+): number[] {
   const distinct: number[] = [];
   for (const player of sortedPlayers) {
     const rank = ranks.get(String(player.id));

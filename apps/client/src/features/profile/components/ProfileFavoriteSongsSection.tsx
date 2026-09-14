@@ -22,9 +22,7 @@ import { useSongLikes } from '@/features/likes/context/SongLikesContext';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
 import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
-import {
-  isRevealAccentColor,
-} from '@/features/game/lib/revealMeta';
+import { isRevealAccentColor } from '@/features/game/lib/revealMeta';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 import { ProfilePinnedFavoritesDialog } from '@/features/profile/components/ProfilePinnedFavoritesDialog';
 
@@ -56,11 +54,7 @@ function FavoriteSongRow({
   return (
     <div
       className="overflow-hidden rounded-xl border border-border/60 bg-card/30 transition-colors hover:border-primary/20 hover:bg-card/50"
-      style={
-        accent
-          ? { borderLeftWidth: 3, borderLeftColor: `${accent}99` }
-          : undefined
-      }
+      style={accent ? { borderLeftWidth: 3, borderLeftColor: `${accent}99` } : undefined}
     >
       <div className="group flex items-center gap-3 p-3 sm:gap-4">
         <button
@@ -309,9 +303,7 @@ export function ProfileFavoriteSongsSection({
       <div className="relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-card sm:p-6">
         {loading && <FavoriteSongsSkeleton />}
 
-        {!loading && error && (
-          <p className="text-center text-sm text-muted-foreground">{error}</p>
-        )}
+        {!loading && error && <p className="text-center text-sm text-muted-foreground">{error}</p>}
 
         {!loading && !error && visibleSongs.length === 0 && (
           <div className="relative z-10 py-6 text-center">

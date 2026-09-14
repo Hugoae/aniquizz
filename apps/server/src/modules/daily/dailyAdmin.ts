@@ -7,8 +7,18 @@ import {
 } from '@aniquizz/shared';
 import { getChoiceCandidates } from '../game/gameService';
 import { DailyHttpError } from './dailyErrors';
-import { generateDailyChallenge, loadChallengeByDate, loadRecentExclusions } from './dailyGenerator';
-import { franchiseKeyFor, mulberry32, pickDailyReplacement, toDailySongCandidate, type Rng } from './dailySelection';
+import {
+  generateDailyChallenge,
+  loadChallengeByDate,
+  loadRecentExclusions,
+} from './dailyGenerator';
+import {
+  franchiseKeyFor,
+  mulberry32,
+  pickDailyReplacement,
+  toDailySongCandidate,
+  type Rng,
+} from './dailySelection';
 import { loadPlayablePool } from './dailyPlayablePool';
 import { recomputeChallengeResults } from './dailyResults';
 import { heardSongsForDailyAttempt } from './dailyAttemptLifecycle';
@@ -55,7 +65,10 @@ export async function listDailyAdmin(now = new Date()) {
       const snapshots = snapshotsFromJson(row.rounds);
       const iso = isoDayFromDate(row.challengeDate);
       const attemptCount = row._count.attempts;
-      const recent = recents[index] ?? { songIds: new Set<number>(), franchiseKeys: new Set<string>() };
+      const recent = recents[index] ?? {
+        songIds: new Set<number>(),
+        franchiseKeys: new Set<string>(),
+      };
       return {
         id: row.id,
         challengeDate: iso,
@@ -115,14 +128,23 @@ const rebuildRound = async (songId: number) => {
     where: { id: songId },
     select: DAILY_SONG_SELECT,
   });
-  if (!song || song.downloadStatus !== 'COMPLETED' || (song.songType !== 'OP' && song.songType !== 'ED')) {
+  if (
+    !song ||
+    song.downloadStatus !== 'COMPLETED' ||
+    (song.songType !== 'OP' && song.songType !== 'ED')
+  ) {
     throw new DailyHttpError(400, 'Ce son n’est pas jouable.');
   }
   const pool = await getChoiceCandidates('anime');
   return snapshotFromSong(song as unknown as DailySongRow, pool, mulberry32(songId + Date.now()));
 };
 
-export async function replaceDailyRound(challengeId: string, roundId: string, songId: number, now = new Date()) {
+export async function replaceDailyRound(
+  challengeId: string,
+  roundId: string,
+  songId: number,
+  now = new Date(),
+) {
   const challenge = await requireEditable(challengeId, now);
   const round = challenge.rounds.find((row) => row.id === roundId);
   if (!round) throw new DailyHttpError(404, 'Manche introuvable.');
@@ -204,7 +226,11 @@ export async function reshuffleDailyRoundClip(
   return listDailyAdmin(now);
 }
 
-export async function reorderDailyRounds(challengeId: string, orderedIds: string[], now = new Date()) {
+export async function reorderDailyRounds(
+  challengeId: string,
+  orderedIds: string[],
+  now = new Date(),
+) {
   const challenge = await requireEditable(challengeId, now);
   if (orderedIds.length !== challenge.rounds.length) {
     throw new DailyHttpError(400, 'L’ordre doit contenir toutes les manches.');
@@ -310,7 +336,8 @@ export async function resetDailyProgress(profileId: string, now = new Date()) {
   }
 
   const xpReverted = attempt.xpAwarded;
-  const counted = attempt.state === 'COMPLETED' || attempt.state === 'FORFEITED' || attempt.state === 'EXPIRED';
+  const counted =
+    attempt.state === 'COMPLETED' || attempt.state === 'FORFEITED' || attempt.state === 'EXPIRED';
   const heard = counted
     ? heardSongsForDailyAttempt(
         attempt.currentRound,
@@ -322,7 +349,10 @@ export async function resetDailyProgress(profileId: string, now = new Date()) {
   await prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${challenge.id}))`;
     if (xpReverted > 0) {
-      const profile = await tx.profile.findUnique({ where: { id: profileId }, select: { xp: true } });
+      const profile = await tx.profile.findUnique({
+        where: { id: profileId },
+        select: { xp: true },
+      });
       if (profile) {
         const xp = Math.max(0, profile.xp - xpReverted);
         await tx.profile.update({
@@ -351,7 +381,8 @@ export async function resetDailyProgress(profileId: string, now = new Date()) {
             completions: Math.max(0, stats.completions - 1),
             wins: attempt.won ? Math.max(0, stats.wins - 1) : stats.wins,
             perfectDays: perfect ? Math.max(0, stats.perfectDays - 1) : stats.perfectDays,
-            lastCompletionDate: currentStreak === 0 ? null : dateFromIsoDay(addCalendarDays(today, -1)),
+            lastCompletionDate:
+              currentStreak === 0 ? null : dateFromIsoDay(addCalendarDays(today, -1)),
           },
         });
       }

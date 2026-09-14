@@ -3,13 +3,7 @@
 export type LibrarySongType = 'OP' | 'ED' | 'INSERT';
 export type LibraryDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 export type LibrarySort =
-  | 'franchise'
-  | 'franchise_desc'
-  | 'popularity'
-  | 'anime'
-  | 'title'
-  | 'likes'
-  | 'liked_recent';
+  'franchise' | 'franchise_desc' | 'popularity' | 'anime' | 'title' | 'likes' | 'liked_recent';
 
 /** UI browse layout (URL `view=`). Independent of server `LibraryTreeResponse.view`. */
 export type LibraryBrowseView = 'franchise' | 'anime' | 'songs';

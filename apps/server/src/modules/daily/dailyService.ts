@@ -106,7 +106,10 @@ const playPayload = (attempt: AttemptRecord, now: Date): DailySafeRoundDto | nul
   });
 };
 
-export async function getDailyToday(profileId: string | null, now = new Date()): Promise<DailyTodayResponse> {
+export async function getDailyToday(
+  profileId: string | null,
+  now = new Date(),
+): Promise<DailyTodayResponse> {
   const challengeDate = dailyCalendarDate(now);
   const [challenge, streak] = await Promise.all([
     ensureTodayChallenge(now),
@@ -176,7 +179,8 @@ export async function startDailyAttempt(profileId: string, now = new Date()) {
       });
       created = true;
     } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+        throw error;
       attempt = await prisma.dailyAttempt.findUniqueOrThrow({
         where: { challengeId_profileId: { challengeId: challenge.id, profileId } },
         include: attemptInclude,
@@ -193,9 +197,7 @@ export async function startDailyAttempt(profileId: string, now = new Date()) {
   if (!created) {
     const startedAt = settled.currentRoundStartedAt?.getTime() ?? 0;
     const freshEmpty =
-      settled.answers.length === 0 &&
-      !settled.revealUntil &&
-      now.getTime() - startedAt < 10_000;
+      settled.answers.length === 0 && !settled.revealUntil && now.getTime() - startedAt < 10_000;
     if (!freshEmpty) {
       const forfeited = await forfeitDailyAttempt(profileId, settled.id, now);
       return { attempt: null, result: forfeited.result, status: 'completed' as const };
@@ -268,7 +270,8 @@ export async function answerDailyAttempt(
       }),
     ]);
   } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') throw error;
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
+      throw error;
   }
 
   const fresh = await loadAttempt(attempt.id, profileId);
@@ -300,7 +303,9 @@ export async function nextDailyRound(profileId: string, attemptId: string, now =
   if (TERMINAL.has(attempt.state)) {
     return { attempt: null, result: await resultFor(attempt), status: 'completed' as const };
   }
-  const nowRevealing = Boolean(attempt.revealUntil && attempt.revealUntil.getTime() > now.getTime());
+  const nowRevealing = Boolean(
+    attempt.revealUntil && attempt.revealUntil.getTime() > now.getTime(),
+  );
   // Guess just timed out on the server: return reveal instead of skipping it.
   if (nowRevealing && !wasRevealing) {
     const payload = playPayload(attempt, now);
@@ -354,7 +359,10 @@ export async function forfeitDailyAttempt(profileId: string, attemptId: string, 
   return { result: await resultFor(attempt) };
 }
 
-export async function getDailyLeaderboard(_profileId: string | null, now = new Date()): Promise<DailyLeaderboardResponse> {
+export async function getDailyLeaderboard(
+  _profileId: string | null,
+  now = new Date(),
+): Promise<DailyLeaderboardResponse> {
   const today = dailyCalendarDate(now);
   const challenge = await loadChallengeByDate(today);
   if (!challenge) {
@@ -374,7 +382,9 @@ export async function getDailyLeaderboard(_profileId: string | null, now = new D
     avatar: row.profile.avatar,
   }));
   const ranks = assignDailyRanks(ranked);
-  const ordered = [...ranked].sort((a, b) => (ranks.get(a.id) ?? 99) - (ranks.get(b.id) ?? 99) || a.id.localeCompare(b.id));
+  const ordered = [...ranked].sort(
+    (a, b) => (ranks.get(a.id) ?? 99) - (ranks.get(b.id) ?? 99) || a.id.localeCompare(b.id),
+  );
   return {
     challengeDate: today,
     participantCount,

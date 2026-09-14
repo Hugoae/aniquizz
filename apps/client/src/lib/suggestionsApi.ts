@@ -88,6 +88,5 @@ export const suggestionsApi = {
       method: 'PATCH',
       body: JSON.stringify(input),
     }),
-  adminDelete: (id: string) =>
-    request<void>(`/admin/suggestions/${id}`, { method: 'DELETE' }),
+  adminDelete: (id: string) => request<void>(`/admin/suggestions/${id}`, { method: 'DELETE' }),
 };

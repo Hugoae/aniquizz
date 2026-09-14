@@ -108,16 +108,35 @@ export function FriendsBubble() {
                     Demandes ({incoming.length})
                   </div>
                   {incoming.map((r) => (
-                    <div key={r.id} className="flex items-center gap-2 rounded-md bg-primary/5 px-2 py-1.5">
-                      <UserAvatar avatar={r.user.avatar} username={r.user.username} className="h-8 w-8" />
+                    <div
+                      key={r.id}
+                      className="flex items-center gap-2 rounded-md bg-primary/5 px-2 py-1.5"
+                    >
+                      <UserAvatar
+                        avatar={r.user.avatar}
+                        username={r.user.username}
+                        className="h-8 w-8"
+                      />
                       <span className="flex min-w-0 flex-1 items-center gap-1.5">
                         <span className="truncate text-sm font-medium">{r.user.username}</span>
                         <RoleBadge role={r.user.role} size={14} />
                       </span>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-success" onClick={() => accept?.(r.id)} aria-label="Accepter">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-success"
+                        onClick={() => accept?.(r.id)}
+                        aria-label="Accepter"
+                      >
                         <Check className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => reject?.(r.id)} aria-label="Refuser">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                        onClick={() => reject?.(r.id)}
+                        aria-label="Refuser"
+                      >
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
@@ -131,12 +150,27 @@ export function FriendsBubble() {
                 </div>
               ) : (
                 ordered.map((f) => (
-                  <div key={f.id} className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-secondary">
-                    <button className="relative shrink-0" onClick={() => openProfile?.(f.id)} aria-label={`Profil de ${f.username}`}>
+                  <div
+                    key={f.id}
+                    className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-secondary"
+                  >
+                    <button
+                      className="relative shrink-0"
+                      onClick={() => openProfile?.(f.id)}
+                      aria-label={`Profil de ${f.username}`}
+                    >
                       <UserAvatar avatar={f.avatar} username={f.username} className="h-8 w-8" />
-                      <span className={cn('absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-popover', PRESENCE_DOT[f.status])} />
+                      <span
+                        className={cn(
+                          'absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-popover',
+                          PRESENCE_DOT[f.status],
+                        )}
+                      />
                     </button>
-                    <button className="min-w-0 flex-1 text-left" onClick={() => openProfile?.(f.id)}>
+                    <button
+                      className="min-w-0 flex-1 text-left"
+                      onClick={() => openProfile?.(f.id)}
+                    >
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className="truncate text-sm font-medium">{f.username}</span>
                         <RoleBadge role={f.role} size={14} />
@@ -156,7 +190,9 @@ export function FriendsBubble() {
                         className="h-7 w-7 text-primary"
                         title="Rejoindre"
                         aria-label={`Rejoindre ${f.username}`}
-                        onClick={() => navigate('/play', { state: { fromInvite: true, roomId: f.roomId } })}
+                        onClick={() =>
+                          navigate('/play', { state: { fromInvite: true, roomId: f.roomId } })
+                        }
                       >
                         <LogIn className="h-4 w-4" />
                       </Button>
@@ -195,7 +231,12 @@ export function FriendsBubble() {
           </span>
 
           <span className="flex items-center gap-1.5">
-            <span className={cn('h-2 w-2 rounded-full', onlineCount > 0 ? 'bg-success' : 'bg-muted-foreground/40')} />
+            <span
+              className={cn(
+                'h-2 w-2 rounded-full',
+                onlineCount > 0 ? 'bg-success' : 'bg-muted-foreground/40',
+              )}
+            />
             <span className="font-mono font-semibold text-foreground">
               {onlineCount}/{friends.length}
             </span>
@@ -205,9 +246,7 @@ export function FriendsBubble() {
           <span className="h-4 w-px bg-border" />
 
           <span className="flex items-center gap-1.5">
-            <span className="font-mono font-semibold text-foreground">
-              {totalOnline ?? '—'}
-            </span>
+            <span className="font-mono font-semibold text-foreground">{totalOnline ?? '—'}</span>
             <span className="text-muted-foreground">En ligne</span>
           </span>
 

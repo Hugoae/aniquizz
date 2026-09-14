@@ -5,8 +5,11 @@ import {
   type PlaylistSnapshot,
 } from './playlistRecipeService';
 
-const snap = (overrides: Partial<PlaylistSnapshot> & Pick<PlaylistSnapshot, 'playlistId' | 'songIds'>): PlaylistSnapshot => {
-  const songs = overrides.songs ?? overrides.songIds.map((songId) => ({ songId, animeId: songId * 10 }));
+const snap = (
+  overrides: Partial<PlaylistSnapshot> & Pick<PlaylistSnapshot, 'playlistId' | 'songIds'>,
+): PlaylistSnapshot => {
+  const songs =
+    overrides.songs ?? overrides.songIds.map((songId) => ({ songId, animeId: songId * 10 }));
   return {
     animeIds: [...new Set(songs.map((row) => row.animeId))],
     songs,

@@ -13,8 +13,7 @@ export const DAILY_COPY = {
   cancel: 'Annuler',
   forfeit: 'Abandonner',
   leaveTitle: 'Quitter le défi ?',
-  leaveBody:
-    'Les questions restantes seront comptées fausses et la tentative sera terminée.',
+  leaveBody: 'Les questions restantes seront comptées fausses et la tentative sera terminée.',
   victory: 'Victoire',
   defeat: 'Défaite',
   detailTitle: 'Détail de la partie',

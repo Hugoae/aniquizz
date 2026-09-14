@@ -1,7 +1,12 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Grid2X2, Columns2, Send } from 'lucide-react';
-import { isArtistPrecision, normalizePrecision, suggestionQueryReady, type Precision } from '@aniquizz/shared';
+import {
+  isArtistPrecision,
+  normalizePrecision,
+  suggestionQueryReady,
+  type Precision,
+} from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -47,7 +52,9 @@ function SuggestionLabel({
   return (
     <span>
       {label.slice(0, highlight.start)}
-      <mark className="rounded-sm bg-primary/25 px-0.5 text-primary">{label.slice(highlight.start, highlight.end)}</mark>
+      <mark className="rounded-sm bg-primary/25 px-0.5 text-primary">
+        {label.slice(highlight.start, highlight.end)}
+      </mark>
       {label.slice(highlight.end)}
     </span>
   );
@@ -182,7 +189,12 @@ function AnswerInputInner({
       : null;
 
   return (
-    <div className={cn('relative flex w-full flex-col items-center gap-3', disabled && 'pointer-events-none opacity-60')}>
+    <div
+      className={cn(
+        'relative flex w-full flex-col items-center gap-3',
+        disabled && 'pointer-events-none opacity-60',
+      )}
+    >
       {submittedAnswer && (
         <div className="flex animate-fade-in items-center gap-2 rounded-md border border-primary/30 bg-primary/20 px-4 py-1.5 shadow-lg">
           <span className="text-xs font-bold uppercase text-primary">Votre réponse :</span>
@@ -192,18 +204,26 @@ function AnswerInputInner({
 
       {showMixSwitchers && (
         <div className="mb-2 flex animate-fade-in items-center gap-4">
-          <Button variant="secondary" size="sm" onClick={onSwitchCarre} className="gap-2 hover:bg-primary/20 hover:text-primary">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onSwitchCarre}
+            className="gap-2 hover:bg-primary/20 hover:text-primary"
+          >
             <Grid2X2 className="h-4 w-4" /> Carré (2 pts)
           </Button>
-          <Button variant="secondary" size="sm" onClick={onSwitchDuo} className="gap-2 hover:bg-primary/20 hover:text-primary">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={onSwitchDuo}
+            className="gap-2 hover:bg-primary/20 hover:text-primary"
+          >
             <Columns2 className="h-4 w-4" /> Duo (1 pt)
           </Button>
         </div>
       )}
 
-      {canType && !showMixSwitchers && (
-        <div className="mb-2 h-9 shrink-0" aria-hidden="true" />
-      )}
+      {canType && !showMixSwitchers && <div className="mb-2 h-9 shrink-0" aria-hidden="true" />}
 
       {canType && (
         <div ref={inputRowRef} className="relative z-50 flex w-full items-center gap-3">
@@ -215,7 +235,8 @@ function AnswerInputInner({
             onChange={(e) => {
               const next = e.target.value;
               setDraft(next);
-              if (next.trim().length > 0 && suggestionQueryReady(next, resolvedPrecision)) setPanelOpen(true);
+              if (next.trim().length > 0 && suggestionQueryReady(next, resolvedPrecision))
+                setPanelOpen(true);
               else setPanelOpen(false);
             }}
             onFocus={() => {

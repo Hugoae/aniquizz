@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { dailyAttemptLabel, formatDailyAdminDate, formatClipTimestamp, toLibraryDifficulty } from './dailyAdminFormat';
+import {
+  dailyAttemptLabel,
+  formatDailyAdminDate,
+  formatClipTimestamp,
+  toLibraryDifficulty,
+} from './dailyAdminFormat';
 import { dailyAdminWarningLabel } from './dailyAdminCopy';
 
 describe('daily admin labels', () => {

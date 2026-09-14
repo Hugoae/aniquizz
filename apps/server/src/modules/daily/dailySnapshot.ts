@@ -76,13 +76,22 @@ export const DAILY_SONG_INCLUDE = {
   anime: { select: DAILY_ANIME_SELECT },
 } as const;
 
-export function buildChoicesWithRng(correctTarget: string, pool: string[], rng: Rng, count = 4): string[] {
+export function buildChoicesWithRng(
+  correctTarget: string,
+  pool: string[],
+  rng: Rng,
+  count = 4,
+): string[] {
   const correctNorm = answerIdentityKey(correctTarget);
-  const uniqueWrong = [...new Set(pool.filter((name) => {
-    if (!name) return false;
-    const key = answerIdentityKey(name);
-    return Boolean(key) && key !== correctNorm;
-  }))];
+  const uniqueWrong = [
+    ...new Set(
+      pool.filter((name) => {
+        if (!name) return false;
+        const key = answerIdentityKey(name);
+        return Boolean(key) && key !== correctNorm;
+      }),
+    ),
+  ];
   const wrong = shuffleWith(uniqueWrong, rng).slice(0, count - 1);
   while (wrong.length < count - 1) wrong.push(PLACEHOLDER);
   return shuffleWith([...wrong, correctTarget], rng);

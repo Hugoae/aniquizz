@@ -1,6 +1,10 @@
 import { useMemo } from 'react';
 import { Check, Music2, Timer, User, X, Zap } from 'lucide-react';
-import { ANSWER_TYPE_LABELS, formatSprintTimeSeconds, type RoundHistoryEntry } from '@aniquizz/shared';
+import {
+  ANSWER_TYPE_LABELS,
+  formatSprintTimeSeconds,
+  type RoundHistoryEntry,
+} from '@aniquizz/shared';
 import { formatSpeedRankLabel } from '@/features/game/copy/speedRankCopy';
 import { cn } from '@/lib/utils';
 
@@ -47,9 +51,12 @@ export function RoundHistoryList({
     if (!isSprint || history.length === 0) return null;
 
     const timed = history.filter((r) => r.isCorrect && r.answerTimeMs != null);
-    const podiums = history.filter((r) => r.speedRank != null && r.speedRank > 0 && r.speedRank <= 3);
+    const podiums = history.filter(
+      (r) => r.speedRank != null && r.speedRank > 0 && r.speedRank <= 3,
+    );
     const fastestMs = timed.reduce<number | null>(
-      (best, r) => (r.answerTimeMs != null && (best == null || r.answerTimeMs < best) ? r.answerTimeMs : best),
+      (best, r) =>
+        r.answerTimeMs != null && (best == null || r.answerTimeMs < best) ? r.answerTimeMs : best,
       null,
     );
 
@@ -91,7 +98,9 @@ export function RoundHistoryList({
             <div
               className={cn(
                 'rounded-full p-1.5',
-                round.isCorrect ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive',
+                round.isCorrect
+                  ? 'bg-success/20 text-success'
+                  : 'bg-destructive/20 text-destructive',
               )}
             >
               {round.isCorrect ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
@@ -145,7 +154,9 @@ export function RoundHistoryList({
                   Votre réponse : <span className="line-through">{round.myAnswer}</span>
                 </div>
               ) : (
-                <div className="mt-1 truncate text-[11px] italic text-muted-foreground/60">Aucune réponse</div>
+                <div className="mt-1 truncate text-[11px] italic text-muted-foreground/60">
+                  Aucune réponse
+                </div>
               ))}
           </div>
 

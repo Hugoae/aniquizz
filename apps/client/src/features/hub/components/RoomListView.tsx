@@ -58,11 +58,7 @@ export function RoomListView({
             }}
             maxLength={6}
           />
-          <Button
-            onClick={() => onJoin(joinCode)}
-            variant="secondary"
-            disabled={!canJoinByCode}
-          >
+          <Button onClick={() => onJoin(joinCode)} variant="secondary" disabled={!canJoinByCode}>
             Rejoindre
           </Button>
         </div>

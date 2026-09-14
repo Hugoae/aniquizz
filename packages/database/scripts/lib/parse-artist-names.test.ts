@@ -90,10 +90,10 @@ describe('parseArtistNames', () => {
 
 describe('resolveArtistNames', () => {
   it('prefers a structured AnimeThemes list over re-parsing the joined credit', () => {
-    assert.deepEqual(
-      resolveArtistNames('CHiCO, HoneyWorks', ['CHiCO', 'HoneyWorks']),
-      ['CHiCO', 'HoneyWorks'],
-    );
+    assert.deepEqual(resolveArtistNames('CHiCO, HoneyWorks', ['CHiCO', 'HoneyWorks']), [
+      'CHiCO',
+      'HoneyWorks',
+    ]);
   });
 
   it('falls back to parsing the display credit', () => {
@@ -102,9 +102,7 @@ describe('resolveArtistNames', () => {
 
   it('expands a curated composite even when AnimeThemes exposes one artist entity', () => {
     assert.deepEqual(
-      resolveArtistNames('The Seatbelts feat. Mai Yamane', [
-        'The Seatbelts feat. Mai Yamane',
-      ]),
+      resolveArtistNames('The Seatbelts feat. Mai Yamane', ['The Seatbelts feat. Mai Yamane']),
       ['The Seatbelts', 'Mai Yamane'],
     );
   });

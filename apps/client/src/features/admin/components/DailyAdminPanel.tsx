@@ -15,7 +15,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
-import { adminApi, AdminApiError, type DailyAdminList, type DailySongSearchHit } from '@/lib/adminApi';
+import {
+  adminApi,
+  AdminApiError,
+  type DailyAdminList,
+  type DailySongSearchHit,
+} from '@/lib/adminApi';
 import { DailyAdminRoundCard } from './daily/DailyAdminRoundCard';
 import { DAILY_ADMIN_COPY, dailyAdminWarningLabel } from './daily/dailyAdminCopy';
 import { dailyAttemptLabel, formatDailyAdminDate } from './daily/dailyAdminFormat';
@@ -62,7 +67,10 @@ export function DailyAdminPanel() {
     setPreviewRoundId(null);
   }, [selectedId]);
 
-  const run = async (action: () => Promise<DailyAdminList>, success = DAILY_ADMIN_COPY.saved) => {
+  const run = async (
+    action: () => Promise<DailyAdminList>,
+    success: string = DAILY_ADMIN_COPY.saved,
+  ) => {
     setBusy(true);
     try {
       setData(await action());
@@ -74,8 +82,10 @@ export function DailyAdminPanel() {
     }
   };
 
-  const challenge = data?.challenges.find((row) => row.id === selectedId) ?? data?.challenges[0] ?? null;
-  const excludeIds = challenge?.rounds.map((round) => round.songId).filter((id): id is number => id != null) ?? [];
+  const challenge =
+    data?.challenges.find((row) => row.id === selectedId) ?? data?.challenges[0] ?? null;
+  const excludeIds =
+    challenge?.rounds.map((round) => round.songId).filter((id): id is number => id != null) ?? [];
 
   if (loading && !data) {
     return (
@@ -92,7 +102,9 @@ export function DailyAdminPanel() {
           <h2 className="font-display text-xl">
             <span className="gradient-text">{DAILY_ADMIN_COPY.title}</span>
           </h2>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{DAILY_ADMIN_COPY.subtitle}</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            {DAILY_ADMIN_COPY.subtitle}
+          </p>
         </div>
         <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
           <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} />
@@ -119,9 +131,13 @@ export function DailyAdminPanel() {
             >
               <p className="font-mono text-xs text-muted-foreground">#{row.challengeNumber}</p>
               <p className="text-sm font-medium capitalize">
-                {isToday ? DAILY_ADMIN_COPY.today : formatDailyAdminDate(row.challengeDate).split(' ')[0]}
+                {isToday
+                  ? DAILY_ADMIN_COPY.today
+                  : formatDailyAdminDate(row.challengeDate).split(' ')[0]}
               </p>
-              <p className="text-[11px] text-muted-foreground">{row.challengeDate.slice(8, 10)}/{row.challengeDate.slice(5, 7)}</p>
+              <p className="text-[11px] text-muted-foreground">
+                {row.challengeDate.slice(8, 10)}/{row.challengeDate.slice(5, 7)}
+              </p>
             </button>
           );
         })}
@@ -132,7 +148,9 @@ export function DailyAdminPanel() {
           <div className="glass-card flex flex-wrap items-start justify-between gap-3 p-4">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="font-display text-lg capitalize">{formatDailyAdminDate(challenge.challengeDate)}</p>
+                <p className="font-display text-lg capitalize">
+                  {formatDailyAdminDate(challenge.challengeDate)}
+                </p>
                 <Badge variant="outline">#{challenge.challengeNumber}</Badge>
                 {challenge.challengeDate === data?.today && (
                   <Badge className="bg-primary/15 text-primary">{DAILY_ADMIN_COPY.today}</Badge>
@@ -205,7 +223,9 @@ export function DailyAdminPanel() {
                 onReplace={(song: DailySongSearchHit) =>
                   void run(() => adminApi.replaceDailyRound(challenge.id, round.id, song.id))
                 }
-                onShuffle={() => void run(() => adminApi.regenerateDailyRound(challenge.id, round.id))}
+                onShuffle={() =>
+                  void run(() => adminApi.regenerateDailyRound(challenge.id, round.id))
+                }
                 onReshuffleClip={() =>
                   void run(
                     () => adminApi.reshuffleDailyRoundClip(challenge.id, round.id),
@@ -218,7 +238,9 @@ export function DailyAdminPanel() {
                   [ids[index], ids[swap]] = [ids[swap]!, ids[index]!];
                   void run(() => adminApi.reorderDailyRounds(challenge.id, ids));
                 }}
-                onVoid={() => setConfirm({ kind: 'void', challengeId: challenge.id, roundId: round.id })}
+                onVoid={() =>
+                  setConfirm({ kind: 'void', challengeId: challenge.id, roundId: round.id })
+                }
                 onRestore={() => void run(() => adminApi.restoreDailyRound(challenge.id, round.id))}
                 preview={previewRoundId === round.id}
                 onTogglePreview={() =>
@@ -238,7 +260,9 @@ export function DailyAdminPanel() {
               {confirm?.kind === 'void' ? DAILY_ADMIN_COPY.voidTitle : DAILY_ADMIN_COPY.regenerate}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirm?.kind === 'void' ? DAILY_ADMIN_COPY.voidBody : DAILY_ADMIN_COPY.regenerateConfirm}
+              {confirm?.kind === 'void'
+                ? DAILY_ADMIN_COPY.voidBody
+                : DAILY_ADMIN_COPY.regenerateConfirm}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

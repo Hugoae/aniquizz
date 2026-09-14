@@ -41,8 +41,18 @@ describe('xpForMatch - difficulty weighting', () => {
   });
 
   it('hard answers are worth more than easy answers', () => {
-    const easyRun = xpForMatch({ ...baseMulti, correctByDifficulty: correct(4, 0, 0), score: 0, roundsPlayed: 4 });
-    const hardRun = xpForMatch({ ...baseMulti, correctByDifficulty: correct(0, 0, 4), score: 0, roundsPlayed: 4 });
+    const easyRun = xpForMatch({
+      ...baseMulti,
+      correctByDifficulty: correct(4, 0, 0),
+      score: 0,
+      roundsPlayed: 4,
+    });
+    const hardRun = xpForMatch({
+      ...baseMulti,
+      correctByDifficulty: correct(0, 0, 4),
+      score: 0,
+      roundsPlayed: 4,
+    });
     expect(hardRun).toBeGreaterThan(easyRun);
   });
 });
@@ -82,7 +92,13 @@ describe('xpForMatch - placement (multiplayer)', () => {
 
   it('awards the top-half bonus beyond the podium', () => {
     // rank 4 of 8 -> top half (ceil(8/2)=4) ; rank 5 -> below half
-    const common = { ...baseMulti, roundsPlayed: 2, correctByDifficulty: correct(), score: 5, playerCount: 8 };
+    const common = {
+      ...baseMulti,
+      roundsPlayed: 2,
+      correctByDifficulty: correct(),
+      score: 5,
+      playerCount: 8,
+    };
     const topHalf = xpForMatch({ ...common, rank: 4 });
     const belowHalf = xpForMatch({ ...common, rank: 5 });
     const participation = 2 * L.XP_PER_ROUND;
@@ -91,7 +107,14 @@ describe('xpForMatch - placement (multiplayer)', () => {
   });
 
   it('gives no placement bonus when score is zero', () => {
-    const res = xpForMatch({ ...baseMulti, roundsPlayed: 5, correctByDifficulty: correct(), score: 0, rank: 1, playerCount: 4 });
+    const res = xpForMatch({
+      ...baseMulti,
+      roundsPlayed: 5,
+      correctByDifficulty: correct(),
+      score: 0,
+      rank: 1,
+      playerCount: 4,
+    });
     expect(res).toBe(5 * L.XP_PER_ROUND); // participation only
   });
 });
@@ -131,8 +154,22 @@ describe('xpForMatch - win streak', () => {
   });
 
   it('does not apply the streak bonus to a loser', () => {
-    const loser = xpForMatch({ ...baseMulti, isWinner: false, winStreak: 5, correctByDifficulty: correct(0, 3, 0), roundsPlayed: 3, score: 10 });
-    const winnerNoStreak = xpForMatch({ ...baseMulti, isWinner: false, winStreak: 0, correctByDifficulty: correct(0, 3, 0), roundsPlayed: 3, score: 10 });
+    const loser = xpForMatch({
+      ...baseMulti,
+      isWinner: false,
+      winStreak: 5,
+      correctByDifficulty: correct(0, 3, 0),
+      roundsPlayed: 3,
+      score: 10,
+    });
+    const winnerNoStreak = xpForMatch({
+      ...baseMulti,
+      isWinner: false,
+      winStreak: 0,
+      correctByDifficulty: correct(0, 3, 0),
+      roundsPlayed: 3,
+      score: 10,
+    });
     expect(loser).toBe(winnerNoStreak);
   });
 });

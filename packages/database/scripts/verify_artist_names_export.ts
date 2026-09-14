@@ -32,7 +32,14 @@ for (const franchise of data) {
 
 console.log(
   JSON.stringify(
-    { songs, missing, mismatchCount: mismatches.length, collabs, atomicKept, mismatches: mismatches.slice(0, 10) },
+    {
+      songs,
+      missing,
+      mismatchCount: mismatches.length,
+      collabs,
+      atomicKept,
+      mismatches: mismatches.slice(0, 10),
+    },
     null,
     2,
   ),

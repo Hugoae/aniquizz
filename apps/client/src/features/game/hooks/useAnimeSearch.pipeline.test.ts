@@ -12,7 +12,7 @@ const ylia = {
   altNames: ['Shigatsu wa Kimi no Uso', 'Your lie in April'],
 };
 
-function searchPipeline(catalogue: typeof ylia[], query: string) {
+function searchPipeline(catalogue: (typeof ylia)[], query: string) {
   const prepared = prepareFuzzyCatalogue(catalogue);
   const index = buildCataloguePrefixIndex(prepared);
   const scoped = narrowCatalogueByPrefix(prepared, index, query);
@@ -53,7 +53,12 @@ describe('useAnimeSearch pipeline', () => {
     const index = buildCataloguePrefixIndex(prepared);
     const scoped = narrowCatalogueByPrefix(prepared, index, 'na');
     expect(scoped.map((row) => row.name)).toEqual(['Naruto']);
-    const hits = getFuzzySuggestions(scoped, 'na', 'franchise', getCatalogueFranchiseCounts(prepared));
+    const hits = getFuzzySuggestions(
+      scoped,
+      'na',
+      'franchise',
+      getCatalogueFranchiseCounts(prepared),
+    );
     expect(hits.map((row) => row.label)).toEqual(['Naruto']);
   });
 });

@@ -72,22 +72,22 @@ describe('decade playlist grouping', () => {
   });
 
   it('defaults the slider to 2010s when that pack exists', () => {
-    const decades = [
-      pack('1990s', 110),
-      pack('2010s', 130),
-      pack('2020s', 140),
-    ];
+    const decades = [pack('1990s', 110), pack('2010s', 130), pack('2020s', 140)];
     expect(defaultDecadePack(decades)?.slug).toBe('2010s');
     expect(defaultDecadePack(decades.slice(0, 1))?.slug).toBe('1990s');
   });
 
   it('moves a decade stored in playlistId onto decadePlaylistId', () => {
     const playlists = [pack('shonen', 10), pack('2010s', 130, { category: 'decade' })];
+    expect(effectivePlaylistSelection({ playlistId: 'id-2010s' }, playlists)).toEqual({
+      playlistId: undefined,
+      decadePlaylistId: 'id-2010s',
+    });
     expect(
-      effectivePlaylistSelection({ playlistId: 'id-2010s' }, playlists),
-    ).toEqual({ playlistId: undefined, decadePlaylistId: 'id-2010s' });
-    expect(
-      effectivePlaylistSelection({ playlistId: 'id-shonen', decadePlaylistId: 'id-2010s' }, playlists),
+      effectivePlaylistSelection(
+        { playlistId: 'id-shonen', decadePlaylistId: 'id-2010s' },
+        playlists,
+      ),
     ).toEqual({ playlistId: 'id-shonen', decadePlaylistId: 'id-2010s' });
   });
 });

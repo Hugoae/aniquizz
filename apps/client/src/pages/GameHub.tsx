@@ -11,7 +11,14 @@ import { Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 import { Header } from '@/components/layout/Header';
 import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
@@ -19,7 +26,10 @@ import { MultiplayerLobby } from '@/features/hub/components/MultiplayerLobby';
 import { SoloReady } from '@/features/hub/components/SoloReady';
 import { ModeSelectView } from '@/features/hub/components/ModeSelectView';
 
-import { LobbyControllerProvider, useLobbyControllerContext } from '@/features/hub/context/LobbyControllerContext';
+import {
+  LobbyControllerProvider,
+  useLobbyControllerContext,
+} from '@/features/hub/context/LobbyControllerContext';
 import { PlayConfigPage } from '@/features/hub/pages/PlayConfigPage';
 import { PlayJoinPage } from '@/features/hub/pages/PlayJoinPage';
 
@@ -104,11 +114,12 @@ function PlayHomePage() {
   const isSoloLobby = roomConfig.maxPlayers === 1;
 
   const watchedPlayersKey = useMemo(
-    () => lobbyPlayers
-      .filter((p) => !p.isBot)
-      .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
-      .sort()
-      .join(','),
+    () =>
+      lobbyPlayers
+        .filter((p) => !p.isBot)
+        .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
+        .sort()
+        .join(','),
     [lobbyPlayers],
   );
 

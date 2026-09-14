@@ -8,12 +8,12 @@ Song difficulty shifts the ratio thresholds (easier songs require a higher ratio
 
 ## Source of truth
 
-| Layer | Module | Role |
-|-------|--------|------|
-| Threshold constants | `packages/shared/src/constants.ts` (`GAME_CONFIG.MEDALS.THRESHOLDS`) | Per-difficulty ratio bars |
-| Pure logic | `packages/shared/src/grading.ts` | `medalMarkerScores`, `computeMedal`, `nextMedalGoal` |
-| Match end | `packages/shared/src/victory.ts` → `MatchEngine.finish()` | Server-authoritative `soloMedal` on `game_over` |
-| Game-over UI | `apps/client/.../SoloMasteryBar.tsx` | Bar markers, labels, next-tier hint |
+| Layer               | Module                                                               | Role                                                 |
+| ------------------- | -------------------------------------------------------------------- | ---------------------------------------------------- |
+| Threshold constants | `packages/shared/src/constants.ts` (`GAME_CONFIG.MEDALS.THRESHOLDS`) | Per-difficulty ratio bars                            |
+| Pure logic          | `packages/shared/src/grading.ts`                                     | `medalMarkerScores`, `computeMedal`, `nextMedalGoal` |
+| Match end           | `packages/shared/src/victory.ts` → `MatchEngine.finish()`            | Server-authoritative `soloMedal` on `game_over`      |
+| Game-over UI        | `apps/client/.../SoloMasteryBar.tsx`                                 | Bar markers, labels, next-tier hint                  |
 
 Player identity and persistence follow the usual JWT `userId` rules; medals are computed at match end, not stored as a separate enum on the profile (stats derive from match history).
 
@@ -59,9 +59,9 @@ Anime precision subtracts `PRECISION_OFFSET.anime` (−0.05) from every tier; ar
 
 ## Medium difficulty reference (QCM, max 20 pts)
 
-| Tier | Ratio | Rounded pts |
-|------|-------|-------------|
-| Bronze | 0.50 | 10 |
-| Argent | 0.58 | 12 |
-| Or | 0.70 | 14 |
-| Platine | 0.90 | 18 |
+| Tier    | Ratio | Rounded pts |
+| ------- | ----- | ----------- |
+| Bronze  | 0.50  | 10          |
+| Argent  | 0.58  | 12          |
+| Or      | 0.70  | 14          |
+| Platine | 0.90  | 18          |

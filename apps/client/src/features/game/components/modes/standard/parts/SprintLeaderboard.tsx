@@ -34,7 +34,9 @@ function SprintRow({
       )}
     >
       {rank != null && (
-        <span className="w-5 shrink-0 text-center text-[11px] font-black text-muted-foreground">#{rank}</span>
+        <span className="w-5 shrink-0 text-center text-[11px] font-black text-muted-foreground">
+          #{rank}
+        </span>
       )}
       <UserAvatar avatar={avatar} username={username} className="h-7 w-7 shrink-0" />
       <span className="min-w-0 flex-1 truncate text-sm font-semibold">{username}</span>
@@ -54,7 +56,12 @@ function SprintRow({
 }
 
 /** Reveal-only Sprint speed board — top 3 correct answerers plus a "Vous" row. */
-export function SprintLeaderboard({ data, currentUserId, myAvatar, compact }: SprintLeaderboardProps) {
+export function SprintLeaderboard({
+  data,
+  currentUserId,
+  myAvatar,
+  compact,
+}: SprintLeaderboardProps) {
   const { top, you } = data;
   const yourTimeMs = you.isCorrect === true ? you.timeMs : null;
 
@@ -65,11 +72,15 @@ export function SprintLeaderboard({ data, currentUserId, myAvatar, compact }: Sp
         compact ? 'max-w-[850px]' : 'max-w-[640px]',
       )}
     >
-      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Classement vitesse</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+        Classement vitesse
+      </p>
 
       <div className="flex flex-col gap-1.5">
         {top.length === 0 ? (
-          <p className="py-1 text-center text-xs text-muted-foreground">Personne n&apos;a trouvé à temps.</p>
+          <p className="py-1 text-center text-xs text-muted-foreground">
+            Personne n&apos;a trouvé à temps.
+          </p>
         ) : (
           top.map((entry, index) => (
             <SprintRow
@@ -86,7 +97,13 @@ export function SprintLeaderboard({ data, currentUserId, myAvatar, compact }: Sp
 
       <div className="my-2 border-t border-border/50" aria-hidden="true" />
 
-      <SprintRow username="Vous" avatar={myAvatar} timeMs={yourTimeMs} wrong={you.isCorrect === false} highlight />
+      <SprintRow
+        username="Vous"
+        avatar={myAvatar}
+        timeMs={yourTimeMs}
+        wrong={you.isCorrect === false}
+        highlight
+      />
     </div>
   );
 }

@@ -1,5 +1,10 @@
 import { customAlphabet } from 'nanoid';
-import type { RoomListItem, RoomListSettingsSummary, RoomSettings, WatchedListProvider } from '@aniquizz/shared';
+import type {
+  RoomListItem,
+  RoomListSettingsSummary,
+  RoomSettings,
+  WatchedListProvider,
+} from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import type { TypedServer } from '../../core/socketTypes';
@@ -113,21 +118,27 @@ export class GameManager {
       if (room.status === 'paused') {
         const pausedMs = room.pausedForMs;
         if (pausedMs !== null && pausedMs > PAUSE_MAX_MS) {
-          logger.info(`[GameManager] Room ${room.id} cancelled: paused ${Math.round(pausedMs / 60_000)}min.`, 'GameManager');
+          logger.info(
+            `[GameManager] Room ${room.id} cancelled: paused ${Math.round(pausedMs / 60_000)}min.`,
+            'GameManager',
+          );
           room.forceCancel('Partie annulée : en pause depuis trop longtemps.');
         }
         continue;
       }
 
       if (room.status === 'playing' && now - room.lastActivityAt > MATCH_STALE_MS) {
-        logger.warn(`[GameManager] Room ${room.id} force-cancelled: match stalled (no progress).`, 'GameManager');
+        logger.warn(
+          `[GameManager] Room ${room.id} force-cancelled: match stalled (no progress).`,
+          'GameManager',
+        );
         room.forceCancel('Partie interrompue : aucune activité détectée.');
         continue;
       }
 
       if (room.status === 'waiting' && now - room.lastActivityAt > LOBBY_IDLE_MS) {
         logger.info(`[GameManager] Room ${room.id} closed: idle lobby.`, 'GameManager');
-        this.io.to(room.id).emit('room_closed', { reason: 'Salon fermé pour cause d\'inactivité.' });
+        this.io.to(room.id).emit('room_closed', { reason: "Salon fermé pour cause d'inactivité." });
         this.removeRoom(room.id);
       }
     }
@@ -245,17 +256,17 @@ export class GameManager {
     return [...this.rooms.values()]
       .filter((room) => room.settings.maxPlayers > 1)
       .map((room) => ({
-      id: room.id,
-      name: room.settings.name,
-      host: room.settings.hostName ?? '',
-      hostAvatar: room.settings.hostAvatar ?? 'player1',
-      mode: room.settings.gameType,
-      players: room.players.size,
-      maxPlayers: room.settings.maxPlayers,
-      isPrivate: room.settings.isPrivate,
-      status: room.status,
-      settings: toRoomListSettings(room.settings),
-    }));
+        id: room.id,
+        name: room.settings.name,
+        host: room.settings.hostName ?? '',
+        hostAvatar: room.settings.hostAvatar ?? 'player1',
+        mode: room.settings.gameType,
+        players: room.players.size,
+        maxPlayers: room.settings.maxPlayers,
+        isPrivate: room.settings.isPrivate,
+        status: room.status,
+        settings: toRoomListSettings(room.settings),
+      }));
   }
 
   /** Push the public room list to lobby browsers (debounced, targeted fan-out). */
@@ -377,7 +388,7 @@ export class GameManager {
       hostId: room.hostId,
       status: room.status,
       isPrivate: room.settings.isPrivate,
-      password: room.settings.isPrivate ? room.settings.password ?? '' : '',
+      password: room.settings.isPrivate ? (room.settings.password ?? '') : '',
       maxPlayers: room.settings.maxPlayers,
       playerCount: room.players.size,
       humanCount: room.humanCount,

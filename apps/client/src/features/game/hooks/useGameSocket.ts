@@ -24,11 +24,7 @@ import type {
   VideoMode,
 } from '@aniquizz/shared';
 import { normalizeVideoMode, GAME_CONFIG } from '@aniquizz/shared';
-import {
-  createInitialState,
-  gameReducer,
-  type GameState,
-} from '../state/gameReducer';
+import { createInitialState, gameReducer, type GameState } from '../state/gameReducer';
 import { playerDisplayName } from '../utils/ranking';
 
 interface UseGameSocketOptions {
@@ -75,15 +71,11 @@ export function useGameSocket({
   onCancelled,
   onClosed,
 }: UseGameSocketOptions): UseGameSocketResult {
-  const [state, dispatch] = useReducer(
-    gameReducer,
-    undefined,
-    () => {
-      const init = createInitialState(initialTotalRounds, initialPlayers);
-      init.nextVideoKey = initialFirstVideo;
-      return init;
-    },
-  );
+  const [state, dispatch] = useReducer(gameReducer, undefined, () => {
+    const init = createInitialState(initialTotalRounds, initialPlayers);
+    init.nextVideoKey = initialFirstVideo;
+    return init;
+  });
 
   const [myWatchedIds, setMyWatchedIds] = useState<number[]>([]);
 
@@ -302,16 +294,16 @@ export function useGameSocket({
       socket.emit('get_game_state', { roomId });
       skipTimer = window.setTimeout(() => {
         if (phaseRef.current === 'guessing' && isSolo) socket.emit('game:skip_round', { roomId });
-      }, 800);
+      }, 800) as unknown as number;
     };
 
-    let skipTimer: ReturnType<typeof setTimeout> | undefined;
-    let recoveryTimer: ReturnType<typeof setTimeout>;
+    let skipTimer: number | undefined;
+    let recoveryTimer: number | undefined;
 
     if (delay <= 0) {
       nudgeServer();
     } else {
-      recoveryTimer = window.setTimeout(nudgeServer, delay);
+      recoveryTimer = window.setTimeout(nudgeServer, delay) as unknown as number;
     }
 
     return () => {
@@ -329,7 +321,10 @@ export function useGameSocket({
   const votePause = useCallback(() => socket.emit('vote_pause', { roomId }), [roomId]);
   const voteSkip = useCallback(() => socket.emit('vote_skip', { roomId }), [roomId]);
   const skipRound = useCallback(() => socket.emit('game:skip_round', { roomId }), [roomId]);
-  const returnToLobby = useCallback(() => socket.emit('game:return_to_lobby', { roomId }), [roomId]);
+  const returnToLobby = useCallback(
+    () => socket.emit('game:return_to_lobby', { roomId }),
+    [roomId],
+  );
   const cancel = useCallback(() => socket.emit('game:cancel', { roomId }), [roomId]);
   const requestSync = useCallback(() => socket.emit('get_game_state', { roomId }), [roomId]);
 

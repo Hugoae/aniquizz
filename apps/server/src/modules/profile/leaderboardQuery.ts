@@ -1,8 +1,5 @@
 import { Prisma } from '@aniquizz/database';
-import {
-  LEADERBOARD_ACCURACY_MIN_ROUNDS,
-  type LeaderboardMetric,
-} from '@aniquizz/shared';
+import { LEADERBOARD_ACCURACY_MIN_ROUNDS, type LeaderboardMetric } from '@aniquizz/shared';
 
 export const BOT_ID_PATTERN = 'bot-%';
 

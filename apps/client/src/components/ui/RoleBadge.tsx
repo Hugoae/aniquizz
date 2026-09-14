@@ -27,7 +27,11 @@ export function RoleBadge({ role, size = 16, className }: RoleBadgeProps) {
       role="img"
       aria-label={label}
       title={label}
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-[4px] text-white', bg, className)}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-[4px] text-white',
+        bg,
+        className,
+      )}
       style={{ width: size, height: size }}
     >
       <Icon strokeWidth={2.5} style={{ width: size * 0.62, height: size * 0.62 }} />

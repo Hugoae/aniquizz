@@ -82,7 +82,10 @@ export function getDifficultyBadge(diffs: string[] = []): { label: string; class
     return { label: 'Moyen', className: 'border-warning/25 bg-warning/10 text-warning' };
   }
   if (hasHard) {
-    return { label: 'Difficile', className: 'border-destructive/25 bg-destructive/10 text-destructive' };
+    return {
+      label: 'Difficile',
+      className: 'border-destructive/25 bg-destructive/10 text-destructive',
+    };
   }
 
   return { label: 'Mixte', className: SETTING_CHIP_NEUTRAL };

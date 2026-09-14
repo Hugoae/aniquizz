@@ -10,12 +10,7 @@ import {
   Mic2,
   type LucideIcon,
 } from 'lucide-react';
-import {
-  GAME_CONFIG,
-  PRECISION_META,
-  type GameConfig,
-  type Precision,
-} from '@aniquizz/shared';
+import { GAME_CONFIG, PRECISION_META, type GameConfig, type Precision } from '@aniquizz/shared';
 
 export {
   normalizePrecision,
@@ -48,7 +43,11 @@ export interface DifficultyOption {
 export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
   { id: 'easy', label: 'Facile', activeClassName: 'border-success bg-success/15 text-success' },
   { id: 'medium', label: 'Moyen', activeClassName: 'border-warning bg-warning/15 text-warning' },
-  { id: 'hard', label: 'Difficile', activeClassName: 'border-destructive bg-destructive/15 text-destructive' },
+  {
+    id: 'hard',
+    label: 'Difficile',
+    activeClassName: 'border-destructive bg-destructive/15 text-destructive',
+  },
 ];
 
 export interface ResponseModeOption {
@@ -99,7 +98,9 @@ export const PRECISION_OPTIONS: PrecisionOption[] = [
  * Rough playtime estimate for the current config: each song costs its guess
  * window plus the reveal shown afterwards. Used for the "≈ N min" hint.
  */
-export function estimateMatchMinutes(config: Pick<GameConfig, 'soundCount' | 'guessDuration'>): number {
+export function estimateMatchMinutes(
+  config: Pick<GameConfig, 'soundCount' | 'guessDuration'>,
+): number {
   const revealPerSong = GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000;
   const totalSeconds = config.soundCount * (config.guessDuration + revealPerSong);
   return Math.max(1, Math.round(totalSeconds / 60));

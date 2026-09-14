@@ -1,7 +1,21 @@
 import { useMemo, useRef } from 'react';
 import {
-  LogOut, Loader2, Camera, Check, X, Edit2, CalendarDays,
-  Clock, UserPlus, UserMinus, Ban, MoreVertical, KeyRound, Sword, Gavel, Trash2,
+  LogOut,
+  Loader2,
+  Camera,
+  Check,
+  X,
+  Edit2,
+  CalendarDays,
+  Clock,
+  UserPlus,
+  UserMinus,
+  Ban,
+  MoreVertical,
+  KeyRound,
+  Sword,
+  Gavel,
+  Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { levelProgress, type WatchedListProvider } from '@aniquizz/shared';
@@ -11,7 +25,10 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -31,13 +48,23 @@ const PROVIDER_LABEL: Record<WatchedListProvider, string> = {
 };
 
 const ROLE_META: Record<string, { label: string; className: string; icon: LucideIcon }> = {
-  ADMIN: { label: 'Admin', className: 'text-destructive border-destructive/40 bg-destructive/10', icon: Sword },
+  ADMIN: {
+    label: 'Admin',
+    className: 'text-destructive border-destructive/40 bg-destructive/10',
+    icon: Sword,
+  },
   MODERATOR: { label: 'Modérateur', className: 'text-info border-info/40 bg-info/10', icon: Gavel },
 };
 
 const getAvatarSrc = (avatar: string) => (avatar.startsWith('http') ? avatar : undefined);
 
-function ProviderLogo({ provider, className }: { provider: WatchedListProvider; className?: string }) {
+function ProviderLogo({
+  provider,
+  className,
+}: {
+  provider: WatchedListProvider;
+  className?: string;
+}) {
   const src = provider === 'anilist' ? ANILIST_LOGO : MAL_LOGO;
   return (
     <img
@@ -48,7 +75,13 @@ function ProviderLogo({ provider, className }: { provider: WatchedListProvider; 
   );
 }
 
-function ListProviderBadge({ provider, username }: { provider: WatchedListProvider; username: string }) {
+function ListProviderBadge({
+  provider,
+  username,
+}: {
+  provider: WatchedListProvider;
+  username: string;
+}) {
   return (
     <>
       <ProviderLogo provider={provider} />
@@ -79,12 +112,24 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({
-  vm, isOwn, relation,
-  isEditingUsername, newUsername, isSaving,
-  onStartEditUsername, onChangeNewUsername, onSaveUsername, onCancelEditUsername,
+  vm,
+  isOwn,
+  relation,
+  isEditingUsername,
+  newUsername,
+  isSaving,
+  onStartEditUsername,
+  onChangeNewUsername,
+  onSaveUsername,
+  onCancelEditUsername,
   onPickAvatarFile,
-  onOpenPasswordModal, onOpenDeleteAccountModal, onSignOut,
-  onAddFriend, onBlock, onRemoveFriend, onUnblock,
+  onOpenPasswordModal,
+  onOpenDeleteAccountModal,
+  onSignOut,
+  onAddFriend,
+  onBlock,
+  onRemoveFriend,
+  onUnblock,
 }: ProfileHeaderProps) {
   const { status: listsStatus } = useLists();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -99,7 +144,9 @@ export function ProfileHeader({
   const memberSince = useMemo(() => {
     if (!vm.createdAt) return null;
     try {
-      return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(new Date(vm.createdAt));
+      return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
+        new Date(vm.createdAt),
+      );
     } catch {
       return null;
     }
@@ -113,7 +160,12 @@ export function ProfileHeader({
         <div className="absolute top-4 right-4 z-20">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-foreground" aria-label="Actions du profil">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-foreground"
+                aria-label="Actions du profil"
+              >
                 <MoreVertical className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
@@ -141,7 +193,6 @@ export function ProfileHeader({
       )}
 
       <div className="relative z-10 flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
-
         <div className="flex flex-col items-center gap-2 shrink-0">
           {isOwn ? (
             <button
@@ -163,7 +214,9 @@ export function ProfileHeader({
                       alt={`Avatar de ${vm.username}`}
                       className="object-cover"
                     />
-                    <AvatarFallback className="bg-secondary text-4xl font-bold text-secondary-foreground">{vm.username.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="bg-secondary text-4xl font-bold text-secondary-foreground">
+                      {vm.username.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                 </div>
               </div>
@@ -173,7 +226,15 @@ export function ProfileHeader({
               <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">
                 {lvl.level}
               </span>
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={onPickAvatarFile} aria-hidden tabIndex={-1} />
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={onPickAvatarFile}
+                aria-hidden
+                tabIndex={-1}
+              />
             </button>
           ) : (
             <div className="relative">
@@ -184,7 +245,12 @@ export function ProfileHeader({
                 }}
               >
                 <div className="rounded-full bg-background p-[3px]">
-                  <UserAvatar avatar={vm.avatar} username={vm.username} className="h-28 w-28" loading="eager" />
+                  <UserAvatar
+                    avatar={vm.avatar}
+                    username={vm.username}
+                    className="h-28 w-28"
+                    loading="eager"
+                  />
                 </div>
               </div>
               <span className="absolute bottom-0 right-0 flex h-8 min-w-[32px] items-center justify-center rounded-full border-4 border-card bg-accent px-1.5 font-mono text-sm font-bold text-accent-foreground">
@@ -193,7 +259,9 @@ export function ProfileHeader({
             </div>
           )}
           <span className="font-mono text-xs text-muted-foreground">
-            {lvl.xpForNextLevel > 0 ? `${lvl.xpIntoLevel} / ${lvl.xpForNextLevel} XP` : 'Niveau max'}
+            {lvl.xpForNextLevel > 0
+              ? `${lvl.xpIntoLevel} / ${lvl.xpForNextLevel} XP`
+              : 'Niveau max'}
           </span>
         </div>
 
@@ -201,23 +269,60 @@ export function ProfileHeader({
           <div className="flex flex-col md:flex-row items-center md:items-center gap-3 min-h-[48px]">
             {isOwn && isEditingUsername ? (
               <div className="flex items-center gap-2 animate-fade-in w-full md:w-auto">
-                <Input value={newUsername} onChange={(e) => onChangeNewUsername(e.target.value)} className="text-2xl font-bold h-10 w-full md:w-64" maxLength={15} autoFocus />
-                <Button size="icon" onClick={onSaveUsername} disabled={isSaving} aria-label="Enregistrer le pseudo" className="h-10 w-10 shrink-0 bg-success text-success-foreground hover:bg-success/90">
-                  {isSaving ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
+                <Input
+                  value={newUsername}
+                  onChange={(e) => onChangeNewUsername(e.target.value)}
+                  className="text-2xl font-bold h-10 w-full md:w-64"
+                  maxLength={15}
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  onClick={onSaveUsername}
+                  disabled={isSaving}
+                  aria-label="Enregistrer le pseudo"
+                  className="h-10 w-10 shrink-0 bg-success text-success-foreground hover:bg-success/90"
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Check className="h-5 w-5" aria-hidden />
+                  )}
                 </Button>
-                <Button size="icon" variant="ghost" onClick={onCancelEditUsername} aria-label="Annuler la modification du pseudo" className="h-10 w-10 shrink-0"><X className="h-5 w-5" aria-hidden /></Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={onCancelEditUsername}
+                  aria-label="Annuler la modification du pseudo"
+                  className="h-10 w-10 shrink-0"
+                >
+                  <X className="h-5 w-5" aria-hidden />
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-3">
                 <h1 className="text-4xl font-black tracking-tight">{vm.username}</h1>
                 {roleMeta && (
-                  <span className={cn('inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md border', roleMeta.className)}>
+                  <span
+                    className={cn(
+                      'inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md border',
+                      roleMeta.className,
+                    )}
+                  >
                     <roleMeta.icon className="h-3.5 w-3.5" />
                     {roleMeta.label}
                   </span>
                 )}
                 {isOwn && (
-                  <Button variant="ghost" size="icon" aria-label="Modifier le pseudo" className="h-8 w-8 text-muted-foreground/50 hover:text-primary transition-colors" onClick={onStartEditUsername}><Edit2 className="h-4 w-4" aria-hidden /></Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Modifier le pseudo"
+                    className="h-8 w-8 text-muted-foreground/50 hover:text-primary transition-colors"
+                    onClick={onStartEditUsername}
+                  >
+                    <Edit2 className="h-4 w-4" aria-hidden />
+                  </Button>
                 )}
               </div>
             )}
@@ -289,12 +394,13 @@ export function ProfileHeader({
               <>
                 <span className={cn('h-2.5 w-2.5 rounded-full', PRESENCE_DOT[vm.status])} />
                 <span className="text-muted-foreground">
-                  {vm.status === 'offline' ? formatLastSeen(vm.lastSeenAt) : presenceLabel(vm.status)}
+                  {vm.status === 'offline'
+                    ? formatLastSeen(vm.lastSeenAt)
+                    : presenceLabel(vm.status)}
                 </span>
               </>
             )}
           </div>
-
         </div>
 
         {!isOwn && (
@@ -304,7 +410,11 @@ export function ProfileHeader({
                 <Button variant="glow" className="gap-2" onClick={() => onAddFriend(vm.id)}>
                   <UserPlus className="h-4 w-4" /> Ajouter en ami
                 </Button>
-                <Button variant="outline" className="gap-2 text-muted-foreground hover:text-destructive" onClick={() => onBlock(vm.id)}>
+                <Button
+                  variant="outline"
+                  className="gap-2 text-muted-foreground hover:text-destructive"
+                  onClick={() => onBlock(vm.id)}
+                >
                   <Ban className="h-4 w-4" /> Bloquer
                 </Button>
               </>
@@ -320,7 +430,11 @@ export function ProfileHeader({
               </Button>
             )}
             {relation === 'friends' && (
-              <Button variant="outline" className="gap-2 text-muted-foreground hover:text-destructive" onClick={() => onRemoveFriend(vm.id)}>
+              <Button
+                variant="outline"
+                className="gap-2 text-muted-foreground hover:text-destructive"
+                onClick={() => onRemoveFriend(vm.id)}
+              >
                 <UserMinus className="h-4 w-4" /> Retirer
               </Button>
             )}

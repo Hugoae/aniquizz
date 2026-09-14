@@ -2,7 +2,11 @@ import 'dotenv/config';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../src';
-import { STAFF_THEMATIC_PLAYLISTS, RETIRED_STAFF_PLAYLIST_SLUGS, type PlaylistRecipe } from '@aniquizz/shared';
+import {
+  STAFF_THEMATIC_PLAYLISTS,
+  RETIRED_STAFF_PLAYLIST_SLUGS,
+  type PlaylistRecipe,
+} from '@aniquizz/shared';
 
 const buildDimensionWhere = (recipe: PlaylistRecipe): Prisma.SongWhereInput => {
   const and: Prisma.SongWhereInput[] = [{ downloadStatus: 'COMPLETED' }];
@@ -86,7 +90,9 @@ async function main() {
     where: { slug: { in: [...RETIRED_STAFF_PLAYLIST_SLUGS] } },
   });
   if (retired.count > 0) {
-    console.log(`Retired ${retired.count} staff playlist(s): ${RETIRED_STAFF_PLAYLIST_SLUGS.join(', ')}`);
+    console.log(
+      `Retired ${retired.count} staff playlist(s): ${RETIRED_STAFF_PLAYLIST_SLUGS.join(', ')}`,
+    );
   }
   for (const seed of STAFF_THEMATIC_PLAYLISTS) {
     const existing = await prisma.thematicPlaylist.findUnique({ where: { slug: seed.slug } });

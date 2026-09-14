@@ -10,10 +10,7 @@ const AuthModalContext = createContext<AuthModalContextType | undefined>(undefin
 /** Isolated modal open state so toggling login does not re-render the whole auth tree. */
 export function AuthModalProvider({ children }: { children: ReactNode }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const value = useMemo(
-    () => ({ showAuthModal, setShowAuthModal }),
-    [showAuthModal],
-  );
+  const value = useMemo(() => ({ showAuthModal, setShowAuthModal }), [showAuthModal]);
   return <AuthModalContext.Provider value={value}>{children}</AuthModalContext.Provider>;
 }
 

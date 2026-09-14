@@ -111,10 +111,11 @@ export const dailyApi = {
   today: (opts?: { refresh?: boolean }) => loadToday(opts?.refresh === true),
   start: () => {
     invalidateDailyToday();
-    return request<{ attempt: DailySafeRoundDto | null; result: DailyResultDto | null; status: string }>(
-      '/daily/attempt',
-      { method: 'POST' },
-    );
+    return request<{
+      attempt: DailySafeRoundDto | null;
+      result: DailyResultDto | null;
+      status: string;
+    }>('/daily/attempt', { method: 'POST' });
   },
   answer: (attemptId: string, selected: string | null) =>
     request<{ reveal: DailyRevealDto | null; result: DailyResultDto | null; finished: boolean }>(
@@ -128,7 +129,9 @@ export const dailyApi = {
     ),
   forfeit: (attemptId: string) => {
     invalidateDailyToday();
-    return request<{ result: DailyResultDto }>(`/daily/attempt/${attemptId}/forfeit`, { method: 'POST' });
+    return request<{ result: DailyResultDto }>(`/daily/attempt/${attemptId}/forfeit`, {
+      method: 'POST',
+    });
   },
   /** Best-effort abandon on tab close — keepalive so the request survives unload. */
   forfeitKeepalive: (attemptId: string) => {

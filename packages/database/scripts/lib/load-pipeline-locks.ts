@@ -125,7 +125,9 @@ function normalizeAnimeLock(raw: Record<string, unknown>): PipelineAnimeLock {
 export function extractLockedFranchises(data: unknown): PipelineFranchiseLock[] {
   if (!Array.isArray(data)) return [];
   return data
-    .filter((row) => row && typeof row === 'object' && (row as { isLocked?: boolean }).isLocked === true)
+    .filter(
+      (row) => row && typeof row === 'object' && (row as { isLocked?: boolean }).isLocked === true,
+    )
     .map((row) => normalizeFranchiseLock(row as Record<string, unknown>));
 }
 

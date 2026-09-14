@@ -23,9 +23,14 @@ const isCustomUploadedAvatar = (avatar: string, userId: string): boolean =>
 
 const removeCustomAvatar = async (userId: string, avatar: string): Promise<void> => {
   if (!isCustomUploadedAvatar(avatar, userId)) return;
-  const { error } = await supabaseAdmin.storage.from('avatars').remove([CUSTOM_AVATAR_PATH(userId)]);
+  const { error } = await supabaseAdmin.storage
+    .from('avatars')
+    .remove([CUSTOM_AVATAR_PATH(userId)]);
   if (error) {
-    logger.warn(`[Profile] Avatar storage cleanup failed for ${userId}: ${error.message}`, 'Profile');
+    logger.warn(
+      `[Profile] Avatar storage cleanup failed for ${userId}: ${error.message}`,
+      'Profile',
+    );
   }
 };
 
@@ -64,10 +69,14 @@ export const deleteUserAccount = async (opts: {
   }
 
   if (confirmUsername.trim() !== profile.username) {
-    throw new DeleteAccountError('Le pseudo de confirmation ne correspond pas.', 'INVALID_CONFIRMATION');
+    throw new DeleteAccountError(
+      'Le pseudo de confirmation ne correspond pas.',
+      'INVALID_CONFIRMATION',
+    );
   }
 
-  const { data: authUser, error: authLookupError } = await supabaseAdmin.auth.admin.getUserById(userId);
+  const { data: authUser, error: authLookupError } =
+    await supabaseAdmin.auth.admin.getUserById(userId);
   if (authLookupError || !authUser.user) {
     throw new DeleteAccountError('Impossible de vérifier la session. Réessaie.', 'FAILED');
   }
@@ -87,18 +96,17 @@ export const deleteUserAccount = async (opts: {
 
   const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
   if (authError) {
-    logger.error(`[Profile] Supabase Auth delete failed for ${userId}: ${authError.message}`, 'Profile');
+    logger.error(
+      `[Profile] Supabase Auth delete failed for ${userId}: ${authError.message}`,
+      'Profile',
+    );
     throw new DeleteAccountError(
       'Le profil a été effacé mais la suppression Auth a échoué. Contacte le support.',
       'FAILED',
     );
   }
 
-  disconnectAllUserSockets(
-    io,
-    userId,
-    'Votre compte a été supprimé. À bientôt sur AniQuizz !',
-  );
+  disconnectAllUserSockets(io, userId, 'Votre compte a été supprimé. À bientôt sur AniQuizz !');
 
   logger.info(`[Profile] Account deleted for ${userId} (${profile.username}).`, 'Profile');
 };

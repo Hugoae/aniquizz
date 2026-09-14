@@ -17,8 +17,7 @@ export function XpEarnedBadge({ xp, className }: XpEarnedBadgeProps) {
         className,
       )}
     >
-      <Sparkles className="h-2.5 w-2.5" aria-hidden />
-      +{xp} XP
+      <Sparkles className="h-2.5 w-2.5" aria-hidden />+{xp} XP
     </div>
   );
 }

@@ -485,8 +485,9 @@ describe('MatchEngine', () => {
       engine.forceEndRound();
 
       const reveal = emitted.find((e) => e.event === 'round_reveal');
-      const players = (reveal!.payload as { players: { id: string; speedRank?: number; speedBonus?: number }[] })
-        .players;
+      const players = (
+        reveal!.payload as { players: { id: string; speedRank?: number; speedBonus?: number }[] }
+      ).players;
       const fast = players.find((p) => String(p.id) === 'player-1');
       expect(fast?.speedRank).toBe(1);
       expect(fast?.speedBonus).toBe(2);

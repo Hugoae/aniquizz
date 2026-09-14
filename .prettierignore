@@ -6,3 +6,8 @@ coverage
 pnpm-lock.yaml
 packages/database/data
 packages/database/prisma/migrations
+graphify-out
+test-results
+playwright-report
+blob-report
+skills-lock.json

@@ -52,60 +52,90 @@ export function CircularGameTimer({
         </div>
       )}
 
-    <div
-      role="timer"
-      aria-label={`Temps restant : ${timeLeft} secondes`}
-      className={cn(
-        'absolute inset-0 z-20 flex flex-col items-center justify-center bg-background transition-all duration-500',
-        phase === 'revealed' ? 'pointer-events-none z-10 opacity-0' : 'opacity-100',
-        className,
-      )}
-    >
-      <div className={cn('relative transition-transform duration-200', (isUrgent || isReady) && 'scale-110')}>
-        {badgeAnchor}
-        <svg className={cn('h-32 w-32 -rotate-90', isReady && 'animate-pulse')}>
-          <circle cx="50%" cy="50%" r="45%" fill="none" stroke="hsl(var(--secondary))" strokeWidth="6" />
-          <circle
-            cx="50%"
-            cy="50%"
-            r="45%"
-            fill="none"
-            stroke={isReady ? 'hsl(var(--primary))' : isUrgent ? 'hsl(var(--destructive))' : 'hsl(var(--primary))'}
-            strokeWidth="6"
-            strokeLinecap="round"
-            pathLength="100"
-            strokeDasharray="100"
-            strokeDashoffset={isReady ? 0 : (100 - calculatedProgress) * -1}
-            className={cn('transition-[stroke-dashoffset] duration-100 ease-linear', isReady && 'drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)]')}
-          />
-        </svg>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {isReady ? (
-            <span className="animate-pulse text-lg font-black text-primary">À vous !</span>
-          ) : (
-            <span
-              className={cn(
-                'text-4xl font-black tabular-nums transition-colors duration-200',
-                isUrgent ? 'text-destructive drop-shadow-[0_0_15px_hsl(var(--destructive)/0.8)] animate-pulse' : 'text-foreground',
-              )}
-            >
-              {timeLeft}
-            </span>
+      <div
+        role="timer"
+        aria-label={`Temps restant : ${timeLeft} secondes`}
+        className={cn(
+          'absolute inset-0 z-20 flex flex-col items-center justify-center bg-background transition-all duration-500',
+          phase === 'revealed' ? 'pointer-events-none z-10 opacity-0' : 'opacity-100',
+          className,
+        )}
+      >
+        <div
+          className={cn(
+            'relative transition-transform duration-200',
+            (isUrgent || isReady) && 'scale-110',
           )}
+        >
+          {badgeAnchor}
+          <svg className={cn('h-32 w-32 -rotate-90', isReady && 'animate-pulse')}>
+            <circle
+              cx="50%"
+              cy="50%"
+              r="45%"
+              fill="none"
+              stroke="hsl(var(--secondary))"
+              strokeWidth="6"
+            />
+            <circle
+              cx="50%"
+              cy="50%"
+              r="45%"
+              fill="none"
+              stroke={
+                isReady
+                  ? 'hsl(var(--primary))'
+                  : isUrgent
+                    ? 'hsl(var(--destructive))'
+                    : 'hsl(var(--primary))'
+              }
+              strokeWidth="6"
+              strokeLinecap="round"
+              pathLength="100"
+              strokeDasharray="100"
+              strokeDashoffset={isReady ? 0 : (100 - calculatedProgress) * -1}
+              className={cn(
+                'transition-[stroke-dashoffset] duration-100 ease-linear',
+                isReady && 'drop-shadow-[0_0_12px_hsl(var(--primary)/0.6)]',
+              )}
+            />
+          </svg>
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            {isReady ? (
+              <span className="animate-pulse text-lg font-black text-primary">À vous !</span>
+            ) : (
+              <span
+                className={cn(
+                  'text-4xl font-black tabular-nums transition-colors duration-200',
+                  isUrgent
+                    ? 'text-destructive drop-shadow-[0_0_15px_hsl(var(--destructive)/0.8)] animate-pulse'
+                    : 'text-foreground',
+                )}
+              >
+                {timeLeft}
+              </span>
+            )}
+          </div>
         </div>
+
+        {showVisualizer && phase === 'guessing' && (
+          <div className="mt-6 flex h-8 w-1/2 items-center justify-center">
+            <AudioVisualizer
+              isPlaying={!isPaused}
+              className={cn('h-8', isUrgent ? 'text-destructive' : 'text-primary')}
+            />
+          </div>
+        )}
+
+        <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">
+          {phase === 'loading'
+            ? 'Chargement…'
+            : phase === 'ready'
+              ? 'Préparez-vous…'
+              : 'Écoutez bien…'}
+        </p>
       </div>
-
-      {showVisualizer && phase === 'guessing' && (
-        <div className="mt-6 flex h-8 w-1/2 items-center justify-center">
-          <AudioVisualizer isPlaying={!isPaused} className={cn('h-8', isUrgent ? 'text-destructive' : 'text-primary')} />
-        </div>
-      )}
-
-      <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">
-        {phase === 'loading' ? 'Chargement…' : phase === 'ready' ? 'Préparez-vous…' : 'Écoutez bien…'}
-      </p>
-    </div>
     </>
   );
 }

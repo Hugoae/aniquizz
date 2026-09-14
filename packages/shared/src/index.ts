@@ -23,6 +23,7 @@ export * from './videoMode';
 export * from './songStartMode';
 export * from './sprint';
 export * from './events';
+export * from './socketPayloads';
 export * from './library';
 export * from './catalogueSearch';
 export * from './suggestions';

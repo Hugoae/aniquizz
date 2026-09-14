@@ -17,13 +17,13 @@ Self-service **right to erasure** for authenticated users. Available from the ow
 
 ## Security
 
-| Control | Implementation |
-|---------|----------------|
-| Identity | JWT `userId` from socket auth only — never accept a target id from client |
-| Re-auth | Client `signInWithPassword`, then server checks `last_sign_in_at` within 10 minutes (`isFreshReauth`) |
-| Confirmation | `confirmUsername` must match DB `Profile.username` exactly |
-| Rate limit | `RATE_LIMITS.deleteAccount` (3 attempts / hour / socket) |
-| Bots | `isBotId()` rejected |
+| Control      | Implementation                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| Identity     | JWT `userId` from socket auth only — never accept a target id from client                             |
+| Re-auth      | Client `signInWithPassword`, then server checks `last_sign_in_at` within 10 minutes (`isFreshReauth`) |
+| Confirmation | `confirmUsername` must match DB `Profile.username` exactly                                            |
+| Rate limit   | `RATE_LIMITS.deleteAccount` (3 attempts / hour / socket)                                              |
+| Bots         | `isBotId()` rejected                                                                                  |
 
 ## What is NOT deleted
 
@@ -32,14 +32,14 @@ Self-service **right to erasure** for authenticated users. Available from the ow
 
 ## Files
 
-| Layer | Path |
-|-------|------|
-| Server logic | `apps/server/src/modules/profile/deleteAccount.ts` |
-| Socket handler | `apps/server/src/modules/profile/profileHandlers.ts` |
-| Room eject | `apps/server/src/modules/game/gameManager.ts` — `ejectUserFromAllRooms()` |
-| Events | `packages/shared/src/events.ts` |
-| UI | `DeleteAccountDialog.tsx`, `ProfileHeader.tsx`, `Profile.tsx` |
-| Legal | `PrivacyPolicyPage.tsx` §6 |
+| Layer          | Path                                                                      |
+| -------------- | ------------------------------------------------------------------------- |
+| Server logic   | `apps/server/src/modules/profile/deleteAccount.ts`                        |
+| Socket handler | `apps/server/src/modules/profile/profileHandlers.ts`                      |
+| Room eject     | `apps/server/src/modules/game/gameManager.ts` — `ejectUserFromAllRooms()` |
+| Events         | `packages/shared/src/events.ts`                                           |
+| UI             | `DeleteAccountDialog.tsx`, `ProfileHeader.tsx`, `Profile.tsx`             |
+| Legal          | `PrivacyPolicyPage.tsx` §6                                                |
 
 ## Tests
 

@@ -56,21 +56,51 @@ function MetaPills({
 
   return (
     <>
-      <span className={cn('rounded border font-bold uppercase tracking-wider shadow-sm', pill, diffColor)}>{diffLabel}</span>
-      <span className={cn('rounded border border-border bg-secondary/50 font-black text-foreground shadow-sm', typePill)}>{formattedType}</span>
+      <span
+        className={cn(
+          'rounded border font-bold uppercase tracking-wider shadow-sm',
+          pill,
+          diffColor,
+        )}
+      >
+        {diffLabel}
+      </span>
+      <span
+        className={cn(
+          'rounded border border-border bg-secondary/50 font-black text-foreground shadow-sm',
+          typePill,
+        )}
+      >
+        {formattedType}
+      </span>
       {episodeLabel && (
-        <span className={cn('rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground', pill)}>
+        <span
+          className={cn(
+            'rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground',
+            pill,
+          )}
+        >
           {episodeLabel}
         </span>
       )}
       {formatLabel && (
-        <span className={cn('flex items-center gap-1 rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground', pill)}>
+        <span
+          className={cn(
+            'flex items-center gap-1 rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground',
+            pill,
+          )}
+        >
           <Film className={compact ? 'h-3 w-3' : 'h-3 w-3'} aria-hidden="true" />
           {formatLabel}
         </span>
       )}
       {seasonYearLabel && (
-        <span className={cn('flex items-center gap-1 rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground', pill)}>
+        <span
+          className={cn(
+            'flex items-center gap-1 rounded border border-border/60 bg-secondary/30 font-bold text-secondary-foreground',
+            pill,
+          )}
+        >
           <Calendar className="h-3 w-3" aria-hidden="true" />
           {seasonYearLabel}
         </span>
@@ -107,8 +137,12 @@ export function SongInfoCard({
           <HelpCircle className="h-10 w-10" aria-hidden="true" />
         </div>
         <div>
-          <p className="text-lg font-black uppercase tracking-tight text-foreground/80">Quel est cet anime ?</p>
-          <p className="mt-1 text-sm text-muted-foreground">Les infos apparaîtront à la révélation.</p>
+          <p className="text-lg font-black uppercase tracking-tight text-foreground/80">
+            Quel est cet anime ?
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Les infos apparaîtront à la révélation.
+          </p>
         </div>
       </div>
     );
@@ -149,8 +183,19 @@ export function SongInfoCard({
       >
         {coverImage ? (
           <div className="relative w-[104px] shrink-0 overflow-hidden">
-            {accent && <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/40 to-transparent mix-blend-multiply" style={{ backgroundColor: `${accent}22` }} />}
-            <img src={coverImage} alt={animeName} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+            {accent && (
+              <div
+                className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/40 to-transparent mix-blend-multiply"
+                style={{ backgroundColor: `${accent}22` }}
+              />
+            )}
+            <img
+              src={coverImage}
+              alt={animeName}
+              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
             {isWatched && (
               <div className="absolute left-1 top-1 z-20 flex items-center gap-1 rounded bg-success px-1.5 py-0.5 text-success-foreground shadow">
                 <Check className="h-3 w-3 stroke-[4]" />
@@ -194,7 +239,13 @@ export function SongInfoCard({
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
             {metaPills}
             {tags?.slice(0, 3).map((tag, i) => (
-              <span key={tag} className={cn('hidden rounded border px-1.5 py-0.5 text-[9px] font-medium sm:inline', REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length])}>
+              <span
+                key={tag}
+                className={cn(
+                  'hidden rounded border px-1.5 py-0.5 text-[9px] font-medium sm:inline',
+                  REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length],
+                )}
+              >
                 {tag}
               </span>
             ))}
@@ -234,7 +285,10 @@ export function SongInfoCard({
           <ExternalLink className="relative -top-0.5 ml-1.5 inline h-3.5 w-3.5 opacity-50" />
         </a>
 
-        <div className="mb-2 flex flex-col gap-1 border-l-2 pl-2" style={accent ? { borderColor: `${accent}88` } : undefined}>
+        <div
+          className="mb-2 flex flex-col gap-1 border-l-2 pl-2"
+          style={accent ? { borderColor: `${accent}88` } : undefined}
+        >
           <div className="flex items-center gap-2 truncate text-base font-bold text-foreground/90">
             <Music2 className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate">{songTitle}</span>
@@ -252,7 +306,13 @@ export function SongInfoCard({
         {tags && tags.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {tags.slice(0, 6).map((tag, i) => (
-              <span key={tag} className={cn('whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-medium', REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length])}>
+              <span
+                key={tag}
+                className={cn(
+                  'whitespace-nowrap rounded border px-1.5 py-0.5 text-[10px] font-medium',
+                  REVEAL_TAG_TONES[i % REVEAL_TAG_TONES.length],
+                )}
+              >
                 {tag}
               </span>
             ))}
@@ -269,7 +329,13 @@ export function SongInfoCard({
             aria-hidden="true"
           />
         )}
-        <img src={coverImage || '/placeholder.png'} alt={animeName} className="h-full w-full object-cover" loading="lazy" decoding="async" />
+        <img
+          src={coverImage || '/placeholder.png'}
+          alt={animeName}
+          className="h-full w-full object-cover"
+          loading="lazy"
+          decoding="async"
+        />
 
         {isWatched && (
           <div className="absolute right-2 top-2 z-20 flex items-center gap-1 rounded-md border border-success/60 bg-success px-2 py-1 text-success-foreground shadow-lg">

@@ -31,7 +31,8 @@ export function SoloResult({
   const [showStickySummary, setShowStickySummary] = useState(false);
 
   const me =
-    victoryData.rankings.find((p) => String(p.id) === String(currentUserId)) ?? victoryData.rankings[0];
+    victoryData.rankings.find((p) => String(p.id) === String(currentUserId)) ??
+    victoryData.rankings[0];
   const soloMedal = victoryData.soloMedal ?? null;
   const isSuccess = !!soloMedal;
   const score = me?.score ?? 0;
@@ -39,7 +40,9 @@ export function SoloResult({
   const correctCount = me?.matchCorrectCount ?? 0;
   const totalRounds = me?.matchTotalCount ?? history.length;
   const songDifficulties =
-    history.length > 0 ? history.map((r) => r.song.difficulty) : (settings.difficulty ?? ['medium']);
+    history.length > 0
+      ? history.map((r) => r.song.difficulty)
+      : (settings.difficulty ?? ['medium']);
 
   const scrollToDetail = useCallback(() => {
     detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -70,7 +73,12 @@ export function SoloResult({
           <span className="font-mono text-sm font-bold tabular-nums text-muted-foreground">
             {correctCount}/{totalRounds}
           </span>
-          <span className={cn('text-xs font-black uppercase', isSuccess ? 'text-success' : 'text-destructive')}>
+          <span
+            className={cn(
+              'text-xs font-black uppercase',
+              isSuccess ? 'text-success' : 'text-destructive',
+            )}
+          >
             {isSuccess ? 'Victoire' : 'Défaite'}
           </span>
         </div>

@@ -48,7 +48,9 @@ describe('dailyPayloads likes', () => {
   it('keeps that catalogue id on the recap rows', () => {
     const result = toResultDto({
       rounds: [round(1, 4242)],
-      answers: [{ roundId: 'round-1', selectedLabel: 'Anime 1', isCorrect: true, responseMs: 1200 }],
+      answers: [
+        { roundId: 'round-1', selectedLabel: 'Anime 1', isCorrect: true, responseMs: 1200 },
+      ],
       xpAwarded: 8,
       completedAt: new Date('2026-09-14T10:00:00.000Z'),
       streak: 1,

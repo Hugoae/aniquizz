@@ -43,11 +43,7 @@ export function SeoHead({
       : formatPageTitle(title);
   const metaDescription = description ?? DEFAULT_DESCRIPTION;
 
-  const jsonLdBlocks = jsonLd
-    ? Array.isArray(jsonLd)
-      ? jsonLd
-      : [jsonLd]
-    : [];
+  const jsonLdBlocks = jsonLd ? (Array.isArray(jsonLd) ? jsonLd : [jsonLd]) : [];
 
   return (
     <Helmet>

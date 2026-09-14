@@ -17,23 +17,35 @@ describe('isWatchedSourceBlocked', () => {
 
   it('blocks watched source when no list provider is linked', () => {
     expect(
-      isWatchedSourceBlocked('watched', { id: 'u1' } as never, { anilistUsername: null, malUsername: null } as never),
+      isWatchedSourceBlocked(
+        'watched',
+        { id: 'u1' } as never,
+        { anilistUsername: null, malUsername: null } as never,
+      ),
     ).toBe(true);
   });
 
   it('allows watched source when AniList is linked', () => {
     expect(
-      isWatchedSourceBlocked('watched', { id: 'u1' } as never, {
-        anilistUsername: 'PlayerOne',
-      } as never),
+      isWatchedSourceBlocked(
+        'watched',
+        { id: 'u1' } as never,
+        {
+          anilistUsername: 'PlayerOne',
+        } as never,
+      ),
     ).toBe(false);
   });
 
   it('allows watched source when MAL is linked', () => {
     expect(
-      isWatchedSourceBlocked('watched', { id: 'u1' } as never, {
-        malUsername: 'PlayerOne',
-      } as never),
+      isWatchedSourceBlocked(
+        'watched',
+        { id: 'u1' } as never,
+        {
+          malUsername: 'PlayerOne',
+        } as never,
+      ),
     ).toBe(false);
   });
 

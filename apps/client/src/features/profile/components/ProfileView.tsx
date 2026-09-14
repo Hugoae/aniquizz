@@ -1,11 +1,11 @@
-import { Trophy, Check, Target, Flame, Music2, Disc, Zap } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-import { StatCard } from "./StatCard";
-import type { AdminProfileStats, Role } from "@/lib/adminApi";
+import { Trophy, Check, Target, Flame, Music2, Disc, Zap } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+import { StatCard } from './StatCard';
+import type { AdminProfileStats, Role } from '@/lib/adminApi';
 
 const getAvatarSrc = (avatar: string): string | undefined =>
-  avatar.startsWith("http") ? avatar : undefined;
+  avatar.startsWith('http') ? avatar : undefined;
 
 export interface ProfileViewProps {
   username: string;
@@ -31,8 +31,8 @@ export function ProfileView({
   role,
   anilistUsername,
   malUsername,
-  presenceLabel = "Hors ligne",
-  presenceColor = "bg-white/30",
+  presenceLabel = 'Hors ligne',
+  presenceColor = 'bg-white/30',
   presenceOnline = false,
   stats,
   headerExtra,
@@ -57,12 +57,12 @@ export function ProfileView({
           <div className="flex-1 space-y-2 py-1">
             <div className="flex items-center justify-center sm:justify-start gap-3">
               <h1 className="text-3xl font-black tracking-tight">{username}</h1>
-              {role === "ADMIN" && (
+              {role === 'ADMIN' && (
                 <span className="text-xs bg-destructive/20 text-destructive px-2 py-1 rounded-sm border border-destructive/50">
                   ADMIN
                 </span>
               )}
-              {role === "MODERATOR" && (
+              {role === 'MODERATOR' && (
                 <span className="text-xs bg-info/20 text-info px-2 py-1 rounded-sm border border-info/50">
                   MODÉRATEUR
                 </span>
@@ -70,7 +70,13 @@ export function ProfileView({
             </div>
 
             <div className="flex items-center justify-center sm:justify-start gap-2 text-muted-foreground">
-              <span className={cn("inline-block w-2 h-2 rounded-full", presenceColor, presenceOnline && "animate-pulse")} />
+              <span
+                className={cn(
+                  'inline-block w-2 h-2 rounded-full',
+                  presenceColor,
+                  presenceOnline && 'animate-pulse',
+                )}
+              />
               <span>{presenceLabel}</span>
             </div>
 
@@ -108,8 +114,18 @@ export function ProfileView({
           <h2 className="text-lg font-bold">Statistiques</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <StatCard icon={Trophy} label="Taux de victoire" value={`${s.winRate}%`} color="text-accent" />
-          <StatCard icon={Check} label="Taux de bon guess" value={`${s.accuracy}%`} color="text-success" />
+          <StatCard
+            icon={Trophy}
+            label="Taux de victoire"
+            value={`${s.winRate}%`}
+            color="text-accent"
+          />
+          <StatCard
+            icon={Check}
+            label="Taux de bon guess"
+            value={`${s.accuracy}%`}
+            color="text-success"
+          />
           <StatCard icon={Target} label="Parties jouées" value={s.gamesPlayed} color="text-info" />
           <StatCard icon={Flame} label="Best Streak" value={s.maxStreak} color="text-warning" />
         </div>
@@ -125,7 +141,9 @@ export function ProfileView({
           <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 mb-4 z-10 relative">
             <div>
               <div className="text-4xl font-black gradient-text">{stats.discoveredSongs}</div>
-              <div className="text-sm text-muted-foreground font-medium">Sons uniques découverts</div>
+              <div className="text-sm text-muted-foreground font-medium">
+                Sons uniques découverts
+              </div>
             </div>
           </div>
           <div className="space-y-2 z-10 relative">
@@ -134,7 +152,7 @@ export function ProfileView({
                 className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000 ease-out"
                 style={{
                   width: `${Math.min(stats.progressPercent, 100)}%`,
-                  boxShadow: "0 0 15px rgba(168, 85, 247, 0.5)",
+                  boxShadow: '0 0 15px rgba(168, 85, 247, 0.5)',
                 }}
               />
             </div>

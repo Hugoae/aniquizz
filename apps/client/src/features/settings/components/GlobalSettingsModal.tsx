@@ -1,11 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { GlobalSettingsContent } from '@/features/settings/components/GlobalSettingsContent';
 import { subscribeSettingsOpen, type SettingsTab } from '@/features/settings/lib/openSettings';
 

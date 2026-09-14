@@ -1,9 +1,5 @@
 import { Server, Socket } from 'socket.io';
-import type {
-  ClientToServerEvents,
-  ServerToClientEvents,
-  SocketData,
-} from '@aniquizz/shared';
+import type { ClientToServerEvents, ServerToClientEvents, SocketData } from '@aniquizz/shared';
 
 /** No inter-server events (single instance). */
 type InterServerEvents = Record<string, never>;

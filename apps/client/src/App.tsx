@@ -1,9 +1,19 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, type ReactElement, type ReactNode } from 'react';
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SkipLink } from '@/components/a11y/SkipLink';
-import { RouteSkeletonFallback, DelayedRouteFallback } from '@/components/layout/RouteSkeletonFallback';
+import {
+  RouteSkeletonFallback,
+  DelayedRouteFallback,
+} from '@/components/layout/RouteSkeletonFallback';
 import { warmLikelyRoutes } from '@/lib/routePrefetch';
 import { dismissAppShellWhenReady } from '@/lib/appShell';
 import { markLandingPaintDone } from '@/lib/initialPaint';

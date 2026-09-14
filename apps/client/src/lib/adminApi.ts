@@ -1,6 +1,6 @@
-import { supabase } from "./supabase";
-import { serverApiBase } from "./env";
-import type { SuggestionAdminUpdateInput, SuggestionItem } from "@aniquizz/shared";
+import { supabase } from './supabase';
+import { serverApiBase } from './env';
+import type { Precision, SuggestionAdminUpdateInput, SuggestionItem } from '@aniquizz/shared';
 
 /**
  * Thin client for the server-side admin REST API. Every call attaches the
@@ -25,7 +25,7 @@ export class AdminApiError extends Error {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     ...(await authHeaders()),
     ...((init.headers as Record<string, string>) ?? {}),
   };
@@ -47,19 +47,12 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 // --- TYPES ------------------------------------------------------------------
 
 export type UserListFilter =
-  | "all"
-  | "players"
-  | "moderators"
-  | "admins"
-  | "muted"
-  | "banned"
-  | "online"
-  | "in_game";
+  'all' | 'players' | 'moderators' | 'admins' | 'muted' | 'banned' | 'online' | 'in_game';
 
-export type UserListSort = "username" | "xp" | "games" | "created" | "seen";
+export type UserListSort = 'username' | 'xp' | 'games' | 'created' | 'seen';
 
-export type Role = "USER" | "MODERATOR" | "ADMIN";
-export type Presence = "online" | "in_game" | "offline";
+export type Role = 'USER' | 'MODERATOR' | 'ADMIN';
+export type Presence = 'online' | 'in_game' | 'offline';
 
 export interface AdminUserListResponse {
   users: AdminUser[];
@@ -142,7 +135,7 @@ export interface AdminRoomPlayer {
 export interface AdminRoomProgress {
   currentRound: number;
   totalRounds: number;
-  phase: "intro" | "ready" | "guessing" | "reveal" | null;
+  phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
   endsAt: number | null;
@@ -181,8 +174,8 @@ export interface BotConfig {
   maxDelayMs: number;
 }
 
-export type SongStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "ERROR" | "SKIPPED";
-export type SongDifficulty = "EASY" | "MEDIUM" | "HARD";
+export type SongStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'ERROR' | 'SKIPPED';
+export type SongDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
 
 export interface AdminSong {
   id: number;
@@ -199,7 +192,7 @@ export interface AdminSong {
   anime: { id: number; name: string } | null;
 }
 
-export type SongType = "OP" | "ED" | "INSERT";
+export type SongType = 'OP' | 'ED' | 'INSERT';
 
 export interface CatalogueSong {
   id: number;
@@ -297,7 +290,7 @@ export interface AdminStats {
   playersInRooms: number;
 }
 
-export type StatsPeriod = "24h" | "7d" | "30d" | "all";
+export type StatsPeriod = '24h' | '7d' | '30d' | 'all';
 
 export interface StatsOverview {
   live: {
@@ -422,7 +415,7 @@ export interface DailySongSearchHit {
   id: number;
   title: string;
   artist: string;
-  songType: "OP" | "ED";
+  songType: 'OP' | 'ED';
   sequence: number;
   typeLabel: string;
   difficulty: SongDifficulty;
@@ -439,53 +432,55 @@ export interface DailyAdminList {
 // --- ENDPOINTS --------------------------------------------------------------
 
 export const adminApi = {
-  me: () => request<{ userId: string; username: string; role: Role }>("/me"),
-  claimAdmin: () => request<{ role: Role }>("/dev/claim-admin", { method: "POST" }),
+  me: () => request<{ userId: string; username: string; role: Role }>('/me'),
+  claimAdmin: () => request<{ role: Role }>('/dev/claim-admin', { method: 'POST' }),
 
   // Users
-  listUsers: (opts: {
-    query?: string;
-    page?: number;
-    filter?: UserListFilter;
-    sort?: UserListSort;
-    sortDir?: "asc" | "desc";
-  } = {}) => {
+  listUsers: (
+    opts: {
+      query?: string;
+      page?: number;
+      filter?: UserListFilter;
+      sort?: UserListSort;
+      sortDir?: 'asc' | 'desc';
+    } = {},
+  ) => {
     const params = new URLSearchParams();
-    if (opts.query) params.set("query", opts.query);
-    if (opts.page) params.set("page", String(opts.page));
-    if (opts.filter && opts.filter !== "all") params.set("filter", opts.filter);
-    if (opts.sort && opts.sort !== "username") params.set("sort", opts.sort);
-    if (opts.sortDir === "desc") params.set("sortDir", "desc");
+    if (opts.query) params.set('query', opts.query);
+    if (opts.page) params.set('page', String(opts.page));
+    if (opts.filter && opts.filter !== 'all') params.set('filter', opts.filter);
+    if (opts.sort && opts.sort !== 'username') params.set('sort', opts.sort);
+    if (opts.sortDir === 'desc') params.set('sortDir', 'desc');
     const qs = params.toString();
-    return request<AdminUserListResponse>(`/users${qs ? `?${qs}` : ""}`);
+    return request<AdminUserListResponse>(`/users${qs ? `?${qs}` : ''}`);
   },
   setRole: (id: string, role: Role) =>
-    request(`/users/${id}/role`, { method: "PATCH", body: JSON.stringify({ role }) }),
+    request(`/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
   ban: (id: string, minutes: number | null) =>
-    request(`/users/${id}/ban`, { method: "POST", body: JSON.stringify({ minutes }) }),
+    request(`/users/${id}/ban`, { method: 'POST', body: JSON.stringify({ minutes }) }),
   mute: (id: string, minutes: number | null) =>
-    request(`/users/${id}/mute`, { method: "POST", body: JSON.stringify({ minutes }) }),
-  resetStats: (id: string) => request(`/users/${id}/reset-stats`, { method: "POST" }),
+    request(`/users/${id}/mute`, { method: 'POST', body: JSON.stringify({ minutes }) }),
+  resetStats: (id: string) => request(`/users/${id}/reset-stats`, { method: 'POST' }),
   resetDaily: (id: string) =>
-    request<{ reset: boolean; xpReverted: number }>(`/users/${id}/reset-daily`, { method: "POST" }),
+    request<{ reset: boolean; xpReverted: number }>(`/users/${id}/reset-daily`, { method: 'POST' }),
   disconnectUser: (id: string) =>
-    request<{ disconnected: number }>(`/users/${id}/disconnect`, { method: "POST" }),
+    request<{ disconnected: number }>(`/users/${id}/disconnect`, { method: 'POST' }),
   getUserProfile: (id: string) => request<AdminUserProfile>(`/users/${id}/profile`),
 
   // Live rooms
-  listRooms: () => request<{ rooms: AdminRoom[] }>("/rooms"),
-  endMatch: (id: string) => request(`/rooms/${id}/end`, { method: "POST" }),
-  closeRoom: (id: string) => request(`/rooms/${id}/close`, { method: "POST" }),
+  listRooms: () => request<{ rooms: AdminRoom[] }>('/rooms'),
+  endMatch: (id: string) => request(`/rooms/${id}/end`, { method: 'POST' }),
+  closeRoom: (id: string) => request(`/rooms/${id}/close`, { method: 'POST' }),
   kick: (roomId: string, userId: string) =>
-    request(`/rooms/${roomId}/kick`, { method: "POST", body: JSON.stringify({ userId }) }),
+    request(`/rooms/${roomId}/kick`, { method: 'POST', body: JSON.stringify({ userId }) }),
 
   // Catalogue
   listSongs: (opts: { query?: string; status?: SongStatus } = {}) => {
     const params = new URLSearchParams();
-    if (opts.query) params.set("query", opts.query);
-    if (opts.status) params.set("status", opts.status);
+    if (opts.query) params.set('query', opts.query);
+    if (opts.status) params.set('status', opts.status);
     const qs = params.toString();
-    return request<{ songs: AdminSong[] }>(`/catalogue/songs${qs ? `?${qs}` : ""}`);
+    return request<{ songs: AdminSong[] }>(`/catalogue/songs${qs ? `?${qs}` : ''}`);
   },
   catalogueTree: (
     opts: {
@@ -499,117 +494,125 @@ export const adminApi = {
     } = {},
   ) => {
     const params = new URLSearchParams();
-    if (opts.query) params.set("query", opts.query);
-    if (opts.status) params.set("status", opts.status);
-    if (opts.difficulty) params.set("difficulty", opts.difficulty);
-    if (opts.locked !== undefined) params.set("locked", String(opts.locked));
-    if (opts.page) params.set("page", String(opts.page));
-    if (opts.pageSize) params.set("pageSize", String(opts.pageSize));
+    if (opts.query) params.set('query', opts.query);
+    if (opts.status) params.set('status', opts.status);
+    if (opts.difficulty) params.set('difficulty', opts.difficulty);
+    if (opts.locked !== undefined) params.set('locked', String(opts.locked));
+    if (opts.page) params.set('page', String(opts.page));
+    if (opts.pageSize) params.set('pageSize', String(opts.pageSize));
     const qs = params.toString();
-    return request<CatalogueTree>(`/catalogue/tree${qs ? `?${qs}` : ""}`, {
+    return request<CatalogueTree>(`/catalogue/tree${qs ? `?${qs}` : ''}`, {
       signal: opts.signal,
     });
   },
   updateSong: (id: number, data: SongWrite) =>
     request<CatalogueSong>(`/catalogue/songs/${id}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  createSong: (data: SongWrite & { title: string; artist: string; songType: SongType; videoKey: string; animeId: number }) =>
-    request<CatalogueSong>(`/catalogue/songs`, { method: "POST", body: JSON.stringify(data) }),
-  deleteSong: (id: number) => request(`/catalogue/songs/${id}`, { method: "DELETE" }),
+  createSong: (
+    data: SongWrite & {
+      title: string;
+      artist: string;
+      songType: SongType;
+      videoKey: string;
+      animeId: number;
+    },
+  ) => request<CatalogueSong>(`/catalogue/songs`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteSong: (id: number) => request(`/catalogue/songs/${id}`, { method: 'DELETE' }),
   bulkUpdateSongs: (
     ids: number[],
     data: { difficulty?: SongDifficulty; downloadStatus?: SongStatus; isLocked?: boolean },
   ) =>
     request<{ count: number }>(`/catalogue/songs/bulk`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ ids, data }),
     }),
   updateAnime: (id: number, data: AnimeWrite) =>
     request<CatalogueAnime>(`/catalogue/animes/${id}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
   createAnime: (data: AnimeWrite & { name: string }) =>
-    request<CatalogueAnime>(`/catalogue/animes`, { method: "POST", body: JSON.stringify(data) }),
-  deleteAnime: (id: number) => request(`/catalogue/animes/${id}`, { method: "DELETE" }),
+    request<CatalogueAnime>(`/catalogue/animes`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteAnime: (id: number) => request(`/catalogue/animes/${id}`, { method: 'DELETE' }),
   updateFranchise: (id: number, data: FranchiseWrite) =>
-    request(`/catalogue/franchises/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    request(`/catalogue/franchises/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   createFranchise: (data: FranchiseWrite & { name: string }) =>
-    request(`/catalogue/franchises`, { method: "POST", body: JSON.stringify(data) }),
-  deleteFranchise: (id: number) => request(`/catalogue/franchises/${id}`, { method: "DELETE" }),
+    request(`/catalogue/franchises`, { method: 'POST', body: JSON.stringify(data) }),
+  deleteFranchise: (id: number) => request(`/catalogue/franchises/${id}`, { method: 'DELETE' }),
 
-  listPlaylists: () => request<{ playlists: AdminThematicPlaylist[] }>("/playlists"),
+  listPlaylists: () => request<{ playlists: AdminThematicPlaylist[] }>('/playlists'),
   previewPlaylistRecipe: (recipe: unknown) =>
-    request<PlaylistRecipePreview>("/playlists/preview", {
-      method: "POST",
+    request<PlaylistRecipePreview>('/playlists/preview', {
+      method: 'POST',
       body: JSON.stringify({ recipe }),
     }),
   seedPlaylists: (publish = true) =>
-    request<{ seeded: Array<{ slug: string; id: string; snapshotCount: number }> }>("/playlists/seed", {
-      method: "POST",
-      body: JSON.stringify({ publish }),
-    }),
+    request<{ seeded: Array<{ slug: string; id: string; snapshotCount: number }> }>(
+      '/playlists/seed',
+      {
+        method: 'POST',
+        body: JSON.stringify({ publish }),
+      },
+    ),
   createPlaylist: (data: PlaylistUpsertInput) =>
-    request<AdminThematicPlaylist>("/playlists", { method: "POST", body: JSON.stringify(data) }),
+    request<AdminThematicPlaylist>('/playlists', { method: 'POST', body: JSON.stringify(data) }),
   updatePlaylist: (id: string, data: PlaylistUpsertInput) =>
     request<AdminThematicPlaylist>(`/playlists/${id}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
   publishPlaylist: (id: string) =>
     request<{ snapshotCount: number; isPublished: boolean }>(`/playlists/${id}/publish`, {
-      method: "POST",
+      method: 'POST',
     }),
   refreshPlaylist: (id: string) =>
-    request<{ snapshotCount: number }>(`/playlists/${id}/refresh`, { method: "POST" }),
-  deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: "DELETE" }),
+    request<{ snapshotCount: number }>(`/playlists/${id}/refresh`, { method: 'POST' }),
+  deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: 'DELETE' }),
 
-  listDaily: () => request<DailyAdminList>("/daily"),
-  searchDailySongs: (
-    opts: { query?: string; exclude?: number[]; signal?: AbortSignal } = {},
-  ) => {
+  listDaily: () => request<DailyAdminList>('/daily'),
+  searchDailySongs: (opts: { query?: string; exclude?: number[]; signal?: AbortSignal } = {}) => {
     const params = new URLSearchParams();
-    if (opts.query) params.set("query", opts.query);
-    if (opts.exclude?.length) params.set("exclude", opts.exclude.join(","));
+    if (opts.query) params.set('query', opts.query);
+    if (opts.exclude?.length) params.set('exclude', opts.exclude.join(','));
     const qs = params.toString();
-    return request<{ songs: DailySongSearchHit[] }>(`/daily/songs${qs ? `?${qs}` : ""}`, {
+    return request<{ songs: DailySongSearchHit[] }>(`/daily/songs${qs ? `?${qs}` : ''}`, {
       signal: opts.signal,
     });
   },
-  setDailyStatus: (id: string, status: "ready" | "draft") =>
+  setDailyStatus: (id: string, status: 'ready' | 'draft') =>
     request<DailyAdminList>(`/daily/${id}/status`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ status }),
     }),
   regenerateDaily: (date: string) =>
-    request<DailyAdminList>("/daily/regenerate", {
-      method: "POST",
+    request<DailyAdminList>('/daily/regenerate', {
+      method: 'POST',
       body: JSON.stringify({ date }),
     }),
   replaceDailyRound: (id: string, roundId: string, songId: number) =>
     request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/replace`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ songId }),
     }),
   regenerateDailyRound: (id: string, roundId: string) =>
-    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/regenerate`, { method: "POST" }),
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/regenerate`, { method: 'POST' }),
   reshuffleDailyRoundClip: (id: string, roundId: string) =>
-    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/clip`, { method: "POST" }),
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/clip`, { method: 'POST' }),
   voidDailyRound: (id: string, roundId: string) =>
-    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/void`, { method: "POST" }),
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/void`, { method: 'POST' }),
   restoreDailyRound: (id: string, roundId: string) =>
-    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/restore`, { method: "POST" }),
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/restore`, { method: 'POST' }),
   reorderDailyRounds: (id: string, orderedIds: string[]) =>
     request<DailyAdminList>(`/daily/${id}/reorder`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ orderedIds }),
     }),
 
   // Stats
-  stats: () => request<AdminStats>("/stats"),
-  statsOverview: (period: StatsPeriod = "7d") =>
+  stats: () => request<AdminStats>('/stats'),
+  statsOverview: (period: StatsPeriod = '7d') =>
     request<StatsOverview>(`/stats/overview?period=${period}`),
   resetActivityStats: () =>
     request<{
@@ -618,26 +621,25 @@ export const adminApi = {
       answers: number;
       matchPlayers: number;
       songHistory: number;
-    }>("/stats/reset-activity", { method: "POST" }),
+    }>('/stats/reset-activity', { method: 'POST' }),
 
   // Suggestions
   updateSuggestion: (id: string, data: SuggestionAdminUpdateInput) =>
     request<SuggestionItem>(`/suggestions/${id}`, {
-      method: "PATCH",
+      method: 'PATCH',
       body: JSON.stringify(data),
     }),
-  deleteSuggestion: (id: string) =>
-    request<void>(`/suggestions/${id}`, { method: "DELETE" }),
+  deleteSuggestion: (id: string) => request<void>(`/suggestions/${id}`, { method: 'DELETE' }),
 
   // Dev tooling
   addBots: (roomId: string, count: number, config?: BotConfig) =>
     request<{ added: number }>(`/dev/rooms/${roomId}/bots`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify({ count, config }),
     }),
   removeBots: (roomId: string, count?: number) =>
     request<{ removed: number }>(`/dev/rooms/${roomId}/remove-bots`, {
-      method: "POST",
+      method: 'POST',
       body: JSON.stringify(count ? { count } : {}),
     }),
   runScenario: (opts: {
@@ -645,18 +647,18 @@ export const adminApi = {
     autoStart: boolean;
     join?: boolean;
     soundCount?: number;
-    responseType?: "typing" | "qcm" | "mix";
+    responseType?: 'typing' | 'qcm' | 'mix';
     difficulty?: string[];
     soundTypes?: string[];
     guessDuration?: number;
     precision?: Precision;
-    soundSelection?: "random" | "mix" | "watched" | "playlist";
+    soundSelection?: 'random' | 'mix' | 'watched' | 'playlist';
     config?: BotConfig;
   }) =>
-    request<{ roomId: string; botsAdded: number }>("/dev/scenario", {
-      method: "POST",
+    request<{ roomId: string; botsAdded: number }>('/dev/scenario', {
+      method: 'POST',
       body: JSON.stringify(opts),
     }),
   devInfo: () =>
-    request<{ devEnabled: boolean; botRosterSize: number; isBotId: boolean }>("/dev/info"),
+    request<{ devEnabled: boolean; botRosterSize: number; isBotId: boolean }>('/dev/info'),
 };

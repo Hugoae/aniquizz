@@ -43,7 +43,12 @@ export function AddFriendButton({ userId, isBot, compact, className }: Props) {
         <Clock className="h-4 w-4" />
       </span>
     ) : (
-      <Button variant="ghost" size="sm" disabled className={cn('gap-1.5 text-muted-foreground', className)}>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled
+        className={cn('gap-1.5 text-muted-foreground', className)}
+      >
         <Clock className="h-3.5 w-3.5" /> Envoyée
       </Button>
     );

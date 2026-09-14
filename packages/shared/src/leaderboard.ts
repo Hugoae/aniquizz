@@ -1,10 +1,4 @@
-export const LEADERBOARD_METRICS = [
-  'xp',
-  'victories',
-  'games',
-  'discoveries',
-  'accuracy',
-] as const;
+export const LEADERBOARD_METRICS = ['xp', 'victories', 'games', 'discoveries', 'accuracy'] as const;
 
 export type LeaderboardMetric = (typeof LEADERBOARD_METRICS)[number];
 

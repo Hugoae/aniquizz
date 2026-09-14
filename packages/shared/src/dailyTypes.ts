@@ -4,11 +4,7 @@ export type DailyChallengeLifecycle = 'draft' | 'ready' | 'cancelled';
 /** `expired` is leftover from the abandoned 15-minute budget; new runs complete or forfeit. */
 export type DailyAttemptState = 'in_progress' | 'completed' | 'forfeited' | 'expired';
 export type DailyPlayerStatusKind =
-  | 'guest'
-  | 'available'
-  | 'in_progress'
-  | 'completed'
-  | 'unavailable';
+  'guest' | 'available' | 'in_progress' | 'completed' | 'unavailable';
 export type DailyTrackState = 'empty' | 'pending' | 'correct' | 'wrong' | 'voided';
 
 export interface DailyRoundSnapshot {

@@ -38,7 +38,14 @@ const zonedParts = (date: Date, timeZone: string): ZonedParts => {
 
 const tzOffsetMs = (date: Date, timeZone: string): number => {
   const parts = zonedParts(date, timeZone);
-  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  const asUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second,
+  );
   return asUtc - date.getTime();
 };
 

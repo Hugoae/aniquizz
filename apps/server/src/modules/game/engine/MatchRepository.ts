@@ -1,5 +1,11 @@
 import { randomUUID } from 'crypto';
-import { AnswerType as PrismaAnswerType, Prisma, StoredPrecision, StoredResponseType, StoredSoloMedal } from '@prisma/client';
+import {
+  AnswerType as PrismaAnswerType,
+  Prisma,
+  StoredPrecision,
+  StoredResponseType,
+  StoredSoloMedal,
+} from '@prisma/client';
 import { prisma, isBotId } from '@aniquizz/database';
 import type { AnswerType, Precision } from '@aniquizz/shared';
 import type { MedalTier } from '@aniquizz/shared';
@@ -129,7 +135,10 @@ export class MatchRepository {
   async persistMatch(input: PersistMatchInput): Promise<void> {
     const humanPlayers = input.players.filter((p) => !isBotId(p.userId));
     if (!humanPlayers.length) {
-      logger.warn('[MatchRepository] No human players to persist; skipping match persistence.', 'Scoring');
+      logger.warn(
+        '[MatchRepository] No human players to persist; skipping match persistence.',
+        'Scoring',
+      );
       return;
     }
 
@@ -142,7 +151,10 @@ export class MatchRepository {
     const players = humanPlayers.filter((p) => profileById.has(p.userId));
 
     if (!players.length) {
-      logger.warn('[MatchRepository] No persistable players; skipping match persistence.', 'Scoring');
+      logger.warn(
+        '[MatchRepository] No persistable players; skipping match persistence.',
+        'Scoring',
+      );
       return;
     }
 
@@ -217,7 +229,10 @@ export class MatchRepository {
     }
 
     await this.updateAggregates(players, input.songIds, profileById);
-    logger.info(`[MatchRepository] Match ${matchId} persisted (${players.length} players).`, 'Scoring');
+    logger.info(
+      `[MatchRepository] Match ${matchId} persisted (${players.length} players).`,
+      'Scoring',
+    );
   }
 
   private async updateAggregates(
@@ -258,7 +273,11 @@ export class MatchRepository {
         songIds.map((songId) => ({ songId, correct: correctSet.has(songId) })),
       );
     } catch (error) {
-      logger.error(`[MatchRepository] Aggregate stats failed for ${player.userId}`, 'Scoring', error);
+      logger.error(
+        `[MatchRepository] Aggregate stats failed for ${player.userId}`,
+        'Scoring',
+        error,
+      );
     }
   }
 }

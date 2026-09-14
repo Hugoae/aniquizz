@@ -1,7 +1,11 @@
 import { useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { resolveNotificationFeedback, type LobbyInvitePayload, type FriendSummary } from '@aniquizz/shared';
+import {
+  resolveNotificationFeedback,
+  type LobbyInvitePayload,
+  type FriendSummary,
+} from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { playNotificationChime } from '@/features/notifications/playNotificationChime';

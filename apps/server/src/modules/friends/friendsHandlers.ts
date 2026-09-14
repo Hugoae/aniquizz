@@ -18,10 +18,7 @@ import { friendsService, FriendServiceError } from './friendsService';
 import { isUserOnline, userRoom, presenceResolver } from './friendsPresence';
 import { getPublicProfile } from '../profile/profileService';
 import { unavailablePublicProfile } from '../profile/privacyRedaction';
-import {
-  canSendLobbyInvite,
-  normalizeLobbyInviteAudience,
-} from '@aniquizz/shared';
+import { canSendLobbyInvite, normalizeLobbyInviteAudience } from '@aniquizz/shared';
 import { prisma } from '@aniquizz/database';
 
 const INVITE_COOLDOWN_MS = 10_000;
@@ -161,7 +158,8 @@ export const registerFriendsHandlers = (
       if (!room) throw new FriendServiceError('Salon introuvable.');
       // Only the host manages the guest list — prevents invite spam and keeps
       // control of who joins with the room owner.
-      if (userId !== room.hostId) throw new FriendServiceError("Seul l'hôte peut inviter des joueurs.");
+      if (userId !== room.hostId)
+        throw new FriendServiceError("Seul l'hôte peut inviter des joueurs.");
       if (await friendsService.isBlockedEitherWay(userId, targetId)) {
         throw new FriendServiceError('Action impossible.');
       }

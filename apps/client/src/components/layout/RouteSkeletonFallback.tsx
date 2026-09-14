@@ -24,7 +24,11 @@ function HeaderSkeleton({ className }: { className?: string }) {
 /** Landing `/` — matches the fixed-viewport hero layout. */
 export function HomeRouteSkeleton() {
   return (
-    <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-background" aria-busy="true" aria-label="Chargement">
+    <div
+      className="relative flex h-[100dvh] flex-col overflow-hidden bg-background"
+      aria-busy="true"
+      aria-label="Chargement"
+    >
       <HeaderSkeleton />
       <main className="flex flex-1 flex-col items-center justify-center px-4 pt-16">
         <Skeleton className="mb-5 h-9 w-64 rounded-full" />
@@ -62,7 +66,11 @@ export function HubRouteSkeleton() {
 /** In-game shell — top bar + stage placeholder. */
 export function GameRouteSkeleton() {
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background" aria-busy="true" aria-label="Chargement">
+    <div
+      className="flex min-h-[100dvh] flex-col bg-background"
+      aria-busy="true"
+      aria-label="Chargement"
+    >
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
         <Skeleton className="h-8 w-24" />
         <Skeleton className="h-8 w-32" />
@@ -141,7 +149,8 @@ export function RouteSkeletonFallback() {
   if (pathname.startsWith('/play')) return <HubRouteSkeleton />;
   if (pathname.startsWith('/daily')) return <HubRouteSkeleton />;
   if (pathname.startsWith('/game')) return <GameRouteSkeleton />;
-  if (pathname.startsWith('/profile') || pathname.startsWith('/admin')) return <ProfileRouteSkeleton />;
+  if (pathname.startsWith('/profile') || pathname.startsWith('/admin'))
+    return <ProfileRouteSkeleton />;
   if (pathname.startsWith('/news')) return <NewsRouteSkeleton />;
 
   return <DefaultRouteSkeleton />;

@@ -14,7 +14,11 @@ interface LibraryPaginationBarProps {
   onPageChange: (page: number) => void;
 }
 
-export function LibraryPaginationBar({ page, totalPages, onPageChange }: LibraryPaginationBarProps) {
+export function LibraryPaginationBar({
+  page,
+  totalPages,
+  onPageChange,
+}: LibraryPaginationBarProps) {
   if (totalPages <= 1) return null;
 
   const pages = buildPageWindow(page, totalPages);

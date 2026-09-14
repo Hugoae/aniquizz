@@ -48,11 +48,17 @@ jobs:
       - name: English code check
         run: node scripts/check-english-code.mjs
 
+      - name: Format
+        run: pnpm format:check
+
       - name: Lint
         run: pnpm lint
 
       - name: Generate Prisma client
         run: pnpm db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
 
       - name: Build
         run: pnpm build

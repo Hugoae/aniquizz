@@ -9,20 +9,20 @@
  *
  * Refuses to run when NODE_ENV=production.
  */
-import { PrismaClient, DownloadStatus } from "@prisma/client";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
-import { createR2Client, getR2Bucket, getR2PublicUrl, r2UploadFile } from "./lib/r2-client";
-import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from "./lib/media";
-import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from "./lib/song-helpers";
-import { resolveArtistNames } from "./lib/parse-artist-names";
-import { formatSongTypeLabel } from "@aniquizz/shared";
+import { PrismaClient, DownloadStatus } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { createR2Client, getR2Bucket, getR2PublicUrl, r2UploadFile } from './lib/r2-client';
+import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from './lib/media';
+import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
+import { resolveArtistNames } from './lib/parse-artist-names';
+import { formatSongTypeLabel } from '@aniquizz/shared';
 
-dotenv.config({ path: path.join(__dirname, "../.env") });
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
-if (process.env.NODE_ENV === "production") {
-  console.error("❌ Refusing to run the dev seed in production.");
+if (process.env.NODE_ENV === 'production') {
+  console.error('❌ Refusing to run the dev seed in production.');
   process.exit(1);
 }
 
@@ -30,8 +30,8 @@ const prisma = new PrismaClient();
 const r2Client = createR2Client();
 const r2Bucket = getR2Bucket();
 
-const DATA_FILE = path.join(__dirname, "../data/data_step2.json");
-const TEMP_DIR = path.join(__dirname, "../data/tmp");
+const DATA_FILE = path.join(__dirname, '../data/data_step2.json');
+const TEMP_DIR = path.join(__dirname, '../data/tmp');
 const LIMIT = Number(process.env.DEV_SEED_LIMIT ?? 10);
 const DOWNLOAD_TIMEOUT = Number(process.env.WORKER_DOWNLOAD_TIMEOUT_MS ?? 60_000);
 const COMPRESS_TIMEOUT = 120_000;
@@ -84,7 +84,7 @@ function buildVideoKeyFromSong(animeName: string, animeId: number, song: RawSong
 }
 
 function isPlayableUrl(url: string | undefined): url is string {
-  return !!url && url.startsWith("http") && url.includes("animethemes.moe");
+  return !!url && url.startsWith('http') && url.includes('animethemes.moe');
 }
 
 function collectCandidates(franchises: RawFranchise[]): Candidate[] {
@@ -129,9 +129,9 @@ async function seedOne(candidate: Candidate): Promise<boolean> {
   });
   const alreadyOnR2 =
     existing?.downloadStatus === DownloadStatus.COMPLETED &&
-    !!existing.sourceUrl?.includes("r2.dev");
+    !!existing.sourceUrl?.includes('r2.dev');
   if (alreadyOnR2) {
-    console.log("   ⏭️  Already on R2 — skipping.");
+    console.log('   ⏭️  Already on R2 — skipping.');
     return true;
   }
 
@@ -197,7 +197,7 @@ async function seedOne(candidate: Candidate): Promise<boolean> {
     console.log(`   ✅ ${publicUrl}`);
     return true;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : "Unknown error";
+    const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`   ❌ ${message}`);
     return false;
   } finally {
@@ -208,19 +208,23 @@ async function seedOne(candidate: Candidate): Promise<boolean> {
 
 async function main() {
   if (!fs.existsSync(DATA_FILE)) {
-    console.error(`❌ Missing ${DATA_FILE}. Run pipeline steps 1-2 first, or restore data_step2.json.`);
+    console.error(
+      `❌ Missing ${DATA_FILE}. Run pipeline steps 1-2 first, or restore data_step2.json.`,
+    );
     process.exit(1);
   }
   if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
-  const franchises = JSON.parse(fs.readFileSync(DATA_FILE, "utf-8")) as RawFranchise[];
+  const franchises = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8')) as RawFranchise[];
   const candidates = collectCandidates(franchises);
 
   console.log(`🌱 DEV SEED — uploading ${candidates.length} opening(s) to R2 '${r2Bucket}'`);
 
   let ok = 0;
   for (const [index, candidate] of candidates.entries()) {
-    console.log(`\n[${index + 1}/${candidates.length}] ${candidate.anime.name} — ${formatSongTypeLabel(normalizePipelineSong(candidate.song).songType, normalizePipelineSong(candidate.song).sequence)}`);
+    console.log(
+      `\n[${index + 1}/${candidates.length}] ${candidate.anime.name} — ${formatSongTypeLabel(normalizePipelineSong(candidate.song).songType, normalizePipelineSong(candidate.song).sequence)}`,
+    );
     if (await seedOne(candidate)) ok++;
   }
 

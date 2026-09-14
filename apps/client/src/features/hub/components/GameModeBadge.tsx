@@ -16,7 +16,11 @@ interface GameModeBadgeProps {
 }
 
 /** Mode pill — trophy for Standard, lightning for Sprint. */
-export function GameModeBadge({ gameType = 'standard', compact = false, className }: GameModeBadgeProps) {
+export function GameModeBadge({
+  gameType = 'standard',
+  compact = false,
+  className,
+}: GameModeBadgeProps) {
   const isSprint = gameType === 'sprint';
   const Icon = isSprint ? Zap : Trophy;
   const label = compact ? COMPACT_LABELS[gameType] : GAME_TYPE_LABELS[gameType];
@@ -29,7 +33,10 @@ export function GameModeBadge({ gameType = 'standard', compact = false, classNam
         className,
       )}
     >
-      <Icon className={cn(compact ? 'h-3 w-3' : 'h-5 w-5', !isSprint && 'fill-current')} aria-hidden="true" />
+      <Icon
+        className={cn(compact ? 'h-3 w-3' : 'h-5 w-5', !isSprint && 'fill-current')}
+        aria-hidden="true"
+      />
       {label}
     </span>
   );

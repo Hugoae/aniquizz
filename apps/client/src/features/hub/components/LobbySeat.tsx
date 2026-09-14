@@ -35,7 +35,9 @@ export function LobbySeat({ variant, children }: LobbySeatProps) {
       <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-border/40 text-muted-foreground/40">
         <UserRound className="h-7 w-7" />
       </div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/50">Place libre</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/50">
+        Place libre
+      </p>
     </div>
   );
 }

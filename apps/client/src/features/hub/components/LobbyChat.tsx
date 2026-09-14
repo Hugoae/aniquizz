@@ -74,21 +74,40 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
           if (msg.isSystem) {
             return (
               <div key={msg.id || index} className="my-2 flex justify-center">
-                <span className="rounded-full bg-secondary/50 px-2 py-1 text-[10px] italic text-muted-foreground">{msg.content}</span>
+                <span className="rounded-full bg-secondary/50 px-2 py-1 text-[10px] italic text-muted-foreground">
+                  {msg.content}
+                </span>
               </div>
             );
           }
           return (
-            <div key={msg.id || index} className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}>
+            <div
+              key={msg.id || index}
+              className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}
+            >
               <div className="mb-0.5 flex items-center gap-2">
-                {!isMe && <UserAvatar avatar={msg.avatar || ''} username={msg.username} className="h-4 w-4" />}
-                <span className={cn('text-xs font-bold', isMe ? 'text-primary' : 'text-foreground')}>{msg.username}</span>
-                <span className="text-[10px] text-muted-foreground opacity-70">{formatTime(msg.timestamp)}</span>
+                {!isMe && (
+                  <UserAvatar
+                    avatar={msg.avatar || ''}
+                    username={msg.username}
+                    className="h-4 w-4"
+                  />
+                )}
+                <span
+                  className={cn('text-xs font-bold', isMe ? 'text-primary' : 'text-foreground')}
+                >
+                  {msg.username}
+                </span>
+                <span className="text-[10px] text-muted-foreground opacity-70">
+                  {formatTime(msg.timestamp)}
+                </span>
               </div>
               <div
                 className={cn(
                   'max-w-[90%] break-words rounded-lg px-3 py-1.5',
-                  isMe ? 'rounded-tr-none bg-primary text-primary-foreground' : 'rounded-tl-none bg-secondary text-secondary-foreground',
+                  isMe
+                    ? 'rounded-tr-none bg-primary text-primary-foreground'
+                    : 'rounded-tl-none bg-secondary text-secondary-foreground',
                 )}
               >
                 {msg.content}
@@ -110,7 +129,14 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
             className="h-9 text-sm"
             autoComplete="off"
           />
-          <Button type="submit" variant="default" size="icon" aria-label="Envoyer" className="h-9 w-9 shrink-0" disabled={!draft.trim()}>
+          <Button
+            type="submit"
+            variant="default"
+            size="icon"
+            aria-label="Envoyer"
+            className="h-9 w-9 shrink-0"
+            disabled={!draft.trim()}
+          >
             <Send className="h-4 w-4" />
           </Button>
         </form>

@@ -56,7 +56,9 @@ export interface AnilistListGroup {
 }
 
 /** Collect AniList media ids from Completed / Watching / On-Hold / Rewatching entries. */
-export const collectWatchedAnilistMediaIds = (lists: AnilistListGroup[] | null | undefined): number[] => {
+export const collectWatchedAnilistMediaIds = (
+  lists: AnilistListGroup[] | null | undefined,
+): number[] => {
   if (!lists?.length) return [];
   const ids = new Set<number>();
   for (const list of lists) {

@@ -21,12 +21,7 @@ const REPORT_PATH = path.join(__dirname, '../data/r2-integrity-report.json');
 const MIN_BYTES = 1024;
 
 type IssueKind =
-  | 'ok'
-  | 'corrupt'
-  | 'zero_duration'
-  | 'too_small'
-  | 'missing_on_r2'
-  | 'download_failed';
+  'ok' | 'corrupt' | 'zero_duration' | 'too_small' | 'missing_on_r2' | 'download_failed';
 
 interface SongScanResult {
   songId: number;
@@ -48,7 +43,10 @@ interface ScanReport {
   orphanR2Keys: string[];
 }
 
-async function listAllR2Keys(client: ReturnType<typeof createR2Client>, bucket: string): Promise<Map<string, number>> {
+async function listAllR2Keys(
+  client: ReturnType<typeof createR2Client>,
+  bucket: string,
+): Promise<Map<string, number>> {
   const keys = new Map<string, number>();
   let token: string | undefined;
 
@@ -104,7 +102,11 @@ async function scanSong(
   };
 
   if (!r2Sizes.has(song.videoKey)) {
-    return { ...base, status: 'missing_on_r2', detail: 'COMPLETED in DB but object absent from R2' };
+    return {
+      ...base,
+      status: 'missing_on_r2',
+      detail: 'COMPLETED in DB but object absent from R2',
+    };
   }
 
   const size = r2Sizes.get(song.videoKey)!;
@@ -119,7 +121,11 @@ async function scanSong(
     base.probedDuration = probedDuration;
 
     if (probedDuration <= 0) {
-      return { ...base, status: 'zero_duration', detail: 'ffprobe returned 0 or unreadable container' };
+      return {
+        ...base,
+        status: 'zero_duration',
+        detail: 'ffprobe returned 0 or unreadable container',
+      };
     }
 
     const playable = await isPlayableMp4(localPath);
@@ -173,7 +179,9 @@ async function main() {
           process.stdout.write(`\r   Validated ${done}/${completedSongs.length} songs…`);
         }
         if (result.status !== 'ok') {
-          console.log(`\n   ⚠️  [${result.status}] ${result.videoKey} (song ${result.songId})${result.detail ? ` — ${result.detail}` : ''}`);
+          console.log(
+            `\n   ⚠️  [${result.status}] ${result.videoKey} (song ${result.songId})${result.detail ? ` — ${result.detail}` : ''}`,
+          );
         }
         return result;
       }),

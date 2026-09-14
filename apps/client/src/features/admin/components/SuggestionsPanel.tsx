@@ -84,7 +84,9 @@ export function SuggestionsPanel({ canManage }: SuggestionsPanelProps) {
       );
       toast.success(SUGGESTIONS_COPY.adminUpdateSuccess);
     } catch (error) {
-      toast.error(error instanceof AdminApiError ? error.message : SUGGESTIONS_COPY.adminUpdateError);
+      toast.error(
+        error instanceof AdminApiError ? error.message : SUGGESTIONS_COPY.adminUpdateError,
+      );
     } finally {
       setSavingId(null);
     }
@@ -98,7 +100,9 @@ export function SuggestionsPanel({ canManage }: SuggestionsPanelProps) {
       toast.success(SUGGESTIONS_COPY.adminDeleteSuccess);
       setReloadToken((current) => current + 1);
     } catch (error) {
-      toast.error(error instanceof AdminApiError ? error.message : SUGGESTIONS_COPY.adminDeleteError);
+      toast.error(
+        error instanceof AdminApiError ? error.message : SUGGESTIONS_COPY.adminDeleteError,
+      );
     } finally {
       setSavingId(null);
     }

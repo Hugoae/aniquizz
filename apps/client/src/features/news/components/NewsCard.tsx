@@ -47,7 +47,10 @@ function renderContent(text: string): ReactNode[] {
           const [label, detail] = item.split(/ : (.+)/s);
           return (
             <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-muted-foreground">
-              <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent/70" aria-hidden="true" />
+              <span
+                className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent/70"
+                aria-hidden="true"
+              />
               <span>
                 {detail !== undefined ? (
                   <>
@@ -80,7 +83,10 @@ function renderContent(text: string): ReactNode[] {
     const heading = line.match(/^\*\*(.+)\*\*$/);
     if (heading) {
       blocks.push(
-        <h4 key={`h-${blocks.length}`} className="mb-1.5 mt-5 text-sm font-bold text-foreground first:mt-0">
+        <h4
+          key={`h-${blocks.length}`}
+          className="mb-1.5 mt-5 text-sm font-bold text-foreground first:mt-0"
+        >
           {heading[1]}
         </h4>,
       );
@@ -138,7 +144,9 @@ export function NewsCard({ news, defaultExpanded = false, index = 0 }: NewsCardP
           <p className="text-sm leading-relaxed text-muted-foreground">{news.description}</p>
 
           {expanded && (
-            <div id={`news-content-${news.id}`} className="mt-4 border-t border-border/60 pt-4">{renderContent(news.content)}</div>
+            <div id={`news-content-${news.id}`} className="mt-4 border-t border-border/60 pt-4">
+              {renderContent(news.content)}
+            </div>
           )}
 
           <button
@@ -150,7 +158,10 @@ export function NewsCard({ news, defaultExpanded = false, index = 0 }: NewsCardP
             className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-primary transition-colors hover:text-primary/80"
           >
             {expanded ? 'Réduire' : 'Lire la suite'}
-            <ChevronDown className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')} aria-hidden />
+            <ChevronDown
+              className={cn('h-4 w-4 transition-transform', expanded && 'rotate-180')}
+              aria-hidden
+            />
           </button>
         </div>
       </div>

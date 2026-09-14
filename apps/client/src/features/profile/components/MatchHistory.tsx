@@ -96,7 +96,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
 
   const color = entry.isWinner
     ? 'hsl(var(--accent))'
-    : topMedal ?? (defeat ? 'hsl(var(--destructive))' : 'hsl(var(--muted-foreground) / 0.35)');
+    : (topMedal ?? (defeat ? 'hsl(var(--destructive))' : 'hsl(var(--muted-foreground) / 0.35)'));
 
   const Icon = entry.isWinner ? Trophy : defeat ? X : Medal;
   const label = solo
@@ -113,7 +113,10 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
       <div className="space-y-2 pl-2">
         <div className="flex items-center justify-between gap-2">
           <span
-            className={cn('inline-flex items-center gap-1.5 text-sm font-bold', entry.isWinner || topMedal || defeat ? '' : 'text-foreground')}
+            className={cn(
+              'inline-flex items-center gap-1.5 text-sm font-bold',
+              entry.isWinner || topMedal || defeat ? '' : 'text-foreground',
+            )}
             style={{ color: entry.isWinner || topMedal || defeat ? color : undefined }}
           >
             <Icon className="h-4 w-4" />
@@ -139,7 +142,9 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
-          <span className="font-bold text-foreground">{entry.score.toLocaleString('fr-FR')} pts</span>
+          <span className="font-bold text-foreground">
+            {entry.score.toLocaleString('fr-FR')} pts
+          </span>
           <span className="inline-flex items-center gap-1 text-success">
             <Target className="h-3 w-3" /> {entry.correctCount}/{entry.totalRounds}
           </span>

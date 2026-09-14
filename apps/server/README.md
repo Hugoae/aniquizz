@@ -35,11 +35,11 @@ src/
 
 ## HTTP endpoints
 
-| Route | Purpose |
-| ----- | ------- |
-| `GET /health` | Render health check + live stats |
+| Route              | Purpose                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| `GET /health`      | Render health check + live stats                                                    |
 | `GET /leaderboard` | Public five-metric rankings (`xp`, `victories`, `games`, `discoveries`, `accuracy`) |
-| `/admin/*` | Admin API (Bearer JWT, role-gated) |
+| `/admin/*`         | Admin API (Bearer JWT, role-gated)                                                  |
 
 All game logic runs over **Socket.io** — see `packages/shared/src/events.ts` for the typed contract.
 
@@ -57,14 +57,14 @@ pnpm test:ensure-auth   # Ensure @aniquizz.test Supabase users exist
 
 Copy `.env.example` → `.env`. Required in production:
 
-| Variable | Purpose |
-| -------- | ------- |
-| `PORT` | HTTP port (Render sets automatically) |
-| `DATABASE_URL` | Postgres connection string |
-| `SUPABASE_URL` | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | JWT verification + admin ops |
-| `CLIENT_URL` | CORS origin (`https://aniquizz.com`) |
-| `R2_*` | Optional on server unless admin uploads |
+| Variable                    | Purpose                                 |
+| --------------------------- | --------------------------------------- |
+| `PORT`                      | HTTP port (Render sets automatically)   |
+| `DATABASE_URL`              | Postgres connection string              |
+| `SUPABASE_URL`              | Supabase project URL                    |
+| `SUPABASE_SERVICE_ROLE_KEY` | JWT verification + admin ops            |
+| `CLIENT_URL`                | CORS origin (`https://aniquizz.com`)    |
+| `R2_*`                      | Optional on server unless admin uploads |
 
 ## Deploy (Render)
 

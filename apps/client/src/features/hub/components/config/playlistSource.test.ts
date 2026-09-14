@@ -20,7 +20,11 @@ const baseStats = (overrides: Partial<PlaylistPoolStats> = {}): PlaylistPoolStat
 
 describe('checkPlaylistPoolLaunch', () => {
   it('blocks an empty filtered pack with the under-button filters copy', () => {
-    const result = checkPlaylistPoolLaunch('playlist', 'mix', baseStats({ filteredCount: 0, playableSongs: 0 }));
+    const result = checkPlaylistPoolLaunch(
+      'playlist',
+      'mix',
+      baseStats({ filteredCount: 0, playableSongs: 0 }),
+    );
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe(PLAYLISTS_COPY.filteredEmpty);
   });
@@ -29,7 +33,13 @@ describe('checkPlaylistPoolLaunch', () => {
     const result = checkPlaylistPoolLaunch(
       'playlist',
       'mix',
-      baseStats({ filteredCount: 4, playableSongs: 4, soundCount: 20, packInsufficient: true, insufficient: true }),
+      baseStats({
+        filteredCount: 4,
+        playableSongs: 4,
+        soundCount: 20,
+        packInsufficient: true,
+        insufficient: true,
+      }),
     );
     expect(result.blocked).toBe(true);
     expect(result.reason).toBe(PLAYLISTS_COPY.packTooSmall);

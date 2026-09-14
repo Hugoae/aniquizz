@@ -15,7 +15,9 @@ const SONG_TYPES: PlaylistSongType[] = ['OP', 'ED'];
 const DIFFICULTIES: Difficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 
 const asStringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.length > 0) : [];
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.length > 0)
+    : [];
 
 const asIntArray = (value: unknown): number[] =>
   Array.isArray(value)
@@ -40,8 +42,10 @@ export const parsePlaylistRecipe = (raw: unknown): PlaylistRecipe => {
   if (formats.length) recipe.formats = formats;
   if (songTypes.length) recipe.songTypes = songTypes;
   if (difficulties.length) recipe.difficulties = difficulties;
-  if (typeof o.yearMin === 'number' && Number.isFinite(o.yearMin)) recipe.yearMin = Math.trunc(o.yearMin);
-  if (typeof o.yearMax === 'number' && Number.isFinite(o.yearMax)) recipe.yearMax = Math.trunc(o.yearMax);
+  if (typeof o.yearMin === 'number' && Number.isFinite(o.yearMin))
+    recipe.yearMin = Math.trunc(o.yearMin);
+  if (typeof o.yearMax === 'number' && Number.isFinite(o.yearMax))
+    recipe.yearMax = Math.trunc(o.yearMax);
   const includeSongIds = asIntArray(o.includeSongIds);
   const excludeSongIds = asIntArray(o.excludeSongIds);
   if (includeSongIds.length) recipe.includeSongIds = includeSongIds;
@@ -85,10 +89,7 @@ export const buildPlaylistMembershipWhere = (recipe: PlaylistRecipe): Prisma.Son
   const and: Prisma.SongWhereInput[] = [{ downloadStatus: 'COMPLETED' }];
   if (recipe.includeSongIds?.length) {
     and.push({
-      OR: [
-        dimensions.length ? { AND: dimensions } : {},
-        { id: { in: recipe.includeSongIds } },
-      ],
+      OR: [dimensions.length ? { AND: dimensions } : {}, { id: { in: recipe.includeSongIds } }],
     });
   } else if (dimensions.length) {
     and.push(...dimensions);
@@ -113,7 +114,9 @@ export interface PlaylistRecipePreview {
   typeBreakdown: { OP: number; ED: number };
 }
 
-export const previewPlaylistRecipe = async (recipe: PlaylistRecipe): Promise<PlaylistRecipePreview> => {
+export const previewPlaylistRecipe = async (
+  recipe: PlaylistRecipe,
+): Promise<PlaylistRecipePreview> => {
   const songs = await prisma.song.findMany({
     where: buildPlaylistMembershipWhere(recipe),
     select: {
@@ -143,7 +146,10 @@ export const previewPlaylistRecipe = async (recipe: PlaylistRecipe): Promise<Pla
   };
 };
 
-export const refreshPlaylistSnapshot = async (playlistId: string, publish: boolean): Promise<number> => {
+export const refreshPlaylistSnapshot = async (
+  playlistId: string,
+  publish: boolean,
+): Promise<number> => {
   const pack = await prisma.thematicPlaylist.findUniqueOrThrow({ where: { id: playlistId } });
   const recipe = parsePlaylistRecipe(pack.recipe);
   const songIds = await resolvePlaylistRecipeSongIds(recipe);
@@ -369,4 +375,3 @@ export const assertPublishedPlaylistSource = async (settings: {
   if (reason) return { ok: false, reason };
   return { ok: true };
 };
-

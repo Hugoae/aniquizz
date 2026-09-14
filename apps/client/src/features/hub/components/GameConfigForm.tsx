@@ -6,14 +6,24 @@ import { cn } from '@/lib/utils';
 
 import type { User } from '@supabase/supabase-js';
 import type { GameConfig, RoomConfig } from '@aniquizz/shared';
-import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasWatchedListLink, hasPlaylistSource } from '@aniquizz/shared';
+import {
+  withPlaylistPoolSoundCount,
+  withWatchedPoolSoundCount,
+  hasWatchedListLink,
+  hasPlaylistSource,
+} from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 import { RoomSettingsSection } from './config/RoomSettingsSection';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { AdvancedSection } from './config/AdvancedSection';
-import { isWatchedSourceBlocked, checkWatchedPoolLaunch, WATCHED_SOURCE_BLOCK_MESSAGE, WATCHED_SERVER_OFFLINE } from './config/watchedSource';
+import {
+  isWatchedSourceBlocked,
+  checkWatchedPoolLaunch,
+  WATCHED_SOURCE_BLOCK_MESSAGE,
+  WATCHED_SERVER_OFFLINE,
+} from './config/watchedSource';
 import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playlistSource';
 import { PLAYLISTS_COPY } from './config/playlistsCopy';
 import { ConfigPoolCard } from './config/ConfigPoolCard';
@@ -90,9 +100,22 @@ export function GameConfigForm<T extends GameConfig>({
     profile?.anilistLastSync ?? '',
     profile?.malLastSync ?? '',
   ].join(':');
-  const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile, cfg.playlistWatched);
-  const playlistBlocked = isPlaylistSourceBlocked(cfg.soundSelection, cfg.playlistId, cfg.decadePlaylistId);
-  const { stats: watchedStatsRaw, loading: watchedLoading, offline: watchedOffline } = useWatchedPoolStats({
+  const watchedBlocked = isWatchedSourceBlocked(
+    cfg.soundSelection,
+    user,
+    profile,
+    cfg.playlistWatched,
+  );
+  const playlistBlocked = isPlaylistSourceBlocked(
+    cfg.soundSelection,
+    cfg.playlistId,
+    cfg.decadePlaylistId,
+  );
+  const {
+    stats: watchedStatsRaw,
+    loading: watchedLoading,
+    offline: watchedOffline,
+  } = useWatchedPoolStats({
     roomId,
     soundCount: cfg.soundCount,
     difficulty: cfg.difficulty,
@@ -128,7 +151,9 @@ export function GameConfigForm<T extends GameConfig>({
     precision: cfg.precision,
     allowFallback: cfg.watchedAllowFallback,
     enabled: cfg.soundSelection === 'playlist' && hasPlaylistSource(cfg),
-    refreshKey: isRoom ? watchedPlayersKey : `${cfg.playlistId ?? ''}:${cfg.decadePlaylistId ?? ''}`,
+    refreshKey: isRoom
+      ? watchedPlayersKey
+      : `${cfg.playlistId ?? ''}:${cfg.decadePlaylistId ?? ''}`,
   });
   const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, cfg.soundCount) ?? null;
   const playlistPoolCheck = checkPlaylistPoolLaunch(
@@ -156,7 +181,11 @@ export function GameConfigForm<T extends GameConfig>({
     playlistPoolCheck.blocked ||
     (cfg.soundSelection === 'watched' && watchedOffline);
 
-  const submitLabel = isRoom ? (currentPlayersCount > 0 ? 'Mettre à jour' : 'Créer le salon') : 'Lancer la partie';
+  const submitLabel = isRoom
+    ? currentPlayersCount > 0
+      ? 'Mettre à jour'
+      : 'Créer le salon'
+    : 'Lancer la partie';
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-8">
@@ -262,16 +291,23 @@ export function GameConfigForm<T extends GameConfig>({
               {WATCHED_SERVER_OFFLINE}
             </p>
           )}
-          {!watchedBlocked && !playlistBlocked && !watchedOffline && watchedPoolCheck.blocked && watchedPoolCheck.reason && (
-            <p className="text-center text-sm font-medium text-destructive" role="alert">
-              {watchedPoolCheck.reason}
-            </p>
-          )}
-          {!watchedBlocked && !playlistBlocked && playlistPoolCheck.blocked && playlistPoolCheck.reason && (
-            <p className="text-center text-sm font-medium text-destructive" role="alert">
-              {playlistPoolCheck.reason}
-            </p>
-          )}
+          {!watchedBlocked &&
+            !playlistBlocked &&
+            !watchedOffline &&
+            watchedPoolCheck.blocked &&
+            watchedPoolCheck.reason && (
+              <p className="text-center text-sm font-medium text-destructive" role="alert">
+                {watchedPoolCheck.reason}
+              </p>
+            )}
+          {!watchedBlocked &&
+            !playlistBlocked &&
+            playlistPoolCheck.blocked &&
+            playlistPoolCheck.reason && (
+              <p className="text-center text-sm font-medium text-destructive" role="alert">
+                {playlistPoolCheck.reason}
+              </p>
+            )}
         </div>
       </div>
     </div>

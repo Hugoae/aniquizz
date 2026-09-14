@@ -30,7 +30,10 @@ export function LibrarySongsGrid({ songs, onSelectSong }: LibrarySongsGridProps)
         const isInlinePlaying = playingId === song.id;
         const videoUrl = getVideoUrl(song.videoKey);
         return (
-          <li key={song.id} className="glass-card overflow-hidden transition-colors hover:border-primary/40">
+          <li
+            key={song.id}
+            className="glass-card overflow-hidden transition-colors hover:border-primary/40"
+          >
             <div className="group flex w-full items-center gap-3 p-3">
               <button
                 type="button"
@@ -112,7 +115,12 @@ export function LibrarySongsGrid({ songs, onSelectSong }: LibrarySongsGridProps)
               </button>
 
               <div className="shrink-0">
-                <SongLikeButton songId={song.id} initialLiked={song.liked} size="md" stopPropagation />
+                <SongLikeButton
+                  songId={song.id}
+                  initialLiked={song.liked}
+                  size="md"
+                  stopPropagation
+                />
               </div>
             </div>
 

@@ -31,14 +31,7 @@ const PAGE_SIZE = 50;
 const BOT_PREFIX = 'bot-';
 
 export type UserListFilter =
-  | 'all'
-  | 'players'
-  | 'moderators'
-  | 'admins'
-  | 'muted'
-  | 'banned'
-  | 'online'
-  | 'in_game';
+  'all' | 'players' | 'moderators' | 'admins' | 'muted' | 'banned' | 'online' | 'in_game';
 
 export type UserListSort = 'username' | 'xp' | 'games' | 'created' | 'seen';
 
@@ -148,11 +141,7 @@ export const listUsers = async (opts: {
   const orderBy = mapOrderBy(sort, sortDir);
 
   // Bots are never surfaced in the admin user list; `all` = humans only.
-  const where = mergeWhere(
-    searchWhere,
-    filterWhere,
-    { NOT: { id: { startsWith: BOT_PREFIX } } },
-  );
+  const where = mergeWhere(searchWhere, filterWhere, { NOT: { id: { startsWith: BOT_PREFIX } } });
   const [rows, total] = await Promise.all([
     prisma.profile.findMany({
       where,
@@ -320,7 +309,9 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
   const nowDate = new Date();
 
   // Reusable "started within the selected period" clauses (empty = all-time).
-  const matchPeriodWhere: Prisma.MatchWhereInput = periodStart ? { startedAt: { gte: periodStart } } : {};
+  const matchPeriodWhere: Prisma.MatchWhereInput = periodStart
+    ? { startedAt: { gte: periodStart } }
+    : {};
   const roundPeriodWhere: Prisma.MatchRoundWhereInput = periodStart
     ? { match: { startedAt: { gte: periodStart } } }
     : {};
@@ -448,13 +439,17 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     orderBy: { _count: { songId: 'desc' } },
     take: 30,
   });
-  const topSongIds = topRounds
-    .map((r) => r.songId)
-    .filter((id): id is number => id !== null);
+  const topSongIds = topRounds.map((r) => r.songId).filter((id): id is number => id !== null);
   const songRows = topSongIds.length
     ? await prisma.song.findMany({
         where: { id: { in: topSongIds } },
-        select: { id: true, title: true, artist: true, difficulty: true, anime: { select: { name: true } } },
+        select: {
+          id: true,
+          title: true,
+          artist: true,
+          difficulty: true,
+          anime: { select: { name: true } },
+        },
       })
     : [];
   const songById = new Map(songRows.map((s) => [s.id, s]));
@@ -673,10 +668,7 @@ const songTextMatch = (q: string): Prisma.SongWhereInput => ({
 });
 
 /** Anime matches search by own name, franchise, altNames, or owned song title/artist. */
-const buildAnimeTextFilter = (
-  q: string,
-  altNameIds: number[],
-): Prisma.AnimeWhereInput => {
+const buildAnimeTextFilter = (q: string, altNameIds: number[]): Prisma.AnimeWhereInput => {
   const or: Prisma.AnimeWhereInput[] = [
     { name: { contains: q, mode: 'insensitive' } },
     { franchise: { name: { contains: q, mode: 'insensitive' } } },

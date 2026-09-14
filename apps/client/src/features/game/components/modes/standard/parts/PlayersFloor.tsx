@@ -132,12 +132,11 @@ export function PlayersFloor({
             onClick={onOpenRoster}
             className="flex items-center gap-2 rounded-full border border-border/60 bg-card/95 px-3 py-1.5 text-xs font-semibold text-muted-foreground shadow-sm transition-colors hover:border-primary/40 hover:text-primary"
           >
-            <Users className="h-3.5 w-3.5" aria-hidden="true" />
-            +{hiddenCount} autre{hiddenCount > 1 ? 's' : ''} — voir le classement
+            <Users className="h-3.5 w-3.5" aria-hidden="true" />+{hiddenCount} autre
+            {hiddenCount > 1 ? 's' : ''} — voir le classement
           </button>
         </div>
       )}
     </div>
   );
 }
-

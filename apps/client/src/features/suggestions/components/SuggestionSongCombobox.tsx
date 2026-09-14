@@ -111,7 +111,9 @@ export function SuggestionSongCombobox({
         aria-label={SUGGESTIONS_COPY.songSearchAria}
         aria-expanded={showPanel}
         aria-controls={SONG_LIST_ID}
-        aria-activedescendant={showPanel && activeSong ? `${SONG_LIST_ID}-${activeSong.id}` : undefined}
+        aria-activedescendant={
+          showPanel && activeSong ? `${SONG_LIST_ID}-${activeSong.id}` : undefined
+        }
         autoComplete="off"
         className={cn('pl-9', FOCUS_RING)}
       />
@@ -174,7 +176,9 @@ export function SuggestionSongCombobox({
                     <span className="block truncate text-xs font-medium text-foreground/80">
                       {song.animeName}
                     </span>
-                    <span className="block truncate text-xs text-muted-foreground">{song.artist}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {song.artist}
+                    </span>
                   </span>
                 </button>
               ))
@@ -193,7 +197,11 @@ export function SuggestionSongCombobox({
               disabled={loadingMore}
               onClick={onLoadMore}
             >
-              {loadingMore ? <Loader2 className="h-4 w-4 animate-spin" /> : SUGGESTIONS_COPY.loadMoreSongs}
+              {loadingMore ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                SUGGESTIONS_COPY.loadMoreSongs
+              )}
             </Button>
           ) : null}
         </div>

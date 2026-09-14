@@ -11,7 +11,11 @@ describe('selectedPoolDifficulties', () => {
   it('unions several checked tiers without inventing the ones in between', () => {
     expect(selectedPoolDifficulties(['medium', 'easy'])).toEqual(['medium', 'easy']);
     expect(selectedPoolDifficulties(['hard', 'easy'])).toEqual(['hard', 'easy']);
-    expect(selectedPoolDifficulties(['easy', 'MEDIUM', 'hard'])).toEqual(['hard', 'medium', 'easy']);
+    expect(selectedPoolDifficulties(['easy', 'MEDIUM', 'hard'])).toEqual([
+      'hard',
+      'medium',
+      'easy',
+    ]);
   });
 
   it('returns undefined when nothing is selected', () => {

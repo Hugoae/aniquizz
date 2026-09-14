@@ -1,7 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import type { WatchedListProvider } from '@aniquizz/shared';
 
@@ -43,7 +47,9 @@ export function WatchlistLinkDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card border-border">
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault();

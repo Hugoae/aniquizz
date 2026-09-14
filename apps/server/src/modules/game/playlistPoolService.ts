@@ -89,7 +89,9 @@ export const computePlaylistPoolStats = async (input: {
     : filteredCount;
 
   const namesFromPack = !overlayActive || input.allowFallback;
-  const choiceFilters = namesFromPack ? filters : { ...filters, watchedIds: input.watchedIds ?? [] };
+  const choiceFilters = namesFromPack
+    ? filters
+    : { ...filters, watchedIds: input.watchedIds ?? [] };
   const choiceAnimeIds = await listPlayableAnimeIds(choiceFilters);
   const distinctNames =
     resolvedPrecision === 'artist'
@@ -127,7 +129,10 @@ export const getPlaylistPoolStatsForRoom = async (
   },
 ): Promise<PlaylistPoolStats | { missing: true }> => {
   const playlistId = pickPlaylistId(overrides?.playlistId, room.settings.playlistId);
-  const decadePlaylistId = pickPlaylistId(overrides?.decadePlaylistId, room.settings.decadePlaylistId);
+  const decadePlaylistId = pickPlaylistId(
+    overrides?.decadePlaylistId,
+    room.settings.decadePlaylistId,
+  );
   if (!hasPlaylistSource({ playlistId, decadePlaylistId })) return { missing: true };
 
   const playlistWatched = overrides?.playlistWatched ?? Boolean(room.settings.playlistWatched);

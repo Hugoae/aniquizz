@@ -13,16 +13,16 @@ open or deferred.
 
 ## Table-by-table summary
 
-| Table | RLS | Client access | Notes |
-|-------|-----|---------------|-------|
-| `Profile` | ON | SELECT own row, INSERT own row | UPDATE/DELETE revoked on `anon`/`authenticated`; profile edits go through server |
-| `Anime`, `Song`, `Franchise` | ON | SELECT only | INSERT/UPDATE/DELETE/TRUNCATE revoked on client roles |
-| `Friendship` | ON | Deny-by-default | All friendship writes via server (Prisma service role) |
-| `Match`, `MatchPlayer`, `MatchRound`, `RoundAnswer` | ON | Deny-by-default | Match history writes server-only |
-| `SongHistory` | ON | SELECT own rows | Writes server-only (`20260910194500_songhistory_server_writes`) |
-| `DailyChallenge`, `DailyChallengeRound`, `DailyAttempt`, `DailyAttemptAnswer`, `DailyPlayerStats` | ON | Deny-by-default | Quiz du jour is server-only (`20260913200000_daily_quiz`); client roles revoked |
-| `_prisma_migrations` | ON | No client policies | INFO advisor only — expected |
-| Storage `avatars` | Policies on `storage.objects` | Public read, owner write | WARN: bucket listing — deferred tighten |
+| Table                                                                                             | RLS                           | Client access                  | Notes                                                                            |
+| ------------------------------------------------------------------------------------------------- | ----------------------------- | ------------------------------ | -------------------------------------------------------------------------------- |
+| `Profile`                                                                                         | ON                            | SELECT own row, INSERT own row | UPDATE/DELETE revoked on `anon`/`authenticated`; profile edits go through server |
+| `Anime`, `Song`, `Franchise`                                                                      | ON                            | SELECT only                    | INSERT/UPDATE/DELETE/TRUNCATE revoked on client roles                            |
+| `Friendship`                                                                                      | ON                            | Deny-by-default                | All friendship writes via server (Prisma service role)                           |
+| `Match`, `MatchPlayer`, `MatchRound`, `RoundAnswer`                                               | ON                            | Deny-by-default                | Match history writes server-only                                                 |
+| `SongHistory`                                                                                     | ON                            | SELECT own rows                | Writes server-only (`20260910194500_songhistory_server_writes`)                  |
+| `DailyChallenge`, `DailyChallengeRound`, `DailyAttempt`, `DailyAttemptAnswer`, `DailyPlayerStats` | ON                            | Deny-by-default                | Quiz du jour is server-only (`20260913200000_daily_quiz`); client roles revoked  |
+| `_prisma_migrations`                                                                              | ON                            | No client policies             | INFO advisor only — expected                                                     |
+| Storage `avatars`                                                                                 | Policies on `storage.objects` | Public read, owner write       | WARN: bucket listing — deferred tighten                                          |
 
 ## Confirmed invariants (9.2 tests)
 
@@ -33,11 +33,11 @@ open or deferred.
 
 ## Remaining gaps (deferred)
 
-| Item | Risk | Plan |
-|------|------|------|
-| Avatars bucket public listing | Low — filenames are UUID-scoped | Tighten SELECT policy to object-level only |
-| Leaked-password (HIBP) | Low — Supabase Pro+ (`password_hibp_enabled`) | Intentionally not enabled while Pro+ is unavailable; advisor WARN accepted |
-| Automated RLS regression in CI | Medium | Future: SQL policy snapshot test against staging |
+| Item                           | Risk                                          | Plan                                                                       |
+| ------------------------------ | --------------------------------------------- | -------------------------------------------------------------------------- |
+| Avatars bucket public listing  | Low — filenames are UUID-scoped               | Tighten SELECT policy to object-level only                                 |
+| Leaked-password (HIBP)         | Low — Supabase Pro+ (`password_hibp_enabled`) | Intentionally not enabled while Pro+ is unavailable; advisor WARN accepted |
+| Automated RLS regression in CI | Medium                                        | Future: SQL policy snapshot test against staging                           |
 
 ## Verification commands
 

@@ -1,7 +1,4 @@
-import {
-  normalizePlayerPrefs,
-  type PlayerPrefs,
-} from '@aniquizz/shared';
+import { normalizePlayerPrefs, type PlayerPrefs } from '@aniquizz/shared';
 
 export const PLAYER_PREFS_STORAGE_KEY = 'aniquizz-player-prefs-v2';
 export const PLAYER_PREFS_LEGACY_STORAGE_KEY = 'aniquizz-player-prefs-v1';

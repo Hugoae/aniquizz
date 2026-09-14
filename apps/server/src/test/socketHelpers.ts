@@ -61,16 +61,9 @@ export async function connectSocketExpectFail(
   });
 }
 
-export function onceEvent<T>(
-  socket: TestSocket,
-  event: string,
-  timeoutMs = 30_000,
-): Promise<T> {
+export function onceEvent<T>(socket: TestSocket, event: string, timeoutMs = 30_000): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => reject(new Error(`Timeout waiting for "${event}"`)),
-      timeoutMs,
-    );
+    const timer = setTimeout(() => reject(new Error(`Timeout waiting for "${event}"`)), timeoutMs);
     socket.once(event, (payload: T) => {
       clearTimeout(timer);
       resolve(payload);
@@ -85,13 +78,10 @@ export function waitForEvent<T>(
   timeoutMs = 60_000,
 ): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(
-      () => {
-        socket.off(event, handler);
-        reject(new Error(`Timeout waiting for "${event}" matching predicate`));
-      },
-      timeoutMs,
-    );
+    const timer = setTimeout(() => {
+      socket.off(event, handler);
+      reject(new Error(`Timeout waiting for "${event}" matching predicate`));
+    }, timeoutMs);
 
     const handler = (payload: T) => {
       if (!predicate(payload)) return;

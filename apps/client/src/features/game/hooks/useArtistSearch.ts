@@ -229,7 +229,10 @@ export function useArtistSearch({
   }, [enabled, catalogue, debouncedTrimmed]);
 
   const isDebouncing =
-    enabled && queryReady && suggestionQueryReady(debouncedTrimmed, 'artist') && debouncedTrimmed !== trimmed;
+    enabled &&
+    queryReady &&
+    suggestionQueryReady(debouncedTrimmed, 'artist') &&
+    debouncedTrimmed !== trimmed;
 
   return {
     suggestions,

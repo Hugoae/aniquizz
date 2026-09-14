@@ -62,15 +62,13 @@ export interface AppLogger {
 }
 
 const wrapPino = (instance: PinoLogger): AppLogger => {
-  const write =
-    (level: LogLevel) =>
-    (message: string, context?: string, meta?: MetaInput) => {
-      const fields: Record<string, unknown> = {
-        ...normalizeMeta(meta),
-      };
-      if (context) fields.context = context;
-      instance[level](fields, message);
+  const write = (level: LogLevel) => (message: string, context?: string, meta?: MetaInput) => {
+    const fields: Record<string, unknown> = {
+      ...normalizeMeta(meta),
     };
+    if (context) fields.context = context;
+    instance[level](fields, message);
+  };
 
   return {
     error: write('error'),

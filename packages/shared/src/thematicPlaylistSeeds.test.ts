@@ -8,7 +8,9 @@ describe('STAFF_THEMATIC_PLAYLISTS', () => {
     expect(new Set(slugs).size).toBe(slugs.length);
     expect(slugs).not.toContain('movies');
     expect(slugs).not.toContain('easy-hits');
-    expect(slugs).toEqual(expect.arrayContaining(['1990s', '2000s', '2010s', '2020s', 'isekai', 'fantasy']));
+    expect(slugs).toEqual(
+      expect.arrayContaining(['1990s', '2000s', '2010s', '2020s', 'isekai', 'fantasy']),
+    );
     for (const retired of RETIRED_STAFF_PLAYLIST_SLUGS) {
       expect(slugs).not.toContain(retired);
     }

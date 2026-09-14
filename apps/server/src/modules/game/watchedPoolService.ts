@@ -87,15 +87,12 @@ export const validateWatchedStart = async (
   }
 
   if (stats.insufficient && !settings.watchedAllowFallback) {
-    const modeHint =
-      settings.watchedMode === 'intersection'
-        ? ' (Commun)'
-        : '';
+    const modeHint = settings.watchedMode === 'intersection' ? ' (Commun)' : '';
     return {
       ok: false,
       reason:
         `Seulement ${stats.playableSongs} son${stats.playableSongs > 1 ? 's' : ''} jouable${stats.playableSongs > 1 ? 's' : ''}${modeHint} pour ${stats.soundCount} demandé${stats.soundCount > 1 ? 's' : ''}. ` +
-        'Activez « Compléter avec l\'aléatoire » ou réduisez le nombre de sons.',
+        "Activez « Compléter avec l'aléatoire » ou réduisez le nombre de sons.",
     };
   }
 

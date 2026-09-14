@@ -25,14 +25,8 @@ export function useDailyPlayRound(input: {
 }) {
   const { initial, onFinished } = input;
   const { profile } = useAuth();
-  const {
-    audioVolume,
-    audioMuted,
-    setAudioVolume,
-    setAudioMuted,
-    toggleMute,
-    soloAutoReveal,
-  } = usePlayerPrefs();
+  const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute, soloAutoReveal } =
+    usePlayerPrefs();
 
   const [round, setRound] = useState(initial);
   const [reveal, setReveal] = useState<DailyRevealDto | null>(initial.reveal);
@@ -49,7 +43,7 @@ export function useDailyPlayRound(input: {
   const lastErrorAtRef = useRef(0);
   revealRef.current = reveal;
 
-  const phase = reveal ? 'revealed' : 'guessing';
+  const phase: 'guessing' | 'revealed' = reveal ? 'revealed' : 'guessing';
   const currentUserId = profile?.id ?? '';
   const myProfile = {
     username: profile?.username || 'Moi',
@@ -257,14 +251,7 @@ export function useDailyPlayRound(input: {
         answerType: 'qcm',
       },
     ],
-    [
-      currentUserId,
-      myProfile.avatar,
-      myProfile.username,
-      profile?.level,
-      reveal,
-      submittedAnswer,
-    ],
+    [currentUserId, myProfile.avatar, myProfile.username, profile?.level, reveal, submittedAnswer],
   );
 
   const phaseDurationSeconds = Math.max(

@@ -36,7 +36,14 @@ describe('DailyLanding', () => {
   it('confirms one attempt, five rounds, and 15 seconds per answer', async () => {
     const user = userEvent.setup();
     const onStart = vi.fn();
-    render(<DailyLanding today={baseToday()} onStart={onStart} onViewResult={() => {}} onLogin={() => {}} />);
+    render(
+      <DailyLanding
+        today={baseToday()}
+        onStart={onStart}
+        onViewResult={() => {}}
+        onLogin={() => {}}
+      />,
+    );
 
     await user.click(screen.getByRole('button', { name: /^commencer$/i }));
     expect(onStart).not.toHaveBeenCalled();
@@ -52,7 +59,14 @@ describe('DailyLanding', () => {
   });
 
   it('uses lobby setting chips for the daily rules', () => {
-    render(<DailyLanding today={baseToday()} onStart={() => {}} onViewResult={() => {}} onLogin={() => {}} />);
+    render(
+      <DailyLanding
+        today={baseToday()}
+        onStart={() => {}}
+        onViewResult={() => {}}
+        onLogin={() => {}}
+      />,
+    );
     expect(screen.getByText('QCM')).toBeInTheDocument();
     expect(screen.getByText('Anime')).toBeInTheDocument();
     expect(screen.getByText('15s')).toBeInTheDocument();
@@ -61,7 +75,14 @@ describe('DailyLanding', () => {
   });
 
   it('formats the date, shows the flame streak, and hides the record', () => {
-    render(<DailyLanding today={baseToday()} onStart={() => {}} onViewResult={() => {}} onLogin={() => {}} />);
+    render(
+      <DailyLanding
+        today={baseToday()}
+        onStart={() => {}}
+        onViewResult={() => {}}
+        onLogin={() => {}}
+      />,
+    );
     expect(screen.getByText(/réinitialisation dans \d+h \d{2}m/i)).toBeInTheDocument();
     expect(screen.getByText(/13 septembre 2026/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/série 3/i)).toBeInTheDocument();
@@ -101,13 +122,27 @@ describe('DailyLanding', () => {
   it('asks guests to log in', async () => {
     const user = userEvent.setup();
     const onLogin = vi.fn();
-    render(<DailyLanding today={baseToday({ status: 'guest' })} onStart={() => {}} onViewResult={() => {}} onLogin={onLogin} />);
+    render(
+      <DailyLanding
+        today={baseToday({ status: 'guest' })}
+        onStart={() => {}}
+        onViewResult={() => {}}
+        onLogin={onLogin}
+      />,
+    );
     await user.click(screen.getByRole('button', { name: /connexion requise/i }));
     expect(onLogin).toHaveBeenCalledOnce();
   });
 
   it('shows the leaderboard before the player has started', async () => {
-    render(<DailyLanding today={baseToday()} onStart={() => {}} onViewResult={() => {}} onLogin={() => {}} />);
+    render(
+      <DailyLanding
+        today={baseToday()}
+        onStart={() => {}}
+        onViewResult={() => {}}
+        onLogin={() => {}}
+      />,
+    );
     expect(await screen.findByRole('heading', { name: /classement du jour/i })).toBeInTheDocument();
     expect(screen.getByText(/personne n.a encore terminé/i)).toBeInTheDocument();
   });

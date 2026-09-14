@@ -18,8 +18,8 @@ import { resolveArtistNames } from './lib/parse-artist-names';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
-const INPUT_FILE = path.join(__dirname, "../data/data_step2.json");
-const DATA_DIR = path.join(__dirname, "../data");
+const INPUT_FILE = path.join(__dirname, '../data/data_step2.json');
+const DATA_DIR = path.join(__dirname, '../data');
 
 async function main() {
   console.log(`🔥 IMPORTATION JSON -> DATABASE (Mode : Respect Locks)`);
@@ -50,13 +50,13 @@ async function main() {
     // and DB export `name` field shapes).
     const franchiseName = fData.franchiseName ?? fData.name;
     if (!franchiseName) {
-      console.warn("⚠️  Franchise ignorée (Nom manquant/undefined)");
+      console.warn('⚠️  Franchise ignorée (Nom manquant/undefined)');
       continue;
     }
 
     // --- Step A: franchise ---
     let dbFranchise = await prisma.franchise.findUnique({
-      where: { name: franchiseName }
+      where: { name: franchiseName },
     });
 
     // Tentative de lien parent/enfant si franchise introuvable
@@ -64,7 +64,7 @@ async function main() {
       const firstAnimeId = fData.animes[0].id;
       const childAnime = await prisma.anime.findUnique({
         where: { id: firstAnimeId },
-        include: { franchise: true }
+        include: { franchise: true },
       });
 
       if (childAnime && childAnime.franchise) {
@@ -108,8 +108,7 @@ async function main() {
       if (existingAnime && existingAnime.isLocked) {
         // Locked anime: skip updates
       } else {
-        const studioName =
-          typeof aData.studio === 'string' ? aData.studio.trim() : '';
+        const studioName = typeof aData.studio === 'string' ? aData.studio.trim() : '';
         const animeFields = {
           name: aData.name ?? String(aData.id),
           siteUrl: aData.siteUrl,
@@ -130,8 +129,7 @@ async function main() {
           franchiseId: franchiseId,
           // Step 1 stores AniList's main studio; skip the French fallback so
           // unlocked imports do not persist a placeholder as a real credit.
-          studio:
-            studioName && studioName !== 'Studio Inconnu' ? studioName : null,
+          studio: studioName && studioName !== 'Studio Inconnu' ? studioName : null,
         };
 
         await prisma.anime.upsert({

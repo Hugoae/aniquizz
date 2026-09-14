@@ -373,9 +373,11 @@ export const browseLibraryTree = async (
     prisma.anime.count({ where: orphanAnimeWhere }),
     prisma.franchise.count({ where: franchiseWhere }),
     prisma.song.count({ where: songFilter }),
-    prisma.anime.count({ where: orphanAnimeWhere }).then(async (count) =>
-      count > 0 ? computeOrphanRank(sort, songFilter, franchiseWhere) : -1,
-    ),
+    prisma.anime
+      .count({ where: orphanAnimeWhere })
+      .then(async (count) =>
+        count > 0 ? computeOrphanRank(sort, songFilter, franchiseWhere) : -1,
+      ),
   ]);
 
   const hasOrphan = orphanCount > 0;

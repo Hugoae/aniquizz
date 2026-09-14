@@ -60,19 +60,19 @@ For integration/e2e tests, run `pnpm test:setup` once (see [CONTRIBUTING.md](./C
 
 ## Common scripts
 
-| Command              | Description                                      |
-| -------------------- | ------------------------------------------------ |
-| `pnpm dev`           | Client + server in watch mode                    |
-| `pnpm build`         | Build all packages                               |
-| `pnpm test`          | Unit, component & integration tests              |
+| Command              | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `pnpm dev`           | Client + server in watch mode                       |
+| `pnpm build`         | Build all packages                                  |
+| `pnpm test`          | Unit, component & integration tests                 |
 | `pnpm test:e2e`      | Playwright e2e (needs `E2E_EMAIL` / `E2E_PASSWORD`) |
-| `pnpm lint`          | Lint all packages                                |
-| `pnpm typecheck`     | TypeScript check                                 |
-| `pnpm check:english` | Fail on French accents in server/shared code     |
-| `pnpm db:generate`   | Generate Prisma client                           |
-| `pnpm db:migrate`    | Apply Prisma migrations (dev)                    |
-| `pnpm db:studio`     | Open Prisma Studio                               |
-| `pnpm perf:baseline` | Build client + summarize bundle sizes            |
+| `pnpm lint`          | Lint all packages                                   |
+| `pnpm typecheck`     | TypeScript check                                    |
+| `pnpm check:english` | Fail on French accents in server/shared code        |
+| `pnpm db:generate`   | Generate Prisma client                              |
+| `pnpm db:migrate`    | Apply Prisma migrations (dev)                       |
+| `pnpm db:studio`     | Open Prisma Studio                                  |
+| `pnpm perf:baseline` | Build client + summarize bundle sizes               |
 
 ## Features (current)
 
@@ -92,10 +92,10 @@ See [`packages/database/README.md`](./packages/database/README.md).
 
 ## Deployment
 
-| Service | Platform | Config |
-| ------- | -------- | ------ |
+| Service | Platform | Config                                             |
+| ------- | -------- | -------------------------------------------------- |
 | Client  | Vercel   | `apps/client/vercel.json` — root dir `apps/client` |
-| Server  | Render   | `render.yaml` — monorepo build from repo root |
+| Server  | Render   | `render.yaml` — monorepo build from repo root      |
 
 Production domain: **https://aniquizz.com** (www and `*.vercel.app` redirect to apex).
 

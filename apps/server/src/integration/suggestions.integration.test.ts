@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { prisma } from '@aniquizz/database';
-import type { SuggestionItem, SuggestionSongOptionsResponse, SuggestionsResponse } from '@aniquizz/shared';
+import type {
+  SuggestionItem,
+  SuggestionSongOptionsResponse,
+  SuggestionsResponse,
+} from '@aniquizz/shared';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
 import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
@@ -296,7 +300,9 @@ describe.skipIf(!hasIntegrationEnv)('suggestions integration', () => {
     expect(response.status).toBe(200);
     const body = (await response.json()) as SuggestionSongOptionsResponse;
     expect(body.songs.length).toBeGreaterThan(0);
-    expect(body.songs[0]?.animeName.toLowerCase()).toContain(songAnimeName.toLowerCase().slice(0, 4));
+    expect(body.songs[0]?.animeName.toLowerCase()).toContain(
+      songAnimeName.toLowerCase().slice(0, 4),
+    );
     expect(body.pagination.page).toBe(1);
   });
 });

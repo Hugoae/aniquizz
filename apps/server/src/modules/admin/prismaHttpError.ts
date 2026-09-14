@@ -1,9 +1,7 @@
 import { Prisma } from '@aniquizz/database';
 import type { Response } from 'express';
 
-export const prismaHttpStatus = (
-  code: string,
-): { status: number; error: string } | null => {
+export const prismaHttpStatus = (code: string): { status: number; error: string } | null => {
   switch (code) {
     case 'P2002':
       return { status: 409, error: 'Valeur déjà utilisée (identifiant unique).' };

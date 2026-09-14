@@ -30,13 +30,13 @@ async function main() {
   }
 
   // 1. NETTOYAGE
-  console.log("🧹 Nettoyage des anciennes données...");
+  console.log('🧹 Nettoyage des anciennes données...');
   await prisma.songHistory.deleteMany();
   await prisma.playerAnimeList.deleteMany();
   await prisma.song.deleteMany();
   await prisma.anime.deleteMany();
   await prisma.franchise.deleteMany();
-  console.log("✨ Base de données propre !");
+  console.log('✨ Base de données propre !');
 
   // 2. INSERTION
   console.log("🌱 Début de l'insertion...");
@@ -50,14 +50,13 @@ async function main() {
   const insertedVideoKeys = new Set<string>();
 
   for (const fData of franchisesData) {
-
     // Create franchise
     const franchise = await prisma.franchise.create({
       data: {
         name: fData.franchiseName || fData.name, // Supporte les deux formats
         genres: fData.genres || [],
-        isLocked: fData.isLocked || false
-      }
+        isLocked: fData.isLocked || false,
+      },
     });
     totalFranchises++;
 
@@ -78,8 +77,8 @@ async function main() {
           seasonYear: aData.year || aData.seasonYear,
           popularity: aData.popularity || 0,
           franchiseId: franchise.id,
-          isLocked: aData.isLocked || false
-        }
+          isLocked: aData.isLocked || false,
+        },
       });
       insertedAnimeIds.add(aData.id);
       totalAnimes++;
@@ -108,7 +107,7 @@ async function main() {
             duration: sData.duration || 0,
             sourceUrl: getPipelineSongSource(sData),
             animeId: anime.id,
-          }
+          },
         });
         insertedVideoKeys.add(videoKey);
         totalSongs++;
@@ -127,7 +126,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error("\n❌ ERREUR FATALE :");
+    console.error('\n❌ ERREUR FATALE :');
     console.error(e);
     process.exit(1);
   })

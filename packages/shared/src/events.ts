@@ -214,7 +214,13 @@ export interface ServerToClientEvents {
   'lists:error': (payload: ListOperationError) => void;
   /** Account permanently deleted — client should sign out and leave. */
   'profile:account_deleted': () => void;
-  home_stats: (stats: { animes: number; users: number; songs: number; online: number; inMultiplayer: number }) => void;
+  home_stats: (stats: {
+    animes: number;
+    users: number;
+    songs: number;
+    online: number;
+    inMultiplayer: number;
+  }) => void;
 
   // Friends (Phase 7)
   'friends:state': (state: FriendsState) => void;
@@ -334,18 +340,9 @@ export interface ClientToServerEvents {
     provider: WatchedListProvider;
     username: string;
   }) => void;
-  'lists:set_active': (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => void;
-  'lists:refresh': (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => void;
-  'lists:unlink': (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => void;
+  'lists:set_active': (payload: { requestId: string; provider: WatchedListProvider }) => void;
+  'lists:refresh': (payload: { requestId: string; provider: WatchedListProvider }) => void;
+  'lists:unlink': (payload: { requestId: string; provider: WatchedListProvider }) => void;
 
   // Friends (Phase 7)
   'friends:list': () => void;

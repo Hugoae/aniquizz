@@ -18,10 +18,12 @@ const Home = () => {
 
       {/* Single-screen landing: fixed viewport height, no scroll. */}
       <div className="relative flex h-[100dvh] flex-col overflow-hidden bg-background font-sans">
-
         <Header />
 
-        <main id={SkipLinkTarget} className="relative flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 pt-16">
+        <main
+          id={SkipLinkTarget}
+          className="relative flex min-h-0 w-full flex-1 flex-col items-center justify-center px-4 pt-16"
+        >
           <HeroSection />
         </main>
 
@@ -31,7 +33,7 @@ const Home = () => {
 
         {/* Version tag */}
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 text-[12px] font-mono font-bold text-muted-foreground/30 pointer-events-none z-40 select-none hidden md:block">
-            v26.6
+          v26.6
         </div>
       </div>
     </>

@@ -97,11 +97,7 @@ export class Tally {
  * Parse an HTTP `Retry-After` header (seconds or HTTP-date) into milliseconds.
  * Falls back to `fallbackMs` when absent/unparseable. Capped to `maxMs`.
  */
-export function parseRetryAfterMs(
-  headers: unknown,
-  fallbackMs: number,
-  maxMs = 60_000,
-): number {
+export function parseRetryAfterMs(headers: unknown, fallbackMs: number, maxMs = 60_000): number {
   const h = (headers ?? {}) as Record<string, string | undefined>;
   const raw = h['retry-after'] ?? h['Retry-After'];
   let ms = fallbackMs;

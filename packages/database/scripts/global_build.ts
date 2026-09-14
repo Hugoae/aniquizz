@@ -40,7 +40,6 @@ const runScript = (scriptName: string, description: string) => {
     console.log(`\n✅ SUCCÈS : ${scriptName} (${durationStr})`);
 
     timings.push({ name: scriptName, description, duration: durationStr });
-
   } catch (error) {
     console.error(`\n❌ ARRÊT CRITIQUE sur ${scriptName}`);
     process.exit(1);
@@ -98,7 +97,7 @@ const main = () => {
 
   console.log(`⏱️  BILAN DES PERFORMANCES :`);
   console.log(`------------------------------------------------------------------`);
-  timings.forEach(t => {
+  timings.forEach((t) => {
     console.log(`   • ${t.description.padEnd(45)} : ${t.duration}`);
   });
   console.log(`------------------------------------------------------------------`);

@@ -1,7 +1,4 @@
-import {
-  type DailyResultDto,
-  type RoundHistoryEntry,
-} from '@aniquizz/shared';
+import { type DailyResultDto, type RoundHistoryEntry } from '@aniquizz/shared';
 
 /** Map the daily recap onto the solo round-history rows. Daily has no points. */
 export function dailyRecapToHistory(result: DailyResultDto): RoundHistoryEntry[] {

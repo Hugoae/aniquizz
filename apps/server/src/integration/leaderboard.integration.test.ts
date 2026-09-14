@@ -104,7 +104,9 @@ describe.skipIf(!hasIntegrationEnv)('leaderboard integration', () => {
     const response = await browse('?metric=xp&pageSize=50');
     expect(response.status).toBe(200);
     const body = (await response.json()) as LeaderboardResponse;
-    const podiumIds = new Set(body.podium.flatMap((group) => group.entries.map((entry) => entry.id)));
+    const podiumIds = new Set(
+      body.podium.flatMap((group) => group.entries.map((entry) => entry.id)),
+    );
     expect(podiumIds.has(first.id)).toBe(true);
     expect(podiumIds.has(tiedA.id)).toBe(true);
     expect(podiumIds.has(tiedB.id)).toBe(true);
@@ -331,10 +333,7 @@ describe.skipIf(!hasIntegrationEnv)('leaderboard integration', () => {
       totalGuesses: 10,
       correctGuesses: 10,
     });
-    const response = await browse(
-      '?metric=accuracy',
-      authHeaders(viewer.id, viewer.username),
-    );
+    const response = await browse('?metric=accuracy', authHeaders(viewer.id, viewer.username));
     const body = (await response.json()) as LeaderboardResponse;
     expect(body.viewer).toEqual({
       status: 'ineligible',

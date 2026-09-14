@@ -114,11 +114,9 @@ export class MatchEngine {
 
     let built;
     try {
-      built = await this.deps.builder.build(
-        this.room.settings,
-        [...this.room.players.values()],
-        { excludePriorMatchSongIds: this.room.getPriorMatchSongIds() },
-      );
+      built = await this.deps.builder.build(this.room.settings, [...this.room.players.values()], {
+        excludePriorMatchSongIds: this.room.getPriorMatchSongIds(),
+      });
     } catch (e) {
       logger.error(`[MatchEngine ${this.room.id}] Playlist build crashed`, 'Game', e);
       return this.abortStart('Erreur technique lors de la préparation.');
@@ -130,12 +128,18 @@ export class MatchEngine {
       if (built.abortReason === 'watched_empty') {
         message =
           settings.watchedMode === 'intersection'
-            ? 'Mode Commun impossible : au moins un joueur n\'a pas de liste AniList utilisable.'
+            ? "Mode Commun impossible : au moins un joueur n'a pas de liste AniList utilisable."
             : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
-      } else if (built.abortReason === 'playlist_missing' || built.abortReason === 'playlist_empty') {
-        message = 'Cette playlist n\'est plus disponible ou n\'a aucun son jouable.';
+      } else if (
+        built.abortReason === 'playlist_missing' ||
+        built.abortReason === 'playlist_empty'
+      ) {
+        message = "Cette playlist n'est plus disponible ou n'a aucun son jouable.";
       }
-      logger.error(`[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`, 'Game');
+      logger.error(
+        `[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`,
+        'Game',
+      );
       return this.abortStart(message);
     }
 
@@ -162,19 +166,22 @@ export class MatchEngine {
       setTimeout(() => {
         const message =
           this.room.settings.soundSelection === 'playlist'
-            ? 'Liste insuffisante : des sons du pack complètent la partie (vous l\'avez autorisé).'
-            : 'Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l\'avez autorisé).';
+            ? "Liste insuffisante : des sons du pack complètent la partie (vous l'avez autorisé)."
+            : "Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l'avez autorisé).";
         this.channel.emit('game:fallback_notification', { message });
       }, 1000);
     }
 
     if (built.difficultyRelaxed) {
-      setTimeout(() => {
-        this.channel.emit('game:fallback_notification', {
-          message:
-            'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
-        });
-      }, built.fallbackUsed ? 2500 : 1000);
+      setTimeout(
+        () => {
+          this.channel.emit('game:fallback_notification', {
+            message:
+              'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
+          });
+        },
+        built.fallbackUsed ? 2500 : 1000,
+      );
     }
 
     // Start round 1 once the intro has visibly elapsed AND the playlist is ready.
@@ -291,7 +298,11 @@ export class MatchEngine {
       try {
         this.endRound();
       } catch (error) {
-        logger.error(`[MatchEngine ${this.room.id}] endRound crashed after timer`, 'GameLoop', error);
+        logger.error(
+          `[MatchEngine ${this.room.id}] endRound crashed after timer`,
+          'GameLoop',
+          error,
+        );
       }
     });
     this.scheduleBotAnswers(item);
@@ -381,7 +392,11 @@ export class MatchEngine {
     this.clock.clear();
     this.clearBotTimers();
 
-    const recorded: RecordedRound = { roundNumber: this.currentRoundIndex + 1, songId: item.id, answers: [] };
+    const recorded: RecordedRound = {
+      roundNumber: this.currentRoundIndex + 1,
+      songId: item.id,
+      answers: [],
+    };
 
     const rankedCorrect = [...this.room.players.values()]
       .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
@@ -435,7 +450,10 @@ export class MatchEngine {
       }
     });
 
-    logger.info(`[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1} reveal.`, 'GameLoop');
+    logger.info(
+      `[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1} reveal.`,
+      'GameLoop',
+    );
 
     this.emitSprintLeaderboard();
 
@@ -461,7 +479,9 @@ export class MatchEngine {
     const settings = this.room.settings;
     const responseType = (settings.responseType ?? 'mix') as ResponseType;
 
-    const songDifficulties = this.playlist.map((s) => MatchEngine.normalizeDifficulty(s.difficulty));
+    const songDifficulties = this.playlist.map((s) =>
+      MatchEngine.normalizeDifficulty(s.difficulty),
+    );
 
     const competitors = [...this.room.players.values()].filter((p) => !p.isBot);
     const result = computeVictory({
@@ -486,7 +506,7 @@ export class MatchEngine {
     const rankings = [...publicPlayers].sort((a, b) => b.score - a.score);
     const winner =
       result.winnerIds.length > 0
-        ? rankings.find((p) => String(p.id) === result.winnerIds[0]) ?? null
+        ? (rankings.find((p) => String(p.id) === result.winnerIds[0]) ?? null)
         : null;
 
     // --- XP / leveling (Phase 7) ---
@@ -527,9 +547,11 @@ export class MatchEngine {
     for (const p of this.room.players.values()) {
       const outcome = xpByUser.get(p.userId);
       if (outcome && outcome.newLevel > outcome.oldLevel && p.socketId) {
-        this.room.io
-          .to(p.socketId)
-          .emit('level_up', { oldLevel: outcome.oldLevel, newLevel: outcome.newLevel, xp: outcome.newXp });
+        this.room.io.to(p.socketId).emit('level_up', {
+          oldLevel: outcome.oldLevel,
+          newLevel: outcome.newLevel,
+          xp: outcome.newXp,
+        });
       }
     }
 
@@ -544,27 +566,29 @@ export class MatchEngine {
         players: [...this.room.players.values()]
           .filter((p) => !p.isBot)
           .map((p) => {
-          const outcome = xpByUser.get(p.userId);
-          return {
-            userId: p.userId,
-            score: p.score,
-            rank: rankByUser.get(p.userId) ?? 0,
-            isWinner: result.winnerIds.includes(p.userId),
-            correctCount: p.matchCorrectCount,
-            totalCount: p.matchTotalCount,
-            maxStreak: p.maxStreak,
-            xpEarned: outcome?.earned ?? 0,
-            newLevel: outcome?.newLevel,
-            newWinStreak: outcome?.newWinStreak,
-            correctSongIds: [...p.correctSongIds],
-            soloMedal: this.room.isSolo ? result.soloMedal : null,
-          };
-        }),
+            const outcome = xpByUser.get(p.userId);
+            return {
+              userId: p.userId,
+              score: p.score,
+              rank: rankByUser.get(p.userId) ?? 0,
+              isWinner: result.winnerIds.includes(p.userId),
+              correctCount: p.matchCorrectCount,
+              totalCount: p.matchTotalCount,
+              maxStreak: p.maxStreak,
+              xpEarned: outcome?.earned ?? 0,
+              newLevel: outcome?.newLevel,
+              newWinStreak: outcome?.newWinStreak,
+              correctSongIds: [...p.correctSongIds],
+              soloMedal: this.room.isSolo ? result.soloMedal : null,
+            };
+          }),
         rounds: this.recordedRounds,
         songIds: this.heardSongIds(),
         ...matchPlaylistPersistence(this.room.settings),
       })
-      .catch((e) => logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e));
+      .catch((e) =>
+        logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e),
+      );
   }
 
   /**
@@ -576,7 +600,12 @@ export class MatchEngine {
     winnerIds: string[],
     rankByUser: Map<string, number>,
     playerCount: number,
-  ): Promise<Map<string, { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }>> {
+  ): Promise<
+    Map<
+      string,
+      { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }
+    >
+  > {
     const outcomes = new Map<
       string,
       { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }
@@ -599,7 +628,10 @@ export class MatchEngine {
         const newWinStreak = isWinner ? prior.currentWinStreak + 1 : 0;
 
         const earned = xpForMatch({
-          correctByDifficulty: this.tallyCorrectByDifficulty(player.correctSongIds, difficultyBySong),
+          correctByDifficulty: this.tallyCorrectByDifficulty(
+            player.correctSongIds,
+            difficultyBySong,
+          ),
           roundsPlayed: player.matchTotalCount,
           score: player.score,
           isWinner,
@@ -747,18 +779,14 @@ export class MatchEngine {
     const base: GameSyncState = {
       status: this.room.status,
       currentRound:
-        this.currentRoundIndex >= 0
-          ? this.currentRoundIndex + 1
-          : this.phase === 'ready'
-            ? 1
-            : 0,
+        this.currentRoundIndex >= 0 ? this.currentRoundIndex + 1 : this.phase === 'ready' ? 1 : 0,
       totalRounds: this.playlist.length,
       players: this.room.toPublicPlayers(this.phase === 'reveal'),
       phase: this.phase,
       round: null as RoundStartPayload | null,
       reveal: null as RoundRevealPayload | null,
       ready: null as GameReadyPayload | null,
-      introFirstVideo: this.phase === 'intro' ? this.playlist[0]?.videoKey ?? null : undefined,
+      introFirstVideo: this.phase === 'intro' ? (this.playlist[0]?.videoKey ?? null) : undefined,
     };
 
     if (this.room.status === 'finished' && this.finishedVictoryData) {
@@ -856,7 +884,7 @@ export class MatchEngine {
 
       const willBeCorrect = Math.random() < cfg.accuracy;
       const answer = willBeCorrect
-        ? item.validAnswers[0] ?? item.anime
+        ? (item.validAnswers[0] ?? item.anime)
         : this.pickWrongAnswer(item);
 
       const botId = p.userId;
@@ -953,8 +981,7 @@ export class MatchEngine {
           points: answer?.pointsAwarded ?? 0,
           myAnswer: answer?.answer ?? null,
           answerType: answer?.answerType ?? null,
-          answerTimeMs:
-            answer?.isCorrect && answer.timeMs != null ? answer.timeMs : null,
+          answerTimeMs: answer?.isCorrect && answer.timeMs != null ? answer.timeMs : null,
           speedRank: answer?.speedRank ?? null,
           speedBonus: answer?.speedBonus ?? 0,
         };
@@ -998,7 +1025,11 @@ export class MatchEngine {
       if (viewer.isBot || !viewer.socketId) continue;
 
       const finalPoints =
-        viewer.isCorrect === true ? basePoints + (bonuses.get(viewer.userId) ?? 0) : viewer.hasAnswered ? 0 : null;
+        viewer.isCorrect === true
+          ? basePoints + (bonuses.get(viewer.userId) ?? 0)
+          : viewer.hasAnswered
+            ? 0
+            : null;
 
       const payload: SprintLeaderboardPayload = {
         top,

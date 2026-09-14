@@ -129,7 +129,13 @@ export default function Profile() {
   const location = useLocation();
   const { user, profile, signOut, authReady, refreshProfile } = useAuth();
   const {
-    addById, remove, block, unblock, relationOf, openProfile, loading: friendsLoading,
+    addById,
+    remove,
+    block,
+    unblock,
+    relationOf,
+    openProfile,
+    loading: friendsLoading,
   } = useFriends();
 
   const isOwn = !userId || (!!user && userId === user.id);
@@ -209,10 +215,13 @@ export default function Profile() {
     };
     const onProfileUpdate = () => {
       toast.success('Profil mis à jour !');
-      setIsSaving(false); setIsEditingUsername(false); refreshProfileRef.current();
+      setIsSaving(false);
+      setIsEditingUsername(false);
+      refreshProfileRef.current();
     };
     const onError = (err: { message?: string }) => {
-      toast.error(err?.message || 'Une erreur est survenue'); setIsSaving(false);
+      toast.error(err?.message || 'Une erreur est survenue');
+      setIsSaving(false);
     };
 
     socket.on('profile:stats', onStats);
@@ -238,7 +247,9 @@ export default function Profile() {
     }
     setPublicData(null);
 
-    const onPublic = (p: PublicProfileData) => { if (p.id === userId) setPublicData(p); };
+    const onPublic = (p: PublicProfileData) => {
+      if (p.id === userId) setPublicData(p);
+    };
     const onFriendsError = (err: { message?: string }) => {
       toast.error(err?.message || 'Profil introuvable.');
       navigate('/');
@@ -343,10 +354,17 @@ export default function Profile() {
     };
   }, [isOwn, profile, user, statsData, publicData]);
 
-  const currentMedal = useMemo(() => collectionMedal(vm?.progressPercent ?? 0), [vm?.progressPercent]);
+  const currentMedal = useMemo(
+    () => collectionMedal(vm?.progressPercent ?? 0),
+    [vm?.progressPercent],
+  );
 
   const relation: Relation = !isOwn
-    ? (friendsLoading && publicData ? publicData.relation : userId ? relationOf(userId) : 'none')
+    ? friendsLoading && publicData
+      ? publicData.relation
+      : userId
+        ? relationOf(userId)
+        : 'none'
     : 'self';
 
   // All Profile writes go through the server (socket) so the client never
@@ -354,7 +372,10 @@ export default function Profile() {
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      if (file.size > 5 * 1024 * 1024) { toast.error("L'image est trop volumineuse (Max 5 Mo)"); return; }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("L'image est trop volumineuse (Max 5 Mo)");
+        return;
+      }
       const reader = new FileReader();
       reader.addEventListener('load', () => {
         if (typeof reader.result === 'string') {
@@ -381,7 +402,9 @@ export default function Profile() {
         .upload(filePath, croppedImageBlob, { upsert: true, contentType: 'image/jpeg' });
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('avatars').getPublicUrl(filePath);
       // Cache-busting: the path is stable, so force clients/CDN to refetch.
       socket.emit('update_profile_data', { avatarUrl: `${publicUrl}?v=${Date.now()}` });
       setShowCropModal(false);
@@ -418,9 +441,7 @@ export default function Profile() {
             </Button>
             <div className="glass-card rounded-xl border border-border bg-card/40 p-10 text-center">
               <h1 className="text-2xl font-black">Profil indisponible</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Ce profil n’est pas accessible.
-              </p>
+              <p className="mt-2 text-sm text-muted-foreground">Ce profil n’est pas accessible.</p>
             </div>
           </main>
           <FloatingSettingsButton />
@@ -448,7 +469,6 @@ export default function Profile() {
         <Header />
 
         <main id="main-content" className="pt-24 container max-w-[1400px] mx-auto px-4 space-y-8">
-
           <Button
             variant="ghost"
             onClick={handleBack}
@@ -474,7 +494,10 @@ export default function Profile() {
             onStartEditUsername={() => setIsEditingUsername(true)}
             onChangeNewUsername={setNewUsername}
             onSaveUsername={saveUsername}
-            onCancelEditUsername={() => { setIsEditingUsername(false); setNewUsername(vm.username); }}
+            onCancelEditUsername={() => {
+              setIsEditingUsername(false);
+              setNewUsername(vm.username);
+            }}
             onPickAvatarFile={onFileChange}
             onOpenPasswordModal={() => setShowPasswordModal(true)}
             onOpenDeleteAccountModal={() => setShowDeleteAccountModal(true)}
@@ -487,14 +510,9 @@ export default function Profile() {
 
           <div className="grid grid-cols-12 gap-8">
             <div className="col-span-12 lg:col-span-9 space-y-8">
-
               <ProfileStatsSection vm={vm} />
 
-              <ProfileFavoriteSongsSection
-                profileId={vm.id}
-                isOwn={isOwn}
-                username={vm.username}
-              />
+              <ProfileFavoriteSongsSection profileId={vm.id} isOwn={isOwn} username={vm.username} />
 
               {/* POKÉDEX */}
               <section className="space-y-4 animate-fade-in" style={{ animationDelay: '160ms' }}>
@@ -507,7 +525,9 @@ export default function Profile() {
                   <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 mb-6 z-10 relative">
                     <div>
                       <div className="text-4xl font-black gradient-text">{vm.discoveredSongs}</div>
-                      <div className="text-sm text-muted-foreground font-medium">Sons uniques découverts</div>
+                      <div className="text-sm text-muted-foreground font-medium">
+                        Sons uniques découverts
+                      </div>
                     </div>
                     <span
                       className={`inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-xs font-bold border border-border ${currentMedal?.textClass ?? 'text-muted-foreground'}`}
@@ -579,8 +599,16 @@ export default function Profile() {
               </section>
             </div>
 
-            <div id="amis" className="col-span-12 lg:col-span-3 space-y-8 scroll-mt-24 animate-fade-in" style={{ animationDelay: '120ms' }}>
-              {isOwn ? <FriendsPanel /> : <PublicFriendsList friends={vm.friends} onOpen={openProfile} />}
+            <div
+              id="amis"
+              className="col-span-12 lg:col-span-3 space-y-8 scroll-mt-24 animate-fade-in"
+              style={{ animationDelay: '120ms' }}
+            >
+              {isOwn ? (
+                <FriendsPanel />
+              ) : (
+                <PublicFriendsList friends={vm.friends} onOpen={openProfile} />
+              )}
               <MatchHistory entries={vm.history} redacted={Boolean(vm.historyRedacted)} />
             </div>
           </div>

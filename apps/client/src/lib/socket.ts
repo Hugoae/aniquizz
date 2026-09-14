@@ -1,7 +1,7 @@
-import { io, Socket } from "socket.io-client";
-import type { ClientToServerEvents, ServerToClientEvents } from "@aniquizz/shared";
-import { serverApiBase } from "./env";
-import { captureClientError } from "./errorReporter";
+import { io, Socket } from 'socket.io-client';
+import type { ClientToServerEvents, ServerToClientEvents } from '@aniquizz/shared';
+import { serverApiBase } from './env';
+import { captureClientError } from './errorReporter';
 
 export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -14,6 +14,6 @@ export const socket: AppSocket = io(serverApiBase(), {
   transports: ['websocket'],
 });
 
-socket.on("connect_error", (err) => {
-  captureClientError(err, { source: "socket_connect_error" });
+socket.on('connect_error', (err) => {
+  captureClientError(err, { source: 'socket_connect_error' });
 });

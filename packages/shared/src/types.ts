@@ -5,6 +5,7 @@ import type { UserRole } from './roles';
 import type { Precision } from './precision';
 import type { VideoMode } from './videoMode';
 import type { SongStartMode } from './songStartMode';
+import type { WatchedListProvider } from './watchedList';
 
 // --- GAME & ROOM CONFIG ---
 export type GameMode = 'solo' | 'multiplayer' | 'competitive';
@@ -75,6 +76,8 @@ export interface GamePlayer extends BasePlayer {
 
   anilistUsername?: string | null;
   malUsername?: string | null;
+  /** Which linked list feeds Watched mode. Null when none is linked. */
+  activeListProvider?: WatchedListProvider | null;
 
   currentAnswer?: string | null;
   isCorrect?: boolean | null;

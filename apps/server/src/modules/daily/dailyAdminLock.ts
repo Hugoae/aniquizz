@@ -10,6 +10,10 @@ export function dailyAdminLineupLocked(
 }
 
 /** Voiding shrinks a live day; future days should replace the song instead. */
-export function dailyAdminCanVoidRound(isoDate: string, today: string, attemptCount: number): boolean {
+export function dailyAdminCanVoidRound(
+  isoDate: string,
+  today: string,
+  attemptCount: number,
+): boolean {
   return isoDate === today && attemptCount > 0;
 }

@@ -21,7 +21,9 @@ export function DailyConfigHeader({ className }: DailyConfigHeaderProps) {
         aria-label={DAILY_COPY.title}
       >
         <Calendar className="h-4 w-4" aria-hidden />
-        <span className="text-[10px] font-black uppercase tracking-wider">{DAILY_COPY.modeRail}</span>
+        <span className="text-[10px] font-black uppercase tracking-wider">
+          {DAILY_COPY.modeRail}
+        </span>
       </div>
       <DailyRuleChips className="flex-1 px-4 py-3" />
     </div>

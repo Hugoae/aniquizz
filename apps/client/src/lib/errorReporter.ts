@@ -1,5 +1,4 @@
-const IS_DEBUG =
-  import.meta.env.DEV || import.meta.env.VITE_DEBUG_REPORTING === 'true';
+const IS_DEBUG = import.meta.env.DEV || import.meta.env.VITE_DEBUG_REPORTING === 'true';
 
 export type ClientErrorContext = {
   source?: string;

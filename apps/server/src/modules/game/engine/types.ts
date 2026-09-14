@@ -132,8 +132,7 @@ export const toPublicPlayer = (
     level: player.isBot ? undefined : player.level,
     // "In game" = still in the match flow (playing, paused, or on the game-over
     // screen) and has NOT returned to the lobby yet. Cleared on return / reset.
-    isInGame:
-      opts.status !== 'waiting' && opts.status !== 'starting' && !opts.returned,
+    isInGame: opts.status !== 'waiting' && opts.status !== 'starting' && !opts.returned,
     anilistUsername: player.anilistUsername,
     malUsername: player.malUsername,
     hasAnswered: player.hasAnswered,

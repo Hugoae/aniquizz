@@ -35,7 +35,8 @@ const balancedPool = (): DailySongCandidate[] => {
           song(id, {
             difficulty,
             songType,
-            popularity: difficulty === 'HARD' ? 20 + n : difficulty === 'MEDIUM' ? 200 + n : 2000 + n,
+            popularity:
+              difficulty === 'HARD' ? 20 + n : difficulty === 'MEDIUM' ? 200 + n : 2000 + n,
           }),
         );
         id += 1;
@@ -181,10 +182,26 @@ describe('dailySelection', () => {
   it('does not lock replacements to openings when endings exist', () => {
     const pool: DailySongCandidate[] = [];
     for (let i = 1; i <= 15; i += 1) {
-      pool.push(song(i, { difficulty: 'EASY', songType: 'OP', franchiseId: i, animeId: i, popularity: 100 }));
+      pool.push(
+        song(i, {
+          difficulty: 'EASY',
+          songType: 'OP',
+          franchiseId: i,
+          animeId: i,
+          popularity: 100,
+        }),
+      );
     }
     for (let i = 16; i <= 30; i += 1) {
-      pool.push(song(i, { difficulty: 'MEDIUM', songType: 'ED', franchiseId: i, animeId: i, popularity: 100 }));
+      pool.push(
+        song(i, {
+          difficulty: 'MEDIUM',
+          songType: 'ED',
+          franchiseId: i,
+          animeId: i,
+          popularity: 100,
+        }),
+      );
     }
     const types = new Set<string>();
     for (let seed = 1; seed <= 24; seed += 1) {
@@ -205,8 +222,20 @@ describe('dailySelection', () => {
 
   it('prefers mid and low popularity over mainstream hits', () => {
     const pool = [
-      song(1, { difficulty: 'EASY', songType: 'OP', franchiseId: 1, animeId: 1, popularity: 50_000 }),
-      song(2, { difficulty: 'EASY', songType: 'OP', franchiseId: 2, animeId: 2, popularity: 40_000 }),
+      song(1, {
+        difficulty: 'EASY',
+        songType: 'OP',
+        franchiseId: 1,
+        animeId: 1,
+        popularity: 50_000,
+      }),
+      song(2, {
+        difficulty: 'EASY',
+        songType: 'OP',
+        franchiseId: 2,
+        animeId: 2,
+        popularity: 40_000,
+      }),
       song(3, { difficulty: 'EASY', songType: 'ED', franchiseId: 3, animeId: 3, popularity: 20 }),
       song(4, { difficulty: 'MEDIUM', songType: 'ED', franchiseId: 4, animeId: 4, popularity: 30 }),
       song(5, { difficulty: 'HARD', songType: 'OP', franchiseId: 5, animeId: 5, popularity: 25 }),

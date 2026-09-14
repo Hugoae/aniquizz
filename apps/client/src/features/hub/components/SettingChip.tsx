@@ -3,8 +3,7 @@ import type { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** Default chip surface — shared across lobbies, room list, game-over, solo recap. */
-export const SETTING_CHIP_NEUTRAL =
-  'border-border/50 bg-secondary/30 text-foreground';
+export const SETTING_CHIP_NEUTRAL = 'border-border/50 bg-secondary/30 text-foreground';
 
 export interface SettingChipProps {
   icon: LucideIcon;
@@ -73,4 +72,16 @@ export function SettingChipList({
   className?: string;
 }) {
   return <div className={cn('flex flex-wrap items-center gap-2', className)}>{children}</div>;
+}
+
+/** List item: strip `key` from the spec so it is not spread onto the DOM (TS2783). */
+export function SettingChipItem({
+  spec,
+  hideLabel,
+}: {
+  spec: SettingChipProps & { key: string };
+  hideLabel?: boolean;
+}) {
+  const { key: _chipKey, ...chip } = spec;
+  return <SettingChip {...chip} hideLabel={hideLabel} />;
 }

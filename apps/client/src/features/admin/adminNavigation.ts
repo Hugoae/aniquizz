@@ -26,7 +26,7 @@ export const getProfileFromAdminState = (state: unknown): ProfileFromAdminState 
   if (!state || typeof state !== 'object') return null;
   const s = state as Record<string, unknown>;
   if (s.returnTo !== '/admin' || !s.admin || typeof s.admin !== 'object') return null;
-  return s as ProfileFromAdminState;
+  return { returnTo: '/admin', admin: s.admin as AdminPanelState };
 };
 
 export const getAdminPanelState = (state: unknown): AdminPanelState | null => {

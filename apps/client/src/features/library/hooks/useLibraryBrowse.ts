@@ -350,20 +350,23 @@ export function useLibraryBrowse(): LibraryBrowseState {
     setPage(1);
   }, []);
 
-  const wrapSetLiked = useCallback((d: LibraryLikedFilter | '') => {
-    setLiked(d);
-    setPage(1);
-    if (d === 'liked') {
-      setViewState('songs');
-      // Favoris → Sons defaults to title A–Z (profile "voir tout" and filter toggle).
-      setSortState(defaultSortForView('songs'));
-    } else if (d === '') {
-      setViewState('franchise');
-      setSortState((prev) =>
-        isSortAllowed(prev, 'franchise', !!user) ? prev : defaultSortForView('franchise'),
-      );
-    }
-  }, [user]);
+  const wrapSetLiked = useCallback(
+    (d: LibraryLikedFilter | '') => {
+      setLiked(d);
+      setPage(1);
+      if (d === 'liked') {
+        setViewState('songs');
+        // Favoris → Sons defaults to title A–Z (profile "voir tout" and filter toggle).
+        setSortState(defaultSortForView('songs'));
+      } else if (d === '') {
+        setViewState('franchise');
+        setSortState((prev) =>
+          isSortAllowed(prev, 'franchise', !!user) ? prev : defaultSortForView('franchise'),
+        );
+      }
+    },
+    [user],
+  );
 
   const resultCount =
     view === 'songs'

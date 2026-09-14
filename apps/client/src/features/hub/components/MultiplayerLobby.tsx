@@ -1,11 +1,26 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import {
-  Check, Settings, ArrowLeft, Copy, Play,
-  Eye, EyeOff, Users, Bot, Loader2, Music2,
+  Check,
+  Settings,
+  ArrowLeft,
+  Copy,
+  Play,
+  Eye,
+  EyeOff,
+  Users,
+  Bot,
+  Loader2,
+  Music2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RoomConfig, GameStatus } from '@aniquizz/shared';
-import { withPlaylistPoolSoundCount, withWatchedPoolSoundCount, hasPlaylistSource, playlistSourceDisplayName, toWatchedPoolStatsView } from '@aniquizz/shared';
+import {
+  withPlaylistPoolSoundCount,
+  withWatchedPoolSoundCount,
+  hasPlaylistSource,
+  playlistSourceDisplayName,
+  toWatchedPoolStatsView,
+} from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,8 +40,16 @@ import { LobbyPlayerCard, type LobbyPlayer } from '@/features/hub/components/Lob
 import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
-import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
-import { checkWatchedLobby, checkWatchedPoolLaunch, watchedPoolModeLabel, resolveWatchedPoolBanner, watchedPoolBannerVariantClasses, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE } from '@/features/hub/components/config/watchedSource';
+import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
+import {
+  checkWatchedLobby,
+  checkWatchedPoolLaunch,
+  watchedPoolModeLabel,
+  resolveWatchedPoolBanner,
+  watchedPoolBannerVariantClasses,
+  WATCHED_ANILIST_BLOCKED_MESSAGE,
+  WATCHED_ANILIST_STALE_MESSAGE,
+} from '@/features/hub/components/config/watchedSource';
 import { checkPlaylistPoolLaunch } from '@/features/hub/components/config/playlistSource';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
@@ -139,10 +162,14 @@ export function MultiplayerLobby({
     watchedMode: gameSettings?.watchedMode,
     precision: gameSettings?.precision,
     allowFallback: gameSettings?.watchedAllowFallback,
-    enabled: isHost && gameSettings?.soundSelection === 'playlist' && hasPlaylistSource(gameSettings ?? {}),
+    enabled:
+      isHost &&
+      gameSettings?.soundSelection === 'playlist' &&
+      hasPlaylistSource(gameSettings ?? {}),
     refreshKey: watchedPlayersKey,
   });
-  const playlistStats = withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
+  const playlistStats =
+    withPlaylistPoolSoundCount(playlistStatsRaw, gameSettings?.soundCount) ?? null;
   const playlistPoolCheck = checkPlaylistPoolLaunch(
     gameSettings?.soundSelection ?? 'random',
     gameSettings?.responseType ?? 'mix',
@@ -150,7 +177,8 @@ export function MultiplayerLobby({
     gameSettings?.watchedAllowFallback,
     gameSettings?.precision,
   );
-  const sourceBlocked = isHost && (watchedCheck.blocked || poolCheck.blocked || playlistPoolCheck.blocked);
+  const sourceBlocked =
+    isHost && (watchedCheck.blocked || poolCheck.blocked || playlistPoolCheck.blocked);
   const watchedBlockReason = watchedCheck.blocked
     ? watchedCheck.reason
     : poolCheck.blocked
@@ -164,7 +192,9 @@ export function MultiplayerLobby({
     const wasInsufficient = prevPoolInsufficientRef.current;
     const nowInsufficient = watchedStats.insufficient;
     if (wasInsufficient === true && nowInsufficient === false) {
-      toast.success('Plus besoin de compléter avec l\'aléatoire — le pool AniList est maintenant suffisant.');
+      toast.success(
+        "Plus besoin de compléter avec l'aléatoire — le pool AniList est maintenant suffisant.",
+      );
       if (gameSettings?.watchedAllowFallback) {
         onPatchRoomSettings?.({ watchedAllowFallback: false }, true);
       }
@@ -180,16 +210,19 @@ export function MultiplayerLobby({
 
   const playlistOverlayOn =
     gameSettings?.soundSelection === 'playlist' && Boolean(gameSettings.playlistWatched);
-  const overlayWatchedStats = playlistOverlayOn && playlistStats ? toWatchedPoolStatsView(playlistStats) : null;
+  const overlayWatchedStats =
+    playlistOverlayOn && playlistStats ? toWatchedPoolStatsView(playlistStats) : null;
   const showWatchedPoolBanner =
     isHost &&
     !watchedCheck.blocked &&
     (gameSettings?.soundSelection === 'watched' || playlistOverlayOn);
   const watchedModeLabel = watchedPoolModeLabel(
-    (gameSettings?.soundSelection === 'watched' ? watchedStats?.watchedMode : overlayWatchedStats?.watchedMode) ??
-      gameSettings?.watchedMode,
+    (gameSettings?.soundSelection === 'watched'
+      ? watchedStats?.watchedMode
+      : overlayWatchedStats?.watchedMode) ?? gameSettings?.watchedMode,
   );
-  const bannerWatchedStats = gameSettings?.soundSelection === 'watched' ? watchedStats : overlayWatchedStats;
+  const bannerWatchedStats =
+    gameSettings?.soundSelection === 'watched' ? watchedStats : overlayWatchedStats;
   const bannerWatchedLoading =
     gameSettings?.soundSelection === 'watched' ? watchedStatsLoading : playlistStatsLoading;
   const watchedPoolBanner = resolveWatchedPoolBanner(
@@ -261,7 +294,9 @@ export function MultiplayerLobby({
 
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 rounded-md border border-border/50 bg-secondary/40 px-3 py-1.5">
-                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Code :</span>
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Code :
+                  </span>
                   <span className="min-w-[80px] text-center font-mono text-lg font-bold tracking-widest text-foreground">
                     {showCode ? roomCode : '••••••'}
                   </span>
@@ -270,7 +305,10 @@ export function MultiplayerLobby({
                     onClick={() => setShowCode((v) => !v)}
                     aria-label={showCode ? 'Masquer le code' : 'Afficher le code'}
                     aria-pressed={showCode}
-                    className={cn('ml-1 rounded text-muted-foreground transition-colors hover:text-foreground', FOCUS_RING)}
+                    className={cn(
+                      'ml-1 rounded text-muted-foreground transition-colors hover:text-foreground',
+                      FOCUS_RING,
+                    )}
                   >
                     {showCode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -278,7 +316,10 @@ export function MultiplayerLobby({
                     type="button"
                     onClick={copyRoomCode}
                     aria-label="Copier le code du salon"
-                    className={cn('ml-1 rounded text-muted-foreground transition-colors hover:text-primary', FOCUS_RING)}
+                    className={cn(
+                      'ml-1 rounded text-muted-foreground transition-colors hover:text-primary',
+                      FOCUS_RING,
+                    )}
                   >
                     <Copy className="h-4 w-4" />
                   </button>
@@ -303,7 +344,7 @@ export function MultiplayerLobby({
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
             <SettingChipList>
               {settingChips.map((spec) => (
-                <SettingChip key={spec.key} {...spec} />
+                <SettingChipItem key={spec.key} spec={spec} />
               ))}
             </SettingChipList>
             <LobbyRulesTrigger
@@ -330,35 +371,37 @@ export function MultiplayerLobby({
         >
           <Music2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="min-w-0 space-y-1">
-          {watchedPoolBanner.variant === 'loading' ? (
-            <span>Analyse du pool AniList…</span>
-          ) : watchedPoolBanner.variant === 'empty' ? (
-            <span>
-              {bannerWatchedStats?.listError === 'anilist_blocked'
-                ? WATCHED_ANILIST_BLOCKED_MESSAGE
-                : `Aucun son jouable (${watchedPoolBanner.modeLabel}) pour ces filtres.`}
-            </span>
-          ) : watchedPoolBanner.variant === 'fallback' ? (
-            <span>
-              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
-              <b>Complétion aléatoire activée</b> pour {watchedPoolBanner.soundCount} manches
-            </span>
-          ) : watchedPoolBanner.variant === 'insufficient' ? (
-            <span>
-              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
-              <b>Insuffisant</b> pour {watchedPoolBanner.soundCount} manches
-            </span>
-          ) : (
-            <span>
-              <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-              {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) — <b>Suffisant</b>
-            </span>
-          )}
-          {bannerWatchedStats?.listError === 'anilist_blocked' && (bannerWatchedStats.playableSongs ?? 0) > 0 && (
-            <span className="block text-warning">{WATCHED_ANILIST_STALE_MESSAGE}</span>
-          )}
+            {watchedPoolBanner.variant === 'loading' ? (
+              <span>Analyse du pool AniList…</span>
+            ) : watchedPoolBanner.variant === 'empty' ? (
+              <span>
+                {bannerWatchedStats?.listError === 'anilist_blocked'
+                  ? WATCHED_ANILIST_BLOCKED_MESSAGE
+                  : `Aucun son jouable (${watchedPoolBanner.modeLabel}) pour ces filtres.`}
+              </span>
+            ) : watchedPoolBanner.variant === 'fallback' ? (
+              <span>
+                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
+                <b>Complétion aléatoire activée</b> pour {watchedPoolBanner.soundCount} manches
+              </span>
+            ) : watchedPoolBanner.variant === 'insufficient' ? (
+              <span>
+                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
+                <b>Insuffisant</b> pour {watchedPoolBanner.soundCount} manches
+              </span>
+            ) : (
+              <span>
+                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
+                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
+                <b>Suffisant</b>
+              </span>
+            )}
+            {bannerWatchedStats?.listError === 'anilist_blocked' &&
+              (bannerWatchedStats.playableSongs ?? 0) > 0 && (
+                <span className="block text-warning">{WATCHED_ANILIST_STALE_MESSAGE}</span>
+              )}
           </div>
         </div>
       )}
@@ -371,7 +414,9 @@ export function MultiplayerLobby({
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <span aria-live="polite" className="text-sm font-bold">
-                <span className={cn(hasEnoughPlayers ? 'text-foreground' : 'text-warning')}>{players.length}</span>
+                <span className={cn(hasEnoughPlayers ? 'text-foreground' : 'text-warning')}>
+                  {players.length}
+                </span>
                 <span className="text-muted-foreground"> / {maxPlayers} joueurs</span>
               </span>
               {/* Equalizer motif: fades in as the room fills. */}
@@ -380,7 +425,10 @@ export function MultiplayerLobby({
                 className="eq ml-1 h-3 text-primary transition-opacity duration-500"
                 style={{ opacity: 0.25 + fillRatio * 0.75 }}
               >
-                <i /><i /><i /><i />
+                <i />
+                <i />
+                <i />
+                <i />
               </span>
             </div>
             {canAddBots && isHost && gameStatus === 'waiting' && !isFull && (
@@ -410,8 +458,13 @@ export function MultiplayerLobby({
                 />
               ))}
               {seats.map((_, index) => (
-                <LobbySeat key={`seat-${index}`} variant={isHost && index === 0 ? 'invite' : 'empty'}>
-                  {isHost && index === 0 ? <InviteFriendsButton excludeIds={playerIds} /> : undefined}
+                <LobbySeat
+                  key={`seat-${index}`}
+                  variant={isHost && index === 0 ? 'invite' : 'empty'}
+                >
+                  {isHost && index === 0 ? (
+                    <InviteFriendsButton excludeIds={playerIds} />
+                  ) : undefined}
                 </LobbySeat>
               ))}
             </div>
@@ -430,7 +483,10 @@ export function MultiplayerLobby({
               variant={hasEnoughPlayers ? 'glow' : 'secondary'}
               size="xxl"
               disabled={!canStart || isStarting}
-              className={cn('w-full max-w-md gap-3', canStart && !isStarting ? 'animate-pulse-glow' : 'opacity-70 grayscale')}
+              className={cn(
+                'w-full max-w-md gap-3',
+                canStart && !isStarting ? 'animate-pulse-glow' : 'opacity-70 grayscale',
+              )}
             >
               {isStarting ? (
                 <>
@@ -460,7 +516,10 @@ export function MultiplayerLobby({
             {!isStarting && !sourceBlocked && guests.length > 0 && !isGameRunning && (
               <span
                 aria-live="polite"
-                className={cn('text-xs font-medium', allGuestsReady ? 'text-success' : 'text-muted-foreground')}
+                className={cn(
+                  'text-xs font-medium',
+                  allGuestsReady ? 'text-success' : 'text-muted-foreground',
+                )}
               >
                 {allGuestsReady
                   ? 'Tous les joueurs sont prêts'
@@ -499,7 +558,13 @@ export function MultiplayerLobby({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setShowLeaveDialog(false); onLeave(); }} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={() => {
+                setShowLeaveDialog(false);
+                onLeave();
+              }}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               Quitter
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -510,7 +575,9 @@ export function MultiplayerLobby({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Transférer le rôle d'hôte ?</AlertDialogTitle>
-            <AlertDialogDescription>Ce joueur deviendra l'hôte du salon et gérera les paramètres.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Ce joueur deviendra l'hôte du salon et gérera les paramètres.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
@@ -524,12 +591,16 @@ export function MultiplayerLobby({
           <AlertDialogHeader>
             <AlertDialogTitle>Exclure ce joueur ?</AlertDialogTitle>
             <AlertDialogDescription>
-              {kickTarget?.name} sera retiré du salon. Il pourra le rejoindre à nouveau avec le code.
+              {kickTarget?.name} sera retiré du salon. Il pourra le rejoindre à nouveau avec le
+              code.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmKick} className="bg-destructive hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={handleConfirmKick}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               Exclure
             </AlertDialogAction>
           </AlertDialogFooter>

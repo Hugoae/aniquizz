@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Loader2, RefreshCw } from 'lucide-react';
-import type {
-  ListOperation,
-  ListProviderStatus,
-  WatchedListProvider,
-} from '@aniquizz/shared';
+import type { ListOperation, ListProviderStatus, WatchedListProvider } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -34,11 +30,12 @@ function stateLabel(status: ListProviderStatus): string {
 
 function fetchStateLabel(status: ListProviderStatus): string | null {
   if (
-    !status.linked
-    || status.state === 'idle'
-    || status.state === 'ok'
-    || status.state === 'unlinked'
-  ) return null;
+    !status.linked ||
+    status.state === 'idle' ||
+    status.state === 'ok' ||
+    status.state === 'unlinked'
+  )
+    return null;
   return SETTINGS_COPY.listState[status.state];
 }
 
@@ -100,7 +97,13 @@ function ListCard({
           </Button>
         ) : null}
         {status.linked ? (
-          <Button type="button" size="sm" variant="destructive" disabled={disabled} onClick={onUnlink}>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            disabled={disabled}
+            onClick={onUnlink}
+          >
             {SETTINGS_COPY.listUnlink}
           </Button>
         ) : null}
@@ -110,16 +113,7 @@ function ListCard({
 }
 
 export function SettingsIntegrationsSection() {
-  const {
-    status,
-    loading,
-    pending,
-    outcome,
-    link,
-    setActive,
-    sync,
-    unlink,
-  } = useLists();
+  const { status, loading, pending, outcome, link, setActive, sync, unlink } = useLists();
   const [linkProvider, setLinkProvider] = useState<WatchedListProvider | null>(null);
   const [linkName, setLinkName] = useState('');
   const [linkRequestId, setLinkRequestId] = useState<string | null>(null);
@@ -208,7 +202,10 @@ export function SettingsIntegrationsSection() {
         }}
       />
 
-      <AlertDialog open={unlinkProvider != null} onOpenChange={(open) => !open && setUnlinkProvider(null)}>
+      <AlertDialog
+        open={unlinkProvider != null}
+        onOpenChange={(open) => !open && setUnlinkProvider(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{SETTINGS_COPY.listUnlinkConfirmTitle}</AlertDialogTitle>

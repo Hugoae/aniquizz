@@ -50,7 +50,12 @@ export function GameTopBar({
   return (
     <header className="relative z-50 flex h-16 shrink-0 items-center justify-between border-b border-border bg-card/95 px-4">
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onShowLeave} className="gap-2 text-muted-foreground hover:text-destructive">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onShowLeave}
+          className="gap-2 text-muted-foreground hover:text-destructive"
+        >
           <LogOut className="h-4 w-4" />
           <span className="hidden md:inline">Quitter</span>
         </Button>
@@ -59,9 +64,16 @@ export function GameTopBar({
             variant={isGamePaused || isPausePending || showPauseTally ? 'secondary' : 'outline'}
             size="sm"
             onClick={onVotePause}
-            className={cn('ml-2 gap-2', isGamePaused && 'border-none bg-warning text-warning-foreground hover:bg-warning/90')}
+            className={cn(
+              'ml-2 gap-2',
+              isGamePaused && 'border-none bg-warning text-warning-foreground hover:bg-warning/90',
+            )}
           >
-            {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
+            {isGamePaused ? (
+              <Play className="h-4 w-4 fill-current" />
+            ) : (
+              <Pause className="h-4 w-4 fill-current" />
+            )}
             {pauseLabel}
           </Button>
         )}
@@ -75,7 +87,9 @@ export function GameTopBar({
             <i></i>
             <i></i>
           </span>
-          <span className="font-display text-xl font-extrabold leading-none tracking-tight gradient-text">AniQuizz</span>
+          <span className="font-display text-xl font-extrabold leading-none tracking-tight gradient-text">
+            AniQuizz
+          </span>
         </div>
         {showRoundProgress && (
           <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">
@@ -90,7 +104,10 @@ export function GameTopBar({
               aria-valuemax={totalRounds}
               aria-label="Progression de la partie"
             >
-              <div className="h-full bg-gradient-primary transition-all duration-1000" style={{ width: `${roundProgress}%` }} />
+              <div
+                className="h-full bg-gradient-primary transition-all duration-1000"
+                style={{ width: `${roundProgress}%` }}
+              />
             </div>
           </div>
         )}

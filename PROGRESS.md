@@ -1,0 +1,782 @@
+# Progress — AniQuizz
+
+> Kept intentionally short (read on every onboarding). Detailed history is archived in
+> [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
+
+## Current phase: **feature audit — Auth + Home** · **v26.7 parked** (2026-09-14)
+
+> **State:** 26.6 tagged `26.6` at `ed82c96`. Quality-gate waves 1–2.6 committed (or about to be). **Parked:** 14 `jsx-a11y` warnings → dedicated cleanup then `error`. 26.7 stays parked.
+
+**26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
+
+### Quality gates — wave 1 ✅
+
+Playbook and CI now match what AGENTS.md claimed. The 6–8 rules that actually bite are encoded; the rest stays review.
+
+| Gate                       | What changed                                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Playbook in git**        | Stopped ignoring `AGENTS.md`, `PLAN.md`, `PROGRESS.md`, `docs/agents/`. `.cursor/rules/` is tracked; the rest of `.cursor/` stays ignored. `SCHEMA-TARGET.md` and `docs/progress-archive/` stay local.        |
+| **Client `tsc`**           | `aniquizz-client` `typecheck` script (`tsc -p tsconfig.app.json --noEmit`). CI runs `pnpm typecheck` after Prisma generate. Wave 1 kept `strict: false`; wave 2.6 flipped it.                                 |
+| **ESLint server + shared** | `eqeqeq` (null ignored), `no-explicit-any`, `no-floating-promises`. `requireAuth` / `guard` settle listener promises (Socket.io never awaits).                                                                |
+| **Zod mutators**           | `socketPayloads.ts`: `game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`. Invalid payload → generic `Requête invalide.` Settings patches still go through `normalizeRoomSettings`. |
+
+### Quality gates — wave 2.1 ✅ (format)
+
+One mechanical Prettier pass, then the gate. No style debate in review.
+
+| Gate                  | What changed                                                                                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`.prettierignore`** | Keep generated trees out of the check: `graphify-out`, Playwright artefacts, `skills-lock.json` (plus existing `dist` / `data` / migrations). |
+| **CI**                | `pnpm format:check` after the English-code check, before lint.                                                                                |
+| **Baseline**          | `pnpm format` on `**/*.{ts,tsx,js,jsx,json,md}` so a clone is green.                                                                          |
+
+### Quality gates — wave 2.2 ✅ (package boundaries)
+
+ESLint `no-restricted-imports` so a stray import fails CI instead of rotting the monorepo.
+
+| Package    | Forbidden                                                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------- |
+| **client** | `apps/server`, `aniquizz-server`, `@aniquizz/database`, `@prisma/client`, `express`, `socket.io` (use `socket.io-client`) |
+| **shared** | `react`, `express`, Prisma, `@aniquizz/database`, Socket.io runtime (`socket.io` / `socket.io-client`)                    |
+| **server** | `react`, `apps/client`, `aniquizz-client`                                                                                 |
+
+Relative `../server` / `../client` paths are also blocked. `@aniquizz/shared` stays the only legal cross-app import. Zod remains allowed in shared.
+
+### Quality gates — wave 2.3 ✅ (shared watch)
+
+The SPA aliases `packages/shared/src`; the server requires `dist/`. A sentence in AGENTS was not enough.
+
+| Piece                   | What changed                                                                                                                                                             |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **shared `dev`**        | `tsc --watch --preserveWatchOutput` so `pnpm dev` rebuilds `dist/` on every edit. Shared `turbo.json` waits for `build` before watch (no two `tsc` on the same `dist/`). |
+| **server `turbo.json`** | `dev` `dependsOn: ["^build"]` so nodemon starts after shared + database `dist/` exist.                                                                                   |
+| **nodemon**             | Watches `packages/shared/dist` (500 ms debounce) and restarts the server.                                                                                                |
+| **`pnpm dev:server`**   | `turbo run dev --filter=aniquizz-server --filter=@aniquizz/shared` so the watch runs with the server, not nodemon alone.                                                 |
+
+### Quality gates — wave 2.4 ✅ (lovable-tagger)
+
+Dropped the Lovable `componentTagger` Vite plugin (`mode === 'development'` only) and the `lovable-tagger` dependency. Production build was already tagger-free.
+
+### Quality gates — wave 2.5 ✅ (jsx-a11y warn)
+
+`eslint-plugin-jsx-a11y` recommended on the SPA, **warn** not error. CI stays green. Baseline: **14** `jsx-a11y` warnings (plus 27 existing react-refresh / exhaustive-deps).
+
+| Rule                             | Count |
+| -------------------------------- | ----- |
+| `click-events-have-key-events`   | 3     |
+| `no-autofocus`                   | 3     |
+| `label-has-associated-control`   | 2     |
+| `no-static-element-interactions` | 2     |
+| `media-has-caption`              | 2     |
+| `anchor-has-content`             | 1     |
+| `role-has-required-aria-props`   | 1     |
+
+Hottest files: `FriendsPanel`, `GameSidebar`, `PlayerCardBase`. Promote to error after a dedicated cleanup — not this pass.
+
+### Quality gates — wave 2.6 ✅ (SPA strict + lint)
+
+Measured a global `strict: true` flip: **10** errors, all hub/game-over. Per-folder tsconfigs would have been weaker for the same work.
+
+| Gate                    | What changed                                                                                                                                                                                                                                                           |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`tsconfig.app.json`** | `strict: true`, `noFallthroughCasesInSwitch: true`. `noUnusedLocals` / `noUnusedParameters` stay false.                                                                                                                                                                |
+| **Fixes**               | Duplicate JSX `key` spreads (`SettingChipItem`); `franchise: string \| null` in the anime prefix index; `checkWatchedPoolLaunch` accepts `undefined` stats; dead `players: []` before spread on `lobby:joined`; solo `GameConfig` vs `RoomConfig` on `PlayConfigPage`. |
+| **Client ESLint**       | `eqeqeq` (`null` ignore) + `@typescript-eslint/no-explicit-any` as **error** (0 new findings). `no-unused-vars` stays off.                                                                                                                                             |
+
+**Wave 2 remaining:** none for toolchain. **Parked:** dedicated `jsx-a11y` cleanup (14 warns) then promote the plugin to error. Do not disable rules to ship.
+
+**Next:** feature audits starting **Auth + Home**. 26.7 stays parked.
+
+### 26.6 — Quiz du jour ✅
+
+Five globally identical songs per Paris day. Not a `Match`: no `gamesPlayed` / wins / guesses / win streak. Heard clips upsert `SongHistory` (pokédex). Doc: `docs/game/daily-quiz.md`.
+
+| Surface             | What shipped                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contract**        | QCM, precision anime, one official attempt. Play clock is **per round** (15s guess + 15s reveal), not a 15-minute budget. Leave / refresh / tab close **forfeits** remaining rounds (no resume). `GET /daily/today` does not start the next song. Midnight `Europe/Paris`. Launch **#1 = 2026-09-14**. No medals, no match points, no share card.                                                                                                                                                                                                                                                                                  |
+| **Score**           | Found `/N` (usually `/5`). Recap victory from 3 found (`DAILY_WIN_MIN_CORRECT`). Ranking: correct desc, then cumulative response time (`1-2-2-4`). Daily has no points.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| **Streak / XP**     | Dedicated `DailyPlayerStats` (including `0/5`). XP once: `3` × active songs + `12` per correct + `20` on victory + `10` perfect (15 at 0/5, 105 at 5/5).                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| **Public**          | `/daily` landing (rules, streak, leaderboard before play), QCM on `StandardGameLayout`, reveal likes (catalogue id, same `SongLikeButton` as solo/multi), recap, profile history merge (`kind: 'daily'`).                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Play loop**       | HTTP only. `GET /today` does not return a playable round. Guessing never leaks title/anime. Player may change the QCM until the visual 15s (Standard margins). Clip start is random (`guess + reveal + 2s` tail).                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Generation**      | Rolling 14-day horizon. Mix 2 easy / 2 medium / 1 hard, OP/ED 3+2 alternating, popularity bands, franchise uniqueness + lookbacks, documented relaxation. Slim OP/ED pool cached ~15 min.                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Admin**           | Horizon review. Replace song. Shuffle: uniform **franchise** then OP/ED, downweight high AniList popularity (not the first catalogue ids). « Nouveau passage » re-rolls clip start. Search uses library matching + type tokens (`bleach ED5`). Suggestions portal + flip **above** the field when there is no room below. Lineup warnings (dup franchise, missing video, recent song/franchise, mix). Void a **live** broken round (today, after first attempt). Reset a player’s **today**: delete attempt + answers, revert XP/level, rewind daily streak/completions **and pokédex rows from that run**, recompute day’s ranks. |
+| **Search (shared)** | `parseCatalogueSearchQuery` strips `OP`/`ED`/`ED5`/`opening 3` from library, daily admin, and suggestion song search. Standalone `in` is never INSERT.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+
+**Decisions:** forfeit-on-leave over resume · recap victory ≠ medals · leaderboard public before you play · admin shuffle must not lock to mainstream openings · likes at reveal only.
+
+### 26.6 — Pokédex musical ✅
+
+Daily heard clips upsert `SongHistory` (started rounds only; leftover forfeit skips). Match `game_over` uses the same rule (`matchHeardSongIds` from recorded + in-progress clips, not the leftover playlist). Admin daily reset rewinds those rows. Profile / leaderboard / admin counts filter `COMPLETED` songs. Collection medals on the profile use design tokens (`text-medal-bronze` / `text-silver` / `text-warning` / `text-aqua`), not hex.
+
+**Next after this release:** 26.7 in `PLAN.md` (found bar on the profile pokédex; heard / found playlists).
+
+**Known nits (non-blocking):** admin reset can decrement `longestStreak` when today only _tied_ an older record; mid/low popularity bands can still surface well-known titles.
+
+**Known nits (non-blocking):** admin reset can decrement `longestStreak` when today only _tied_ an older record; mid/low popularity bands can still surface well-known titles.
+
+### 26.6 — artist precision ✅
+
+`Precision` includes `'artist'`. Product chose **Artiste**, not song title (title + OP/ED sequence → 26.x+ backlog). Doc: `docs/game/artist-precision.md`.
+
+| Surface                      | What shipped                                                                                                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Answers**                  | Typing: any billed `artistNames` unit + full display as extra free-type. Title/anime never count. Unicode via `answerIdentityKey`.                                          |
+| **QCM / Duo / autocomplete** | Billed units only (atomic comma-in-name bands stay one label). Correct QCM = first billed unit. Same-song units excluded from distractors. Pool gate counts distinct units. |
+| **Medals**                   | `PRECISION_OFFSET.artist = -0.08`.                                                                                                                                          |
+| **Copy**                     | Config « Un artiste suffit » + tooltip / lobby: one credited artist/group is enough.                                                                                        |
+| **Audio follow-up**          | Player volume/mute on library, profile, admin previews (same prefs as in-match).                                                                                            |
+
+**Decisions:** `artistNames[0]` = first billed (catalogue-verified), not a curated lead vocalist. No random-per-round QCM target. Composite credits never appear as buttons or suggestions.
+
+### 26.6 — player settings ✅
+
+Full settings panel (tabs **Général / Social / Compte**) replaces the legal/cookies-only placeholder. Room config stays host-scoped; player prefs are per user.
+
+| Tab         | What shipped                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Général** | Volume + mute persist and apply **everywhere** (match, library, profile previews, admin preview, notification chimes). Storage `aniquizz-player-prefs-v2` (v1 migrated). Motion Auto / Réduit / Complet (`data-motion`; Complet overrides OS; Réduit — or Auto + OS reduce — cuts CSS transitions including the settings morph). Gameplay: autofocus, Entrée, révélation solo immédiate, rappel de raccourcis. |
+| **Social**  | Internal notification matrix (toasts + chime, sounds off by default, no browser push). Friend-request privacy. Blocked-account list.                                                                                                                                                                                                                                                                           |
+| **Compte**  | Privacy audiences (status / history / invites). Dual AniList + MAL with one active Watched source. Profile badges + settings cards share `ListsProvider`.                                                                                                                                                                                                                                                      |
+
+| Layer      | Detail                                                                                                                                                                                                                                                                                                                                               |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shared** | `playerPrefs`, `privacyAudience`, `notificationFeedback`, `resolveActiveListProvider`. Presence `hidden`. Public profile `unavailable` / `historyRedacted`. Correlated `lists:*` request ids.                                                                                                                                                        |
+| **DB**     | Audio `20260912140000`. Comfort `20260912160000`. Privacy + `activeListProvider` / per-provider last-sync `20260912161000`. `lastListSync` kept. No RLS change.                                                                                                                                                                                      |
+| **Socket** | `profile:update_prefs` / `profile:update_privacy`. `lists:get_status` is immediate (idle until resolved). Mutations serialize per user and answer via `lists:result` / `lists:error`. `watched:list_changed` refreshes lobby pool previews. Invites: friends-only, not blocked, audience, host-only, dedicated limit + per-target cooldown.          |
+| **Client** | Local-first comfort prefs, account-synced when signed in. Privacy and lists are account-only. Segmented controls fill the track (no grey halo on the selected pill). Floating settings morphs open/close in 500ms (content stays mounted so height retracts to the 56px chip); `data-motion=reduced` (Réduit, or Auto + OS) snaps with no animation. |
+
+**List hardening:** both providers may stay linked; linking/switching commits before any fetch; unlink of the active source falls back atomically; MAL private 404 ≠ missing profile; outages are not cached as a successful sync; inactive linked sources stay `idle`, never a fake `ok`. Legacy list writes through `update_profile_data` were removed.
+
+**Decisions:** sounds off by default · visual = toasts only · hidden status is never fake offline · no `PlayerAnimeList` persistence · no browser push · no language selector (i18n stays backlog).
+
+**Verify:** shared/server/client typechecks · focused prefs, privacy, list resolver, and socket integration tests · `pnpm check:english` · lint · build · `pnpm test`.
+
+### 26.6 — voluntary Ko-fi support ✅
+
+Header outline CTA **Soutenir** (`☕` + label, icon-only below `sm`) links to `https://ko-fi.com/aniquizz` in a new tab. It sits left of **Admin** for staff, and in that slot for everyone else. A light `border` divider separates it from the profile chip when signed in. The Game route has no header, so the CTA never appears in a match.
+
+**Out of scope (kept out):** Ko-fi script / iframe, backend, webhook, donor account link, public badge, leaderboard, gameplay perk.
+
+**Legal:** CGU §5 (optional, no consideration, no tax receipt) · privacy (Ko-fi / PayPal as processors, accounting retention). AniQuizz stays free and ad-free.
+
+**Next:** close 26.6 (commit, CI, tag). Proposed commit when asked: `feat(26.6): quiz du jour, player settings, artist precision, and Ko-fi support`.
+
+### 26.5 — what’s in the tree
+
+| Pillar                                         | Status                                                                                          |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| **Catalogue endings + credits + OP/ED filter** | Prod data 2026-09-05                                                                            |
+| **Staff thematic playlists**                   | Done (picker, decade overlay, Watched overlay, admin, seed, audit, polish)                      |
+| **Product-audit hardening**                    | P0/P1/useful P2 shipped; HIBP deferred by plan-tier decision                                    |
+| **Release copy**                               | News id 7 (full 26.5, 11 Sept.) · roadmap Endings + Playlists `done` · Home + app-shell `v26.5` |
+
+### 26.5 — product-audit hardening (2026-09-10 → 2026-09-11)
+
+Full-product audit (canvas `full-product-audit`) then two fix waves. Canvas after P0/P1: integrity 5.5 → 8 · RLS 6.5 → 8.5 · auth 8 → 8.5 · principes 6.5 → 7 · tests 7 → 7.5.
+
+#### P0 — exploitable (10 Sept.)
+
+| Item               | What changed                                                                                                                                 | Notes                                                                                                                    |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Mix honor system   | `resolveEffectiveAnswerType` clamps Mix typing: a QCM/Duo **button label** claimed as typing scores as qcm (3 pts), not typing (6).          | Server no longer trusts `answerType` from the wire when the string is on the round’s choices/duo.                        |
+| `game:skip_round`  | `Room.forceEndRound(userId)` requires membership + `isSolo` (`maxPlayers === 1`).                                                            | Client recovery skip is solo-only. Custom client cannot force-end a multi match.                                         |
+| SongHistory INSERT | Live RLS: drop `"Add to history"`; revoke INSERT/UPDATE/DELETE/TRUNCATE on `SongHistory` (and Profile TRUNCATE) from `anon`/`authenticated`. | Prisma `20260910194500_songhistory_server_writes` applied + `migrate resolve --applied`. Client SELECT of own rows kept. |
+
+#### P1 (10 Sept.)
+
+| Item                           | What changed                                                                                                       | Notes                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
+| Votes skip/pause               | Membership (`canVote`) + clear that player’s vote on disconnect/leave.                                             | Outsider ignored. `requiredVotes` follows connected humans.                                                              |
+| Pool stats IDOR                | `watched:get_pool_stats` / playlist stats: foreign `roomId` → caller’s solo stats, not the other lobby’s lists.    | `room.players.has(userId)`.                                                                                              |
+| `get_game_state`               | `requireAuth` + membership.                                                                                        | No anonymous sync. Answers still stripped until reveal.                                                                  |
+| Reconnect game-over / starting | `Room.getSyncState` delegates `playing` / `paused` / `finished` / `starting`.                                      | `victoryData` survives refresh; frozen peek while starting.                                                              |
+| Peek window                    | Server `generatePeekWindow` **once per round**; client reducer does not invent a new square.                       | Guessing sync reuses `currentPeekWindow`.                                                                                |
+| Join + room password           | `RATE_LIMITS.joinLobby` 8/60 s per socket; `toClientRoomSettings` strips password for guests (host still gets it). | Password still compared in memory (plaintext). Per-socket bucket reset on handshake — fixed later the same wave with IP. |
+| Delete account                 | `isFreshReauth(last_sign_in_at, 10 min)`.                                                                          | Password never hits our API. Stolen JWT without a recent sign-in is blocked. Docs: `docs/security/delete-account.md`.    |
+| `socket.id` in UI              | GameHub / GameSidebar / lobby mapping use `user.id` only.                                                          | Server was already JWT `userId`.                                                                                         |
+
+#### P2 useful (11 Sept.)
+
+| Item                 | What changed                                                                                                                             | Notes                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Ready serveur        | `Room.canStartMatch` requires every connected non-bot human `isReady`.                                                                   | Host already ready; bots already ready; solo unchanged. Reason: `Tous les joueurs doivent être prêts.`                            |
+| Watched QCM          | Same `hasEnoughQcmNames` (≥ 4 distinct names) as playlists. `distinctNames` on pool stats. Lobby + `validateWatchedStart` block Mix/QCM. | Typing skips the gate. Doc `docs/game/watched-qcm-choices.md`. Duo-only threshold (&lt; 2) not added (Mix/QCM already cuts at 4). |
+| AniList stale        | `listError: 'anilist_blocked'` when `blocked` **or** `stale`, even if a cached list is served.                                           | Start still allowed if `playableSongs > 0`. UI warns: liste peut dater de quelques minutes. Empty + down still blocks.            |
+| Difficulty cascade   | `fetchWithFallback` sets `difficultyRelaxed`; MatchEngine toasts via `game:fallback_notification`.                                       | Same channel as Watched fallback; second toast delayed ~2.5 s if both fire. No-op when all difficulties already selected.         |
+| Helmet               | `helmet` on Express **before** CORS. CSP + COEP off (JSON + Socket.io API).                                                              | `trust proxy` still production-only. Needs Express process restart.                                                               |
+| Join by IP           | Sliding window 8/60 s **per IP** in addition to per-socket. `handshakeClientIp`: `X-Forwarded-For` first hop in production only.         | In-memory per process (same as other socket guards). Reconnect no longer resets the IP bucket.                                    |
+| HIBP leaked-password | **Intentionally disabled.** Advisor `auth_leaked_password_protection` remains WARN.                                                      | Supabase Pro+ is unavailable; the warning is accepted and is not a 26.5 blocker. See `docs/security/rls-audit.md`.                |
+
+#### Out of scope for 26.5 (backlog)
+
+- Client `tsconfig` `strict` / `noImplicitAny` — enable by `features/` later.
+- God-files (`MatchEngine`, `adminRoutes` / `adminService`, Profile, MultiplayerLobby).
+- Room password still plaintext in server memory.
+- Other audit leftovers: `claim-admin` outside production, admin PATCH role without `guardProtectedTarget`, friend invites without friendship, public profile `roomId`, Mix Duo in a qcm room (intentional lifeline), QCM answer not required to be in `choices`, XP persist best-effort, public health, public R2 catalogue, hex in medals/charts.
+
+#### Key decisions
+
+- Identity stays JWT `userId` — no `socket.id` fallbacks.
+- Mix scoring is server-authoritative from offered labels, not the client `answerType` claim.
+- Watched QCM reuses the playlist gate rather than inventing a second threshold.
+- Stale AniList lists remain **playable** (better than emptying the pool) but must surface `listError`.
+- Helmet must not set CSP/COEP on this API or Socket.io polling breaks.
+- Join IP limit is in-process memory (fail-open, no extra DB quota) — same honesty as existing socket buckets.
+
+#### 26.5 closure record
+
+- Commit `89c7627` is on `origin/main`; CI, Vercel, and Render are healthy.
+- Tags `26.3`, `26.4`, and `26.5` were created and pushed.
+- `easy-hits` was deleted from production on 2026-09-12; its snapshot rows cascaded.
+- HIBP is intentionally deferred while Supabase Pro+ is unavailable.
+- SEO: genuine JSON-LD aliases (`AniQuiz`) + library SearchAction; do not keyword-stuff schema. Search Console after deploy.
+- Not blocking: Death March ED2 Unknown Artist, full ffmpeg `r2:scan`, client `strict`, god-file splits.
+
+#### Verification
+
+Scoped tests: Mix clamp, skip solo, votes, peek/sync, reauth, Room ready, Watched QCM launch, handshake IP, IP buckets, difficulty toast. `pnpm --filter @aniquizz/shared build` · server `typecheck` · `pnpm check:english` · `graphify update .`. SongHistory grants confirmed live. HIBP advisor WARN accepted by product decision.
+
+### 26.5 — staff thematic playlists
+
+| Surface    | Delivered                                                                                                                                                                                                                                                                                                                                                 |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schema** | `ThematicPlaylist` + `ThematicPlaylistSong` snapshot, nullable `Match.playlistId` / `Match.decadePlaylistId`, GIN on `Song.tags` / `Franchise.genres`. Manual migrations `20260905180000_thematic_playlists` + `20260911180000_match_decade_playlist`.                                                                                                    |
+| **Shared** | Recipe membership (AND across dimensions, include/exclude, year = song anime `seasonYear`). `playlistId` / `decadePlaylistId` / `playlistWatched` on `GameConfig`. QCM min 4 distinct names. Staff seed: Shonen, Seinen, Slice of Life, Mecha, Fantasy, Romance, Supernatural, Sci-Fi, Sports, Isekai, 1990s–2020s. Retired slugs: `movies`, `easy-hits`. |
+| **Draw**   | Playlist membership (`thematicPlaylists.some`, AND when combined) in `PlaylistBuilder` / `buildSongWhere`. Watched overlay inside the pack. Fallback = rest of snapshot, never global. Pack too small → block start. QCM distractors from the same universe.                                                                                              |
+| **Client** | Playlists tab: pack picker + decade overlay, pool banner, Watched overlay + « Compléter avec le pack ». Union/Commun only when `isRoom && playerCount > 1`. AniList down/stale copy aligned with Watched. Pack blurbs = famous-anime examples. Rules copy + lobby start gates.                                                                            |
+| **Admin**  | Preview (year histogram), publish/refresh snapshot, seed staff packs.                                                                                                                                                                                                                                                                                     |
+| **Docs**   | `docs/game/thematic-playlists.md`. News id 7 + roadmap Playlists `done` (11 Sept.).                                                                                                                                                                                                                                                                       |
+
+**State:** shipped in 26.5. Future player-created playlists remain in the 26.x+ backlog.
+
+#### Playlist audit — majors (11 Sept.)
+
+| Item                      | What changed                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **M1 Pool stats races**   | `requestId` + 250 ms debounce on `usePlaylistPoolStats`; `soundCount` no longer refetches (client `withPlaylistPoolSoundCount`). `guardSilent` 20/10 s. Room path is host-only. |
+| **M2 Recipe vs snapshot** | Recipe edit unpublishes (`nextPlaylistPublishState`). `isPublished` on upsert is honored only when the recipe is unchanged and `snapshotCount > 0`.                             |
+| **M3 Start TOCTOU**       | `applySettings` frozen while `status === 'starting'`. `startGame` aborts if `room.settings` identity changed during `validateMusicSourceStart`.                                 |
+| **M4 `id IN` blow-up**    | Draw/stats filter by `ThematicPlaylistSong` membership. Pack meta cached 30 s, invalidated on refresh.                                                                          |
+
+#### Playlist audit — minors (11 Sept.)
+
+| Item                  | What changed                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| **m1 Prisma HTTP**    | `wrap` maps P2002→409, P2025→404 via `handlePrismaError`. Snapshot `createMany` uses `skipDuplicates`. |
+| **m2 Recipe Zod**     | Caps + positive constraint + `yearMin <= yearMax`. `/playlists/preview` parses the same schema.        |
+| **m3 Preview query**  | One `findMany` with `buildPlaylistMembershipWhere` (no id-list round-trip).                            |
+| **m4 GET /playlists** | Drop `optionalAuth`. `Cache-Control` 60s + SWR 300s. Client module cache 60s; retry forces refresh.    |
+| **m5 Decade persist** | `Match.decadePlaylistId` + `matchPlaylistPersistence` (intersection no longer collapses onto genre).   |
+| **m6 Stale count**    | Pack meta + snapshot load in a transaction. Combined `staleDropped` is primary pack only.              |
+| **m7 Admin panel**    | Load generation cancel; draft fields use functional `setDraft`.                                        |
+| **m8 API base**       | `serverApiBase()` shared by playlist/admin/library/suggestions/leaderboard/socket.                     |
+| **m9 Lobby source**   | Create/update (and bot scenarios) require published packs with `snapshotCount > 0`.                    |
+
+#### Playlist polish (11 Sept.)
+
+| Item           | What changed                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Extra packs    | Fantasy, Romance, Surnaturel, Science-fiction, Sports, Isekai + decades 1990s–2020s. `movies` / `easy-hits` are retired seed slugs. |
+| Decade overlay | Combinable with a genre pack; picker keeps both slots independently.                                                                |
+| Union / Commun | Hidden unless salon **and** 2+ humans (`showWatchedFusionMode`). Solo rules omit fusion copy.                                       |
+| AniList copy   | Playlist overlay uses the same down / stale messages as Watched.                                                                    |
+| Pack blurbs    | Famous-anime examples in picker flair (and seed descriptions).                                                                      |
+
+Staff snapshot counts (prod, 2026-09-11): Shonen 287 · Seinen 24 · Tranches de vie 809 · Mecha 81 · Fantasy 1100 · Romance 979 · Surnaturel 838 · Science-fiction 472 · Sports 165 · Isekai 95 · Années 1990 105 · 2000 452 · 2010 1447 · 2020 970. `easy-hits` and `movies` are absent from production.
+
+### 26.5 — endings + catalogue credits + release content ✅ (2026-09-05)
+
+| Surface            | Delivered                                                                                                                                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pipeline**       | AnimeThemes scopes (top N / exact ids / all / unlocked-only), `SONG_TYPES=OP,ED`, dry-run, locked-row backfill without overwrite. Client OP/ED filter + Watched rules copy.                                           |
+| **Prod catalogue** | **1185 OP + 1814 ED COMPLETED** (2999 playable) + 2 SKIPPED = **3001** songs. 433 franchises, 869 animes, all `isLocked`.                                                                                             |
+| **R2**             | Key-level 1:1 with COMPLETED at the 2990 snapshot; two orphans deleted. Later rows brought the completed count to 2999.                                                                                               |
+| **Artists**        | `manual_edits.json` Unknown Artist pass: MAL title-match (~628) + manual leftover research + spelling unification (7 same-artist duplicates). Imported 2026-09-05. **1** Unknown left (Death March ED2, empty title). |
+| **Locks**          | All 2042 previously unlocked songs set `isLocked: true` then imported. DB: 433 / 869 / 3001 locked.                                                                                                                   |
+| **Release**        | News id 7 (full 26.5, 11 Sept.) · roadmap Endings `done` (5 Sept.) + Playlists `done` (11 Sept.) · Home + app-shell tag **v26.5**.                                                                                    |
+
+**Artist pass notes:** match by title not OP/ED sequence (Gintama / Naruto mismatches). Reused dump spellings (`THE RAMPAGE`, `Atari Kousuke`, `Faylan`, …). Did **not** merge BoA (Fairy Tail) with BOA (Lain _Duvet_).
+
+**State:** shipped and tagged. Optional full ffmpeg `r2:scan` remains non-blocking.
+
+### 26.5 — targeted endings backfill + playable filter ✅ (code)
+
+- **Pipeline:** AnimeThemes step 2 now supports live AniList top N, exact ids,
+  all-input, and historical unlocked-only scopes. Targeted scopes include locked
+  anime without changing lock state; missing/excluded top entries are reported
+  and replaced by the next eligible AniList rank.
+- **Safety:** `ANIMETHEMES_INPUT_FILE=manual_edits.json` uses the exported DB
+  snapshot; `ANIMETHEMES_DRY_RUN=1` previews selected ids without AnimeThemes,
+  cache, or `data_step2.json` writes. Invalid/conflicting selectors fail early.
+  R2 `SKIPPED` rows can now be explicitly requeued by video key or in bulk while
+  preserving deliberate `WORKER_SKIP_VIDEO_KEYS` exclusions.
+- **Client:** Endings are selectable alongside Openings. Watched rules copy
+  reflects opening-only, ending-only, or mixed filters.
+- **Docs:** `packages/database/README.md` and `.env.example` contain exact
+  PowerShell commands, manual-edit import ordering, and every supported scope.
+- **Verification:** live dry-run selected 100 anime; four excluded/absent higher
+  ranks were transparently replaced. `check:english` ✅ · lint 0 errors /
+  21 pre-existing warnings ✅ · build 4/4 ✅ · tests 327 green + 1 skipped ✅.
+  Graphify updated.
+
+**Prod verification (2026-09-05, key-level, no ffmpeg decode):** the documented
+top-100 ED import does **not** need to be re-run. Postgres already has
+playable endings at scale (see table above). Top-100 AniList-popularity anime
+in the catalogue had OP **and** ED at the 2990 snapshot.
+
+R2 bucket `aniquizz-videos`: key-level scan (2026-09-05) found two orphans;
+deleted the same day via `delete_r2_keys.ts`: `DGrayman-1482-ED2.mp4` (song
+11215 _Pride of Tomorrow_ stays `SKIPPED`) and `KiminoNawa-21519-OP2.mp4`
+(no Song row). Full `pnpm r2:scan` (download + ffmpeg decode) was **not** run.
+
+**Follow-up:** 26.6 shipped (tag `26.6`). Next is 26.7 in `PLAN.md`.
+
+### 26.4 — community leaderboard ✅ (2026-09-02)
+
+Public lifetime rankings replace the Coming Soon page. Five tabs, all modes (Standard + Sprint,
+solo + multi) feeding existing `Profile` aggregates and `SongHistory`.
+
+| Surface       | Delivered                                                                                                                                                                                                                                                       |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shared**    | `packages/shared/src/leaderboard.ts` — metric union, discriminated entries, pagination, podium groups, viewer (`ranked` / `ineligible` / `unranked`), `LEADERBOARD_ACCURACY_MIN_ROUNDS = 50`. Internal name `accuracy` to avoid clashing with game `Precision`. |
+| **DB**        | Migration `20260902190000_leaderboard_indexes` — `gamesPlayed` DESC, `maxStreak` DESC, partial expression index for eligible accuracy. Pokédex stays `COUNT(SongHistory)` (unique `(profileId, songId)`); no denormalized counter. Applied to prod.             |
+| **API**       | `GET /leaderboard` — Zod + `optionalAuth` + `publicRead` limiter. `RANK()` over the primary metric, `ROW_NUMBER()` for stable paging, page + podium sample + viewer from one snapshot.                                                                          |
+| **Integrity** | `MatchEngine.finish()` passes **human competitors only** into `computeVictory` (prospective; bots were never persisted). Unfinished matches, guests, and bots stay unranked.                                                                                    |
+| **Client**    | Lazy `features/leaderboard/` — five accessible tabs, arena podium + full list, abort-safe hook, French help copy, Home prefetch. Logged-out browse; profile clicks still go through the auth gate.                                                              |
+
+**Product rules:** competition ranks `1-2-2-4` over the full eligible population · page size 25 (max 50) · URL `?metric=&page=` · no period/friends/season filters · bots and **currently** banned accounts excluded (expired bans re-enter) · accuracy eligibility at 50 played rounds (unanswered = miss) · Pokédex = unique songs heard (replays do not count; catalogue delete drops the discovery) · victory ties share rank and sort by `gamesPlayed` desc.
+
+**Polish (2026-09-02):** streak tab removed · XP shows lobby `Nv` badge + total XP · podium reuses game-over gold/silver/bronze rings, crown, and glow · tab icons match profile (`Zap` / `Trophy` / `Target` / `Disc` / `Check`).
+
+**Known historical limitation:** bot-filled-lobby podium inflation is fixed going forward only. Profile aggregates are treated as authoritative; `report-leaderboard-consistency.ts` is **read-only** (reports drift vs `MatchPlayer`, does not overwrite).
+
+**Tests:** shared `leaderboard.test.ts` · `victory.test.ts` bot-omission regression · `leaderboard.integration.test.ts` (ties across pages, unique discoveries, song cascade, 49/50 rounds, bans/bots, viewer, validation, rate limit) · client URL / hook / list / login-gating tests.
+
+**Integrity check (read-only):** `report-leaderboard-consistency.ts` sampled 7 profiles with match activity — **0 drifted fields**. EXPLAIN on `discoveries` / `accuracy` is a Seq Scan at current volume (8 profiles, ~631 `SongHistory` rows); no TTL cache added.
+
+Final CI pre-flight: `check:english` ✅ · `lint` 0 error / 21 pre-existing warnings ✅ ·
+`build` 4/4 ✅ · `test` **292 green** (shared 130, server 82 + 1 skipped, client 80). Graphify updated (`graphify update .`).
+
+**Release content:** news id 6 + roadmap « Classement global » `done` · prerender `/leaderboard` live copy · app-shell news card.
+
+**Shipped to origin (2026-09-02 / 03):** `8b027e6` then `4e32022` on `origin/main`. CI, Vercel, and Render all on that tip.
+
+**Historical outcome:** v26.5 endings shipped. Decide on `skills-lock.json` separately.
+
+### 26.4 — Song likes system (complete feature doc)
+
+User-curated favorites (`SongLike`), distinct from `SongHistory` (“heard in a match”). Product surface: library filter/like, in-game reveal heart, profile showcase (pinned + privacy).
+
+#### Schema / migrations
+
+| Migration                                    | What                                                                                                                |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `20260715160000_song_likes`                  | Table `SongLike` (`profileId`, `songId`, `likedAt`) · unique `(profileId, songId)` · indexes · cascade Profile/Song |
+| `20260715180000_profile_pinned_favorites`    | `SongLike.pinOrder` (1–5 showcase) · unique `(profileId, pinOrder)`                                                 |
+| `20260715190000_profile_show_favorite_songs` | `Profile.showFavoriteSongs` (public profile visibility toggle)                                                      |
+| `20260715200000_song_like_count`             | `Song.likeCount` denormalized counter + **backfill** from `SongLike`                                                |
+| `20260715210000_song_like_rls`               | Defense-in-depth: `SongLike` RLS enabled + client grants revoked                                                    |
+
+#### Shared (`packages/shared`)
+
+- `LibraryLikedFilter` (`liked` \| `unliked`) · `liked?: boolean` · **`likeCount: number`** on `LibrarySong`
+- `likedCount` on `LibraryMetaResponse` (likes of **current user**, not per-song)
+- Toggle/ids/pinned types · favorites browse fields: `curated`, `totalLikes`, `visible`, `publicVisible`
+- Socket profile update payload includes `showFavoriteSongs`
+
+#### Server
+
+| Piece              | Behavior                                                                                                                                                                                     |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `songLikeService`  | `likeSong` / `unlikeSong` (transaction: create/delete like **+** `likeCount` ±1, idempotent re-like) · `getLikedSongIds` · `countLikedSongs` · `resolveLikedIds` · pinned get/set (max 5)    |
+| Routes             | `PUT/DELETE /library/songs/:id/like` · `GET /library/likes/ids` · `GET/PUT /library/likes/pinned` · `GET /library/users/:userId/favorites` · library `?liked=` filter · rate limit mutations |
+| Favorites endpoint | Pinned first, else recent likes (max 5) · respects `showFavoriteSongs` for public viewers · owner always sees own                                                                            |
+
+#### Client
+
+| Area        | Delivered                                                                                                                                                                                                             |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Library** | Filtre « Mes favoris » · `SongLikeButton` tree/drawer · hero liked count · drawer (pas de CTA « Lancer une partie »)                                                                                                  |
+| **In-game** | Cœur sur `SongInfoCard` **au reveal seulement** · `SongLikesProvider` (optimistic + toast FR + **undo unlike**)                                                                                                       |
+| **Profile** | Section **Titres favoris** · play inline · badge type / accent cover · modale **Choisir mes favoris** (ordre ↑↓, toggle public, pagination 20, recherche) · compteur affichés/total · badges Sélection perso / Masqué |
+
+#### Tests / deploy notes
+
+- Integration: `songLikes.integration.test.ts` (8) — like/unlike, `likeCount` increment/decrement, filter, meta, pinned, privacy
+- **Prod:** all 5 migrations applied ✅ · release content shipped ✅ · **pushed to `origin/main`**
+- Counters: **per-song** = `Song.likeCount` · **per-user total** = `COUNT(SongLike)` / `likedCount` on meta
+
+### 26.4 — audit & release boundary ✅ (2026-09-02)
+
+CI pre-flight on the uncommitted tree: `check:english` ✅ · `lint` 0 error / 21 pre-existing warnings ✅ ·
+`build` 4/4 ✅ · `test` **248 green** (shared 123, server 59 + 1 skipped, client 66).
+
+| Area                | Change                                                                                                                                                                                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Audit fix**       | `SongLikesContext.tsx` was double-spaced (176 blank lines / 322) — reformatted to 154 lines, logic unchanged                                                                                                                                                                     |
+| **Audit fix**       | `App.tsx` — `SongLikesProvider` import moved out of the middle of the `lazy()` block into the top import group                                                                                                                                                                   |
+| **Audit fix**       | `ProfilePinnedFavoritesDialog` — visibility toggle leaked socket listeners: `once('user_profile')` + `once('error')` with no cross-cleanup meant a later unrelated `error` silently reverted the toggle. Now a single `settle()` removes both listeners, with an 8 s ack timeout |
+| **DB hardening**    | `SongLike` had RLS disabled (unlike `Profile` / `Song` / `SongHistory`). Not exploitable — the table has **zero** `anon`/`authenticated` grants, so PostgREST cannot reach it — but migration `20260715210000_song_like_rls` aligns it with the `phase9_rls_hardening` posture   |
+| **Data check**      | Counter consistency verified in prod: 28 `SongLike` rows · 28 songs with `likeCount > 0` · `SUM(likeCount) = 28` · 4 pinned — no drift                                                                                                                                           |
+| **Release content** | News id 6 dated 2026-09-02: classement (top 25, 5 metrics), favoris, idées, Librairie 3 vues · roadmap Classement `2 septembre 2026, v26.4` · `v26.4` tag on Home + app-shell                                                                                                    |
+
+**Migration history findings (no action needed):**
+
+- The `finished_at IS NULL` row for `20260712200000_profile_mal_username` also carries `rolled_back_at` — it was properly resolved via `migrate resolve --rolled-back` and Prisma skips it. Deleting it would only lose the audit trail.
+- `supabase_migrations.schema_migrations` lags behind on purpose: there is no `supabase/` dir and no Supabase CLI usage in the repo. **`_prisma_migrations` is the single source of truth**; mirroring further would create a false dual source.
+
+**Known debt raised (remaining):**
+
+- 5 pre-existing double-spaced files: `FinalRanking.tsx`, `MultiPodium.tsx`, `SoloLobbyRecap.tsx`, `LibraryTreeView.tsx`, `ScoringStrategy.ts`.
+- `SongHistory` grants `INSERT/UPDATE/DELETE/TRUNCATE` to `anon` + `authenticated` (RLS-policy-protected only) — much looser than `Song` (`SELECT` only). Pre-26.4, worth a hardening pass.
+
+### 26.4 — debt pass: service split, lazy likes, shared likes feature ✅ (2026-09-02)
+
+| Area                     | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Server split**         | `libraryService.ts` (1070 lines) **deleted**, replaced by 5 modules in `modules/catalogue/`: `librarySongQuery.ts` (227 — where/select/mapping/user flags, shared), `libraryBrowse.ts` (272 — song by id, flat songs, animes, liked_recent), `libraryTree.ts` (434 — franchise tree + search tree + orphan pagination), `libraryMeta.ts` (72 — cached meta + `clearLibraryMetaCache`), `libraryFavorites.ts` (120 — public favorites + `UserFavoritesError`). Code moved verbatim; only imports changed (`routes/library.ts` + 2 integration tests). |
+| **Lazy liked ids**       | `SongLikesProvider` stays above the router (state shared across routes) but no longer fetches eagerly: `GET /library/likes/ids` fires only when a like-aware surface mounts (`useSongLikes` consumers auto-call `requestLikedIds()`). Home no longer triggers the request. A `toggleVersionRef` re-fetches if a toggle races the in-flight ids fetch, so optimistic state is never clobbered.                                                                                                                                                        |
+| **Shared likes feature** | New `apps/client/src/features/likes/` — `context/SongLikesContext.tsx`, `components/SongLikeButton.tsx`, `copy/likesCopy.ts` (6 keys moved out of `libraryCopy.ts`). `game` no longer imports from `library`; both import from `likes`. 8 import sites updated.                                                                                                                                                                                                                                                                                      |
+
+### 26.4 — community suggestions board ✅ (2026-09-02)
+
+| Area           | Delivered                                                                                                                                                                                                                                                                                                |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Data**       | `Suggestion` + `SuggestionVote` · categories Improvement / Song request / Correction / Other · status rank Open → Planned → Done → Rejected · unique vote · transactional `voteCount` · optional Song `SetNull`                                                                                          |
+| **Security**   | Server-only RLS on both tables, all `anon` / `authenticated` grants revoked · auth required to create/vote/delete · moderator update, admin delete · 5 creations per rolling 24 h · Postgres-backed HTTP rate limits                                                                                     |
+| **Public API** | `GET /suggestions[/:id]` public + optional `myVote` · `POST /suggestions` · `PUT/DELETE /:id/vote` · owner delete of untreated ideas · Top/recent, multi-word text search, category/status, pagination · `GET /suggestions/song-options`                                                                 |
+| **Public UI**  | Lazy `/suggestions` page · 20-item pagination · debounced full-text search + category/status filters · vote rail + optimistic vote · category/status badges · official team reply · structured song correction · accessible paginated song combobox · owner delete while unlocked · public SEO prerender |
+| **Home**       | Third secondary « Idées » button + intent prefetch; HTML app-shell kept in parity                                                                                                                                                                                                                        |
+| **Admin**      | New Suggestions tab · filters category/status · status update · official response · admin-only deletion                                                                                                                                                                                                  |
+| **Tests**      | `suggestions.integration.test.ts` (13) + client validation/combobox/stale-search tests                                                                                                                                                                                                                   |
+
+### 26.4 — suggestions release hardening ✅ (2026-09-02)
+
+| Area               | Change                                                                                                                                                                            |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Votes**          | `SELECT … FOR UPDATE` + `createMany({ skipDuplicates })` — concurrent PUT from the same user returns 200 with `voteCount === 1`                                                   |
+| **Rate limits**    | `HttpRateLimitBucket` (hashed key, sliding window, `Retry-After`) shared by suggestions + library; daily create quota is the same persistent bucket (delete does not free a slot) |
+| **Staff lock**     | `staffTreatedAt` set on first non-OPEN status or official reply · author DELETE then 403                                                                                          |
+| **Account delete** | Untreated ideas removed · treated ideas kept with `authorId` null · votes of the deleted user decremented then dropped                                                            |
+| **Song search**    | Ranked SQL pagination (`/suggestions/song-options`) · client loads one page then « Afficher plus »                                                                                |
+| **React**          | `AbortController` on board, admin panel, and song search so only the latest response applies                                                                                      |
+| **A11y / copy**    | WAI-ARIA combobox · all French UI strings in `suggestionsCopy.ts` · create dialog split under the file-size cap                                                                   |
+| **DB**             | Migrations `20260902180000_suggestions_hardening` + `20260902181000_http_rate_limit_rls` applied                                                                                  |
+
+Final CI pre-flight: `check:english` ✅ · `lint` 0 error / 21 pre-existing warnings ✅ ·
+`build` 4/4 ✅ · `test` **267 green** (shared 123, server 72 + 1 skipped, client 72).
+
+### 26.4 — news & roadmap aligned with shipped idées board ✅ (2026-09-02)
+
+Player-facing v26.4 copy now matches the live board (no internals):
+
+| Surface   | Change                                                                                                                                                                                                |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| News id 6 | Section **La boîte à idées** : bouton Home **Idées**, vote (connexion), recherche + filtres, **5 / 24 h**, statuts **En cours / Prévue / Réalisée / Refusée**, réponses officielles, picker catalogue |
+| App-shell | Description de la carte actualité alignée (vote + idées)                                                                                                                                              |
+| Roadmap   | « Boîte à idées » `done` — description board public + statuts FR                                                                                                                                      |
+| PLAN      | 26.4 marked feature-complete; pushed to `origin/main`                                                                                                                                                 |
+
+### 26.4 — library browse views (Franchise / Anime / Sons) ✅ (2026-07-15)
+
+| Area      | Delivered                                                                                              |
+| --------- | ------------------------------------------------------------------------------------------------------ |
+| **Views** | Toggle Franchise (tree) · Anime (expand list) · Sons (flat grid) · défaut Franchise                    |
+| **URL**   | `?view=songs&sort=likes` · auto `view=songs` si filtre Favoris · clear favoris → Franchise             |
+| **Sorts** | `likes` (likeCount desc) · `liked_recent` (SongLike.likedAt, auth) · matrice tri↔vue (options grisées) |
+| **Meta**  | `anime.popularity` exposé · badges compact (`12.4k`) · `likeCount` toujours affiché (y compris 0)      |
+| **API**   | `GET /library/animes` · `/library/songs?sort=likes\|liked_recent`                                      |
+| **Tests** | library integration +2 (sort likes, animes pagination)                                                 |
+
+### 26.4 — chantier 1 (historical short list) ✅ — superseded by section above
+
+### 26.3 — release content shipped (2026-07-14)
+
+**26.1** shipped (2026-07-10) · **26.2** shipped (2026-07-12)
+
+### 26.3 — chantier 1: engine tests + autocomplete doc ✅
+
+| Area                       | Delivered                                                                                                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MatchEngine unit tests** | 18 tests in `MatchEngine.test.ts` — standard scoring (typing/qcm/duo/mix), `effectiveAnswerType` clamp, answer change before reveal, streak/`maxStreak`, solo/multi guess-timer parity (26.2.1 regression), reveal anti-leak, reveal → next round |
+| **Test harness**           | `matchEngineTestHarness.ts` — mock io, playlist factory, `advanceToGuessing()` with fake timers                                                                                                                                                   |
+| **Doc**                    | `docs/perf/baseline.md` Axis 1 updated — documents 26.2.1 client-side fuzzy (`anime:get_all` → local `useAnimeSearch`) vs stale 10.8 server-per-keystroke description                                                                             |
+
+### 26.3 — chantier 2: GameForm full-screen routes ✅
+
+| Area             | Delivered                                                                                                                                                                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Routes**       | `/play/create` (solo · créer salon · édition lobby) · `/play/join` (liste + code) · `/play/*` nested sous `GameHub`                                                                                                                                 |
+| **Layout**       | `PlayConfigPage` plein écran — modes en haut (`GameTypeSelector`), sidebar + panneau `glass-card`                                                                                                                                                   |
+| **Nav sections** | **Général** (règles + sélection musicale) · **Source** · **Avancée** (vidéo + départ son) — plus d’onglets Salon / Filtres / Vidéo / Départ son                                                                                                     |
+| **Multi salon**  | Paramètres salon (nom, privé, mdp, joueurs max) en bloc compact **au-dessus** de la nav — pas de catégorie dédiée                                                                                                                                   |
+| **Form**         | `GameConfigForm` refactoré — `configSections.ts`, sections `config/*` réutilisées                                                                                                                                                                   |
+| **Controller**   | `LobbyControllerContext` — socket unique sur tout `/play/*` ; modals config supprimées                                                                                                                                                              |
+| **UX polish**    | Retour unique · pas de sous-titre descriptif · titre de section dans le panneau · Sprint typing actif (violet) · erreur mdp privé · retour lobby en édition (`returnTo`) · précision en primary · padding resserré · scroll-spy testé puis rollback |
+| **Parité**       | Solo, création multi, édition lobby (draft), Watched gates, mot de passe privé                                                                                                                                                                      |
+
+**Historical outcome:** chantier 3 — Sprint shipped (see below).
+
+### 26.3 — chantier 3: Sprint (ex Quick Draw) ✅
+
+| Area              | Delivered                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Shared**        | `gameType: 'standard' \| 'sprint'` · `sprint.ts` (`computeSprintPodiumBonus`, `sprintSpeedRank`, `formatSprintTimeSeconds`, `maxSprintPointsPerRound`, `gameTypeFromStoredMode`) · `GAME_TYPE_LABELS.sprint` (« Sprint »)                                                                                                     |
+| **Engine**        | `ScoringStrategy.roundBonus()` · `sprintScoring` · bonus at `endRound` on **final** correct answer (`answerTimeMs` updatable until chrono ends) · `speedRank` / `speedBonus` at reveal · `sprint:leaderboard` event (reveal-only, per socket)                                                                                 |
+| **Settings**      | Zod Sprint: typing forced · min 2 joueurs · solo config hides Sprint (`GameTypeSelector.soloOnly`)                                                                                                                                                                                                                            |
+| **Client config** | `GameTypeSelector` · RulesSection typing-only · lobby rules copy Sprint                                                                                                                                                                                                                                                       |
+| **In-game UX**    | Typing forcé · barre de saisie **reste active** après envoi (changement de réponse autorisé) · badge **`Jusqu'à +8 pts`** (5 base + 3 max podium) · classement vitesse **au reveal seulement** (suspense) · panel sous card anime (aligné player cards) · top 3 + ligne **Vous** séparée · croix rouge si faux (pas de temps) |
+| **Game over**     | `MatchConfigHeader` badge SPR/éclair · `RoundHistoryList` Sprint : temps, rang (`1er correct`…), points `+8` avec breakdown `5+3` · bandeau récap podiums + meilleur temps                                                                                                                                                    |
+| **Persistance**   | `Match.mode = SPRINT` en DB (migration `20260713160000_match_game_mode_sprint`) · historique profil badge Sprint (warning) · `RecordedAnswer` + `RoundHistoryEntry` : `answerTimeMs`, `speedRank`, `speedBonus`                                                                                                               |
+| **Tests**         | MatchEngine Sprint (3+) · shared `sprint.test.ts` (120 tests shared total)                                                                                                                                                                                                                                                    |
+
+**Product rules (locked):**
+
+- Sprint = **multi uniquement** (podium bonus meaningless solo).
+- Classement vitesse = **bonnes réponses finales** triées par `answerTimeMs`, pas « premier essai correct ».
+- Stats profil **multi** = au moins **1 autre humain** persisté (`MatchPlayer` count) — lobby + bots only compte solo.
+
+### 26.3 — release content ✅
+
+| Area        | Delivered                                                                                         |
+| ----------- | ------------------------------------------------------------------------------------------------- |
+| **News**    | Actualité v26.3 (`newsData.ts`, id 5) — Sprint, config plein écran, polish · date 14 juillet 2026 |
+| **Roadmap** | Sprint coché · graphiques profil en planned · Mode Rapidité retiré (remplacé par Sprint)          |
+| **Home**    | Tag version `v26.3` · app-shell aligné (actualités + version)                                     |
+| **CI**      | `check:english` · `lint` · `build` · `test` verts en local                                        |
+
+### 26.3 — data prep: match snapshots for future profile charts ✅
+
+| Area            | Delivered                                                                                     |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| **Schema**      | Migration `20260712193000` — `Match.responseType`, `Match.precision`, `MatchPlayer.soloMedal` |
+| **Persistance** | `MatchRepository` écrit les snapshots à la fin de partie (aucune UI)                          |
+
+**Deferred (26.x+ backlog):** graphiques profil — API d’agrégation, Recharts, section `/profile`.
+
+### 26.3 — polish: Solo lobby recap (Option A) ✅
+
+| Area          | Delivered                                                                                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Recap**     | `soloLobbyRecapGroups.ts` — groupes Partie / Réponse / Musique / Vidéo · badge mode dynamique              |
+| **UI**        | `SoloReady` + `SoloLobbyRecap` — Header site, coupe Standard, Retour hors carte, Règles discret (`subtle`) |
+| **Fix**       | Renommage `soloLobbyRecapGroups.ts` (collision Windows `.ts` / `.tsx`)                                     |
+| **Solo-only** | Pas d’estimation `≈ X min` · ligne Vidéo (`VIDEO_MODE_LABELS`)                                             |
+| **Tests**     | `soloLobbyRecapGroups.test.ts` (6 tests)                                                                   |
+
+### 26.3 — polish: setting chips unifiés + mode badges ✅
+
+| Area                 | Delivered                                                                                                             |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **Composant**        | `SettingChip.tsx` + `SETTING_CHIP_NEUTRAL` — `rounded-lg`, `h-7`, style neutre partout                                |
+| **Source de vérité** | `roomSettings.ts` — `buildLobbySettingChips()` (Diff + Sons + Temps + Précision + Réponse + Source + **Vidéo**)       |
+| **Difficulté**       | Couleur seule sémantique : 1 tier (success/warning/destructive) · 2 tiers = dégradé moitié-moitié · 3 = triple        |
+| **Icônes**           | `Gauge` (diff), `Keyboard` (réponse), `Eye` (vidéo), `Target` (précision), etc.                                       |
+| **Mode badge**       | `GameModeBadge.tsx` — Standard (coupe) / Sprint (éclair) · compact STD/SPR en liste salons                            |
+| **Surfaces**         | Lobby multi · `RoomList` · solo recap · modal Règles · game-over `MatchConfigHeader` · overlay in-game `ConfigBadges` |
+| **Config**           | `GameTypeSelector` — coupe à la place de Sparkles pour Standard                                                       |
+| **API liste salons** | `RoomListSettingsSummary` + `toRoomListSettings` — expose `gameType` + `videoMode`                                    |
+| **Tests**            | `roomSettings.test.ts` · `soloLobbyRecapGroups.test.ts`                                                               |
+
+**Historical outcome:** the v26.3 release boundary was completed and tagged.
+
+### 26.3 — fix: typing autocomplete perf ✅
+
+| Area       | Change                                                                                                                                                                                     |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Cause**  | Chaque frappe mettait à jour `answer` dans `Game.tsx` → re-render de tout l’arbre (vidéo, joueurs, sidebar) + fuzzy sur tout le catalogue + `buildFranchiseCounts` recalculé à chaque fois |
+| **Fix**    | Draft isolé dans `AnswerInput` · debounce adaptatif · index préfixe · `startTransition`                                                                                                    |
+| **UX**     | Barre de typing **conservée** après envoi (pill + champ « Modifier votre réponse… ») — requis pour Sprint et parité solo/multi                                                             |
+| **Shared** | `getFuzzySuggestions(..., franchiseCountsCache?)` · export `buildFranchiseCountsMap`                                                                                                       |
+
+### 26.3 — fix: admin catalogue tree search / refresh ✅ (2026-07-15)
+
+Admin → onglet **Catalogue** : recherche / refresh peu fiable (« je tape un anime, ça sort pas »).
+
+| Area              | Change                                                                                                                                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cause**         | Courses de `load()` sans abort · UI gardait l’ancien arbre sans feedback · search sans `altNames` · sons non filtrés par query · N+1 Prisma par franchise                                                                    |
+| **Client**        | `AbortController` sur `catalogueTree` · ignore réponses périmées · overlay « Actualisation… » + grisé pendant refresh · « Aucun résultat » seulement hors loading · debounce ne reset `page` que si la query commitée change |
+| **Server search** | Match `Anime.altNames` via SQL `unnest` + `ILIKE` · sons : titre/artiste **ou** identité anime (name / franchise / altNames) — sinon uniquement le(s) son(s) matching                                                        |
+| **Server load**   | Batch page : 1 query franchises → 1 animes → 1 songs (plus de boucle `loadAnimesWithSongs` par franchise)                                                                                                                    |
+| **Files**         | `CataloguePanel.tsx` · `adminApi.ts` · `adminService.ts` (`catalogueTree`)                                                                                                                                                   |
+
+### 26.3 — fix: lobby settings stuck after socket replace ✅ (2026-07-15)
+
+| Area       | Change                                                                                                                                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cause**  | Après `server namespace disconnect` (1 session / user), le nouveau socket n’était plus dans le channel Socket.IO `roomId` → `update_room_settings` OK mais pas de `room_updated` → pas de retour `/play` |
+| **Fix**    | Re-`lobby:join` au `connect` si `currentRoomId` + waiting · navigate immédiat après save paramètres · reconnect host same room → `onRoomJoined` (pas kick hors édition)                                  |
+| **Commit** | `7acf18a` · `useLobbyController.ts`                                                                                                                                                                      |
+
+---
+
+## Shipped history
+
+### v26.2 — boundary closed ✅ (2026-07-12)
+
+### 26.2 — chantier 1: Librairie musicale ✅
+
+| Area       | Delivered                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------- |
+| **API**    | `GET /library/meta`, `/library/tree`, `/library/songs`, `/library/song/:id` · optional auth · rate limit |
+| **Server** | `libraryService.ts` · search-mode pagination when `q` set                                                |
+| **DB**     | Migration `20260712180000_library_franchise_popularity`                                                  |
+| **Shared** | `packages/shared/src/library.ts` · `animeMatchesLibrarySearch()`                                         |
+| **Client** | `/library` full browse UI                                                                                |
+| **Tests**  | 8 integration tests `library.integration.test.ts`                                                        |
+
+### 26.2 — chantier 2: MyAnimeList (Watched) ✅
+
+| Area              | Delivered                                                                                                                                   |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| **API MAL**       | Official v2 `GET /users/{name}/animelist` · header `X-MAL-CLIENT-ID` only (no OAuth) · `malService.ts`                                      |
+| **List statuses** | `watching`, `completed`, `on_hold` → internal catalogue ids via `Anime.idMal`                                                               |
+| **Resolver**      | `listResolver.ts` + `watchedPoolResolve.ts` — one provider per profile (AniList **XOR** MAL); cross-provider union/intersection OK in multi |
+| **DB**            | `Profile.malUsername` · index `Anime.idMal` — migration `20260712200000_profile_mal_username`                                               |
+| **Shared**        | `watchedList.ts` (`hasWatchedListLink`, `watchedListProvider`) · socket `malUsername` on `GamePlayer` / `SocketData`                        |
+| **Server**        | Profile link mutual exclusivity · warm lobby · Watched gates · `validateWatchedStart`                                                       |
+| **Client**        | Profil : deux boutons **Lier** + logo AniList / MAL · `WatchlistLinkDialog` · hub Watched gates · copy FR (On-Hold)                         |
+| **Admin**         | Stats `watchedListLinked` + breakdown AniList/MAL · `ProfileView` / `RoomsPanel` affichent MAL                                              |
+| **Config**        | `MAL_CLIENT_ID` local + Render (`apps/server/.env.example`)                                                                                 |
+| **Tests**         | `malService.test.ts` in CI · `watched.integration.test.ts` (no-list + MAL pool) · `watchedList` / `watchedSource`                           |
+
+**Bugfix (MAL mapping):** `mapMalIdsToCatalogueIds` must **not** filter `isLocked: false` — `isLocked` is an ETL freeze flag, not a playability gate. Without this fix, MAL lists mapped to 0 catalogue animes locally.
+
+### 26.2 — polish: first-paint / load UX ✅
+
+| Area                 | Delivered                                                                            |
+| -------------------- | ------------------------------------------------------------------------------------ |
+| **Home eager**       | `Home` import synchrone — plus de lazy/Suspense skeleton sur `/`                     |
+| **App-shell**        | HTML shell hors `#root`, overlay jusqu'au paint React (`dismissAppShell` même frame) |
+| **Skeleton**         | `AppSuspenseFallback` + `RouteSkeletonFallback` → `null` sur `/`                     |
+| **Header**           | Placeholder profil (`ProfileButton loading`) dès session, sans attendre `profile`    |
+| **Motion cold load** | `isFirstLandingPaint()` — pas de `fade-in` / `slide-up` au premier paint             |
+| **Shell parity**     | `app-shell.css` aligné sur vraie Home (actualités, polices self-hosted, chip profil) |
+
+### 26.2 — polish: in-game performance ✅
+
+| Area           | Delivered                                                                                                                                                       |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Timer**      | `useMatchCountdown` + `MatchCountdownOverlays` (`apps/client/src/features/game/`) — progress 100ms, chiffres 250ms ; `Game.tsx` ne re-render plus à chaque tick |
+| **Visualizer** | `AudioVisualizer` CSS-only (`.eq-bars` in `index.css`) — zéro `setState` pendant la manche                                                                      |
+| **GPU**        | `backdrop-blur` retiré des surfaces in-game (cartes joueurs, top bar, overlays, timers…) → `bg-*/95` opaques                                                    |
+| **Profiler**   | `DevRenderProfiler` (`components/dev/`) — dev only, log commits React > 8ms sur layout + countdown                                                              |
+| **Tests**      | `useMatchCountdown.test.ts` (pure `computeMatchCountdown`)                                                                                                      |
+
+**Symptôme ciblé :** ralentissements / animations saccadées en partie (ex. MacBook Air M1) — cause principale : timer 100ms sur tout l'arbre `Game` + visualizer 100ms + `backdrop-blur` GPU.
+
+**Vidéo floutée :** blur live `blur-xl` (24px) → `blur-[25.2px]` (+5%) pour masquer davantage l'image (`VideoStage.tsx`).
+
+### 26.2 — tweak: blurred video concealment ✅
+
+| Change       | Detail                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| **Blur +5%** | Mode `videoMode: 'blurred'` — `blur-xl` (24px) → `blur-[25.2px]` in `VideoStage.tsx`      |
+| **Why**      | Slightly stronger hide of the anime frame during guessing without changing mode behaviour |
+
+### 26.2 — gameplay: solo guess phase aligned with multi ✅
+
+**Problem (before):** en solo, la manche passait immédiatement en révélation dès la première réponse — le joueur ne pouvait ni profiter du chrono complet ni modifier sa réponse.
+
+**Behaviour (after):** le solo suit le même déroulement que le multijoueur pendant la phase `guessing` :
+
+| Moment             | Solo                                                           | Multi (inchangé)                                                                        |
+| ------------------ | -------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Réponse soumise    | Score mis à jour, badge « réponse envoyée », input reste actif | Idem                                                                                    |
+| Changer de réponse | Autorisé (même mode : typing / carré / duo)                    | Autorisé jusqu'à la fin du chrono                                                       |
+| Fin de manche      | Chrono écoulé **ou** clic **Révéler**                          | Chrono **ou** tous les connectés ont répondu **ou** vote skip majoritaire en révélation |
+
+**Bouton Révéler (solo uniquement) :**
+
+- Libellé **Révéler** (ex-**Passer**), icône œil.
+- Visible seulement si `submittedAnswer !== null` et `phase === 'guessing'`.
+- Réutilise l'événement existant `game:skip_round` → `MatchEngine.forceEndRound()` — **aucun nouvel event socket**.
+
+**Fichiers :**
+
+| Layer  | File                                                                             | Change                                                                     |
+| ------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Server | `apps/server/src/modules/game/engine/MatchEngine.ts`                             | Retrait du `endRound()` anticipé quand `isSolo && allConnectedAnswered()`  |
+| Client | `apps/client/src/features/game/components/modes/standard/parts/VideoStage.tsx`   | Bouton Révéler (condition + copy)                                          |
+| Client | `apps/client/src/features/game/components/modes/standard/StandardGameLayout.tsx` | `handleSoloSkip` → `socket.emit('game:skip_round')` (inchangé)             |
+| Client | `apps/client/src/pages/Game.tsx`                                                 | `submittedAnswer` + placeholder « Changer votre réponse… » (déjà en place) |
+
+**Tests :** pas de test unitaire `MatchEngine` dédié (setup lourd) ; lint client OK · suite serveur 28 passés (working tree).
+
+### 26.2 — release content ✅
+
+| Area        | Delivered                                                                          |
+| ----------- | ---------------------------------------------------------------------------------- |
+| **News**    | Actualité v26.2 (`newsData.ts`) — Librairie, MAL, solo Révéler, perf               |
+| **Roadmap** | Librairie + MAL cochées (`12 juillet 2026 — avec la v26.2`) · dates Q3/Q4 ajustées |
+| **Home**    | Tag version `v26.2` · app-shell aligné                                             |
+
+## Boundary 26.2 — closed ✅ (2026-07-12)
+
+| Item                           | Statut                    |
+| ------------------------------ | ------------------------- |
+| Code + push `main`             | ✅                        |
+| CI GitHub                      | ✅                        |
+| Migrations prod                | ✅ (schéma déjà en place) |
+| `MAL_CLIENT_ID` Render         | ✅ (configuré)            |
+| `ARCHITECTURE.md`              | ✅                        |
+| Tags `26.1` + `26.2`           | ✅                        |
+| Historique migrations Supabase | ✅ aligné                 |
+
+**Historical outcome:** v26.3 shipped after this boundary.
+
+Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/v26.1.md).
+
+## Recent key decisions
+
+- **Quiz du jour (26.6):** not a Match. One attempt, forfeit-on-leave, Paris midnight, dedicated streak/XP. Admin shuffle is franchise-uniform and must not lock to openings. Reveal likes use the catalogue song id.
+- **Player settings (26.6):** comfort prefs are local-first + account-synced; privacy audiences and list links are account-only and server-enforced. Sounds off by default; hidden status is never fake offline. Volume/mute apply to every preview surface, not only in-match.
+- **Artist precision (26.6):** guess the performer, not the song title. QCM/autocomplete use billed units; first billed unit is the QCM target. Song-title / OP-ED sequence deferred to backlog.
+- **List integrations (26.6):** AniList and MAL may stay linked together; one canonical `activeListProvider` drives Watched and falls back atomically when unlinked.
+- **MAL cross-provider multi:** each player's pool resolved separately (AniList ids or MAL→`idMal`), then union/intersection on catalogue `Anime.id`.
+- **MAL statuses:** `on_hold` included alongside Completed/Watching (product choice 26.2).
+- **Librairie (26.2):** playable = `downloadStatus: COMPLETED` only. Tree paginated by franchise; search (`q`) switches to flat song pagination.
+- **Graphiques profil:** deferred to 26.x+ backlog (`PLAN.md` backlog) — DB snapshots persist at match end; UI/API removed from 26.3 scope.
+- **Quick Draw → Sprint (26.3):** renommé `sprint` partout ; typing-only multi ; podium bonus relatif aux **corrects** ; config + in-game + game-over + historique profil ; classement vitesse reveal-only ; re-réponse autorisée jusqu’au chrono.
+- **GameForm (26.3):** full-screen `/play/create` ; nav Général/Source/Avancée ; salon en sidebar multi ; modes en haut ; scroll-spy rejeté.
+- **Watched mode:** QCM distractors use the same `watchedIds` as songs; global fallback **opt-in only**. See `docs/game/watched-qcm-choices.md`, `watched-pool-threshold.md`.
+- **Playlist (lobby):** cumulative **song-id** exclusion across matches in the same salon (`Room.priorMatchSongIds`); auto-relaxation when the filtered pool is too small; stale-match abort on lobby return.
+- **Playlist order (fix A, 26.2):** removed `smartShuffle` « largest franchise first » opener bias. After franchise-diverse pick (`pickBestCandidates`), round order is a uniform Fisher-Yates shuffle (`shuffleArray`). Diversity at pick time unchanged; adjacent same-franchise rounds possible only when pass 2 had to duplicate franchises (small pool).
+- **First-paint UX (26.2):** app-shell HTML conservé jusqu'au commit React; Home eager; header profil placeholder; animations landing désactivées au cold load. Shell aligné pixel-par-pixel sur Home (fonts + actualités).
+- **In-game perf (26.2):** countdown isolé (`MatchCountdownOverlays`), visualizer CSS-only, suppression `backdrop-blur` in-game, `DevRenderProfiler` en dev. Mode vidéo floutée : blur +5% (24px → 25.2px).
+- **Solo guess phase (26.2):** même chrono que le multi — pas de révélation instantanée à la réponse ; bouton **Révéler** actif après la première réponse (`game:skip_round`).
+- **Lobby edit stuck after socket replace (26.3 fix):** après `server namespace disconnect`, re-`lobby:join` au reconnect + exit config au submit — voir § _26.3 — fix: lobby settings stuck_.
+- **Admin catalogue tree (26.3 fix):** abort + loading overlay · `altNames` ILIKE · filter sons par query · batch animes/songs — voir § _26.3 — fix: admin catalogue tree search_.
+- **Song likes (26.4):** `SongLike` is server-only (Express API + Prisma owner connection, no PostgREST grants, RLS on as defense-in-depth). Per-song counter is denormalized in `Song.likeCount` and written **in the same transaction** as the like — never recomputed on read.
+- **Migration source of truth (26.4):** `_prisma_migrations` only. `supabase_migrations.schema_migrations` is left to dashboard-applied SQL (RLS, storage); no Supabase CLI in the repo, so do not mirror Prisma migrations into it.
+
+## Roadmap (see `PLAN.md`)
+
+| Version   | Scope                                                                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **26.1**  | Delete account · AniList pool + opt-in · lobby rules · video modes · song start · admin lobby bots — ✅ all shipped                                                        |
+| **26.2**  | Librairie ✅ · MAL Watched ✅ · polish UX/perf ✅ · solo guess + Révéler ✅ · shipped 2026-07-12                                                                           |
+| **26.3**  | Engine tests + doc ✅ · GameForm ✅ · Sprint ✅ · polish ✅ · snapshots data ✅ · release content ✅ · lobby reconnect fix ✅ · admin catalogue search fix ✅ · tag `26.3` |
+| **26.4**  | Song likes full ✅ · library views ✅ · **boîte à idées** ✅ · **classement global** ✅ (5 metrics) · release content aligned ✅ · tag `26.4`                              |
+| **26.5**  | Endings catalogue ✅ · OP/ED filter ✅ · artist credits + locks imported ✅ · staff playlists ✅ · hardening ✅ · tag `26.5`                                               |
+| **26.6**  | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
+| **26.x+** | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
+
+## Conventions
+
+- End each **26.x** update: checklist in `PLAN.md` · condense the phase here · archive detail
+  under `docs/progress-archive/` · propose a Conventional Commits message when requested.
+- One chantier at a time per `PLAN.md`; document decisions and test status.
+- Engineering playbook (CI, typing, tokens, graphify): [`AGENTS.md`](./AGENTS.md).
+
+## Shipped commits (v26.4)
+
+`PLAN.md` / `PROGRESS.md` are gitignored, so they never appear in a commit. The planned five-way split was folded into two commits on `origin/main`:
+
+| SHA       | Message                                                          |
+| --------- | ---------------------------------------------------------------- |
+| `8b027e6` | `feat(26.4): ship likes, ideas board, and public leaderboard`    |
+| `4e32022` | `fix(26.4): date the roadmap 2 September and flag new home CTAs` |
+
+**Still open:** `skills-lock.json` (graphify skill pin) — commit as `chore(tooling)` or add to `.gitignore`.

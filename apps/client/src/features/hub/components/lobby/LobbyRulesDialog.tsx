@@ -3,12 +3,7 @@ import { BookOpen } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   buildLobbyRulesSections,
@@ -35,7 +30,9 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
               <BookOpen className="h-5 w-5 text-primary" aria-hidden="true" />
               Règles de la partie
             </span>
-            <span className="text-sm font-normal text-muted-foreground">(selon la config actuelle)</span>
+            <span className="text-sm font-normal text-muted-foreground">
+              (selon la config actuelle)
+            </span>
           </DialogTitle>
         </DialogHeader>
 
@@ -58,7 +55,10 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
                   <ul className="space-y-1.5 text-sm leading-relaxed text-muted-foreground">
                     {section.lines.map((line, i) => (
                       <li key={i} className="flex gap-2">
-                        <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50" aria-hidden="true" />
+                        <span
+                          className="mt-2 h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50"
+                          aria-hidden="true"
+                        />
                         <span>{line}</span>
                       </li>
                     ))}
@@ -66,7 +66,12 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
                 )}
 
                 {section.chips && section.chips.length > 0 && (
-                  <div className={cn('flex flex-wrap gap-2', section.lines?.length ? 'mt-3' : undefined)}>
+                  <div
+                    className={cn(
+                      'flex flex-wrap gap-2',
+                      section.lines?.length ? 'mt-3' : undefined,
+                    )}
+                  >
                     {section.chips.map((chip) => (
                       <SettingChip
                         key={chip.key}
@@ -96,7 +101,12 @@ interface LobbyRulesTriggerProps {
 }
 
 /** Opens the shared lobby rules modal — visible to host and guests. */
-export function LobbyRulesTrigger({ config, context, className, subtle = false }: LobbyRulesTriggerProps) {
+export function LobbyRulesTrigger({
+  config,
+  context,
+  className,
+  subtle = false,
+}: LobbyRulesTriggerProps) {
   const [open, setOpen] = useState(false);
 
   return (

@@ -65,10 +65,7 @@ export function DailyTracks({ tracks, className, size = 'sm' }: DailyTracksProps
             )}
           />
           <span
-            className={cn(
-              'font-mono text-muted-foreground',
-              size === 'xl' ? 'text-sm' : 'text-xs',
-            )}
+            className={cn('font-mono text-muted-foreground', size === 'xl' ? 'text-sm' : 'text-xs')}
           >
             {index + 1}
           </span>

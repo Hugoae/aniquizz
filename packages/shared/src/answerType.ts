@@ -4,10 +4,7 @@
 import type { AnswerType, ResponseType } from './game';
 import { normalizeString } from './utils';
 
-export function answerMatchesOfferedChoice(
-  answer: string,
-  offered: readonly string[],
-): boolean {
+export function answerMatchesOfferedChoice(answer: string, offered: readonly string[]): boolean {
   if (!answer || offered.length === 0) return false;
   const normalized = normalizeString(answer);
   if (!normalized) return false;

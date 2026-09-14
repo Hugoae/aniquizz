@@ -32,18 +32,18 @@ src/
 
 ## Routes
 
-| Path | Page | Auth |
-| ---- | ---- | ---- |
-| `/` | Home | — |
-| `/play` | Game hub (lobby) | ✓ |
-| `/game` | Active match | ✓ |
-| `/profile`, `/profile/:userId` | Profile | ✓ |
-| `/admin` | Admin panel | ✓ (MODERATOR+) |
-| `/library` | Music catalogue browse | prefetch |
-| `/news` | News & roadmap | — |
-| `/leaderboard` | Community rankings (XP, victories, games, Pokédex, accuracy) | — |
-| `/suggestions` | Community ideas board | — |
-| `/legal/*` | CGU, privacy, mentions | — |
+| Path                           | Page                                                         | Auth           |
+| ------------------------------ | ------------------------------------------------------------ | -------------- |
+| `/`                            | Home                                                         | —              |
+| `/play`                        | Game hub (lobby)                                             | ✓              |
+| `/game`                        | Active match                                                 | ✓              |
+| `/profile`, `/profile/:userId` | Profile                                                      | ✓              |
+| `/admin`                       | Admin panel                                                  | ✓ (MODERATOR+) |
+| `/library`                     | Music catalogue browse                                       | prefetch       |
+| `/news`                        | News & roadmap                                               | —              |
+| `/leaderboard`                 | Community rankings (XP, victories, games, Pokédex, accuracy) | —              |
+| `/suggestions`                 | Community ideas board                                        | —              |
+| `/legal/*`                     | CGU, privacy, mentions                                       | —              |
 
 ## Scripts
 
@@ -58,12 +58,12 @@ pnpm typecheck    # tsc --noEmit
 
 Copy `.env.example` → `.env`:
 
-| Variable | Purpose |
-| -------- | ------- |
-| `VITE_SUPABASE_URL` | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | Supabase anon key |
-| `VITE_SERVER_URL` | Socket.io / API origin (prod: Render URL) |
-| `VITE_R2_PUBLIC_URL` | Public R2 bucket base URL for video MP4s |
+| Variable                 | Purpose                                   |
+| ------------------------ | ----------------------------------------- |
+| `VITE_SUPABASE_URL`      | Supabase project URL                      |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key                         |
+| `VITE_SERVER_URL`        | Socket.io / API origin (prod: Render URL) |
+| `VITE_R2_PUBLIC_URL`     | Public R2 bucket base URL for video MP4s  |
 
 ## Deploy (Vercel)
 

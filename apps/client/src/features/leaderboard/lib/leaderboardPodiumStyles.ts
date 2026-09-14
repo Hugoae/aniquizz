@@ -14,9 +14,12 @@ export const podiumFrameClass = (rank: number): string => {
 };
 
 export const podiumRingClass = (rank: number): string => {
-  if (rank === 1) return 'border-warning ring-4 ring-warning/40 shadow-[0_0_14px_hsl(var(--warning)/0.28)]';
-  if (rank === 2) return 'border-silver ring-4 ring-silver/35 shadow-[0_0_8px_hsl(var(--silver)/0.22)]';
-  if (rank === 3) return 'border-bronze ring-4 ring-bronze/35 shadow-[0_0_8px_hsl(var(--bronze)/0.2)]';
+  if (rank === 1)
+    return 'border-warning ring-4 ring-warning/40 shadow-[0_0_14px_hsl(var(--warning)/0.28)]';
+  if (rank === 2)
+    return 'border-silver ring-4 ring-silver/35 shadow-[0_0_8px_hsl(var(--silver)/0.22)]';
+  if (rank === 3)
+    return 'border-bronze ring-4 ring-bronze/35 shadow-[0_0_8px_hsl(var(--bronze)/0.2)]';
   return 'border-border/70';
 };
 

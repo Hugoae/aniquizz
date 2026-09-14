@@ -5,8 +5,7 @@ export const PROFILE_COPY = {
   favoriteSongsEmptyOwn: 'Aucun titre favori pour le moment.',
   favoriteSongsEmptyOwnHint:
     'Likez des sons depuis la librairie ou à la révélation en fin de manche.',
-  favoriteSongsEmptyPublic: (username: string) =>
-    `${username} n'a pas encore de titres favoris.`,
+  favoriteSongsEmptyPublic: (username: string) => `${username} n'a pas encore de titres favoris.`,
   favoriteSongsCount: (n: number) =>
     n === 0 ? 'aucun favori' : n === 1 ? '1 favori' : `${n.toLocaleString('fr-FR')} favoris`,
   favoriteSongsShownTotal: (shown: number, total: number) =>
@@ -19,7 +18,7 @@ export const PROFILE_COPY = {
   favoriteSongsCuratedBadge: 'Sélection perso',
   customizeTitle: 'Mes 5 favoris du profil',
   customizeHint:
-    'Choisissez jusqu\'à 5 titres parmi vos favoris à mettre en avant sur votre profil public.',
+    "Choisissez jusqu'à 5 titres parmi vos favoris à mettre en avant sur votre profil public.",
   customizeSelected: (n: number, max: number) => `${n}/${max} sélectionnés`,
   customizeSearch: 'Rechercher dans vos favoris…',
   customizeSave: 'Enregistrer',
@@ -30,7 +29,7 @@ export const PROFILE_COPY = {
   customizeEmptyLikes: 'Likez des sons depuis la librairie pour pouvoir les sélectionner ici.',
   customizeMaxReached: (max: number) => `Vous ne pouvez sélectionner que ${max} titres maximum.`,
   customizeOrderTitle: 'Ordre sur le profil',
-  customizeOrderHint: 'Utilisez les flèches pour définir l\'ordre d\'affichage (1 = en haut).',
+  customizeOrderHint: "Utilisez les flèches pour définir l'ordre d'affichage (1 = en haut).",
   customizeNoneSelected: 'Aucun titre sélectionné — ajoutez-en depuis la liste ci-dessous.',
   customizeAddTitle: 'Ajouter depuis vos favoris',
   customizeBrowseTotal: (n: number) =>

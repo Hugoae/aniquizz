@@ -37,7 +37,12 @@ export function SettingsBlockedSection() {
                 <UserAvatar avatar={user.avatar} username={user.username} className="h-8 w-8" />
                 <span className="truncate text-sm font-medium">{user.username}</span>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => setPendingId(user.id)}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPendingId(user.id)}
+              >
                 {SETTINGS_COPY.blockedUnblock}
               </Button>
             </li>

@@ -3,7 +3,7 @@
  * Durations are expressed in minutes to match the admin API contract.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { MODERATION_BAN_MESSAGE, isBanSanctionReason } from '@aniquizz/shared';
 
@@ -19,13 +19,13 @@ export const PERMANENT_MINUTES = 52_560_000;
 const PERMANENT_THRESHOLD_MS = 50 * 365 * 24 * 60 * 60 * 1000;
 
 export const DURATION_OPTIONS: DurationOption[] = [
-  { label: "1 heure", minutes: 60 },
-  { label: "2 heures", minutes: 120 },
-  { label: "12 heures", minutes: 720 },
-  { label: "24 heures", minutes: 1440 },
-  { label: "1 semaine", minutes: 10080 },
-  { label: "1 mois", minutes: 43200 },
-  { label: "Définitif", minutes: PERMANENT_MINUTES },
+  { label: '1 heure', minutes: 60 },
+  { label: '2 heures', minutes: 120 },
+  { label: '12 heures', minutes: 720 },
+  { label: '24 heures', minutes: 1440 },
+  { label: '1 semaine', minutes: 10080 },
+  { label: '1 mois', minutes: 43200 },
+  { label: 'Définitif', minutes: PERMANENT_MINUTES },
 ];
 
 export const isSanctionActive = (until: string | null | undefined): boolean =>
@@ -33,7 +33,7 @@ export const isSanctionActive = (until: string | null | undefined): boolean =>
 
 /** Compact "vu il y a X" style relative time in French. */
 export const formatRelativeFromNow = (iso: string | null | undefined): string => {
-  if (!iso) return "jamais vu";
+  if (!iso) return 'jamais vu';
   const ms = Date.now() - new Date(iso).getTime();
   if (ms < 60_000) return "à l'instant";
   const minutes = Math.floor(ms / 60_000);
@@ -52,10 +52,10 @@ export const formatRelativeFromNow = (iso: string | null | undefined): string =>
  * Returns "Définitif" for very long sanctions and "" when already expired.
  */
 export const formatRemaining = (until: string | null | undefined): string => {
-  if (!until) return "";
+  if (!until) return '';
   const ms = new Date(until).getTime() - Date.now();
-  if (ms <= 0) return "";
-  if (ms >= PERMANENT_THRESHOLD_MS) return "Définitif";
+  if (ms <= 0) return '';
+  if (ms >= PERMANENT_THRESHOLD_MS) return 'Définitif';
 
   const totalMinutes = Math.ceil(ms / 60_000);
   const days = Math.floor(totalMinutes / 1440);

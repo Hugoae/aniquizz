@@ -63,7 +63,10 @@ export function PlayerCardBase({
         <UserAvatar
           avatar={player.avatar}
           username={displayName}
-          className={cn('h-10 w-10 border-2 shadow-sm transition-all', isCurrentUser ? 'border-primary' : 'border-border')}
+          className={cn(
+            'h-10 w-10 border-2 shadow-sm transition-all',
+            isCurrentUser ? 'border-primary' : 'border-border',
+          )}
         />
         {isDisconnected && (
           <span
@@ -77,8 +80,16 @@ export function PlayerCardBase({
       </div>
 
       <div className="flex h-full min-w-0 flex-1 flex-col justify-center">
-        <div className={cn('flex w-full items-center justify-between gap-3', !hasChildren && 'h-full')}>
-          <span className={cn('min-w-0 flex-1 truncate text-sm font-bold', isCurrentUser ? 'text-primary' : 'text-foreground')} title={displayName}>
+        <div
+          className={cn('flex w-full items-center justify-between gap-3', !hasChildren && 'h-full')}
+        >
+          <span
+            className={cn(
+              'min-w-0 flex-1 truncate text-sm font-bold',
+              isCurrentUser ? 'text-primary' : 'text-foreground',
+            )}
+            title={displayName}
+          >
             {displayName}
           </span>
           {!hideScore && (
@@ -89,7 +100,11 @@ export function PlayerCardBase({
           )}
         </div>
 
-        {hasChildren && <div className="mt-1 flex h-4 w-full animate-in items-center justify-between fade-in">{children}</div>}
+        {hasChildren && (
+          <div className="mt-1 flex h-4 w-full animate-in items-center justify-between fade-in">
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );

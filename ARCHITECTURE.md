@@ -35,13 +35,13 @@ flowchart LR
 
 React SPA deployed to Vercel (`apps/client` as project root).
 
-| Area | Purpose |
-| ---- | ------- |
-| `src/pages/` | Routed views — Home, GameHub, Game, Profile, Admin, Library, Leaderboard, legal pages |
-| `src/features/` | Feature modules — auth, game, hub, friends, profile, admin, settings, library, leaderboard, suggestions |
-| `src/components/ui/` | shadcn/ui primitives |
-| `src/lib/` | Supabase, socket, admin API, env, route prefetch |
-| `vercel.json` | SPA rewrite, apex redirects, immutable asset cache |
+| Area                 | Purpose                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| `src/pages/`         | Routed views — Home, GameHub, Game, Profile, Admin, Library, Leaderboard, legal pages                   |
+| `src/features/`      | Feature modules — auth, game, hub, friends, profile, admin, settings, library, leaderboard, suggestions |
+| `src/components/ui/` | shadcn/ui primitives                                                                                    |
+| `src/lib/`           | Supabase, socket, admin API, env, route prefetch                                                        |
+| `vercel.json`        | SPA rewrite, apex redirects, immutable asset cache                                                      |
 
 Route-based code splitting (`React.lazy`) with skeleton fallbacks. Supabase and
 socket helpers load on demand after first paint where possible.
@@ -50,21 +50,21 @@ socket helpers load on demand after first paint where possible.
 
 Express + Socket.io on Render (Starter, Frankfurt). Binds `0.0.0.0:$PORT`.
 
-| Area | Purpose |
-| ---- | ------- |
-| `src/core/` | HTTP bootstrap, `SocketManager`, JWT auth middleware, rate guards |
-| `src/modules/game/` | `GameManager`, `gameHandlers`, `gameService`, **engine/** (`MatchEngine`, `PlaylistBuilder`, `RoundClock`, …) |
-| `src/modules/lobby/` | Room create/join, settings, room list fan-out |
-| `src/modules/chat/` | In-game chat (respects mute sanctions) |
-| `src/modules/profile/` | Stats, public profiles, five-metric community leaderboard |
-| `src/modules/friends/` | Friend graph, presence, invites |
-| `src/modules/admin/` | REST `/admin/*` — users, rooms, catalogue, stats, dev tools |
-| `src/modules/anilist/` | Watched-list resolution for AniList mode |
-| `src/modules/mal/` | MyAnimeList public API — username verify, animelist fetch, `idMal` catalogue mapping |
-| `src/modules/lists/` | `listResolver` + `listHandlers` — AniList **and** MAL may stay linked; one `activeListProvider` drives Watched |
-| `src/modules/catalogue/` | `libraryService` — browse meta, franchise tree, song search/detail |
-| `src/modules/daily/` | Quiz du jour — generation, HTTP play loop, admin review |
-| `src/routes/` | `/health`, `/library/*`, `/leaderboard`, `/suggestions`, `/daily/*` |
+| Area                     | Purpose                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `src/core/`              | HTTP bootstrap, `SocketManager`, JWT auth middleware, rate guards                                              |
+| `src/modules/game/`      | `GameManager`, `gameHandlers`, `gameService`, **engine/** (`MatchEngine`, `PlaylistBuilder`, `RoundClock`, …)  |
+| `src/modules/lobby/`     | Room create/join, settings, room list fan-out                                                                  |
+| `src/modules/chat/`      | In-game chat (respects mute sanctions)                                                                         |
+| `src/modules/profile/`   | Stats, public profiles, five-metric community leaderboard                                                      |
+| `src/modules/friends/`   | Friend graph, presence, invites                                                                                |
+| `src/modules/admin/`     | REST `/admin/*` — users, rooms, catalogue, stats, dev tools                                                    |
+| `src/modules/anilist/`   | Watched-list resolution for AniList mode                                                                       |
+| `src/modules/mal/`       | MyAnimeList public API — username verify, animelist fetch, `idMal` catalogue mapping                           |
+| `src/modules/lists/`     | `listResolver` + `listHandlers` — AniList **and** MAL may stay linked; one `activeListProvider` drives Watched |
+| `src/modules/catalogue/` | `libraryService` — browse meta, franchise tree, song search/detail                                             |
+| `src/modules/daily/`     | Quiz du jour — generation, HTTP play loop, admin review                                                        |
+| `src/routes/`            | `/health`, `/library/*`, `/leaderboard`, `/suggestions`, `/daily/*`                                            |
 
 Catalogue caches (`getAllAnimeNames`, choice candidates) warm at boot to reduce
 cold-start latency on Render.
@@ -102,30 +102,30 @@ Media keys live in `Song.videoKey`; completed songs point at public R2 URLs.
 
 Read-only catalogue browse — no gameplay impact.
 
-| Layer | Detail |
-| ----- | ------ |
-| **HTTP** | `GET /library/meta`, `/library/tree`, `/library/songs`, `/library/song/:id` — optional JWT (`optionalAuth`) for heard/unheard filters; rate-limited |
-| **Server** | `libraryService.ts` — playable songs = `downloadStatus: COMPLETED` only (same rule as matches) |
-| **Browse modes** | Default: franchise tree paginated by `Franchise.maxPopularity`. With `q` search: flat song pagination + `Anime.altNames` GIN index |
-| **Client** | `/library` — filters, tree view, song drawer with video preview |
-| **Shared** | `packages/shared/src/library.ts` — browse params, response types, `animeMatchesLibrarySearch()` |
-| **DB** | Migration `20260712180000_library_franchise_popularity` — `Franchise.maxPopularity`, `Anime_altNames_gin_idx` |
+| Layer            | Detail                                                                                                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **HTTP**         | `GET /library/meta`, `/library/tree`, `/library/songs`, `/library/song/:id` — optional JWT (`optionalAuth`) for heard/unheard filters; rate-limited |
+| **Server**       | `libraryService.ts` — playable songs = `downloadStatus: COMPLETED` only (same rule as matches)                                                      |
+| **Browse modes** | Default: franchise tree paginated by `Franchise.maxPopularity`. With `q` search: flat song pagination + `Anime.altNames` GIN index                  |
+| **Client**       | `/library` — filters, tree view, song drawer with video preview                                                                                     |
+| **Shared**       | `packages/shared/src/library.ts` — browse params, response types, `animeMatchesLibrarySearch()`                                                     |
+| **DB**           | Migration `20260712180000_library_franchise_popularity` — `Franchise.maxPopularity`, `Anime_altNames_gin_idx`                                       |
 
 ## Watched lists — AniList & MyAnimeList (v26.2, dual-link in v26.6)
 
-| Rule | Behaviour |
-| ---- | --------- |
-| **Dual link, one active** | `Profile.anilistUsername` and `Profile.malUsername` may both stay set. `activeListProvider` selects the Watched source; unlinking the active source falls back to the remaining link |
-| **AniList** | Existing GraphQL sync → internal `Anime.id` |
-| **MAL** | Official v2 `GET /users/{name}/animelist` with `X-MAL-CLIENT-ID` (no OAuth); a profile-page HEAD disambiguates missing users from private-list 404s. Statuses: `watching`, `completed`, `on_hold` → catalogue via `Anime.idMal` |
-| **Multi lobby** | Each player's pool resolved separately; host settings apply **union** or **intersection** on catalogue ids |
-| **Gates** | Same min-pool threshold and opt-in global fallback as AniList-only Watched — see [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md) |
-| **Env** | `MAL_CLIENT_ID` on server (Render prod + `apps/server/.env.example`) |
-| **DB** | `Profile.malUsername` (`20260712200000`); `activeListProvider` + per-provider last-sync (`20260912161000`). `lastListSync` kept until a later contract drop |
-| **Socket** | `lists:get_status` returns persisted links immediately with `idle` health until resolved. Mutations (`link` / `set_active` / `refresh` / `unlink`) carry a request id and answer through correlated `lists:result` / `lists:error`; per-user serialization prevents link/switch races |
-| **Client state** | `ListsProvider` is the single live source for the profile badge, settings cards, active-source switch, and the auth-profile compatibility snapshot |
-| **Sync semantics** | Linking and switching commit before any provider fetch. Manual sync updates the provider timestamp only after a successful/private-empty response; unavailable/stale responses remain explicit and do not masquerade as success |
-| **Lobby coherence** | List mutations update the live `GamePlayer` snapshot; `watched:list_changed` makes active room pool previews resolve again after source changes and successful syncs |
+| Rule                      | Behaviour                                                                                                                                                                                                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Dual link, one active** | `Profile.anilistUsername` and `Profile.malUsername` may both stay set. `activeListProvider` selects the Watched source; unlinking the active source falls back to the remaining link                                                                                                  |
+| **AniList**               | Existing GraphQL sync → internal `Anime.id`                                                                                                                                                                                                                                           |
+| **MAL**                   | Official v2 `GET /users/{name}/animelist` with `X-MAL-CLIENT-ID` (no OAuth); a profile-page HEAD disambiguates missing users from private-list 404s. Statuses: `watching`, `completed`, `on_hold` → catalogue via `Anime.idMal`                                                       |
+| **Multi lobby**           | Each player's pool resolved separately; host settings apply **union** or **intersection** on catalogue ids                                                                                                                                                                            |
+| **Gates**                 | Same min-pool threshold and opt-in global fallback as AniList-only Watched — see [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md)                                                                                                                       |
+| **Env**                   | `MAL_CLIENT_ID` on server (Render prod + `apps/server/.env.example`)                                                                                                                                                                                                                  |
+| **DB**                    | `Profile.malUsername` (`20260712200000`); `activeListProvider` + per-provider last-sync (`20260912161000`). `lastListSync` kept until a later contract drop                                                                                                                           |
+| **Socket**                | `lists:get_status` returns persisted links immediately with `idle` health until resolved. Mutations (`link` / `set_active` / `refresh` / `unlink`) carry a request id and answer through correlated `lists:result` / `lists:error`; per-user serialization prevents link/switch races |
+| **Client state**          | `ListsProvider` is the single live source for the profile badge, settings cards, active-source switch, and the auth-profile compatibility snapshot                                                                                                                                    |
+| **Sync semantics**        | Linking and switching commit before any provider fetch. Manual sync updates the provider timestamp only after a successful/private-empty response; unavailable/stale responses remain explicit and do not masquerade as success                                                       |
+| **Lobby coherence**       | List mutations update the live `GamePlayer` snapshot; `watched:list_changed` makes active room pool previews resolve again after source changes and successful syncs                                                                                                                  |
 
 Shared helpers: `packages/shared/src/watchedList.ts` (`hasWatchedListLink`, `resolveActiveListProvider`). Socket payloads expose both usernames plus `activeListProvider` on `GamePlayer` / `SocketData`.
 
@@ -140,15 +140,15 @@ per-package `.env.example` files for the required subset.
 
 ## Related docs
 
-| Doc | Topic |
-| --- | ----- |
-| [`docs/game/solo-medals.md`](./docs/game/solo-medals.md) | Solo medal tiers, mastery bar, rounding fix |
-| [`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md) | Watched AniList QCM/Duo distractor pool |
-| [`docs/game/artist-precision.md`](./docs/game/artist-precision.md) | Artist answer precision (credits, QCM, autocomplete) |
-| [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md) | Watched min-pool gates (AniList + MAL) |
-| [`docs/admin/moderation.md`](./docs/admin/moderation.md) | Mute/ban behaviour |
-| [`docs/security/delete-account.md`](./docs/security/delete-account.md) | RGPD account deletion flow |
-| [`docs/security/rls-audit.md`](./docs/security/rls-audit.md) | Postgres RLS |
-| [`docs/seo/google-search-console.md`](./docs/seo/google-search-console.md) | SEO checklist |
-| [`docs/perf/baseline.md`](./docs/perf/baseline.md) | Performance snapshots |
-| [`packages/database/README.md`](./packages/database/README.md) | Catalogue pipeline |
+| Doc                                                                            | Topic                                                |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| [`docs/game/solo-medals.md`](./docs/game/solo-medals.md)                       | Solo medal tiers, mastery bar, rounding fix          |
+| [`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md)       | Watched AniList QCM/Duo distractor pool              |
+| [`docs/game/artist-precision.md`](./docs/game/artist-precision.md)             | Artist answer precision (credits, QCM, autocomplete) |
+| [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md) | Watched min-pool gates (AniList + MAL)               |
+| [`docs/admin/moderation.md`](./docs/admin/moderation.md)                       | Mute/ban behaviour                                   |
+| [`docs/security/delete-account.md`](./docs/security/delete-account.md)         | RGPD account deletion flow                           |
+| [`docs/security/rls-audit.md`](./docs/security/rls-audit.md)                   | Postgres RLS                                         |
+| [`docs/seo/google-search-console.md`](./docs/seo/google-search-console.md)     | SEO checklist                                        |
+| [`docs/perf/baseline.md`](./docs/perf/baseline.md)                             | Performance snapshots                                |
+| [`packages/database/README.md`](./packages/database/README.md)                 | Catalogue pipeline                                   |

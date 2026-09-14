@@ -44,8 +44,7 @@ export const LIBRARY_COPY = {
   metaLikes: (n: number) => `${n.toLocaleString('fr-FR')} like${n === 1 ? '' : 's'}`,
   metaLikesAria: (n: number) =>
     n === 0 ? 'Aucun like' : n === 1 ? '1 like' : `${n.toLocaleString('fr-FR')} likes`,
-  animeSongCount: (n: number) =>
-    n === 1 ? '1 son' : `${n.toLocaleString('fr-FR')} sons`,
+  animeSongCount: (n: number) => (n === 1 ? '1 son' : `${n.toLocaleString('fr-FR')} sons`),
   statLiked: (n: number) =>
     n === 0 ? 'aucun favori' : n === 1 ? '1 favori' : `${n.toLocaleString('fr-FR')} favoris`,
   searchModeHint: 'Résultats par son — pagination sur les extraits correspondants',
@@ -63,7 +62,11 @@ export const LIBRARY_COPY = {
   playCta: 'Lancer une partie',
   playCtaHint: 'Entendez ce son en blindtest depuis le mode Standard.',
   resultsCount: (n: number) =>
-    n === 0 ? 'Aucun résultat' : n === 1 ? '1 son trouvé' : `${n.toLocaleString('fr-FR')} sons trouvés`,
+    n === 0
+      ? 'Aucun résultat'
+      : n === 1
+        ? '1 son trouvé'
+        : `${n.toLocaleString('fr-FR')} sons trouvés`,
   emptyTitle: 'Aucun son ne correspond',
   emptyHint: 'Essayez un autre mot-clé ou élargissez les filtres.',
   loadError: 'Impossible de charger la librairie.',

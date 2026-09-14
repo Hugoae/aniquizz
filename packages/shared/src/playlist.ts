@@ -92,13 +92,13 @@ export const PLAYLIST_UNAVAILABLE_REASON = "Cette playlist n'est plus disponible
 export const recipeHasPositiveConstraint = (recipe: PlaylistRecipe): boolean =>
   Boolean(
     recipe.genres?.length ||
-      recipe.tags?.length ||
-      recipe.formats?.length ||
-      recipe.songTypes?.length ||
-      recipe.difficulties?.length ||
-      recipe.includeSongIds?.length ||
-      recipe.yearMin != null ||
-      recipe.yearMax != null,
+    recipe.tags?.length ||
+    recipe.formats?.length ||
+    recipe.songTypes?.length ||
+    recipe.difficulties?.length ||
+    recipe.includeSongIds?.length ||
+    recipe.yearMin != null ||
+    recipe.yearMax != null,
   );
 
 export const recipeYearRangeIsValid = (recipe: PlaylistRecipe): boolean =>
@@ -215,12 +215,12 @@ export const hasEnoughQcmNames = (distinctNames: number, responseType: string): 
 export const qcmPoolTooSmallReason = (precision?: unknown): string => {
   if (normalizePrecision(precision) === 'artist') {
     return (
-      'Pas assez d\'artistes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
+      "Pas assez d'artistes distincts dans ce pool pour le QCM (il en faut au moins 4). " +
       'Passez en Typing ou élargissez les filtres.'
     );
   }
   return (
-    'Pas assez d\'animes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
+    "Pas assez d'animes distincts dans ce pool pour le QCM (il en faut au moins 4). " +
     'Passez en Typing ou élargissez les filtres.'
   );
 };
@@ -298,7 +298,9 @@ export const playlistChipsFromRecipe = (recipe: PlaylistRecipe): string[] => {
   for (const genre of recipe.genres ?? []) chips.push(genre);
   if (recipe.yearMin != null && recipe.yearMax != null) {
     chips.push(
-      recipe.yearMin === recipe.yearMax ? String(recipe.yearMin) : `${recipe.yearMin}–${recipe.yearMax}`,
+      recipe.yearMin === recipe.yearMax
+        ? String(recipe.yearMin)
+        : `${recipe.yearMin}–${recipe.yearMax}`,
     );
   } else if (recipe.yearMin != null) {
     chips.push(`≥ ${recipe.yearMin}`);
@@ -346,10 +348,13 @@ export function playlistSourceDisplayName(
 /** Intersection of snapshot song ids (combine decade × other pack). */
 export function intersectPlaylistSongIds(sets: number[][]): number[] {
   if (!sets.length) return [];
-  return sets.reduce((acc, next) => {
-    const keep = new Set(next);
-    return acc.filter((id) => keep.has(id));
-  }, [...new Set(sets[0])]);
+  return sets.reduce(
+    (acc, next) => {
+      const keep = new Set(next);
+      return acc.filter((id) => keep.has(id));
+    },
+    [...new Set(sets[0])],
+  );
 }
 
 export const withPlaylistPoolSoundCount = (
@@ -366,9 +371,7 @@ export const withPlaylistPoolSoundCount = (
 };
 
 /** Reuse Watched banner math when a playlist overlay is treated like a watched pool. */
-export const toWatchedPoolStatsView = (
-  stats: PlaylistPoolStats,
-): WatchedPoolStats => ({
+export const toWatchedPoolStatsView = (stats: PlaylistPoolStats): WatchedPoolStats => ({
   animeCount: stats.animeCount,
   playableSongs: stats.playableSongs,
   soundCount: stats.soundCount,

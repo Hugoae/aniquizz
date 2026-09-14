@@ -16,7 +16,10 @@ export function formatDailyAdminDate(iso: string): string {
   }).format(new Date(`${iso}T00:00:00.000Z`));
 }
 
-export function dailyAttemptLabel(count: number, copy: { attemptsNone: string; attemptsOne: string; attemptsMany: (n: number) => string }): string {
+export function dailyAttemptLabel(
+  count: number,
+  copy: { attemptsNone: string; attemptsOne: string; attemptsMany: (n: number) => string },
+): string {
   if (count <= 0) return copy.attemptsNone;
   if (count === 1) return copy.attemptsOne;
   return copy.attemptsMany(count);

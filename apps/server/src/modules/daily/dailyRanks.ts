@@ -37,8 +37,8 @@ export async function syncChallengeRanks(
 
   // One statement instead of N Prisma updates. Ids are TEXT (Prisma String uuid),
   // not Postgres uuid — do not cast to uuid.
-  const tuples = rows.map((row) =>
-    Prisma.sql`(CAST(${row.id} AS text), CAST(${ranks.get(row.id) ?? null} AS integer))`,
+  const tuples = rows.map(
+    (row) => Prisma.sql`(CAST(${row.id} AS text), CAST(${ranks.get(row.id) ?? null} AS integer))`,
   );
 
   await tx.$executeRaw`

@@ -13,10 +13,10 @@ export const PLAYLISTS_COPY = {
   fallbackLabel: 'Compléter avec le pack',
   fallbackHint: 'Les manches manquantes restent dans ce pack (jamais le catalogue global).',
   packTooSmall:
-    'Ce pack n\'a pas assez de sons pour ce nombre de manches (pas de complétion hors pack).',
+    "Ce pack n'a pas assez de sons pour ce nombre de manches (pas de complétion hors pack).",
   filteredEmpty: 'Aucun son jouable pour ces filtres. Changez la source ou les filtres.',
   qcmTooSmall:
-    'Pas assez d\'animes distincts dans ce pool pour le QCM. Passez en Typing ou élargissez les filtres.',
+    "Pas assez d'animes distincts dans ce pool pour le QCM. Passez en Typing ou élargissez les filtres.",
   overlayEmpty: 'Aucun son du pack dans vos listes pour ces filtres.',
   overlayInsufficient: (playable: number, soundCount: number) =>
     `Seulement ${playable} son${playable > 1 ? 's' : ''} du pack dans vos listes pour ${soundCount} demandé${soundCount > 1 ? 's' : ''}. ` +
@@ -26,7 +26,7 @@ export const PLAYLISTS_COPY = {
   overlayRules:
     'Limiter aux animes vus : seuls les titres du pack présents dans vos listes peuvent sortir.',
   fallbackRules:
-    'Compléter avec le pack est activé : si l\'intersection Watched est trop petite, le reste du pack complète (jamais l\'aléatoire global).',
+    "Compléter avec le pack est activé : si l'intersection Watched est trop petite, le reste du pack complète (jamais l'aléatoire global).",
   decadeCard: 'Décennie',
   decadeBlurb: 'Combinable avec un autre pack. Glisse pour choisir la période.',
   noOutsideFill: 'Si le pack lui-même est trop petit, le lancement est bloqué.',

@@ -3,7 +3,7 @@ import type { GameConfig, GameType } from '@aniquizz/shared';
 import { GAME_TYPE_LABELS, playlistSourceDisplayName } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
-import { SettingChip, SettingChipList } from '@/features/hub/components/SettingChip';
+import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
 const COMPACT_MODE_LABELS: Record<GameType, string> = {
@@ -60,11 +60,13 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
         aria-label={`Mode ${GAME_TYPE_LABELS[gameType]}`}
       >
         <ModeIcon className={cn('h-4 w-4', !isSprint && 'fill-current')} aria-hidden />
-        <span className="text-[10px] font-black uppercase tracking-wider">{COMPACT_MODE_LABELS[gameType]}</span>
+        <span className="text-[10px] font-black uppercase tracking-wider">
+          {COMPACT_MODE_LABELS[gameType]}
+        </span>
       </div>
       <SettingChipList className="flex-1 px-4 py-3">
         {chips.map((spec) => (
-          <SettingChip key={spec.key} {...spec} />
+          <SettingChipItem key={spec.key} spec={spec} />
         ))}
       </SettingChipList>
     </div>

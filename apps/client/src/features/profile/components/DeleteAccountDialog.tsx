@@ -6,7 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordField } from '@/components/ui/PasswordField';
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
 import { socket } from '@/lib/socket';
@@ -42,10 +46,7 @@ export function DeleteAccountDialog({
     onOpenChange(false);
   };
 
-  const canSubmit =
-    confirmUsername === username &&
-    password.length > 0 &&
-    !isDeleting;
+  const canSubmit = confirmUsername === username && password.length > 0 && !isDeleting;
 
   const handleDelete = async () => {
     if (!userEmail || !canSubmit) return;
@@ -103,7 +104,15 @@ export function DeleteAccountDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!isDeleting) { onOpenChange(next); if (!next) reset(); } }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!isDeleting) {
+          onOpenChange(next);
+          if (!next) reset();
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -114,13 +123,15 @@ export function DeleteAccountDialog({
 
         <div className="space-y-4 py-2 text-sm">
           <p className="text-muted-foreground">
-            Cette action est <strong className="text-foreground">définitive et irréversible</strong>.
-            Seront supprimés : ton profil, tes statistiques, ton historique de parties, ta liste AniList liée et tes liens d&apos;amitié.
+            Cette action est <strong className="text-foreground">définitive et irréversible</strong>
+            . Seront supprimés : ton profil, tes statistiques, ton historique de parties, ta liste
+            AniList liée et tes liens d&apos;amitié.
           </p>
 
           <div className="space-y-2">
             <label htmlFor="confirm-username" className="text-sm font-medium">
-              Saisis ton pseudo <span className="font-mono text-destructive">{username}</span> pour confirmer
+              Saisis ton pseudo <span className="font-mono text-destructive">{username}</span> pour
+              confirmer
             </label>
             <Input
               id="confirm-username"
@@ -146,12 +157,12 @@ export function DeleteAccountDialog({
           <Button variant="ghost" onClick={close} disabled={isDeleting}>
             Annuler
           </Button>
-          <Button
-            variant="destructive"
-            onClick={handleDelete}
-            disabled={!canSubmit}
-          >
-            {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : 'Supprimer définitivement'}
+          <Button variant="destructive" onClick={handleDelete} disabled={!canSubmit}>
+            {isDeleting ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              'Supprimer définitivement'
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -11,9 +11,15 @@ test.describe('community leaderboard', () => {
 
     await page.getByRole('tab', { name: /pokédex/i }).click();
     await expect(page).toHaveURL(/metric=discoveries/);
-    await expect(page.getByRole('tab', { name: /pokédex/i })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /pokédex/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     await page.getByRole('tab', { name: /pokédex/i }).press('ArrowLeft');
-    await expect(page.getByRole('tab', { name: /parties/i })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tab', { name: /parties/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
 });

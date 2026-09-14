@@ -6,7 +6,11 @@ import {
   SONG_START_MODE_LABELS,
 } from '@aniquizz/shared';
 import { Music2 } from 'lucide-react';
-import { SettingChip, SettingChipList, SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
+import {
+  SettingChip,
+  SettingChipList,
+  SETTING_CHIP_NEUTRAL,
+} from '@/features/hub/components/SettingChip';
 import { buildRoomSettingBadges } from '@/features/hub/components/roomSettings';
 import { cn } from '@/lib/utils';
 
@@ -69,9 +73,5 @@ export function DailyRuleChips({
     );
   }
 
-  return (
-    <SettingChipList className={cn(gap, className)}>
-      {chips.map(renderChip)}
-    </SettingChipList>
-  );
+  return <SettingChipList className={cn(gap, className)}>{chips.map(renderChip)}</SettingChipList>;
 }

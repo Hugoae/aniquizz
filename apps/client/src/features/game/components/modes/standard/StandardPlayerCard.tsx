@@ -18,7 +18,16 @@ interface StandardPlayerCardProps {
   hideScore?: boolean;
 }
 
-export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick, hideScore }: StandardPlayerCardProps) {
+export function StandardPlayerCard({
+  player,
+  isCurrentUser,
+  showResult,
+  rank,
+  rankPending,
+  flash,
+  onClick,
+  hideScore,
+}: StandardPlayerCardProps) {
   const isCorrect = player.isCorrect === true;
   const isWrong = showResult && !isCorrect;
   const displayedAnswer = player.currentAnswer || '…';
@@ -51,10 +60,14 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, ra
     <div
       className={cn(
         'absolute bottom-[calc(100%+12px)] left-1/2 z-30 w-max max-w-[150px] -translate-x-1/2 animate-in zoom-in slide-in-from-bottom-2 rounded-xl border px-3 py-2 text-center text-[11px] font-bold shadow-xl duration-300',
-        isCorrect ? 'border-success/60 bg-success text-success-foreground' : 'border-destructive/60 bg-destructive text-destructive-foreground',
+        isCorrect
+          ? 'border-success/60 bg-success text-success-foreground'
+          : 'border-destructive/60 bg-destructive text-destructive-foreground',
       )}
     >
-      <span className="line-clamp-2 w-full whitespace-normal break-words leading-tight">{displayedAnswer}</span>
+      <span className="line-clamp-2 w-full whitespace-normal break-words leading-tight">
+        {displayedAnswer}
+      </span>
       <div
         className={cn(
           'absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r',
@@ -87,7 +100,9 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, ra
       }
       topRightContent={streakBadge}
       className={cn(
-        showResult && isCorrect && 'border-success/50 bg-success/10 shadow-[0_0_15px_hsl(var(--success)/0.15)]',
+        showResult &&
+          isCorrect &&
+          'border-success/50 bg-success/10 shadow-[0_0_15px_hsl(var(--success)/0.15)]',
         showResult && isWrong && 'border-destructive/50 bg-destructive/10',
         flash && 'animate-rank-flash',
       )}

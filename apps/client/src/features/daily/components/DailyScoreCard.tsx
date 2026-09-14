@@ -33,7 +33,10 @@ export function DailyScoreCard({ result, isSuccess, username, avatar }: DailySco
           aria-hidden
         />
       ) : (
-        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]" aria-hidden>
+        <div
+          className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+          aria-hidden
+        >
           <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-destructive/15 via-destructive/5 to-transparent" />
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_0%,hsl(var(--destructive)/0.08),transparent_55%)]" />
         </div>

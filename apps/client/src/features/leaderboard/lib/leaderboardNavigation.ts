@@ -1,5 +1,8 @@
 import { isLeaderboardMetric, type LeaderboardMetric } from '@aniquizz/shared';
-import { parseLeaderboardMetric, leaderboardSearchString } from '@/features/leaderboard/utils/leaderboardUrl';
+import {
+  parseLeaderboardMetric,
+  leaderboardSearchString,
+} from '@/features/leaderboard/utils/leaderboardUrl';
 
 /** Location state on /profile/:userId when opened from the community board. */
 export interface ProfileFromLeaderboardState {
@@ -19,7 +22,11 @@ export const getProfileFromLeaderboardState = (
 ): ProfileFromLeaderboardState | null => {
   if (!state || typeof state !== 'object') return null;
   const s = state as Record<string, unknown>;
-  if (s.returnTo !== '/leaderboard' || typeof s.metric !== 'string' || !isLeaderboardMetric(s.metric)) {
+  if (
+    s.returnTo !== '/leaderboard' ||
+    typeof s.metric !== 'string' ||
+    !isLeaderboardMetric(s.metric)
+  ) {
     return null;
   }
   return { returnTo: '/leaderboard', metric: s.metric };

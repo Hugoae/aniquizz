@@ -16,13 +16,31 @@ import { StandardGameOver } from '@/features/game/components/modes/standard/Stan
 import { StandardGameLayout } from '@/features/game/components/modes/standard/StandardGameLayout';
 import { GlobalSettingsModal } from '@/features/settings/components/GlobalSettingsModal';
 import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink, maxSprintPointsPerRound, playlistSourceDisplayName } from '@aniquizz/shared';
+import {
+  GAME_CONFIG,
+  type AnswerType,
+  type GamePlayer,
+  type RoomSettings,
+  isBanSanctionReason,
+  getPrecisionChipLabel,
+  normalizePrecision,
+  normalizeVideoMode,
+  hasWatchedListLink,
+  maxSprintPointsPerRound,
+  playlistSourceDisplayName,
+} from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
@@ -49,7 +67,8 @@ export default function Game() {
   const roomId = initialState.roomId ?? '';
   const initialPlayers = initialState.players ?? [];
   const settings: Partial<RoomSettings> = initialState.settings ?? { gameType: 'standard' };
-  const gameMode: GameMode = initialState.mode === 'solo' || settings.maxPlayers === 1 ? 'solo' : 'multiplayer';
+  const gameMode: GameMode =
+    initialState.mode === 'solo' || settings.maxPlayers === 1 ? 'solo' : 'multiplayer';
 
   const currentUserId = profile?.id ?? '';
 
@@ -107,7 +126,11 @@ export default function Game() {
 
   // --- Local UI state ---
   const [inputMode, setInputMode] = useState<InputMode>(() =>
-    settings.gameType === 'sprint' ? 'typing' : settings.responseType === 'qcm' ? 'carre' : 'typing',
+    settings.gameType === 'sprint'
+      ? 'typing'
+      : settings.responseType === 'qcm'
+        ? 'carre'
+        : 'typing',
   );
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
 
@@ -122,7 +145,11 @@ export default function Game() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [loadingCount, setLoadingCount] = useState(3);
 
-  const myProfile = { username: profile?.username || 'Moi', avatar: profile?.avatar || 'player1', xp: profile?.xp ?? 0 };
+  const myProfile = {
+    username: profile?.username || 'Moi',
+    avatar: profile?.avatar || 'player1',
+    xp: profile?.xp ?? 0,
+  };
   const amIHost = players.find((p) => String(p.id) === currentUserId)?.isHost;
   /** The round-1 clip preload signal doubles as "server build finished". */
   const firstClipReady = state.preloadTarget !== null;
@@ -133,7 +160,8 @@ export default function Game() {
       ? 'Le salon sera fermé et la partie annulée.'
       : 'La partie continuera pour les autres joueurs.';
 
-  const choices = inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : [];
+  const choices =
+    inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : [];
 
   // --- New round: reset the input area ---
   useEffect(() => {
@@ -228,11 +256,7 @@ export default function Game() {
     (val: string) => {
       if (!val) return;
       setSubmittedAnswer(val);
-      actions.answer(
-        val,
-        INPUT_TO_ANSWER_TYPE[inputMode],
-        gameMode === 'solo' && soloAutoReveal,
-      );
+      actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode], gameMode === 'solo' && soloAutoReveal);
     },
     [actions.answer, gameMode, inputMode, soloAutoReveal],
   );
@@ -248,14 +272,18 @@ export default function Game() {
   const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, settings);
 
-  const configBadges = useMemo(() => ({
-    sourceLabel: sourceChipValue(settings.soundSelection, playlistName),
-    difficultyLabel: Array.isArray(settings.difficulty) && settings.difficulty.length === 1
-      ? settings.difficulty[0]
-      : 'Varié',
-    precisionLabel: getPrecisionChipLabel(settings.precision),
-    modeLabel: 'Standard',
-  }), [settings.soundSelection, settings.difficulty, settings.precision, playlistName]);
+  const configBadges = useMemo(
+    () => ({
+      sourceLabel: sourceChipValue(settings.soundSelection, playlistName),
+      difficultyLabel:
+        Array.isArray(settings.difficulty) && settings.difficulty.length === 1
+          ? settings.difficulty[0]
+          : 'Varié',
+      precisionLabel: getPrecisionChipLabel(settings.precision),
+      modeLabel: 'Standard',
+    }),
+    [settings.soundSelection, settings.difficulty, settings.precision, playlistName],
+  );
 
   const gameOverSettings = {
     ...settings,
@@ -289,23 +317,43 @@ export default function Game() {
   }
 
   const commonProps = {
-    phase, players, currentRound: state.currentRound, totalRounds: state.totalRounds,
-    phaseEndsAt: state.phaseEndsAt, phaseDurationSeconds: state.phaseDurationSeconds,
-    volume: audioVolume, isMuted: audioMuted, onVolumeChange, onToggleMute: toggleMute,
-    videoRef, autoplayBlocked,
+    phase,
+    players,
+    currentRound: state.currentRound,
+    totalRounds: state.totalRounds,
+    phaseEndsAt: state.phaseEndsAt,
+    phaseDurationSeconds: state.phaseDurationSeconds,
+    volume: audioVolume,
+    isMuted: audioMuted,
+    onVolumeChange,
+    onToggleMute: toggleMute,
+    videoRef,
+    autoplayBlocked,
     onSafePlay: resumeCurrent,
-    isGamePaused: state.isGamePaused, isPausePending: state.isPausePending,
-    pauseVotes: state.pauseVotes, pauseRequired: state.pauseRequired, resumeCountdown: state.resumeCountdown,
+    isGamePaused: state.isGamePaused,
+    isPausePending: state.isPausePending,
+    pauseVotes: state.pauseVotes,
+    pauseRequired: state.pauseRequired,
+    resumeCountdown: state.resumeCountdown,
     onVotePause: actions.votePause,
-    skipVotes: state.skipVotes, skipRequired: state.skipRequired, onVoteSkip: actions.voteSkip,
-    currentSong, nextVideoKey: state.nextVideoKey, submittedAnswer,
+    skipVotes: state.skipVotes,
+    skipRequired: state.skipRequired,
+    onVoteSkip: actions.voteSkip,
+    currentSong,
+    nextVideoKey: state.nextVideoKey,
+    submittedAnswer,
     onAction: handleAction,
     precision: normalizePrecision(activeSettings.precision),
-    myProfile, sidebarCollapsed, setSidebarCollapsed,
+    myProfile,
+    sidebarCollapsed,
+    setSidebarCollapsed,
     onShowLeave: () => setShowLeaveChoice(true),
     onShowProfile: () => setHardLeavePrompt('profile'),
     onShowSettings: () => setShowSettings(true),
-    currentUserId, gameMode, roomId, configBadges,
+    currentUserId,
+    gameMode,
+    roomId,
+    configBadges,
     videoMode: state.videoMode ?? normalizeVideoMode(settings.videoMode),
   };
 
@@ -347,11 +395,15 @@ export default function Game() {
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-bold animate-pulse gradient-text">CHARGEMENT...</h2>
             <p className="text-muted-foreground">
-              {loadingCount === 0 && !firstClipReady ? 'Préparation de la partie…' : 'Préparez vos écouteurs...'}
+              {loadingCount === 0 && !firstClipReady
+                ? 'Préparation de la partie…'
+                : 'Préparez vos écouteurs...'}
             </p>
           </div>
           {amIHost ? (
-            <Button variant="destructive" onClick={actions.cancel} className="mt-8">Annuler la partie</Button>
+            <Button variant="destructive" onClick={actions.cancel} className="mt-8">
+              Annuler la partie
+            </Button>
           ) : (
             <Button variant="outline" onClick={() => setHardLeavePrompt('play')} className="mt-8">
               Quitter le salon
@@ -390,12 +442,12 @@ export default function Game() {
             <AlertDialogTitle>Quitter le match ?</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                <strong className="text-foreground">Retour au lobby</strong> — vous quittez l&apos;écran de jeu mais
-                restez dans le salon.
+                <strong className="text-foreground">Retour au lobby</strong> — vous quittez
+                l&apos;écran de jeu mais restez dans le salon.
               </span>
               <span className="block">
-                <strong className="text-foreground">Quitter le salon</strong> — vous êtes retiré du salon.{' '}
-                {leaveSalonConsequences}
+                <strong className="text-foreground">Quitter le salon</strong> — vous êtes retiré du
+                salon. {leaveSalonConsequences}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -425,7 +477,10 @@ export default function Game() {
       </AlertDialog>
 
       {/* Hard leave confirmation — shared by profile and "Quitter le salon" (`leave_room`). */}
-      <AlertDialog open={hardLeavePrompt !== null} onOpenChange={(open) => !open && setHardLeavePrompt(null)}>
+      <AlertDialog
+        open={hardLeavePrompt !== null}
+        onOpenChange={(open) => !open && setHardLeavePrompt(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Quitter le salon ?</AlertDialogTitle>
@@ -441,7 +496,10 @@ export default function Game() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmHardLeave} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmHardLeave}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               {hardLeavePrompt === 'profile' ? 'Quitter et voir mon profil' : 'Quitter le salon'}
             </AlertDialogAction>
           </AlertDialogFooter>

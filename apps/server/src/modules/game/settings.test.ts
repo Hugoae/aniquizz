@@ -22,9 +22,7 @@ describe('normalizeRoomSettings', () => {
   });
 
   it('rejects playlist source without playlistId', () => {
-    expect(() =>
-      normalizeRoomSettings({ soundSelection: 'playlist' }, meta),
-    ).toThrow(/playlist/i);
+    expect(() => normalizeRoomSettings({ soundSelection: 'playlist' }, meta)).toThrow(/playlist/i);
   });
 
   it('keeps decadePlaylistId and allows a decade-only playlist source', () => {

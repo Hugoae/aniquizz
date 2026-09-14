@@ -13,7 +13,10 @@ export function SettingsNotificationsSection() {
   } = usePlayerPrefs();
 
   return (
-    <section aria-labelledby="settings-notifications-heading" className="border-t border-border/60 pt-5">
+    <section
+      aria-labelledby="settings-notifications-heading"
+      className="border-t border-border/60 pt-5"
+    >
       <h3 id="settings-notifications-heading" className="text-sm font-bold text-foreground">
         {SETTINGS_COPY.notificationsHeading}
       </h3>

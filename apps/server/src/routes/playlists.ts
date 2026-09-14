@@ -7,8 +7,7 @@ import { logger } from '../utils/logger';
 import { playlistChipsFromRecipe, type ThematicPlaylistSummary } from '@aniquizz/shared';
 
 /** Browser / CDN cache: list is staff-published and changes rarely. */
-export const PUBLISHED_PLAYLISTS_CACHE_CONTROL =
-  'public, max-age=60, stale-while-revalidate=300';
+export const PUBLISHED_PLAYLISTS_CACHE_CONTROL = 'public, max-age=60, stale-while-revalidate=300';
 
 const toSummary = (row: {
   id: string;

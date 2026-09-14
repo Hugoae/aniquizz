@@ -22,7 +22,8 @@ const wrap =
         return;
       }
       logger.error('[Daily] Route failed', 'Daily', error);
-      if (!res.headersSent) res.status(500).json({ error: 'Impossible de charger le quiz du jour.' });
+      if (!res.headersSent)
+        res.status(500).json({ error: 'Impossible de charger le quiz du jour.' });
     });
   };
 
@@ -74,13 +75,17 @@ export function registerDailyRoutes(app: Application): void {
         ...HTTP_RATE_LIMITS.dailyPlay,
       });
       if (!allowed) return;
-      const parsed = z.object({ selected: z.string().min(1).max(120).nullable().optional() }).safeParse(req.body);
+      const parsed = z
+        .object({ selected: z.string().min(1).max(120).nullable().optional() })
+        .safeParse(req.body);
       if (!parsed.success) {
         res.status(400).json({ error: 'Réponse invalide.' });
         return;
       }
       res.setHeader('Cache-Control', 'private, no-store');
-      res.json(await answerDailyAttempt(req.actor!.userId, idParam(req), parsed.data.selected ?? null));
+      res.json(
+        await answerDailyAttempt(req.actor!.userId, idParam(req), parsed.data.selected ?? null),
+      );
     }),
   );
 

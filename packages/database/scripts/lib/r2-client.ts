@@ -5,7 +5,7 @@ import {
   ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
-} from "@aws-sdk/client-s3";
+} from '@aws-sdk/client-s3';
 
 /**
  * Videos are content-addressed (the key never points at different bytes), so they
@@ -13,7 +13,7 @@ import {
  * the buffer warmed during the intro/reveal for instant playback, and lets the
  * CDN edge serve repeats without hitting the origin.
  */
-export const VIDEO_CACHE_CONTROL = "public, max-age=31536000, immutable";
+export const VIDEO_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -24,24 +24,24 @@ function requireEnv(name: string): string {
 }
 
 export function createR2Client(): S3Client {
-  const accountId = requireEnv("R2_ACCOUNT_ID");
+  const accountId = requireEnv('R2_ACCOUNT_ID');
 
   return new S3Client({
-    region: "auto",
+    region: 'auto',
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     credentials: {
-      accessKeyId: requireEnv("R2_ACCESS_KEY_ID"),
-      secretAccessKey: requireEnv("R2_SECRET_ACCESS_KEY"),
+      accessKeyId: requireEnv('R2_ACCESS_KEY_ID'),
+      secretAccessKey: requireEnv('R2_SECRET_ACCESS_KEY'),
     },
   });
 }
 
 export function getR2Bucket(): string {
-  return requireEnv("R2_BUCKET");
+  return requireEnv('R2_BUCKET');
 }
 
 export function getR2PublicUrl(key: string): string {
-  const base = requireEnv("R2_PUBLIC_URL").replace(/\/$/, "");
+  const base = requireEnv('R2_PUBLIC_URL').replace(/\/$/, '');
   return `${base}/${key}`;
 }
 
@@ -55,7 +55,7 @@ export async function r2ObjectExists(
     return true;
   } catch (error: unknown) {
     const err = error as { name?: string; $metadata?: { httpStatusCode?: number } };
-    if (err.name === "NotFound" || err.$metadata?.httpStatusCode === 404) {
+    if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
       return false;
     }
     throw error;
@@ -73,7 +73,7 @@ export async function r2UploadFile(
       Bucket: bucket,
       Key: key,
       Body: body,
-      ContentType: "video/mp4",
+      ContentType: 'video/mp4',
       CacheControl: VIDEO_CACHE_CONTROL,
     }),
   );
@@ -84,10 +84,7 @@ export async function r2UploadFile(
  * `MetadataDirective: REPLACE`). Run once after adding the header to uploads so
  * previously-stored videos also become cacheable. Returns the count updated.
  */
-export async function r2BackfillCacheControl(
-  client: S3Client,
-  bucket: string,
-): Promise<number> {
+export async function r2BackfillCacheControl(client: S3Client, bucket: string): Promise<number> {
   let updated = 0;
   let continuationToken: string | undefined;
 
@@ -108,8 +105,8 @@ export async function r2BackfillCacheControl(
           Bucket: bucket,
           Key: object.Key,
           CopySource: `${bucket}/${encodeURIComponent(object.Key)}`,
-          MetadataDirective: "REPLACE",
-          ContentType: "video/mp4",
+          MetadataDirective: 'REPLACE',
+          ContentType: 'video/mp4',
           CacheControl: VIDEO_CACHE_CONTROL,
         }),
       );

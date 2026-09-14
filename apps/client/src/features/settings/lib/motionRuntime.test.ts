@@ -24,8 +24,7 @@ describe('resolvedMotionValue', () => {
 describe('readOsPrefersReduced', () => {
   it('does not throw when matchMedia is missing', () => {
     const original = window.matchMedia;
-    // @ts-expect-error jsdom may omit matchMedia
-    delete window.matchMedia;
+    delete (window as { matchMedia?: typeof window.matchMedia }).matchMedia;
     expect(readOsPrefersReduced()).toBe(false);
     const stop = subscribeOsPrefersReduced(() => {});
     expect(() => stop()).not.toThrow();

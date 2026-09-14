@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import { captureError } from '../utils/errorReporter';
 import { env } from '../config/env';
 import type { TypedSocket } from './socketTypes';
 import { handshakeClientIp } from './httpClientIp';
@@ -10,7 +11,14 @@ import { handshakeClientIp } from './httpClientIp';
  */
 
 /** A socket event listener with arbitrary arity (0-arg events included). */
-type Listener<A extends unknown[]> = (...args: A) => void;
+type Listener<A extends unknown[]> = (...args: A) => unknown;
+
+/** Socket.io never awaits listeners — settle async work and surface rejections. */
+const settleListener = (result: unknown, source: string): void => {
+  void Promise.resolve(result).catch((error: unknown) => {
+    captureError(error, { context: 'Socket', source });
+  });
+};
 
 interface RateLimitRule {
   /** Max number of calls allowed within the window. */
@@ -76,7 +84,7 @@ export const requireAuth = <A extends unknown[]>(
       socket.emit('error', { message: 'Vous devez être connecté pour effectuer cette action.' });
       return;
     }
-    handler(...args);
+    settleListener(handler(...args), 'requireAuth');
   };
 };
 
@@ -108,7 +116,7 @@ export const guard = <A extends unknown[]>(
         return;
       }
     }
-    handler(...args);
+    return handler(...args);
   });
 };
 
@@ -125,7 +133,7 @@ export const guardSilent = <A extends unknown[]>(
 ): Listener<A> => {
   return requireAuth<A>(socket, (...args: A) => {
     if (isRateLimited(socket, key, rule)) return;
-    handler(...args);
+    return handler(...args);
   });
 };
 

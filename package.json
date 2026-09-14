@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "turbo run dev",
-    "dev:server": "pnpm --filter aniquizz-server dev",
+    "dev:server": "turbo run dev --filter=aniquizz-server --filter=@aniquizz/shared",
     "dev:client": "pnpm --filter aniquizz-client dev",
     "build": "turbo run build",
     "lint": "turbo run lint",

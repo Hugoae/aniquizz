@@ -47,7 +47,12 @@ interface ModeSelectViewProps {
 }
 
 /** The Play landing screen: pick a game mode. */
-export function ModeSelectView({ onSelectMode, onBack, multiplayerCount, bannedUntil }: ModeSelectViewProps) {
+export function ModeSelectView({
+  onSelectMode,
+  onBack,
+  multiplayerCount,
+  bannedUntil,
+}: ModeSelectViewProps) {
   const playBanned = isSanctionActive(bannedUntil);
   useSanctionTicker(playBanned);
 
@@ -58,7 +63,10 @@ export function ModeSelectView({ onSelectMode, onBack, multiplayerCount, bannedU
   const cards = useMemo<ModeCardData[]>(() => {
     return MODE_CARDS.map((card) => {
       if (card.id === 'multiplayer') {
-        return { ...card, teaser: `${multiplayerCount} joueur${multiplayerCount > 1 ? 's' : ''} en multijoueur` };
+        return {
+          ...card,
+          teaser: `${multiplayerCount} joueur${multiplayerCount > 1 ? 's' : ''} en multijoueur`,
+        };
       }
       return card;
     });

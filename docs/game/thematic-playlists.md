@@ -4,15 +4,15 @@ Staff-curated **music sources** (not a new game mode). A pack is a frozen snapsh
 
 ## Hybrid recipe + snapshot
 
-| Layer | Role |
-|-------|------|
-| **Recipe** | JSON: `genres[]` (franchise `hasSome`), `tags[]` (song `hasSome`), `yearMin`/`yearMax` (`Anime.seasonYear` of **that song's entry**), `formats[]`, optional `songTypes` / `difficulties`, `includeSongIds` / `excludeSongIds`. |
-| **Publish / refresh** | Admin job resolves the recipe on `downloadStatus = COMPLETED`, writes `ThematicPlaylistSong`. Players see a frozen count. |
-| **Draw** | Membership `ThematicPlaylistSong` (AND across combined packs) plus lobby filters. Recipe is **not** re-run at match start. |
+| Layer                 | Role                                                                                                                                                                                                                           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Recipe**            | JSON: `genres[]` (franchise `hasSome`), `tags[]` (song `hasSome`), `yearMin`/`yearMax` (`Anime.seasonYear` of **that song's entry**), `formats[]`, optional `songTypes` / `difficulties`, `includeSongIds` / `excludeSongIds`. |
+| **Publish / refresh** | Admin job resolves the recipe on `downloadStatus = COMPLETED`, writes `ThematicPlaylistSong`. Players see a frozen count.                                                                                                      |
+| **Draw**              | Membership `ThematicPlaylistSong` (AND across combined packs) plus lobby filters. Recipe is **not** re-run at match start.                                                                                                     |
 
 Membership: `(matches every non-empty dimension OR includeSongIds) AND NOT excludeSongIds AND COMPLETED`. Empty arrays = no constraint. **Exclude always wins.** Include still requires COMPLETED.
 
-**Year:** an OP of *Naruto Shippuden* (2007) does **not** enter « Années 90 » even if Naruto Classic would. Admin preview shows a year histogram so this is visible.
+**Year:** an OP of _Naruto Shippuden_ (2007) does **not** enter « Années 90 » even if Naruto Classic would. Admin preview shows a year histogram so this is visible.
 
 **Shonen** is an AniList **tag** (`Song.tags`), not a franchise genre.
 
@@ -20,10 +20,10 @@ Membership: `(matches every non-empty dimension OR includeSongIds) AND NOT exclu
 
 Décennie is an overlay, not a mutually exclusive source. The lobby stores:
 
-| Field | Role |
-|-------|------|
-| `playlistId` | Optional genre / tag / theme pack |
-| `decadePlaylistId` | Optional decade pack |
+| Field              | Role                              |
+| ------------------ | --------------------------------- |
+| `playlistId`       | Optional genre / tag / theme pack |
+| `decadePlaylistId` | Optional decade pack              |
 
 Valid playlist sources: decade-only, genre-only, or **both**. Draw and pool stats **intersect frozen snapshots** (Shonen ∩ Années 2010). Watched overlay, if on, still applies on that intersection. An empty intersection blocks start (`playlist_empty` / `filteredEmpty`) — no fill from the global catalogue.
 
@@ -41,13 +41,13 @@ When overlay is on, `watchedMode` (union / commun) applies **inside the pack**. 
 
 ## QCM / Duo
 
-Distractors must come from the same restricted universe as the draw (same leak as Watched: *« this anime is not in the pack »*).
+Distractors must come from the same restricted universe as the draw (same leak as Watched: _« this anime is not in the pack »_).
 
-| Source | Choice pool |
-|--------|-------------|
-| Playlist | Snapshot anime ids (after COMPLETED + lobby filters) |
-| Playlist + Watched, no fallback | Pack ∩ watched ids |
-| Playlist + Watched + fallback | Full filtered pack (pack fills can appear) |
+| Source                          | Choice pool                                          |
+| ------------------------------- | ---------------------------------------------------- |
+| Playlist                        | Snapshot anime ids (after COMPLETED + lobby filters) |
+| Playlist + Watched, no fallback | Pack ∩ watched ids                                   |
+| Playlist + Watched + fallback   | Full filtered pack (pack fills can appear)           |
 
 Typing-only rooms skip this. QCM / mix require **≥ 4 distinct names**; otherwise start is blocked (no `???` padding as the intended UX).
 

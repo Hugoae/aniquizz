@@ -32,7 +32,9 @@ describe('SongInfoCard likes', () => {
   });
 
   it('still overlays the like control when a cover is present', () => {
-    render(<SongInfoCard {...revealed} variant="band" coverImage="https://example.com/cover.jpg" />);
+    render(
+      <SongInfoCard {...revealed} variant="band" coverImage="https://example.com/cover.jpg" />,
+    );
     expect(screen.getByRole('button', { name: LIKES_COPY.likeAria })).toBeInTheDocument();
   });
 });

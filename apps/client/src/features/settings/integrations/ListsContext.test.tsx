@@ -1,10 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ListOperationResult,
-  ListsStatusPayload,
-} from '@aniquizz/shared';
+import type { ListOperationResult, ListsStatusPayload } from '@aniquizz/shared';
 
 const socketMock = vi.hoisted(() => {
   const handlers = new Map<string, (payload: never) => void>();

@@ -22,15 +22,16 @@ const INVITE_OPTIONS = [
 
 export function SettingsPrivacySection() {
   const { profile, refreshProfile } = useAuth();
-  const [privacy, setPrivacy] = useState<AccountPrivacy>(() =>
-    ACCOUNT_PRIVACY_DEFAULTS,
-  );
+  const [privacy, setPrivacy] = useState<AccountPrivacy>(() => ACCOUNT_PRIVACY_DEFAULTS);
 
   useEffect(() => {
     setPrivacy({
-      onlineStatusAudience: profile?.onlineStatusAudience ?? ACCOUNT_PRIVACY_DEFAULTS.onlineStatusAudience,
-      matchHistoryAudience: profile?.matchHistoryAudience ?? ACCOUNT_PRIVACY_DEFAULTS.matchHistoryAudience,
-      lobbyInviteAudience: profile?.lobbyInviteAudience ?? ACCOUNT_PRIVACY_DEFAULTS.lobbyInviteAudience,
+      onlineStatusAudience:
+        profile?.onlineStatusAudience ?? ACCOUNT_PRIVACY_DEFAULTS.onlineStatusAudience,
+      matchHistoryAudience:
+        profile?.matchHistoryAudience ?? ACCOUNT_PRIVACY_DEFAULTS.matchHistoryAudience,
+      lobbyInviteAudience:
+        profile?.lobbyInviteAudience ?? ACCOUNT_PRIVACY_DEFAULTS.lobbyInviteAudience,
       showFavoriteSongs: profile?.showFavoriteSongs !== false,
       allowFriendRequests: profile?.allowFriendRequests !== false,
     });
@@ -57,7 +58,9 @@ export function SettingsPrivacySection() {
       <h3 id="settings-privacy-heading" className="text-sm font-bold text-foreground">
         {SETTINGS_COPY.privacyHeading}
       </h3>
-      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{SETTINGS_COPY.privacyHint}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        {SETTINGS_COPY.privacyHint}
+      </p>
 
       <div className="mt-4 space-y-3">
         <SettingsChoiceRow<PrivacyAudience>

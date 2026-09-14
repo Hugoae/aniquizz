@@ -42,7 +42,10 @@ export function useLeaderboard() {
     }
 
     void leaderboardApi
-      .browse({ metric, page: 1, pageSize: LEADERBOARD_DEFAULT_PAGE_SIZE }, { signal: controller.signal })
+      .browse(
+        { metric, page: 1, pageSize: LEADERBOARD_DEFAULT_PAGE_SIZE },
+        { signal: controller.signal },
+      )
       .then((result) => {
         if (controller.signal.aborted) return;
         if (result.metric !== metric) return;

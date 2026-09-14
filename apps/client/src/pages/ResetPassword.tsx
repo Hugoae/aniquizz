@@ -11,7 +11,11 @@ import { supabase } from '@/lib/supabase';
 import { getErrorMessage } from '@/lib/errors';
 
 const isPasswordValid = (pw: string) =>
-  pw.length >= 8 && /[a-z]/.test(pw) && /[A-Z]/.test(pw) && /[0-9]/.test(pw) && /[^A-Za-z0-9]/.test(pw);
+  pw.length >= 8 &&
+  /[a-z]/.test(pw) &&
+  /[A-Z]/.test(pw) &&
+  /[0-9]/.test(pw) &&
+  /[^A-Za-z0-9]/.test(pw);
 
 /**
  * Landing page for the password-recovery email link. Supabase parses the
@@ -31,7 +35,10 @@ export default function ResetPassword() {
 
     // Primary signal: fired when Supabase parses the recovery link.
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY' && mounted) { setReady(true); setChecking(false); }
+      if (event === 'PASSWORD_RECOVERY' && mounted) {
+        setReady(true);
+        setChecking(false);
+      }
     });
 
     // Fallback: `detectSessionInUrl` consumes and clears the URL fragment before
@@ -43,16 +50,22 @@ export default function ResetPassword() {
       setChecking(false);
     });
 
-    return () => { mounted = false; sub.subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas.'); return;
+      toast.error('Les mots de passe ne correspondent pas.');
+      return;
     }
     if (!isPasswordValid(newPassword)) {
-      toast.error('Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.');
+      toast.error(
+        'Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
+      );
       return;
     }
     setSubmitting(true);
@@ -60,7 +73,7 @@ export default function ResetPassword() {
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) {
         if (/different from the old|should be different|same.*password/i.test(error.message)) {
-          toast.error('Le nouveau mot de passe doit être différent de l\'ancien.');
+          toast.error("Le nouveau mot de passe doit être différent de l'ancien.");
         } else if (/weak|at least|character|requirement|pwned|leaked/i.test(error.message)) {
           toast.error('Le mot de passe ne respecte pas les exigences de sécurité.');
         } else {
@@ -89,7 +102,9 @@ export default function ResetPassword() {
         </div>
 
         {checking ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
         ) : ready ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <PasswordField
@@ -107,7 +122,8 @@ export default function ResetPassword() {
               onChange={setConfirmPassword}
             />
             <p className="text-xs text-muted-foreground">
-              Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.
+              Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère
+              spécial.
             </p>
             <Button type="submit" className="w-full font-bold" disabled={submitting}>
               {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

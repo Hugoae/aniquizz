@@ -62,12 +62,15 @@ const malHeaders = (): Record<string, string> | null => {
  */
 const probeMalProfileExists = async (name: string): Promise<MalVerifyResult> => {
   try {
-    const response = await axios.head(`https://myanimelist.net/profile/${encodeURIComponent(name)}`, {
-      timeout: 8_000,
-      maxRedirects: 5,
-      headers: { 'User-Agent': MAL_PROFILE_UA },
-      validateStatus: (status) => status === 200 || status === 404,
-    });
+    const response = await axios.head(
+      `https://myanimelist.net/profile/${encodeURIComponent(name)}`,
+      {
+        timeout: 8_000,
+        maxRedirects: 5,
+        headers: { 'User-Agent': MAL_PROFILE_UA },
+        validateStatus: (status) => status === 200 || status === 404,
+      },
+    );
     if (response.status === 200) return 'exists';
     if (response.status === 404) return 'not_found';
     return 'unverified';

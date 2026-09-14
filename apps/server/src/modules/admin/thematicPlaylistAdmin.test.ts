@@ -16,14 +16,18 @@ describe('playlistRecipeSchema', () => {
   });
 
   it('rejects oversized include lists', () => {
-    const includeSongIds = Array.from({ length: PLAYLIST_RECIPE_LIMITS.includeSongIds + 1 }, (_, i) => i + 1);
+    const includeSongIds = Array.from(
+      { length: PLAYLIST_RECIPE_LIMITS.includeSongIds + 1 },
+      (_, i) => i + 1,
+    );
     expect(playlistRecipeSchema.safeParse({ includeSongIds }).success).toBe(false);
   });
 
   it('rejects overlong dimension strings', () => {
-    expect(playlistRecipeSchema.safeParse({ tags: ['x'.repeat(PLAYLIST_RECIPE_LIMITS.stringMax + 1)] }).success).toBe(
-      false,
-    );
+    expect(
+      playlistRecipeSchema.safeParse({ tags: ['x'.repeat(PLAYLIST_RECIPE_LIMITS.stringMax + 1)] })
+        .success,
+    ).toBe(false);
   });
 
   it('accepts a tagged recipe', () => {

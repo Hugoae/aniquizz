@@ -120,7 +120,7 @@ describe('buildLobbyRulesSections', () => {
     const source = sections.find((s) => s.id === 'source');
     expect(source?.lines?.some((l) => l.includes('Union'))).toBe(true);
     expect(source?.lines?.some((l) => l.includes('au moins un joueur'))).toBe(true);
-    expect(source?.lines?.some((l) => l.includes('Compléter avec l\'aléatoire'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes("Compléter avec l'aléatoire"))).toBe(true);
     expect(source?.lines?.some((l) => l.match(/\d+\s+son/))).toBe(false);
     expect(source?.lines?.some((l) => l.toLowerCase().includes('bot'))).toBe(false);
     expect(source?.lines?.some((l) => l.includes('Intersection'))).toBe(false);
@@ -173,7 +173,7 @@ describe('buildLobbyRulesSections', () => {
     expect(source?.lines?.some((l) => l.includes('(Commun)'))).toBe(true);
     expect(source?.lines?.some((l) => l.includes('Mode Commun'))).toBe(true);
     expect(source?.lines?.some((l) => l.includes('Intersection'))).toBe(false);
-    expect(source?.lines?.some((l) => l.includes('Compléter avec l\'aléatoire'))).toBe(false);
+    expect(source?.lines?.some((l) => l.includes("Compléter avec l'aléatoire"))).toBe(false);
     expect(source?.lines?.some((l) => l.includes('Sans opt-in'))).toBe(false);
   });
 

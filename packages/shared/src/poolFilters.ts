@@ -27,10 +27,10 @@ export function selectedPoolSongTypes(types?: string[]): PoolSongTypeId[] | unde
 }
 
 /** Filters the Disponible banner (and pool stats) must use: checked boxes only. */
-export function resolvePoolQueryFilters(input: {
-  types?: string[];
+export function resolvePoolQueryFilters(input: { types?: string[]; difficulty?: string[] }): {
+  types?: PoolSongTypeId[];
   difficulty?: string[];
-}): { types?: PoolSongTypeId[]; difficulty?: string[] } {
+} {
   return {
     types: selectedPoolSongTypes(input.types),
     difficulty: selectedPoolDifficulties(input.difficulty),

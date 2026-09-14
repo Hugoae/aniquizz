@@ -30,7 +30,10 @@ const MEDAL_ASCENDING: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
 
 const clampRatio = (value: number): number => Math.max(0, Math.min(1, value));
 
-const applyPrecisionOffset = (thresholds: MedalThresholds, precision?: Precision): MedalThresholds => {
+const applyPrecisionOffset = (
+  thresholds: MedalThresholds,
+  precision?: Precision,
+): MedalThresholds => {
   const offset = GAME_CONFIG.MEDALS.PRECISION_OFFSET[normalizePrecision(precision)];
   return {
     bronze: clampRatio(thresholds.bronze + offset),
@@ -192,5 +195,10 @@ export interface MedalMeta {
 export const getMedalMeta = (medal: MedalTier): MedalMeta | null => {
   if (!medal) return null;
   const meta = GAME_CONFIG.MEDALS.META[medal];
-  return { key: medal, label: meta.label, textClass: meta.textClass, borderClass: meta.borderClass };
+  return {
+    key: medal,
+    label: meta.label,
+    textClass: meta.textClass,
+    borderClass: meta.borderClass,
+  };
 };

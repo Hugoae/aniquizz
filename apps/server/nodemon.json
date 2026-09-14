@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "../../packages/shared/dist"],
+  "ext": "ts,js",
+  "ignore": ["**/*.test.ts", "**/*.integration.test.ts", "src/test"],
+  "delay": 500
+}

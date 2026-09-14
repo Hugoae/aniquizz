@@ -8,23 +8,30 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 
 ## Glossary
 
-| Term | Definition | Where |
-|------|------------|-------|
-| **feature module** | Self-contained domain folder (components, hooks, copy) under `src/features/<domain>/`. | `features/` |
-| **useGameSocket** | Hook owning the in-match socket lifecycle; feeds `gameReducer`. | `features/game/` |
-| **useAnimeSearch / useArtistSearch** | Local fuzzy autocomplete; artist mode uses a separate catalogue (`artist:get_all`). | `features/game/hooks/` |
-| **gameReducer** | Client mirror of match state; merges server payloads (with lobby-config fallbacks for `videoMode`). | `features/game/` |
-| **useLobbyController** | Lobby actions (create/join, settings, `addBots`, ready). | `features/hub/` |
-| **lobbyRulesCopy** | Pure builder turning live `RoomConfig` into French rules text (unit-tested). | `features/hub/components/lobby/lobbyRulesCopy.ts` |
-| **VideoStage** | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants. | `features/game/` |
-| **useVideoPlayback** | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`. | `features/game/` |
-| **SoloMasteryBar / SoloScoreCard** | Game-over medal UI; take `precision` so labels match server thresholds. | `features/game/.../gameover/solo/` |
-| **adminApi** | Typed fetch client for `/admin/*` REST (Bearer JWT). | `lib/adminApi.ts` |
-| **dailyApi** | Typed fetch client for `/daily/*` (Quiz du jour). | `lib/dailyApi.ts` |
-| **socket.ts** | Singleton Socket.io client wired to Supabase auth. | `lib/socket.ts` |
+| Term                                 | Definition                                                                                          | Where                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| **feature module**                   | Self-contained domain folder (components, hooks, copy) under `src/features/<domain>/`.              | `features/`                                       |
+| **useGameSocket**                    | Hook owning the in-match socket lifecycle; feeds `gameReducer`.                                     | `features/game/`                                  |
+| **useAnimeSearch / useArtistSearch** | Local fuzzy autocomplete; artist mode uses a separate catalogue (`artist:get_all`).                 | `features/game/hooks/`                            |
+| **gameReducer**                      | Client mirror of match state; merges server payloads (with lobby-config fallbacks for `videoMode`). | `features/game/`                                  |
+| **useLobbyController**               | Lobby actions (create/join, settings, `addBots`, ready).                                            | `features/hub/`                                   |
+| **lobbyRulesCopy**                   | Pure builder turning live `RoomConfig` into French rules text (unit-tested).                        | `features/hub/components/lobby/lobbyRulesCopy.ts` |
+| **VideoStage**                       | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants.         | `features/game/`                                  |
+| **useVideoPlayback**                 | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`.                                   | `features/game/`                                  |
+| **SoloMasteryBar / SoloScoreCard**   | Game-over medal UI; take `precision` so labels match server thresholds.                             | `features/game/.../gameover/solo/`                |
+| **adminApi**                         | Typed fetch client for `/admin/*` REST (Bearer JWT).                                                | `lib/adminApi.ts`                                 |
+| **dailyApi**                         | Typed fetch client for `/daily/*` (Quiz du jour).                                                   | `lib/dailyApi.ts`                                 |
+| **socket.ts**                        | Singleton Socket.io client wired to Supabase auth.                                                  | `lib/socket.ts`                                   |
 
 ## Known pitfalls
 
+- **CI typechecks the SPA** (`tsc -p tsconfig.app.json --noEmit`) with
+  `strict: true`. Vite/SWC does not typecheck — a green `pnpm build` is not a
+  type gate. Keep `noUnusedLocals` / `noUnusedParameters` off.
+- **Do not import `apps/server` or `@aniquizz/database`.** Talk to the API over
+  HTTP / Socket.io. ESLint `no-restricted-imports` enforces this.
+- **`jsx-a11y` is warn**, not error. Fix findings in a dedicated pass; don't
+  disable the plugin to ship.
 - **User-facing copy is French; code/comments English.** Keep strings isolated
   (e.g. `lobbyRulesCopy.ts`, copy files) for future i18n — don't inline French in logic.
 - **Design tokens only** — style via Tailwind semantic classes (`bg-primary`,

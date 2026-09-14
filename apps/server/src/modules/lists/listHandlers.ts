@@ -1,28 +1,15 @@
 import { prisma } from '@aniquizz/database';
-import type {
-  ListOperation,
-  WatchedListProvider,
-} from '@aniquizz/shared';
-import {
-  isWatchedListProvider,
-  resolveActiveListProvider,
-} from '@aniquizz/shared';
+import type { ListOperation, WatchedListProvider } from '@aniquizz/shared';
+import { isWatchedListProvider, resolveActiveListProvider } from '@aniquizz/shared';
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from '../game/gameManager';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import { logger } from '../../utils/logger';
 import { verifyAnilistUser } from '../anilist/anilistService';
 import { anilistListGate } from '../anilist/anilistListGate';
-import {
-  invalidateMalUserCache,
-  verifyMalUser,
-  type MalVerifyResult,
-} from '../mal/malService';
+import { invalidateMalUserCache, verifyMalUser, type MalVerifyResult } from '../mal/malService';
 import { userRoom } from '../friends/friendsPresence';
-import {
-  resolvePlayerCatalogueWithMeta,
-  type CatalogueResolveResult,
-} from './listResolver';
+import { resolvePlayerCatalogueWithMeta, type CatalogueResolveResult } from './listResolver';
 import {
   buildListsStatus,
   LIST_STATUS_SELECT,
@@ -126,8 +113,7 @@ export const registerListHandlers = (
     row: ListStatusRow,
     provider: WatchedListProvider,
   ) => {
-    const expectedUsername =
-      provider === 'anilist' ? row.anilistUsername : row.malUsername;
+    const expectedUsername = provider === 'anilist' ? row.anilistUsername : row.malUsername;
     if (!expectedUsername) return;
     const key = `${userId}:${provider}`;
     let pending = inflightRefresh.get(key);
@@ -254,15 +240,17 @@ export const registerListHandlers = (
         });
       } catch (error) {
         logger.error('Failed to link list', 'Lists', error);
-        emitOperationError(requestId, 'link', payload?.provider ?? null, 'Impossible de lier ce compte.');
+        emitOperationError(
+          requestId,
+          'link',
+          payload?.provider ?? null,
+          'Impossible de lier ce compte.',
+        );
       }
     });
   };
 
-  const handleSetActive = (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => {
+  const handleSetActive = (payload: { requestId: string; provider: WatchedListProvider }) => {
     const userId = uid();
     const requestId = requestIdFrom(payload);
     enqueueMutation(userId, async () => {
@@ -308,10 +296,7 @@ export const registerListHandlers = (
     });
   };
 
-  const handleRefresh = (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => {
+  const handleRefresh = (payload: { requestId: string; provider: WatchedListProvider }) => {
     const userId = uid();
     const requestId = requestIdFrom(payload);
     enqueueMutation(userId, async () => {
@@ -321,8 +306,7 @@ export const registerListHandlers = (
           return;
         }
         const row = await loadCanonicalRow(userId);
-        const username =
-          payload.provider === 'anilist' ? row.anilistUsername : row.malUsername;
+        const username = payload.provider === 'anilist' ? row.anilistUsername : row.malUsername;
         if (!username?.trim()) {
           emitOperationError(
             requestId,
@@ -390,10 +374,7 @@ export const registerListHandlers = (
     });
   };
 
-  const handleUnlink = (payload: {
-    requestId: string;
-    provider: WatchedListProvider;
-  }) => {
+  const handleUnlink = (payload: { requestId: string; provider: WatchedListProvider }) => {
     const userId = uid();
     const requestId = requestIdFrom(payload);
     enqueueMutation(userId, async () => {
@@ -419,15 +400,13 @@ export const registerListHandlers = (
                   anilistUsername: null,
                   anilistLastSync: null,
                   activeListProvider: nextActive,
-                  lastListSync:
-                    nextActive === 'mal' ? current.malLastSync : null,
+                  lastListSync: nextActive === 'mal' ? current.malLastSync : null,
                 }
               : {
                   malUsername: null,
                   malLastSync: null,
                   activeListProvider: nextActive,
-                  lastListSync:
-                    nextActive === 'anilist' ? current.anilistLastSync : null,
+                  lastListSync: nextActive === 'anilist' ? current.anilistLastSync : null,
                 },
           select: LIST_STATUS_SELECT,
         });

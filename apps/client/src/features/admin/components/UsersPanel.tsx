@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-import { ArrowUp, ArrowDown, Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { useCallback, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
+import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
   PaginationItem,
-} from "@/components/ui/pagination";
+} from '@/components/ui/pagination';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,7 +20,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from '@/components/ui/alert-dialog';
 import {
   adminApi,
   AdminApiError,
@@ -28,25 +28,22 @@ import {
   type Role,
   type UserListFilter,
   type UserListSort,
-} from "@/lib/adminApi";
-import type { AdminUsersListState } from "@/features/admin/adminNavigation";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { cn } from "@/lib/utils";
-import {
-  AdminUserRow,
-  type AdminUserRowPending,
-} from "@/features/admin/components/AdminUserRow";
+} from '@/lib/adminApi';
+import type { AdminUsersListState } from '@/features/admin/adminNavigation';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { cn } from '@/lib/utils';
+import { AdminUserRow, type AdminUserRowPending } from '@/features/admin/components/AdminUserRow';
 
 /** Build a compact page-number list with ellipses (e.g. 1 … 4 5 6 … 12). */
-const buildPageNumbers = (current: number, total: number): (number | "…")[] => {
+const buildPageNumbers = (current: number, total: number): (number | '…')[] => {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
   const nums = new Set(
     [1, total, current, current - 1, current + 1].filter((p) => p >= 1 && p <= total),
   );
   const sorted = [...nums].sort((a, b) => a - b);
-  const result: (number | "…")[] = [];
+  const result: (number | '…')[] = [];
   for (let i = 0; i < sorted.length; i += 1) {
-    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push("…");
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push('…');
     result.push(sorted[i]);
   }
   return result;
@@ -67,19 +64,24 @@ function UsersPagination({
     <Pagination className="pt-2">
       <PaginationContent>
         <PaginationItem>
-          <Button variant="ghost" size="sm" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+          >
             Précédent
           </Button>
         </PaginationItem>
         {pages.map((p, i) =>
-          p === "…" ? (
+          p === '…' ? (
             <PaginationItem key={`ellipsis-${i}`}>
               <PaginationEllipsis />
             </PaginationItem>
           ) : (
             <PaginationItem key={p}>
               <Button
-                variant={page === p ? "outline" : "ghost"}
+                variant={page === p ? 'outline' : 'ghost'}
                 size="icon"
                 className="h-9 w-9"
                 onClick={() => onPageChange(p)}
@@ -106,7 +108,7 @@ function UsersPagination({
 
 /** UI-facing errors are French; underlying API messages stay as the server sent. */
 const errorMessage = (e: unknown): string =>
-  e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
+  e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
 
 type PendingConfirm = AdminUserRowPending;
 
@@ -114,31 +116,31 @@ type FilterKey = UserListFilter;
 type SortKey = UserListSort;
 
 const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "players", label: "Joueurs" },
-  { key: "online", label: "En ligne" },
-  { key: "in_game", label: "En partie" },
-  { key: "moderators", label: "Modérateurs" },
-  { key: "admins", label: "Admins" },
-  { key: "muted", label: "Mutés" },
-  { key: "banned", label: "Bannis" },
+  { key: 'all', label: 'Tous' },
+  { key: 'players', label: 'Joueurs' },
+  { key: 'online', label: 'En ligne' },
+  { key: 'in_game', label: 'En partie' },
+  { key: 'moderators', label: 'Modérateurs' },
+  { key: 'admins', label: 'Admins' },
+  { key: 'muted', label: 'Mutés' },
+  { key: 'banned', label: 'Bannis' },
 ];
 
 const EMPTY_FILTER_MESSAGES: Partial<Record<FilterKey, string>> = {
-  muted: "Aucun joueur muté actuellement.",
-  banned: "Aucun joueur banni actuellement.",
-  online: "Aucun joueur en ligne.",
-  in_game: "Aucun joueur en partie.",
-  moderators: "Aucun modérateur.",
-  admins: "Aucun administrateur.",
+  muted: 'Aucun joueur muté actuellement.',
+  banned: 'Aucun joueur banni actuellement.',
+  online: 'Aucun joueur en ligne.',
+  in_game: 'Aucun joueur en partie.',
+  moderators: 'Aucun modérateur.',
+  admins: 'Aucun administrateur.',
 };
 
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: "username", label: "Pseudo" },
-  { key: "xp", label: "XP" },
-  { key: "games", label: "Parties" },
-  { key: "created", label: "Inscription" },
-  { key: "seen", label: "Activité" },
+  { key: 'username', label: 'Pseudo' },
+  { key: 'xp', label: 'XP' },
+  { key: 'games', label: 'Parties' },
+  { key: 'created', label: 'Inscription' },
+  { key: 'seen', label: 'Activité' },
 ];
 
 export function UsersPanel({
@@ -153,17 +155,17 @@ export function UsersPanel({
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [query, setQuery] = useState(initialListState?.query ?? "");
-  const [filter, setFilter] = useState<FilterKey>(initialListState?.filter ?? "all");
-  const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? "username");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">(initialListState?.sortDir ?? "asc");
+  const [query, setQuery] = useState(initialListState?.query ?? '');
+  const [filter, setFilter] = useState<FilterKey>(initialListState?.filter ?? 'all');
+  const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? 'username');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialListState?.sortDir ?? 'asc');
   const [page, setPage] = useState(initialListState?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({ online: 0, inGame: 0, banned: 0, muted: 0 });
   const [loading, setLoading] = useState(false);
   const [pending, setPending] = useState<PendingConfirm | null>(null);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialListState?.query ?? "");
+  const [debouncedQuery, setDebouncedQuery] = useState(initialListState?.query ?? '');
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -173,33 +175,36 @@ export function UsersPanel({
     return () => clearTimeout(t);
   }, [query]);
 
-  const load = useCallback(async (opts?: {
-    search?: string;
-    page?: number;
-    filter?: FilterKey;
-    sort?: SortKey;
-    sortDir?: "asc" | "desc";
-  }) => {
-    setLoading(true);
-    try {
-      const res = await adminApi.listUsers({
-        query: opts?.search,
-        page: opts?.page ?? 1,
-        filter: opts?.filter ?? "all",
-        sort: opts?.sort ?? "username",
-        sortDir: opts?.sortDir ?? "asc",
-      });
-      setUsers(res.users);
-      setPage(res.page);
-      setTotalPages(res.totalPages);
-      setTotal(res.total);
-      setCounts(res.counts);
-    } catch (e) {
-      toast.error(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const load = useCallback(
+    async (opts?: {
+      search?: string;
+      page?: number;
+      filter?: FilterKey;
+      sort?: SortKey;
+      sortDir?: 'asc' | 'desc';
+    }) => {
+      setLoading(true);
+      try {
+        const res = await adminApi.listUsers({
+          query: opts?.search,
+          page: opts?.page ?? 1,
+          filter: opts?.filter ?? 'all',
+          sort: opts?.sort ?? 'username',
+          sortDir: opts?.sortDir ?? 'asc',
+        });
+        setUsers(res.users);
+        setPage(res.page);
+        setTotalPages(res.totalPages);
+        setTotal(res.total);
+        setCounts(res.counts);
+      } catch (e) {
+        toast.error(errorMessage(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [],
+  );
 
   // Fetch whenever page, filters, sort or debounced search changes.
   useEffect(() => {
@@ -228,38 +233,44 @@ export function UsersPanel({
     return () => clearInterval(id);
   }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
-  const run = useCallback(async (fn: () => Promise<unknown>, successMsg: string) => {
-    try {
-      await fn();
-      toast.success(successMsg);
-      await load({
-        search: debouncedQuery || undefined,
-        page,
-        filter,
-        sort: sortKey,
-        sortDir,
-      });
-    } catch (e) {
-      toast.error(errorMessage(e));
-    }
-  }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
+  const run = useCallback(
+    async (fn: () => Promise<unknown>, successMsg: string) => {
+      try {
+        await fn();
+        toast.success(successMsg);
+        await load({
+          search: debouncedQuery || undefined,
+          page,
+          filter,
+          sort: sortKey,
+          sortDir,
+        });
+      } catch (e) {
+        toast.error(errorMessage(e));
+      }
+    },
+    [debouncedQuery, page, filter, sortKey, sortDir, load],
+  );
 
   const handleSetPending = useCallback((p: PendingConfirm) => setPending(p), []);
-  const handleOpenDetail = useCallback((u: AdminUser) => {
-    if (u.id === profile?.id) return;
-    navigate(`/profile/${u.id}`, {
-      state: {
-        returnTo: '/admin',
-        admin: {
-          tab: 'users',
-          users: { page, filter, sortKey, sortDir, query: debouncedQuery },
+  const handleOpenDetail = useCallback(
+    (u: AdminUser) => {
+      if (u.id === profile?.id) return;
+      navigate(`/profile/${u.id}`, {
+        state: {
+          returnTo: '/admin',
+          admin: {
+            tab: 'users',
+            users: { page, filter, sortKey, sortDir, query: debouncedQuery },
+          },
         },
-      },
-    });
-  }, [navigate, page, filter, sortKey, sortDir, debouncedQuery, profile?.id]);
+      });
+    },
+    [navigate, page, filter, sortKey, sortDir, debouncedQuery, profile?.id],
+  );
   const handleRoleChange = useCallback(
     (userId: string, role: Role) => {
-      void run(() => adminApi.setRole(userId, role), "Rôle mis à jour.");
+      void run(() => adminApi.setRole(userId, role), 'Rôle mis à jour.');
     },
     [run],
   );
@@ -274,10 +285,10 @@ export function UsersPanel({
   const toggleSort = (key: SortKey) => {
     setPage(1);
     if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortDir(key === "username" ? "asc" : "desc");
+      setSortDir(key === 'username' ? 'asc' : 'desc');
     }
   };
 
@@ -310,12 +321,12 @@ export function UsersPanel({
           <Button
             key={f.key}
             size="sm"
-            variant={filter === f.key ? "default" : "outline"}
+            variant={filter === f.key ? 'default' : 'outline'}
             onClick={() => {
               setFilter(f.key);
               setPage(1);
             }}
-            className={cn("rounded-full", filter !== f.key && "border-border")}
+            className={cn('rounded-full', filter !== f.key && 'border-border')}
           >
             {f.label}
           </Button>
@@ -332,10 +343,18 @@ export function UsersPanel({
               size="sm"
               variant="ghost"
               onClick={() => toggleSort(s.key)}
-              className={cn("h-7 gap-1 px-2 text-xs", active ? "text-primary" : "text-muted-foreground")}
+              className={cn(
+                'h-7 gap-1 px-2 text-xs',
+                active ? 'text-primary' : 'text-muted-foreground',
+              )}
             >
               {s.label}
-              {active && (sortDir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />)}
+              {active &&
+                (sortDir === 'asc' ? (
+                  <ArrowUp className="h-3 w-3" />
+                ) : (
+                  <ArrowDown className="h-3 w-3" />
+                ))}
             </Button>
           );
         })}
@@ -346,13 +365,27 @@ export function UsersPanel({
           <caption className="sr-only">Liste des utilisateurs</caption>
           <thead className="text-left text-muted-foreground border-b border-border">
             <tr>
-              <th scope="col" className="p-3">Joueur</th>
-              <th scope="col" className="p-3">Rôle</th>
-              <th scope="col" className="p-3">Parties</th>
-              <th scope="col" className="p-3">Salon</th>
-              <th scope="col" className="p-3">Vu</th>
-              <th scope="col" className="p-3">État</th>
-              <th scope="col" className="p-3 text-right">Actions</th>
+              <th scope="col" className="p-3">
+                Joueur
+              </th>
+              <th scope="col" className="p-3">
+                Rôle
+              </th>
+              <th scope="col" className="p-3">
+                Parties
+              </th>
+              <th scope="col" className="p-3">
+                Salon
+              </th>
+              <th scope="col" className="p-3">
+                Vu
+              </th>
+              <th scope="col" className="p-3">
+                État
+              </th>
+              <th scope="col" className="p-3 text-right">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -372,8 +405,8 @@ export function UsersPanel({
               <tr>
                 <td colSpan={7} className="p-6 text-center text-muted-foreground">
                   {debouncedQuery
-                    ? "Aucun utilisateur ne correspond à cette recherche."
-                    : EMPTY_FILTER_MESSAGES[filter] ?? "Aucun utilisateur."}
+                    ? 'Aucun utilisateur ne correspond à cette recherche.'
+                    : (EMPTY_FILTER_MESSAGES[filter] ?? 'Aucun utilisateur.')}
                 </td>
               </tr>
             )}
@@ -390,7 +423,8 @@ export function UsersPanel({
 
       <div className="flex flex-col items-center gap-2">
         <p className="text-xs text-muted-foreground">
-          {total} joueur(s) — page {page} sur {totalPages} — {users.length} affiché(s) (max 50 par page)
+          {total} joueur(s) — page {page} sur {totalPages} — {users.length} affiché(s) (max 50 par
+          page)
         </p>
         <UsersPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
@@ -405,7 +439,7 @@ export function UsersPanel({
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void confirmPending()}
-              className={pending?.destructive ? "bg-destructive hover:bg-destructive/90" : ""}
+              className={pending?.destructive ? 'bg-destructive hover:bg-destructive/90' : ''}
             >
               {pending?.confirmLabel}
             </AlertDialogAction>

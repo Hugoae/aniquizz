@@ -35,9 +35,7 @@ export function LibrarySongDrawer({
   const baseUrl = song ? getVideoUrl(song.videoKey) : '';
   // Media Fragments (`#t=`) help the browser start near the handoff timestamp.
   const videoUrl =
-    baseUrl && resumeAt != null && resumeAt > 0
-      ? `${baseUrl}#t=${resumeAt.toFixed(2)}`
-      : baseUrl;
+    baseUrl && resumeAt != null && resumeAt > 0 ? `${baseUrl}#t=${resumeAt.toFixed(2)}` : baseUrl;
 
   useEffect(() => {
     if (!song || !baseUrl) return;

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -7,11 +7,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import {
   adminApi,
   AdminApiError,
@@ -21,25 +21,25 @@ import {
   type SongDifficulty,
   type SongStatus,
   type SongType,
-} from "@/lib/adminApi";
-import { getVideoUrl } from "@/lib/video";
-import { PrefVolumeVideo } from "@/features/settings/components/PrefVolumeVideo";
+} from '@/lib/adminApi';
+import { getVideoUrl } from '@/lib/video';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 
-const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : "Erreur.");
+const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : 'Erreur.');
 
-const SONG_TYPES: SongType[] = ["OP", "ED", "INSERT"];
-const DIFFICULTIES: SongDifficulty[] = ["EASY", "MEDIUM", "HARD"];
-const STATUSES: SongStatus[] = ["PENDING", "PROCESSING", "COMPLETED", "ERROR", "SKIPPED"];
+const SONG_TYPES: SongType[] = ['OP', 'ED', 'INSERT'];
+const DIFFICULTIES: SongDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
+const STATUSES: SongStatus[] = ['PENDING', 'PROCESSING', 'COMPLETED', 'ERROR', 'SKIPPED'];
 
 const toList = (s: string): string[] =>
   s
-    .split(",")
+    .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
 
 const numOrNull = (s: string): number | null => {
   const n = Number(s);
-  return s.trim() === "" || Number.isNaN(n) ? null : n;
+  return s.trim() === '' || Number.isNaN(n) ? null : n;
 };
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
@@ -51,7 +51,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-const selectCls = "w-full rounded border border-border bg-background px-2 py-2 text-sm";
+const selectCls = 'w-full rounded border border-border bg-background px-2 py-2 text-sm';
 
 // --- Song -------------------------------------------------------------------
 
@@ -72,17 +72,17 @@ interface SongForm {
 }
 
 const songToForm = (s: CatalogueSong | undefined, animeId: number): SongForm => ({
-  title: s?.title ?? "",
-  artist: s?.artist ?? "",
-  songType: s?.songType ?? "OP",
+  title: s?.title ?? '',
+  artist: s?.artist ?? '',
+  songType: s?.songType ?? 'OP',
   sequence: String(s?.sequence ?? 1),
-  difficulty: s?.difficulty ?? "MEDIUM",
-  downloadStatus: s?.downloadStatus ?? "PENDING",
-  videoKey: s?.videoKey ?? "",
-  sourceUrl: s?.sourceUrl ?? "",
-  duration: s?.duration != null ? String(s.duration) : "",
-  episodeRange: s?.episodeRange ?? "",
-  tags: (s?.tags ?? []).join(", "),
+  difficulty: s?.difficulty ?? 'MEDIUM',
+  downloadStatus: s?.downloadStatus ?? 'PENDING',
+  videoKey: s?.videoKey ?? '',
+  sourceUrl: s?.sourceUrl ?? '',
+  duration: s?.duration != null ? String(s.duration) : '',
+  episodeRange: s?.episodeRange ?? '',
+  tags: (s?.tags ?? []).join(', '),
   animeId: String(s?.animeId ?? animeId),
   isLocked: s?.isLocked ?? false,
 });
@@ -113,7 +113,7 @@ export function SongEditDialog({
 
   const save = async () => {
     if (!form.title.trim() || !form.videoKey.trim()) {
-      toast.error("Titre et videoKey requis.");
+      toast.error('Titre et videoKey requis.');
       return;
     }
     setBusy(true);
@@ -135,10 +135,10 @@ export function SongEditDialog({
       };
       if (isEdit) {
         await adminApi.updateSong(song!.id, payload);
-        toast.success("Son mis à jour.");
+        toast.success('Son mis à jour.');
       } else {
         await adminApi.createSong(payload);
-        toast.success("Son créé.");
+        toast.success('Son créé.');
       }
       onOpenChange(false);
       onSaved();
@@ -153,21 +153,21 @@ export function SongEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-card">
         <DialogHeader>
-          <DialogTitle>{isEdit ? `Éditer le son #${song!.id}` : "Nouveau son"}</DialogTitle>
+          <DialogTitle>{isEdit ? `Éditer le son #${song!.id}` : 'Nouveau son'}</DialogTitle>
           <DialogDescription>Toutes les métadonnées du son.</DialogDescription>
         </DialogHeader>
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto px-1 sm:grid-cols-2">
           <Row label="Titre">
-            <Input value={form.title} onChange={(e) => set("title", e.target.value)} />
+            <Input value={form.title} onChange={(e) => set('title', e.target.value)} />
           </Row>
           <Row label="Artiste">
-            <Input value={form.artist} onChange={(e) => set("artist", e.target.value)} />
+            <Input value={form.artist} onChange={(e) => set('artist', e.target.value)} />
           </Row>
           <Row label="Type">
             <select
               className={selectCls}
               value={form.songType}
-              onChange={(e) => set("songType", e.target.value as SongType)}
+              onChange={(e) => set('songType', e.target.value as SongType)}
             >
               {SONG_TYPES.map((t) => (
                 <option key={t}>{t}</option>
@@ -179,14 +179,14 @@ export function SongEditDialog({
               type="number"
               min={1}
               value={form.sequence}
-              onChange={(e) => set("sequence", e.target.value)}
+              onChange={(e) => set('sequence', e.target.value)}
             />
           </Row>
           <Row label="Difficulté">
             <select
               className={selectCls}
               value={form.difficulty}
-              onChange={(e) => set("difficulty", e.target.value as SongDifficulty)}
+              onChange={(e) => set('difficulty', e.target.value as SongDifficulty)}
             >
               {DIFFICULTIES.map((d) => (
                 <option key={d}>{d}</option>
@@ -197,7 +197,7 @@ export function SongEditDialog({
             <select
               className={selectCls}
               value={form.downloadStatus}
-              onChange={(e) => set("downloadStatus", e.target.value as SongStatus)}
+              onChange={(e) => set('downloadStatus', e.target.value as SongStatus)}
             >
               {STATUSES.map((s) => (
                 <option key={s}>{s}</option>
@@ -205,36 +205,36 @@ export function SongEditDialog({
             </select>
           </Row>
           <Row label="videoKey (clé R2)">
-            <Input value={form.videoKey} onChange={(e) => set("videoKey", e.target.value)} />
+            <Input value={form.videoKey} onChange={(e) => set('videoKey', e.target.value)} />
           </Row>
           <Row label="sourceUrl (origine)">
-            <Input value={form.sourceUrl} onChange={(e) => set("sourceUrl", e.target.value)} />
+            <Input value={form.sourceUrl} onChange={(e) => set('sourceUrl', e.target.value)} />
           </Row>
           <Row label="Durée (s)">
             <Input
               type="number"
               value={form.duration}
-              onChange={(e) => set("duration", e.target.value)}
+              onChange={(e) => set('duration', e.target.value)}
             />
           </Row>
           <Row label="Épisodes">
             <Input
               value={form.episodeRange}
-              onChange={(e) => set("episodeRange", e.target.value)}
+              onChange={(e) => set('episodeRange', e.target.value)}
             />
           </Row>
           <Row label="Tags (séparés par des virgules)">
-            <Input value={form.tags} onChange={(e) => set("tags", e.target.value)} />
+            <Input value={form.tags} onChange={(e) => set('tags', e.target.value)} />
           </Row>
           <Row label="Anime ID (déplacer)">
             <Input
               type="number"
               value={form.animeId}
-              onChange={(e) => set("animeId", e.target.value)}
+              onChange={(e) => set('animeId', e.target.value)}
             />
           </Row>
           <div className="flex items-center gap-2 pt-5">
-            <Switch checked={form.isLocked} onCheckedChange={(v) => set("isLocked", v)} />
+            <Switch checked={form.isLocked} onCheckedChange={(v) => set('isLocked', v)} />
             <Label className="text-sm">Verrouillé</Label>
           </div>
         </div>
@@ -253,7 +253,7 @@ export function SongEditDialog({
             Annuler
           </Button>
           <Button onClick={() => void save()} disabled={busy}>
-            {isEdit ? "Enregistrer" : "Créer"}
+            {isEdit ? 'Enregistrer' : 'Créer'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -279,17 +279,23 @@ interface AnimeForm {
 }
 
 const animeToForm = (a: CatalogueAnime | undefined, franchiseId: number | null): AnimeForm => ({
-  name: a?.name ?? "",
-  altNames: (a?.altNames ?? []).join(", "),
-  studio: a?.studio ?? "",
-  siteUrl: a?.siteUrl ?? "",
-  coverImage: a?.coverImage ?? "",
-  seasonYear: a?.seasonYear != null ? String(a.seasonYear) : "",
-  format: a?.format ?? "",
-  status: a?.status ?? "",
-  tags: (a?.tags ?? []).join(", "),
+  name: a?.name ?? '',
+  altNames: (a?.altNames ?? []).join(', '),
+  studio: a?.studio ?? '',
+  siteUrl: a?.siteUrl ?? '',
+  coverImage: a?.coverImage ?? '',
+  seasonYear: a?.seasonYear != null ? String(a.seasonYear) : '',
+  format: a?.format ?? '',
+  status: a?.status ?? '',
+  tags: (a?.tags ?? []).join(', '),
   popularity: String(a?.popularity ?? 0),
-  franchiseId: a ? (a.franchiseId != null ? String(a.franchiseId) : "") : franchiseId != null ? String(franchiseId) : "",
+  franchiseId: a
+    ? a.franchiseId != null
+      ? String(a.franchiseId)
+      : ''
+    : franchiseId != null
+      ? String(franchiseId)
+      : '',
   isLocked: a?.isLocked ?? false,
 });
 
@@ -319,7 +325,7 @@ export function AnimeEditDialog({
 
   const save = async () => {
     if (!form.name.trim()) {
-      toast.error("Nom requis.");
+      toast.error('Nom requis.');
       return;
     }
     setBusy(true);
@@ -340,10 +346,10 @@ export function AnimeEditDialog({
       };
       if (isEdit) {
         await adminApi.updateAnime(anime!.id, payload);
-        toast.success("Anime mis à jour.");
+        toast.success('Anime mis à jour.');
       } else {
         await adminApi.createAnime(payload);
-        toast.success("Anime créé.");
+        toast.success('Anime créé.');
       }
       onOpenChange(false);
       onSaved();
@@ -358,57 +364,57 @@ export function AnimeEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl bg-card">
         <DialogHeader>
-          <DialogTitle>{isEdit ? `Éditer l'anime #${anime!.id}` : "Nouvel anime"}</DialogTitle>
+          <DialogTitle>{isEdit ? `Éditer l'anime #${anime!.id}` : 'Nouvel anime'}</DialogTitle>
           <DialogDescription>Métadonnées de l'anime.</DialogDescription>
         </DialogHeader>
         <div className="grid max-h-[65vh] gap-3 overflow-y-auto px-1 sm:grid-cols-2">
           <Row label="Nom">
-            <Input value={form.name} onChange={(e) => set("name", e.target.value)} />
+            <Input value={form.name} onChange={(e) => set('name', e.target.value)} />
           </Row>
           <Row label="Franchise ID (déplacer)">
             <Input
               type="number"
               value={form.franchiseId}
-              onChange={(e) => set("franchiseId", e.target.value)}
+              onChange={(e) => set('franchiseId', e.target.value)}
             />
           </Row>
           <Row label="Noms alternatifs (virgules)">
-            <Input value={form.altNames} onChange={(e) => set("altNames", e.target.value)} />
+            <Input value={form.altNames} onChange={(e) => set('altNames', e.target.value)} />
           </Row>
           <Row label="Studio">
-            <Input value={form.studio} onChange={(e) => set("studio", e.target.value)} />
+            <Input value={form.studio} onChange={(e) => set('studio', e.target.value)} />
           </Row>
           <Row label="Site URL">
-            <Input value={form.siteUrl} onChange={(e) => set("siteUrl", e.target.value)} />
+            <Input value={form.siteUrl} onChange={(e) => set('siteUrl', e.target.value)} />
           </Row>
           <Row label="Cover image URL">
-            <Input value={form.coverImage} onChange={(e) => set("coverImage", e.target.value)} />
+            <Input value={form.coverImage} onChange={(e) => set('coverImage', e.target.value)} />
           </Row>
           <Row label="Année">
             <Input
               type="number"
               value={form.seasonYear}
-              onChange={(e) => set("seasonYear", e.target.value)}
+              onChange={(e) => set('seasonYear', e.target.value)}
             />
           </Row>
           <Row label="Format">
-            <Input value={form.format} onChange={(e) => set("format", e.target.value)} />
+            <Input value={form.format} onChange={(e) => set('format', e.target.value)} />
           </Row>
           <Row label="Statut (AniList)">
-            <Input value={form.status} onChange={(e) => set("status", e.target.value)} />
+            <Input value={form.status} onChange={(e) => set('status', e.target.value)} />
           </Row>
           <Row label="Popularité">
             <Input
               type="number"
               value={form.popularity}
-              onChange={(e) => set("popularity", e.target.value)}
+              onChange={(e) => set('popularity', e.target.value)}
             />
           </Row>
           <Row label="Tags (virgules)">
-            <Input value={form.tags} onChange={(e) => set("tags", e.target.value)} />
+            <Input value={form.tags} onChange={(e) => set('tags', e.target.value)} />
           </Row>
           <div className="flex items-center gap-2 pt-5">
-            <Switch checked={form.isLocked} onCheckedChange={(v) => set("isLocked", v)} />
+            <Switch checked={form.isLocked} onCheckedChange={(v) => set('isLocked', v)} />
             <Label className="text-sm">Verrouillé</Label>
           </div>
         </div>
@@ -417,7 +423,7 @@ export function AnimeEditDialog({
             Annuler
           </Button>
           <Button onClick={() => void save()} disabled={busy}>
-            {isEdit ? "Enregistrer" : "Créer"}
+            {isEdit ? 'Enregistrer' : 'Créer'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -438,23 +444,23 @@ export function FranchiseEditDialog({
   franchise?: CatalogueFranchiseGroup;
   onSaved: () => void;
 }) {
-  const [name, setName] = useState("");
-  const [genres, setGenres] = useState("");
+  const [name, setName] = useState('');
+  const [genres, setGenres] = useState('');
   const [isLocked, setIsLocked] = useState(false);
   const [busy, setBusy] = useState(false);
   const isEdit = !!franchise && franchise.id !== null;
 
   useEffect(() => {
     if (open) {
-      setName(franchise?.name ?? "");
-      setGenres((franchise?.genres ?? []).join(", "));
+      setName(franchise?.name ?? '');
+      setGenres((franchise?.genres ?? []).join(', '));
       setIsLocked(franchise?.isLocked ?? false);
     }
   }, [open, franchise]);
 
   const save = async () => {
     if (!name.trim()) {
-      toast.error("Nom requis.");
+      toast.error('Nom requis.');
       return;
     }
     setBusy(true);
@@ -462,10 +468,10 @@ export function FranchiseEditDialog({
       const payload = { name: name.trim(), genres: toList(genres), isLocked };
       if (isEdit) {
         await adminApi.updateFranchise(franchise!.id!, payload);
-        toast.success("Franchise mise à jour.");
+        toast.success('Franchise mise à jour.');
       } else {
         await adminApi.createFranchise(payload);
-        toast.success("Franchise créée.");
+        toast.success('Franchise créée.');
       }
       onOpenChange(false);
       onSaved();
@@ -480,7 +486,7 @@ export function FranchiseEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Éditer la franchise" : "Nouvelle franchise"}</DialogTitle>
+          <DialogTitle>{isEdit ? 'Éditer la franchise' : 'Nouvelle franchise'}</DialogTitle>
           <DialogDescription>Regroupe des animes liés.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -500,7 +506,7 @@ export function FranchiseEditDialog({
             Annuler
           </Button>
           <Button onClick={() => void save()} disabled={busy}>
-            {isEdit ? "Enregistrer" : "Créer"}
+            {isEdit ? 'Enregistrer' : 'Créer'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -517,16 +523,21 @@ export function VideoPreviewDialog({
   song: CatalogueSong | null;
   onOpenChange: (v: boolean) => void;
 }) {
-  const url = song ? getVideoUrl(song.videoKey) : "";
+  const url = song ? getVideoUrl(song.videoKey) : '';
   return (
     <Dialog open={!!song} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl bg-card">
         <DialogHeader>
-          <DialogTitle>{song ? `${song.title} — ${song.artist}` : ""}</DialogTitle>
+          <DialogTitle>{song ? `${song.title} — ${song.artist}` : ''}</DialogTitle>
           <DialogDescription className="font-mono text-xs">{song?.videoKey}</DialogDescription>
         </DialogHeader>
         {url ? (
-          <PrefVolumeVideo src={url} controls autoPlay className="max-h-[70vh] w-full rounded bg-black" />
+          <PrefVolumeVideo
+            src={url}
+            controls
+            autoPlay
+            className="max-h-[70vh] w-full rounded bg-black"
+          />
         ) : (
           <p className="text-sm text-muted-foreground">
             URL vidéo indisponible (VITE_R2_PUBLIC_URL manquant).

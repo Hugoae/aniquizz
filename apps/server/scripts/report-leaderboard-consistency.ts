@@ -17,9 +17,7 @@ async function main(): Promise<void> {
   console.log(`Sampled ${report.sampled} profiles with match activity.`);
   console.log(`Drifted fields: ${report.drifted.length}`);
   for (const row of report.drifted.slice(0, 20)) {
-    console.log(
-      `  ${row.username} ${row.field}: stored=${row.stored} computed=${row.computed}`,
-    );
+    console.log(`  ${row.username} ${row.field}: stored=${row.stored} computed=${row.computed}`);
   }
   if (report.drifted.length > 20) {
     console.log(`  … ${report.drifted.length - 20} more`);

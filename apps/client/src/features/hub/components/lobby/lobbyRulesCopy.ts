@@ -11,9 +11,7 @@ import {
   SONG_START_MODE_LABELS,
   normalizeSongStartMode,
 } from '@aniquizz/shared';
-import {
-  buildLobbySettingChips,
-} from '@/features/hub/components/roomSettings';
+import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
 import { watchedModeDisplayLabel } from '@/features/hub/components/config/watchedSource';
@@ -48,10 +46,10 @@ export interface LobbyRulesSection {
 }
 
 const STANDARD_MODE_INTRO =
-  'Blindtest anime : écoute un extrait et devine l\'anime avant la fin du chrono.';
+  "Blindtest anime : écoute un extrait et devine l'anime avant la fin du chrono.";
 
 const SPRINT_INTRO =
-  'Sprint : typing uniquement en multijoueur — bonus vitesse selon l\'ordre d\'arrivée des bonnes réponses.';
+  "Sprint : typing uniquement en multijoueur — bonus vitesse selon l'ordre d'arrivée des bonnes réponses.";
 
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
@@ -61,12 +59,14 @@ const sprintScoringLines = (): string[] => {
   return [
     `Typing correct : ${SCORING.TYPING} pts de base.`,
     'Bonus vitesse (parmi les bonnes réponses) : 1 joueur → +0 ; 2 → +2 / +1 ; 3 ou plus → +3 / +2 / +1 (top 3).',
-    'L\'ordre d\'arrivée (1er, 2e, 3e…) est affiché à la révélation.',
+    "L'ordre d'arrivée (1er, 2e, 3e…) est affiché à la révélation.",
   ];
 };
 
 const scoringLinesForConfig = (config: GameConfig): string[] =>
-  config.gameType === 'sprint' ? sprintScoringLines() : scoringLines(config.responseType, config.precision);
+  config.gameType === 'sprint'
+    ? sprintScoringLines()
+    : scoringLines(config.responseType, config.precision);
 
 const scoringLines = (
   responseType: GameConfig['responseType'],
@@ -76,10 +76,10 @@ const scoringLines = (
 
   const typingLine = `Typing : ${SCORING.TYPING} pts — écris toi-même la réponse au clavier.`;
   const typingAutocompleteLine = isArtistPrecision(precision)
-    ? 'Autocomplétion : en tapant, les artistes correspondants s\'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.'
-    : 'Autocomplétion : en tapant, les titres correspondants s\'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.';
+    ? "Autocomplétion : en tapant, les artistes correspondants s'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie."
+    : "Autocomplétion : en tapant, les titres correspondants s'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.";
   const typingToleranceLine =
-    'Une tolérance aux fautes de frappe s\'applique sur les réponses longues.';
+    "Une tolérance aux fautes de frappe s'applique sur les réponses longues.";
   const qcmLine = `Carré : ${SCORING.QCM} pts — choisis parmi 4 propositions.`;
   const duoLine = `Duo : ${SCORING.DUO} pt — choisis entre 2 propositions (joker pour éliminer des mauvaises réponses).`;
 
@@ -90,7 +90,14 @@ const scoringLines = (
       return [qcmLine];
     case 'mix':
     default:
-      return [MIX_CHOICE_LINE, typingLine, typingAutocompleteLine, typingToleranceLine, qcmLine, duoLine];
+      return [
+        MIX_CHOICE_LINE,
+        typingLine,
+        typingAutocompleteLine,
+        typingToleranceLine,
+        qcmLine,
+        duoLine,
+      ];
   }
 };
 
@@ -100,7 +107,7 @@ const precisionFlowLine = (precision: GameConfig['precision']): string => {
     return 'Précision Franchise : « My Hero Academia » suffit, inutile de préciser « My Hero Academia Season 3 ».';
   }
   if (resolved === 'artist') {
-    return 'Précision Artiste : un des artistes ou groupes crédités suffit, inutile de tous les citer. Le titre et l\'anime ne comptent pas.';
+    return "Précision Artiste : un des artistes ou groupes crédités suffit, inutile de tous les citer. Le titre et l'anime ne comptent pas.";
   }
   return 'Précision Anime : « My Hero Academia Season 3 » est requis, « My Hero Academia » seul ne suffit pas.';
 };
@@ -110,7 +117,7 @@ const videoFlowLine = (videoMode: GameConfig['videoMode']): string => {
     case 'blurred':
       return 'Chaque manche : extrait audio et vidéo floutée pendant le guess, tu devines avant la fin du chrono.';
     case 'peek':
-      return 'Chaque manche : extrait audio et une petite fenêtre vidéo (position aléatoire, nouvelle à chaque manche) ; le reste de l\'image est masqué. Tu devines avant la fin du chrono.';
+      return "Chaque manche : extrait audio et une petite fenêtre vidéo (position aléatoire, nouvelle à chaque manche) ; le reste de l'image est masqué. Tu devines avant la fin du chrono.";
     case 'hidden':
     default:
       return 'Chaque manche : extrait audio diffusé, vidéo cachée (fond noir), tu devines avant la fin du chrono.';
@@ -120,15 +127,15 @@ const videoFlowLine = (videoMode: GameConfig['videoMode']): string => {
 const songStartFlowLine = (songStartMode: GameConfig['songStartMode']): string => {
   switch (normalizeSongStartMode(songStartMode)) {
     case 'beginning':
-      return 'Départ de l\'extrait : au tout début du clip (intro de l\'OP/ED).';
+      return "Départ de l'extrait : au tout début du clip (intro de l'OP/ED).";
     case 'random':
     default:
-      return 'Départ de l\'extrait : à un moment aléatoire du clip (nouveau à chaque manche, sauf si le clip est trop court).';
+      return "Départ de l'extrait : à un moment aléatoire du clip (nouveau à chaque manche, sauf si le clip est trop court).";
   }
 };
 
 const REVEAL_FLOW_LINE =
-  'Révélation de la bonne réponse avec la vidéo complète, puis manche suivante jusqu\'à la fin de la playlist.';
+  "Révélation de la bonne réponse avec la vidéo complète, puis manche suivante jusqu'à la fin de la playlist.";
 
 const WATCHED_LIST_STATUSES = 'Completed, Watching ou On-Hold';
 
@@ -162,14 +169,17 @@ const sourceLines = (config: GameConfig, context: LobbyRulesContext): string[] =
     );
     if (config.watchedAllowFallback) {
       lines.push(
-        'Compléter avec l\'aléatoire est activé : si le pool Watched est insuffisant, des sons du catalogue global complètent la playlist (notification en partie).',
+        "Compléter avec l'aléatoire est activé : si le pool Watched est insuffisant, des sons du catalogue global complètent la playlist (notification en partie).",
       );
     }
     return lines;
   }
 
   if (config.soundSelection === 'playlist') {
-    const combined = context.playlistName?.split(' ∩ ').map((part) => part.trim()).filter(Boolean);
+    const combined = context.playlistName
+      ?.split(' ∩ ')
+      .map((part) => part.trim())
+      .filter(Boolean);
     const sourceLine =
       combined && combined.length >= 2
         ? PLAYLISTS_COPY.sourceRulesCombine(combined[0], combined[1])
@@ -220,7 +230,9 @@ const soloBronzeThresholdLine = (
   difficulties: string[] | undefined,
   precision: GameConfig['precision'],
 ): string => {
-  const selected = [...new Set((difficulties?.length ? difficulties : ['medium']).map(normalizeDifficultyKey))];
+  const selected = [
+    ...new Set((difficulties?.length ? difficulties : ['medium']).map(normalizeDifficultyKey)),
+  ];
   selected.sort((a, b) => DIFFICULTY_ORDER.indexOf(a) - DIFFICULTY_ORDER.indexOf(b));
   const resolvedPrecision = normalizePrecision(precision);
 
@@ -232,7 +244,10 @@ const soloBronzeThresholdLine = (
 
   const effectiveBronze = effectiveMedalThresholds(selected, resolvedPrecision).bronze;
   const breakdown = selected
-    .map((key) => `${DIFFICULTY_FR[key]} ${formatPercentFr(effectiveMedalThresholds([key], resolvedPrecision).bronze)}`)
+    .map(
+      (key) =>
+        `${DIFFICULTY_FR[key]} ${formatPercentFr(effectiveMedalThresholds([key], resolvedPrecision).bronze)}`,
+    )
     .join(', ');
 
   return `Seuil Bronze : ${formatPercentFr(effectiveBronze)} minimum du score max (moyenne des difficultés sélectionnées : ${breakdown}).`;
@@ -257,8 +272,8 @@ const victoryLines = (context: LobbyRulesContext, config: GameConfig): string[] 
 };
 
 const multiLobbyLines = (): string[] => [
-  'L\'hôte lance la partie quand au moins 2 joueurs sont présents ; les invités doivent se mettre « Prêt ».',
-  'L\'hôte peut exclure un joueur ou transférer le rôle d\'hôte depuis le lobby.',
+  "L'hôte lance la partie quand au moins 2 joueurs sont présents ; les invités doivent se mettre « Prêt ».",
+  "L'hôte peut exclure un joueur ou transférer le rôle d'hôte depuis le lobby.",
   'Vote Pause : met la partie en pause si une majorité de joueurs le demande.',
   'Vote Suivant : passe à la manche suivante pendant la révélation si une majorité le demande.',
 ];

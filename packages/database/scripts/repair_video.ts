@@ -33,16 +33,22 @@ function loadAnimethemesUrl(animeId: number, songType: string, sequence: number)
   const entry = cache[String(animeId)];
   if (!entry?.animethemes) return null;
 
-  const theme = entry.animethemes.find((t) => t.type === songType && (t.sequence ?? 1) === sequence);
+  const theme = entry.animethemes.find(
+    (t) => t.type === songType && (t.sequence ?? 1) === sequence,
+  );
   const link = theme?.animethemeentries?.[0]?.videos?.[0]?.link;
   return link && link.startsWith('http') ? link : null;
 }
 
 async function decodeCheck(filePath: string): Promise<boolean> {
   try {
-    execFileSync(ffmpegInstaller.path, ['-v', 'error', '-i', filePath, '-frames:v', '1', '-f', 'null', '-'], {
-      stdio: 'pipe',
-    });
+    execFileSync(
+      ffmpegInstaller.path,
+      ['-v', 'error', '-i', filePath, '-frames:v', '1', '-f', 'null', '-'],
+      {
+        stdio: 'pipe',
+      },
+    );
     return true;
   } catch {
     return false;

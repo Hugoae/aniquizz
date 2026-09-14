@@ -6,10 +6,7 @@ const PROTECTED_EMAILS = new Set(['hugo.aen2@gmail.com']);
 const normalizeUsername = (value: string): string => value.trim().toLowerCase();
 const normalizeEmail = (value: string): string => value.trim().toLowerCase();
 
-export const isProtectedProfile = (profile: {
-  username: string;
-  email: string;
-}): boolean =>
+export const isProtectedProfile = (profile: { username: string; email: string }): boolean =>
   PROTECTED_USERNAMES.has(normalizeUsername(profile.username)) ||
   PROTECTED_EMAILS.has(normalizeEmail(profile.email));
 

@@ -37,11 +37,7 @@ describe.skipIf(!hasIntegrationEnv)('list handlers integration', () => {
         activeListProvider: 'anilist',
       },
     });
-    socket = await connectSocket(
-      bundle.url,
-      await getTestAccessToken('admin'),
-      'admin_dev',
-    );
+    socket = await connectSocket(bundle.url, await getTestAccessToken('admin'), 'admin_dev');
   });
 
   afterAll(async () => {

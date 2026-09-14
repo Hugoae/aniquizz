@@ -1,4 +1,11 @@
-import type { GamePlayer, GameStatus, GameSyncState, RoomSettings, UserRole, WatchedListProvider } from '@aniquizz/shared';
+import type {
+  GamePlayer,
+  GameStatus,
+  GameSyncState,
+  RoomSettings,
+  UserRole,
+  WatchedListProvider,
+} from '@aniquizz/shared';
 import { toClientRoomSettings } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
@@ -79,7 +86,8 @@ export class Room {
       existing.avatar = avatar || existing.avatar;
       if (opts.anilistUsername !== undefined) existing.anilistUsername = opts.anilistUsername;
       if (opts.malUsername !== undefined) existing.malUsername = opts.malUsername;
-      if (opts.activeListProvider !== undefined) existing.activeListProvider = opts.activeListProvider;
+      if (opts.activeListProvider !== undefined)
+        existing.activeListProvider = opts.activeListProvider;
       if (opts.role) existing.role = opts.role;
       if (opts.level != null) existing.level = opts.level;
       logger.info(`[Room ${this.id}] Reconnected: ${safeUsername} (${userId})`, 'Lobby');
@@ -380,9 +388,7 @@ export class Room {
 
   /** Connected human players (bots excluded). */
   private connectedHumanIds(): string[] {
-    return [...this.players.values()]
-      .filter((p) => p.isConnected && !p.isBot)
-      .map((p) => p.userId);
+    return [...this.players.values()].filter((p) => p.isConnected && !p.isBot).map((p) => p.userId);
   }
 
   /**
@@ -449,7 +455,10 @@ export class Room {
     // clicks and late joiners see the room as busy.
     if (this.status === 'starting') return;
 
-    if ((this.status === 'playing' || this.status === 'paused') && !this.allConnectedHumansInLobby()) {
+    if (
+      (this.status === 'playing' || this.status === 'paused') &&
+      !this.allConnectedHumansInLobby()
+    ) {
       return;
     }
 

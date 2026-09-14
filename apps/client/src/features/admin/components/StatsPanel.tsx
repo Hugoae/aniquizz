@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
   Activity,
   Ban,
@@ -27,16 +27,9 @@ import {
   UserPlus,
   Users,
   Wifi,
-} from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from "recharts";
-import { Button } from "@/components/ui/button";
+} from 'lucide-react';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
+import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,51 +39,46 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/features/auth/context/AuthContext";
-import { cn } from "@/lib/utils";
-import {
-  adminApi,
-  AdminApiError,
-  type StatsOverview,
-  type StatsPeriod,
-} from "@/lib/adminApi";
+} from '@/components/ui/alert-dialog';
+import { useAuth } from '@/features/auth/context/AuthContext';
+import { cn } from '@/lib/utils';
+import { adminApi, AdminApiError, type StatsOverview, type StatsPeriod } from '@/lib/adminApi';
 
 const errorMessage = (e: unknown): string =>
-  e instanceof AdminApiError ? e.message : "Une erreur est survenue.";
+  e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
 
 const REFRESH_MS = 60_000;
 
 const PERIODS: { key: StatsPeriod; label: string }[] = [
-  { key: "24h", label: "24 h" },
-  { key: "7d", label: "7 j" },
-  { key: "30d", label: "30 j" },
-  { key: "all", label: "Tout" },
+  { key: '24h', label: '24 h' },
+  { key: '7d', label: '7 j' },
+  { key: '30d', label: '30 j' },
+  { key: 'all', label: 'Tout' },
 ];
 
 /** "sur …" suffix for period-scoped metrics. */
 const PERIOD_TEXT: Record<StatsPeriod, string> = {
-  "24h": "24 h",
-  "7d": "7 j",
-  "30d": "30 j",
+  '24h': '24 h',
+  '7d': '7 j',
+  '30d': '30 j',
   all: "tout l'historique",
 };
 
 const PERIOD_SHORT: Record<StatsPeriod, string> = {
-  "24h": "24 h",
-  "7d": "7 j",
-  "30d": "30 j",
-  all: "total",
+  '24h': '24 h',
+  '7d': '7 j',
+  '30d': '30 j',
+  all: 'total',
 };
 
 const DIFFICULTY_LABELS: Record<string, string> = {
-  EASY: "Facile",
-  MEDIUM: "Moyen",
-  HARD: "Difficile",
+  EASY: 'Facile',
+  MEDIUM: 'Moyen',
+  HARD: 'Difficile',
 };
 
 const MODE_LABELS: Record<string, string> = {
-  STANDARD: "Standard",
+  STANDARD: 'Standard',
 };
 
 const formatUptime = (seconds: number): string => {
@@ -102,7 +90,7 @@ const formatUptime = (seconds: number): string => {
 };
 
 const formatDuration = (seconds: number): string => {
-  if (!seconds) return "—";
+  if (!seconds) return '—';
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
   return m > 0 ? `${m}m ${s}s` : `${s}s`;
@@ -124,7 +112,7 @@ function StatCard({
   label,
   value,
   secondary,
-  accent = "text-primary",
+  accent = 'text-primary',
 }: {
   icon: typeof Activity;
   label: string;
@@ -136,9 +124,9 @@ function StatCard({
     <div className="glass-card p-4 flex flex-col gap-1">
       <div className="flex items-center justify-between">
         <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</span>
-        <Icon className={cn("h-4 w-4", accent)} />
+        <Icon className={cn('h-4 w-4', accent)} />
       </div>
-      <div className={cn("text-2xl font-bold", accent)}>{value}</div>
+      <div className={cn('text-2xl font-bold', accent)}>{value}</div>
       {secondary && <div className="text-xs text-muted-foreground">{secondary}</div>}
     </div>
   );
@@ -162,7 +150,7 @@ function SegmentBar({ segments }: { segments: Segment[] }) {
           segments.map((seg) => (
             <div
               key={seg.label}
-              className={cn("h-full", seg.className)}
+              className={cn('h-full', seg.className)}
               style={{ width: `${(seg.value / total) * 100}%` }}
               title={`${seg.label}: ${seg.value}`}
             />
@@ -172,7 +160,7 @@ function SegmentBar({ segments }: { segments: Segment[] }) {
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         {segments.map((seg) => (
           <span key={seg.label} className="flex items-center gap-1.5 text-muted-foreground">
-            <span className={cn("h-2 w-2 rounded-full", seg.dot)} />
+            <span className={cn('h-2 w-2 rounded-full', seg.dot)} />
             {seg.label} <span className="font-semibold text-foreground">{seg.value}</span>
           </span>
         ))}
@@ -224,12 +212,12 @@ function TopList({
   );
 }
 
-const CHART_COLORS = ["#a855f7", "#8b5cf6", "#6366f1"];
+const CHART_COLORS = ['#a855f7', '#8b5cf6', '#6366f1'];
 
 function MatchesChart({ data }: { data: { date: string; count: number }[] }) {
   const chartData = data.map((d) => ({
     ...d,
-    label: d.date.slice(8, 10) + "/" + d.date.slice(5, 7),
+    label: d.date.slice(8, 10) + '/' + d.date.slice(5, 7),
   }));
   return (
     <div className="glass-card p-4 space-y-3">
@@ -241,21 +229,21 @@ function MatchesChart({ data }: { data: { date: string; count: number }[] }) {
         <BarChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
             axisLine={false}
             tickLine={false}
             interval="preserveStartEnd"
           />
           <Tooltip
-            cursor={{ fill: "rgba(255,255,255,0.05)" }}
+            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
             contentStyle={{
-              background: "hsl(var(--background))",
-              border: "1px solid rgba(255,255,255,0.1)",
+              background: 'hsl(var(--background))',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 8,
               fontSize: 12,
             }}
-            labelStyle={{ color: "hsl(var(--muted-foreground))" }}
-            formatter={(value: number) => [`${value} partie(s)`, ""]}
+            labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
+            formatter={(value: number) => [`${value} partie(s)`, '']}
           />
           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
             {chartData.map((_, i) => (
@@ -272,9 +260,9 @@ function MatchesChart({ data }: { data: { date: string; count: number }[] }) {
 
 export function StatsPanel() {
   const { profile } = useAuth();
-  const isAdmin = profile?.role === "ADMIN";
+  const isAdmin = profile?.role === 'ADMIN';
   const [data, setData] = useState<StatsOverview | null>(null);
-  const [period, setPeriod] = useState<StatsPeriod>("7d");
+  const [period, setPeriod] = useState<StatsPeriod>('7d');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
   const [, tick] = useState(0);
@@ -341,8 +329,8 @@ export function StatsPanel() {
             <Button
               key={p.key}
               size="sm"
-              variant={period === p.key ? "default" : "outline"}
-              className={cn("rounded-full", period !== p.key && "border-border")}
+              variant={period === p.key ? 'default' : 'outline'}
+              className={cn('rounded-full', period !== p.key && 'border-border')}
               onClick={() => setPeriod(p.key)}
             >
               {p.label}
@@ -370,7 +358,12 @@ export function StatsPanel() {
       {/* --- Temps réel --- */}
       <SectionTitle icon={Activity} title="Temps réel" />
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={Clock} label="Uptime" value={formatUptime(live.uptimeSeconds)} accent="text-info" />
+        <StatCard
+          icon={Clock}
+          label="Uptime"
+          value={formatUptime(live.uptimeSeconds)}
+          accent="text-info"
+        />
         <StatCard
           icon={Users}
           label="Joueurs en ligne"
@@ -392,23 +385,63 @@ export function StatsPanel() {
           secondary={live.botsInRooms ? `+ ${live.botsInRooms} bot(s)` : undefined}
           accent="text-accent"
         />
-        <StatCard icon={MemoryStick} label="Mémoire (RSS)" value={`${live.memoryRssMb} Mo`} accent="text-warning" />
+        <StatCard
+          icon={MemoryStick}
+          label="Mémoire (RSS)"
+          value={`${live.memoryRssMb} Mo`}
+          accent="text-warning"
+        />
         <StatCard icon={Cpu} label="Node" value={live.nodeVersion} accent="text-accent" />
-        <StatCard icon={Wifi} label="Sockets connectés" value={live.connectedSockets} accent="text-success" />
-        <StatCard icon={Server} label="Joueurs (total salons)" value={live.playersInRooms} accent="text-primary" />
+        <StatCard
+          icon={Wifi}
+          label="Sockets connectés"
+          value={live.connectedSockets}
+          accent="text-success"
+        />
+        <StatCard
+          icon={Server}
+          label="Joueurs (total salons)"
+          value={live.playersInRooms}
+          accent="text-primary"
+        />
       </div>
       <div className="grid gap-3 md:grid-cols-2">
         <SegmentBar
           segments={[
-            { label: "Publics", value: live.roomsPublic, className: "bg-success", dot: "bg-success" },
-            { label: "Privés", value: live.roomsPrivate, className: "bg-warning", dot: "bg-warning" },
+            {
+              label: 'Publics',
+              value: live.roomsPublic,
+              className: 'bg-success',
+              dot: 'bg-success',
+            },
+            {
+              label: 'Privés',
+              value: live.roomsPrivate,
+              className: 'bg-warning',
+              dot: 'bg-warning',
+            },
           ]}
         />
         <SegmentBar
           segments={[
-            { label: "En attente", value: live.roomsWaiting, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
-            { label: "En partie", value: live.roomsPlaying, className: "bg-success", dot: "bg-success" },
-            { label: "En pause", value: live.roomsPaused, className: "bg-warning", dot: "bg-warning" },
+            {
+              label: 'En attente',
+              value: live.roomsWaiting,
+              className: 'bg-muted-foreground/40',
+              dot: 'bg-muted-foreground/40',
+            },
+            {
+              label: 'En partie',
+              value: live.roomsPlaying,
+              className: 'bg-success',
+              dot: 'bg-success',
+            },
+            {
+              label: 'En pause',
+              value: live.roomsPaused,
+              className: 'bg-warning',
+              dot: 'bg-warning',
+            },
           ]}
         />
       </div>
@@ -446,14 +479,39 @@ export function StatsPanel() {
         />
         <StatCard icon={Ban} label="Bannis" value={community.banned} accent="text-destructive" />
         <StatCard icon={MicOff} label="Mutés" value={community.muted} accent="text-warning" />
-        <StatCard icon={Shield} label="Modérateurs" value={community.roles.MODERATOR} accent="text-info" />
-        <StatCard icon={Shield} label="Admins" value={community.roles.ADMIN} accent="text-primary" />
+        <StatCard
+          icon={Shield}
+          label="Modérateurs"
+          value={community.roles.MODERATOR}
+          accent="text-info"
+        />
+        <StatCard
+          icon={Shield}
+          label="Admins"
+          value={community.roles.ADMIN}
+          accent="text-primary"
+        />
       </div>
       <SegmentBar
         segments={[
-          { label: "Joueurs", value: community.roles.USER, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
-          { label: "Modérateurs", value: community.roles.MODERATOR, className: "bg-info", dot: "bg-info" },
-          { label: "Admins", value: community.roles.ADMIN, className: "bg-primary", dot: "bg-primary" },
+          {
+            label: 'Joueurs',
+            value: community.roles.USER,
+            className: 'bg-muted-foreground/40',
+            dot: 'bg-muted-foreground/40',
+          },
+          {
+            label: 'Modérateurs',
+            value: community.roles.MODERATOR,
+            className: 'bg-info',
+            dot: 'bg-info',
+          },
+          {
+            label: 'Admins',
+            value: community.roles.ADMIN,
+            className: 'bg-primary',
+            dot: 'bg-primary',
+          },
         ]}
       />
 
@@ -516,15 +574,20 @@ export function StatsPanel() {
           label="Difficulté populaire"
           value={
             activity.topDifficulty
-              ? DIFFICULTY_LABELS[activity.topDifficulty.difficulty] ?? activity.topDifficulty.difficulty
-              : "—"
+              ? (DIFFICULTY_LABELS[activity.topDifficulty.difficulty] ??
+                activity.topDifficulty.difficulty)
+              : '—'
           }
           accent="text-warning"
         />
         <StatCard
           icon={Gamepad2}
           label="Mode populaire"
-          value={activity.modes[0] ? MODE_LABELS[activity.modes[0].mode] ?? activity.modes[0].mode : "—"}
+          value={
+            activity.modes[0]
+              ? (MODE_LABELS[activity.modes[0].mode] ?? activity.modes[0].mode)
+              : '—'
+          }
           secondary={activity.modes[0] ? `${activity.modes[0].count} partie(s)` : undefined}
           accent="text-info"
         />
@@ -539,11 +602,36 @@ export function StatsPanel() {
       {/* Catalogue health */}
       <SegmentBar
         segments={[
-          { label: "Prêts", value: activity.catalogue.completed, className: "bg-success", dot: "bg-success" },
-          { label: "En attente", value: activity.catalogue.pending, className: "bg-muted-foreground/40", dot: "bg-muted-foreground/40" },
-          { label: "En cours", value: activity.catalogue.processing, className: "bg-info", dot: "bg-info" },
-          { label: "Erreurs", value: activity.catalogue.error, className: "bg-destructive", dot: "bg-destructive" },
-          { label: "Ignorés", value: activity.catalogue.skipped, className: "bg-warning", dot: "bg-warning" },
+          {
+            label: 'Prêts',
+            value: activity.catalogue.completed,
+            className: 'bg-success',
+            dot: 'bg-success',
+          },
+          {
+            label: 'En attente',
+            value: activity.catalogue.pending,
+            className: 'bg-muted-foreground/40',
+            dot: 'bg-muted-foreground/40',
+          },
+          {
+            label: 'En cours',
+            value: activity.catalogue.processing,
+            className: 'bg-info',
+            dot: 'bg-info',
+          },
+          {
+            label: 'Erreurs',
+            value: activity.catalogue.error,
+            className: 'bg-destructive',
+            dot: 'bg-destructive',
+          },
+          {
+            label: 'Ignorés',
+            value: activity.catalogue.skipped,
+            className: 'bg-warning',
+            dot: 'bg-warning',
+          },
         ]}
       />
 
@@ -574,8 +662,9 @@ export function StatsPanel() {
             <AlertDialogTitle>Réinitialiser l'activité de jeu ?</AlertDialogTitle>
             <AlertDialogDescription>
               Tout l'historique des parties (parties jouées, top animes, top sons, durées, taux de
-              réponse) et les sons découverts seront <b>définitivement supprimés</b>. Le catalogue de
-              sons et les profils des joueurs ne sont pas affectés. Cette action est irréversible.
+              réponse) et les sons découverts seront <b>définitivement supprimés</b>. Le catalogue
+              de sons et les profils des joueurs ne sont pas affectés. Cette action est
+              irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -588,7 +677,7 @@ export function StatsPanel() {
               disabled={resetting}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {resetting ? "Suppression…" : "Réinitialiser"}
+              {resetting ? 'Suppression…' : 'Réinitialiser'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

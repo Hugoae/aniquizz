@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   resolveActiveListProvider,
   type ListOperation,
@@ -49,12 +43,7 @@ const statusFromProfile = (profile: Profile | null): ListsStatusPayload => {
   });
   return {
     active,
-    anilist: providerStatus(
-      'anilist',
-      anilistUsername,
-      active,
-      profile?.anilistLastSync ?? null,
-    ),
+    anilist: providerStatus('anilist', anilistUsername, active, profile?.anilistLastSync ?? null),
     mal: providerStatus('mal', malUsername, active, profile?.malLastSync ?? null),
   };
 };
@@ -191,14 +180,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       clearStatusTimer();
       clearOperationTimer();
     };
-  }, [
-    userId,
-    patchProfile,
-    refreshStatus,
-    finishOperation,
-    clearStatusTimer,
-    clearOperationTimer,
-  ]);
+  }, [userId, patchProfile, refreshStatus, finishOperation, clearStatusTimer, clearOperationTimer]);
 
   const begin = useCallback(
     (

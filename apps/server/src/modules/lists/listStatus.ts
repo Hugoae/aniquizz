@@ -60,13 +60,7 @@ export const buildListsStatus = (
   const active = resolveActiveListProvider(row);
   return {
     active,
-    anilist: providerStatus(
-      'anilist',
-      row.anilistUsername,
-      active,
-      row.anilistLastSync,
-      resolved,
-    ),
+    anilist: providerStatus('anilist', row.anilistUsername, active, row.anilistLastSync, resolved),
     mal: providerStatus('mal', row.malUsername, active, row.malLastSync, resolved),
   };
 };

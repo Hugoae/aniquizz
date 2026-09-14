@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ChevronDown, ChevronRight, Film, Pause, Play, X } from 'lucide-react';
-import {
-  formatSongTypeLabel,
-  type LibraryAnimeGroup,
-  type LibrarySong,
-} from '@aniquizz/shared';
+import { formatSongTypeLabel, type LibraryAnimeGroup, type LibrarySong } from '@aniquizz/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -150,8 +146,7 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                           <p className="truncate text-sm font-medium">{song.title}</p>
                           <p className="truncate text-xs text-muted-foreground">
                             {song.artist}
-                            <span className="text-muted-foreground/50"> · </span>
-                            ♥ {song.likeCount}
+                            <span className="text-muted-foreground/50"> · </span>♥ {song.likeCount}
                           </p>
                         </button>
 

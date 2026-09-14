@@ -6,19 +6,17 @@ import {
   type SelectableAnime,
 } from './animethemes-selection';
 
-const anime = (
-  id: number,
-  popularity: number,
-  isLocked: boolean,
-): SelectableAnime => ({ id, popularity, isLocked, name: `Anime ${id}` });
+const anime = (id: number, popularity: number, isLocked: boolean): SelectableAnime => ({
+  id,
+  popularity,
+  isLocked,
+  name: `Anime ${id}`,
+});
 
 describe('AnimeThemes selection', () => {
   it('keeps the historical unlocked-only behavior by default', () => {
     const config = parseAnimeThemesSelectionConfig({});
-    const result = resolveAnimeThemeSelection(
-      [anime(1, 500, true), anime(2, 400, false)],
-      config,
-    );
+    const result = resolveAnimeThemeSelection([anime(1, 500, true), anime(2, 400, false)], config);
 
     assert.deepEqual(result.selectedIds, [2]);
     assert.deepEqual(result.missingIds, []);
@@ -28,10 +26,7 @@ describe('AnimeThemes selection', () => {
     const config = parseAnimeThemesSelectionConfig({
       ANIMETHEMES_INCLUDE_LOCKED: 'true',
     });
-    const result = resolveAnimeThemeSelection(
-      [anime(1, 500, true), anime(2, 400, false)],
-      config,
-    );
+    const result = resolveAnimeThemeSelection([anime(1, 500, true), anime(2, 400, false)], config);
 
     assert.deepEqual(result.selectedIds, [1, 2]);
   });
