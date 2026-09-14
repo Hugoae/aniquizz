@@ -48,6 +48,9 @@ export const GAME_COPY = {
     standard: 'Standard',
     me: 'Moi',
   },
+  stage: {
+    pauseEndOfRound: 'Pause en fin de round',
+  },
 } as const;
 
 export function playerDisconnectedToast(name: string): string {

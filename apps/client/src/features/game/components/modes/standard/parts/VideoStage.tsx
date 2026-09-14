@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Clock, Eye, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { AlertCircle, Eye, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
@@ -215,21 +215,12 @@ export const VideoStage = memo(function VideoStage({
       )}
 
       <DevRenderProfiler id="MatchCountdownOverlays">
-        {isPausePending && !isGamePaused && (
-          <div
-            className="pointer-events-none absolute left-4 top-3 z-40 flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-full border border-warning/40 bg-background/95 px-3 py-1.5 shadow-lg"
-            role="status"
-            aria-live="polite"
-          >
-            <Clock className="h-3.5 w-3.5 animate-pulse text-warning" aria-hidden="true" />
-            <span className="text-xs font-bold text-warning">Pause en fin de round</span>
-          </div>
-        )}
         <MatchCountdownOverlays
           phase={phase}
           phaseEndsAt={phaseEndsAt}
           phaseDurationSeconds={phaseDurationSeconds}
           isGamePaused={isGamePaused}
+          isPausePending={isPausePending}
           useCenterTimer={useCenterTimer}
           useBottomBar={useBottomBar}
         />

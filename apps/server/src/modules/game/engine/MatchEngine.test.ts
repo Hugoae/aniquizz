@@ -144,7 +144,7 @@ describe('MatchEngine', () => {
       expect(player.roundPoints).toBe(GAME_CONFIG.SCORING.DUO);
     });
 
-    it('clamps claimed typing to qcm in mix when the answer matches a choice', async () => {
+    it('honours mix typing even when the answer matches a QCM choice', async () => {
       const { room, engine } = createEngineHarness({
         settings: { responseType: 'mix' },
       });
@@ -153,8 +153,8 @@ describe('MatchEngine', () => {
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
 
-      expect(getPlayer(room, 'player-1').answerType).toBe('qcm');
-      expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.QCM);
+      expect(getPlayer(room, 'player-1').answerType).toBe('typing');
+      expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.TYPING);
     });
 
     it('keeps mix typing when the title is not an offered choice', async () => {

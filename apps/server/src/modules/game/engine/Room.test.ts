@@ -57,6 +57,34 @@ describe('Room.playerReturnToLobby', () => {
   });
 });
 
+describe('Room.reattachMatchSocket', () => {
+  it('reconnects a disconnected member without marking them in the lobby', () => {
+    const { io } = createMockIo();
+    const room = new Room('room-1', io, 'host', makeSettings());
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+    room.addOrReconnect('guest', 'Guest', 'guest', 's-guest');
+    room.status = 'playing';
+
+    room.markDisconnected('s-guest');
+    expect(room.players.get('guest')?.isConnected).toBe(false);
+
+    expect(room.reattachMatchSocket('guest', 's-guest-2')).toBe(true);
+
+    const guest = room.players.get('guest');
+    expect(guest?.isConnected).toBe(true);
+    expect(guest?.socketId).toBe('s-guest-2');
+    expect(room.returnedPlayers.has('guest')).toBe(false);
+  });
+
+  it('returns false when the user is not in the room', () => {
+    const { io } = createMockIo();
+    const room = new Room('room-1', io, 'host', makeSettings());
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+
+    expect(room.reattachMatchSocket('outsider', 's-new')).toBe(false);
+  });
+});
+
 describe('Room.applySettings', () => {
   it('applies host settings while the room is waiting', () => {
     const { io } = createMockIo();

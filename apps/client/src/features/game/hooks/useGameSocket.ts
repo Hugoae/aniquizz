@@ -6,6 +6,7 @@ import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
 import { toast } from 'sonner';
 import { notifyModerationBan } from '@/lib/suspension';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 import type {
   AnsweredPayload,
   AnswerType,
@@ -133,10 +134,9 @@ export function useGameSocket({
   useEffect(() => {
     if (!roomId) return;
 
-    socket.emit('get_game_state', { roomId });
-
-    const resync = () => socket.emit('get_game_state', { roomId });
-    socket.on('connect', resync);
+    const stopReady = subscribeWhenSocketReady(socket, () => {
+      socket.emit('get_game_state', { roomId });
+    });
 
     const clearResumeTimer = () => {
       if (resumeTimerRef.current) {
@@ -269,8 +269,8 @@ export function useGameSocket({
     socket.on('error', handlers.error);
 
     return () => {
+      stopReady();
       clearResumeTimer();
-      socket.off('connect', resync);
       socket.off('game_state_sync', handlers.game_state_sync);
       socket.off('game_started', handlers.game_started);
       socket.off('game:ready', handlers['game:ready']);

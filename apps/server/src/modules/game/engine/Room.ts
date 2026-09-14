@@ -128,6 +128,25 @@ export class Room {
   }
 
   /**
+   * Bind a new socket to an existing member without treating them as back in
+   * the lobby. `get_game_state` uses this after F5 so match broadcasts resume.
+   * Do not call `markInLobby` from that path — it can abort a playing match.
+   */
+  reattachMatchSocket(userId: string, socketId: string): boolean {
+    const existing = this.players.get(userId);
+    if (!existing) return false;
+    if (existing.socketId === socketId && existing.isConnected) return true;
+    existing.socketId = socketId;
+    existing.isConnected = true;
+    logger.info(
+      `[Room ${this.id}] Reattached match socket: ${existing.username} (${userId})`,
+      'Game',
+    );
+    this.emitLobbyUpdate();
+    return true;
+  }
+
+  /**
    * DEV-only: add a simulated player. Picks the next free bot profile from the
    * roster. Returns the created player, or null if the room is full / no bot
    * profile is available.

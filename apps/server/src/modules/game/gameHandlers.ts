@@ -104,6 +104,12 @@ export const registerGameHandlers = (
     if (!parsed) return;
     const room = gameManager.getRoom(parsed.roomId);
     if (!room || !room.players.has(uid())) return;
+    // A refresh drops the previous socket. Match events go to `io.to(room.id)`,
+    // so the new socket must rejoin that channel and replace `player.socketId`.
+    // Do not `markInLobby` here — that can abort a playing match.
+    void socket.join(room.id);
+    gameManager.cancelCleanup(room.id);
+    room.reattachMatchSocket(uid(), socket.id);
     socket.emit('game_state_sync', room.getSyncState());
   };
 

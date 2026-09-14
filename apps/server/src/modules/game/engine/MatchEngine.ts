@@ -364,10 +364,11 @@ export class MatchEngine {
     // so guard only their re-entry (their timer fires a single time anyway).
     if (player.isBot && player.hasAnswered) return;
 
-    // Anti-cheat: never trust the client's claimed answer type — clamp it to what
-    // the room's response mode actually allows so points can't be inflated
-    // (e.g. picking from QCM choices but claiming a "typing" answer for 5 pts).
-    const effectiveType = this.effectiveAnswerType(answerType, answer, item);
+    // Anti-cheat: never trust the client's claimed type beyond the room mode.
+    // Typing-only always scores as typing; QCM-only never awards typing. Mix
+    // honours the claim — the correct title is always a QCM label, so the
+    // old "string matches a button → qcm" clamp made honest Mix typing worth 2.
+    const effectiveType = this.effectiveAnswerType(answerType);
 
     const timeMs = Math.max(0, Date.now() - this.guessStartAt);
     const isCorrect = isAnswerCorrect(answer, item.validAnswers);
@@ -892,15 +893,9 @@ export class MatchEngine {
     return requiredVoteCount(humans);
   }
 
-  /**
-   * Clamp a client-claimed answer type to what the room's response mode permits.
-   * Mix typing is only honoured when the string is not an offered QCM/Duo label.
-   */
-  private effectiveAnswerType(claimed: AnswerType, answer: string, item: PlaylistItem): AnswerType {
-    return resolveEffectiveAnswerType(claimed, this.room.settings.responseType, answer, {
-      choices: item.choices,
-      duo: item.duo,
-    });
+  /** Clamp a claimed answer type to what the room's response mode permits. */
+  private effectiveAnswerType(claimed: AnswerType): AnswerType {
+    return resolveEffectiveAnswerType(claimed, this.room.settings.responseType);
   }
 
   /** Typed broadcast channel for this room. */

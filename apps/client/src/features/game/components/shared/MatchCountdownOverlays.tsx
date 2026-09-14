@@ -1,16 +1,32 @@
 import { memo } from 'react';
+import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useMatchCountdown } from '@/features/game/hooks/useMatchCountdown';
 import { CircularGameTimer } from './CircularGameTimer';
 import type { GamePhase } from '@/features/game/components/modes/standard/parts/types';
+import { GAME_COPY } from '@/features/game/copy/gameCopy';
 
 interface MatchCountdownOverlaysProps {
   phase: GamePhase;
   phaseEndsAt: number;
   phaseDurationSeconds: number;
   isGamePaused: boolean;
+  isPausePending: boolean;
   useCenterTimer: boolean;
   useBottomBar: boolean;
+}
+
+function PausePendingBadge() {
+  return (
+    <div
+      className="flex animate-fade-in items-center gap-2 whitespace-nowrap rounded-full border border-warning/40 bg-background/95 px-3 py-1.5 shadow-lg"
+      role="status"
+      aria-live="polite"
+    >
+      <Clock className="h-3.5 w-3.5 animate-pulse text-warning" aria-hidden="true" />
+      <span className="text-xs font-bold text-warning">{GAME_COPY.stage.pauseEndOfRound}</span>
+    </div>
+  );
 }
 
 /** Bottom progress bar when the video is visible during guessing (blurred / peek). */
@@ -54,6 +70,7 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
   phaseEndsAt,
   phaseDurationSeconds,
   isGamePaused,
+  isPausePending,
   useCenterTimer,
   useBottomBar,
 }: MatchCountdownOverlaysProps) {
@@ -63,6 +80,8 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
     phaseDurationSeconds,
     isGamePaused,
   });
+
+  const showPauseBadge = isPausePending && !isGamePaused;
 
   return (
     <>
@@ -74,6 +93,17 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
         >
           <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
           <span className="font-mono font-bold text-foreground">{timeLeft}s</span>
+        </div>
+      )}
+
+      {showPauseBadge && (
+        <div
+          className={cn(
+            'pointer-events-none absolute left-1/2 z-40 -translate-x-1/2',
+            useBottomBar ? 'bottom-14' : 'top-3',
+          )}
+        >
+          <PausePendingBadge />
         </div>
       )}
 
