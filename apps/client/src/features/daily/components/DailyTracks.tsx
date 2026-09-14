@@ -55,7 +55,7 @@ export function DailyTracks({ tracks, className, size = 'sm' }: DailyTracksProps
         <div key={index} className="flex flex-col items-center gap-1.5">
           <div
             className={cn(
-              'rounded-sm border',
+              'rounded-sm border transition-[height,background-color,border-color] duration-300 ease-out',
               BAR[size][track],
               track === 'empty' && 'border-border/70 bg-muted/40',
               track === 'pending' && 'border-warning/50 bg-warning/30',

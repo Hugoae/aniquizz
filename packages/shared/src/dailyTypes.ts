@@ -94,6 +94,9 @@ export interface DailyRevealDto {
   revealEndsAt: string;
   finished: boolean;
   result?: DailyResultDto;
+  /** Next playable clip only — no title/anime/choices. Used to warm the buffer. */
+  nextVideo: string | null;
+  nextVideoStartTime: number | null;
 }
 
 export interface DailySafeRoundDto {

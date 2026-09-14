@@ -225,7 +225,14 @@ function StandardGameLayoutInner({
 
               {/* Slot under the video: answer input while guessing; on small screens
                   the reveal info shows here as a band (the big side card is hidden). */}
-              <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
+              <div
+                className={cn(
+                  'z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible',
+                  // QCM 2×2 is two h-14 rows + gap-3. Keep that height on reveal so
+                  // the player row does not jump when the choices unmount.
+                  (responseType === 'qcm' || inputMode === 'carre') && 'min-h-[7.75rem]',
+                )}
+              >
                 {(phase === 'guessing' || phase === 'ready') ? (
                   <AnswerInput
                     responseType={responseType}

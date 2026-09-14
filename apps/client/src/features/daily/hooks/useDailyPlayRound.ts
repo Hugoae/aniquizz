@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DAILY_GUESS_MS,
   DAILY_REVEAL_MS,
@@ -57,17 +57,26 @@ export function useDailyPlayRound(input: {
     xp: profile?.xp ?? 0,
   };
 
-  const currentSong: CurrentSong = reveal
-    ? reveal.song
-    : { videoKey: round.videoKey, videoStartTime: round.videoStartTime };
+  const currentSong: CurrentSong = useMemo(
+    () =>
+      reveal
+        ? reveal.song
+        : { videoKey: round.videoKey, videoStartTime: round.videoStartTime },
+    [reveal, round.videoKey, round.videoStartTime],
+  );
 
-  const { videoRef, preloadRef, autoplayBlocked, resumeCurrent } = useVideoPlayback({
+  const { videoRef, preloadRef, autoplayBlocked, resumeCurrent, warmVideo } = useVideoPlayback({
     currentSong,
     phase,
     isGamePaused: false,
     volume: audioVolume,
     isMuted: audioMuted,
   });
+
+  useEffect(() => {
+    if (!reveal?.nextVideo) return;
+    warmVideo(reveal.nextVideo, reveal.nextVideoStartTime ?? 0);
+  }, [reveal?.nextVideo, reveal?.nextVideoStartTime, warmVideo]);
 
   const onVolumeChange = useCallback(
     (volume: number) => {

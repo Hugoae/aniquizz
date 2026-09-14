@@ -51,6 +51,8 @@ describe('tracksFromPrior', () => {
         tracks: ['correct', 'correct', 'empty', 'empty', 'empty'],
         revealEndsAt: new Date().toISOString(),
         finished: false,
+        nextVideo: 'v-next',
+        nextVideoStartTime: 4,
       },
     });
     expect(tracksFromPrior(previous, next)).toEqual(['correct', 'correct', 'empty', 'empty', 'empty']);
