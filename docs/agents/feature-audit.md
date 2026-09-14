@@ -5,7 +5,9 @@ par le nom du domaine (`Auth`, `Home`, `Hub`, `Game`, …).
 
 Le prompt ci-dessous est **en français** (livrable + discussion). Le code, les
 commentaires et les commits du repo restent en **anglais** ; l’UI utilisateur
-reste en **français**.
+reste en **français**. Un smoke navigateur de bout en bout (lentille 10,
+compte de test local) est **obligatoire** — guest + lecture CSS ne suffisent
+pas.
 
 ---
 
@@ -61,7 +63,22 @@ dis ce qui doit rester cohérent (n’audite pas ces voisins en entier).
    cibles de tap assez grandes, pas d’action essentielle en hover-only,
    wrap des CTA, safe-area si pertinent. Dire ce que tu as réellement
    ouvert dans le navigateur vs ce que tu as seulement lu dans le CSS.
-10. **SEO / contenu crawlable** — `<title>` / meta description / canonical /
+10. **Smoke de bout en bout** — obligatoire, pas un bonus. Compte de test
+    local (`admin@aniquizz.test` / `TEST_ACCOUNTS_PASSWORD`) : ne pas
+    parker « l’outil ne peut pas remplir le mot de passe ». Guest seul ne
+    suffit pas si FEATURE a une session, un socket, ou une route
+    `ProtectedRoute`. Parcours réel dans le navigateur (clics, pas un
+    screenshot) :
+    - guest → AuthModal / returnTo si FEATURE est protégée ;
+    - login → happy path FEATURE (et les voisins qui lisent le même état) ;
+    - vide / erreur / loading si tu peux les déclencher sans casser les
+      données ;
+    - F5 / reconnect si FEATURE est realtime (`session_replaced`, salon,
+      match) ;
+    - un viewport ~390px sur le même parcours (en plus du desktop).
+    Dans le livrable : matrice passé / raté / sauté, avec la raison si
+    sauté. Ne pas inventer un OK d’après le code.
+11. **SEO / contenu crawlable** — `<title>` / meta description / canonical /
     OG / Twitter / `robots` / JSON-LD s’ils existent pour FEATURE ;
     hiérarchie de titres (un `h1`) ; liens réels (`<a>` / `Link`) plutôt
     que `div role="button"` pour tout ce qui navigue ; `alt` des images
@@ -75,6 +92,9 @@ dis ce qui doit rester cohérent (n’audite pas ces voisins en entier).
 - Graphify `query` / `path` / `explain` avant Grep / Read.
 - Suis un parcours utilisateur de bout en bout (clic → réseau / socket →
   DB → UI).
+- **Smoke navigateur obligatoire** (lentille 10) avant de clore l’audit :
+  compte `admin_dev`, pas seulement guest. Si un pas est sauté, l’écrire
+  (et pourquoi) — ne pas le compter comme OK.
 - Pour le téléphone : reproduis le parcours sur un viewport court, pas
   seulement un screenshot desktop.
 - Préfère les preuves (fichier:ligne, payload, trou de test) au goût.
@@ -93,7 +113,8 @@ triés :
 | OK  | Explicitement bon ; évite de re-litiger |
 
 Chaque finding : sévérité, lentille, fichiers, ce qui cloche, correctif
-suggéré (pas de patch tant que je ne le demande pas). Termine par : ce que
-tu n’as pas vérifié (surtout mobile réel et SEO prerender), et un ordre de
-fix recommandé.
+suggéré (pas de patch tant que je ne le demande pas). Inclus une **matrice
+smoke** (parcours × passé/raté/sauté). Termine par : ce que tu n’as pas
+vérifié (surtout mobile réel et SEO prerender), et un ordre de fix
+recommandé.
 ```

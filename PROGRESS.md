@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix). **Profile is closed** (P1 + P2 + logged-in smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Hub/Game **logged-in** match/lobby QA is still open (those audits were guest + tests).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -223,6 +223,23 @@ Socket.io does not auto-reconnect after `io server disconnect`. A same-tab overl
 | **Browser**            | Own `/profile`: pokédex denominator 3002, friends list (not infinite spinner). Unknown UUID: « Profil indisponible » without home redirect. `/play` → solo config still works signed-in.                  |
 
 **Next:** Library audit. Optional later: Hub/Game logged-in smoke with the same test account. Do not start 26.7.
+
+### Audit — logged-in smoke Auth + Home + Hub + Game (2026-09-14)
+
+Canvas: `auth-hub-game-smoke`. Account `admin_dev` on local Vite + server. Feature-audit prompt lens 10 (smoke e2e) added in `docs/agents/feature-audit.md`.
+
+| Result      | What                                                                                                                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **OK**      | Logout → AuthModal. Guest Jouer → login → `/play`. News, Admin, settings, friends bubble, Home 390px + 700×400, join list, F5 `intent=create`.                                                                         |
+| **P1**      | Hub « Créer le salon » / « Lancer la partie » stay on the form. No server `lobby:create`. Catalogue pool stuck on Analyse…. Same ghost-socket class as profile stats; Hub hooks do not use `subscribeWhenSocketReady`. |
+| **Skipped** | In-match pause / skip / F5 / chat — never reached `/game`.                                                                                                                                                             |
+| **P2**      | Skip link click hit the fixed header. Pool a11y “son s”. Profile carousel pages all `aria-current`.                                                                                                                    |
+
+### Audit — Hub logged-in P1 + P2 hotfix ✅ (2026-09-14)
+
+Same ghost-socket class as profile stats. Hub pool hooks and lobby mutators now wait `subscribeWhenSocketReady` / `onceWhenSocketReady` (80 ms settle, no `connect()` from Hub). Skip link is `fixed z-[200]` (not `sr-only` under the header). Pool card hides the unit while the count is `…`. Carousel dots use `aria-current="page"` only on the active page.
+
+Do not start 26.7. Next: Library audit (or Game logged-in pause/skip/F5/chat after a match actually starts).
 
 ### Audit — Auth + Home ✅ (2026-09-14)
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { WatchedPoolStats } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 
 export interface WatchedPoolStatsRequest {
   roomId?: string;
@@ -69,24 +70,21 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
       setOffline(true);
     };
 
-    const onConnect = () => {
-      setOffline(false);
-      setLoading(true);
-      emit();
-    };
     const onListChanged = () => {
       setLoading(true);
-      emit();
+      if (socket.connected) emit();
     };
 
     socket.on('watched:pool_stats', onStats);
     socket.on('watched:list_changed', onListChanged);
-    socket.on('connect', onConnect);
     socket.on('connect_error', markOffline);
 
-    if (socket.connected) {
+    const stopReady = subscribeWhenSocketReady(socket, () => {
+      setOffline(false);
       emit();
-    } else if (!socket.active) {
+    });
+
+    if (!socket.connected && !socket.active) {
       markOffline();
     }
 
@@ -96,9 +94,9 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
 
     return () => {
       window.clearTimeout(timeout);
+      stopReady();
       socket.off('watched:pool_stats', onStats);
       socket.off('watched:list_changed', onListChanged);
-      socket.off('connect', onConnect);
       socket.off('connect_error', markOffline);
     };
   }, [roomId, soundCount, enabled, difficultyKey, typesKey, watchedMode, precision, refreshKey]);

@@ -24,6 +24,7 @@ import { shouldPollHubHomeStats, type LobbyView } from '@/features/hub/lobbySock
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useLobbySocketBindings } from '@/features/hub/hooks/useLobbySocketBindings';
 import { socket } from '@/lib/socket';
+import { createOnceReadyQueue, subscribeWhenSocketReady } from '@/lib/socketReady';
 import { getPlayBannedMessage, isSanctionActive } from '@/lib/suspension';
 import {
   playCreatePath,
@@ -133,6 +134,9 @@ export function useLobbyController() {
   const [isLaunchPending, setIsLaunchPending] = useState(false);
 
   const [multiplayerCount, setMultiplayerCount] = useState(0);
+  const readyQueueRef = useRef(createOnceReadyQueue(socket));
+
+  useEffect(() => () => readyQueueRef.current.cancel(), []);
 
   const getPlayerIdentity = useCallback(
     () => ({
@@ -158,15 +162,12 @@ export function useLobbyController() {
     const onJoinRoute = location.pathname.endsWith('/join');
     if (!onJoinRoute) return;
 
-    const subscribe = () => {
+    const stopReady = subscribeWhenSocketReady(socket, () => {
       socket.emit('lobby:subscribe_list');
-    };
-
-    if (socket.connected) subscribe();
-    else socket.once('connect', subscribe);
+    });
 
     return () => {
-      socket.off('connect', subscribe);
+      stopReady();
       if (socket.connected) socket.emit('lobby:unsubscribe_list');
     };
   }, [location.pathname]);
@@ -212,7 +213,9 @@ export function useLobbyController() {
           password: '',
         },
       };
-      socket.emit('lobby:create', soloRoomPayload);
+      readyQueueRef.current.enqueue(() => {
+        socket.emit('lobby:create', soloRoomPayload);
+      });
       window.history.replaceState({}, document.title);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -298,10 +301,12 @@ export function useLobbyController() {
   const emitSolo = useCallback(
     (soloConfig: GameConfig) => {
       const pseudo = profile?.username || HUB_COPY.player;
-      socket.emit('lobby:create', {
-        roomName: soloRoomName(pseudo),
-        ...getPlayerIdentity(),
-        settings: { ...soloConfig, isPrivate: true, maxPlayers: 1, password: '' },
+      readyQueueRef.current.enqueue(() => {
+        socket.emit('lobby:create', {
+          roomName: soloRoomName(pseudo),
+          ...getPlayerIdentity(),
+          settings: { ...soloConfig, isPrivate: true, maxPlayers: 1, password: '' },
+        });
       });
     },
     [profile, getPlayerIdentity],
@@ -324,7 +329,9 @@ export function useLobbyController() {
         return;
       }
       if (action === 'update') {
-        socket.emit('update_room_settings', { roomId, settings: cfg });
+        readyQueueRef.current.enqueue(() => {
+          socket.emit('update_room_settings', { roomId, settings: cfg });
+        });
         // Don't wait for room_updated — host may be off the Socket.IO channel after
         // a session replace; settings still apply server-side via roomId lookup.
         leaveConfigRoute();
@@ -335,7 +342,9 @@ export function useLobbyController() {
         ...getPlayerIdentity(),
         settings: cfg,
       };
-      socket.emit('lobby:create', payload);
+      readyQueueRef.current.enqueue(() => {
+        socket.emit('lobby:create', payload);
+      });
     },
     [currentRoomId, roomConfig, getPlayerIdentity, leaveConfigRoute, location.search, navigate],
   );
@@ -354,7 +363,9 @@ export function useLobbyController() {
   const startLobbyGame = useCallback(() => {
     if (!currentRoomId || !isAmIHost || isLaunchStarting) return;
     setIsLaunchPending(true);
-    socket.emit('start_game', { roomId: currentRoomId });
+    readyQueueRef.current.enqueue(() => {
+      socket.emit('start_game', { roomId: currentRoomId });
+    });
   }, [currentRoomId, isAmIHost, isLaunchStarting]);
   const toggleReady = useCallback(() => {
     if (currentRoomId) socket.emit('toggle_ready', { roomId: currentRoomId });
@@ -382,7 +393,10 @@ export function useLobbyController() {
   const joinRoom = useCallback(
     (roomId: string) => {
       const targetRoomId = roomId || joinCode;
-      if (targetRoomId) socket.emit('lobby:join', { roomId: targetRoomId, ...getPlayerIdentity() });
+      if (targetRoomId)
+        readyQueueRef.current.enqueue(() => {
+          socket.emit('lobby:join', { roomId: targetRoomId, ...getPlayerIdentity() });
+        });
     },
     [joinCode, getPlayerIdentity],
   );
@@ -391,10 +405,12 @@ export function useLobbyController() {
   }, []);
   const submitPassword = useCallback(() => {
     if (!pendingRoomId || !passwordInput) return;
-    socket.emit('lobby:join', {
-      roomId: pendingRoomId,
-      password: passwordInput,
-      ...getPlayerIdentity(),
+    readyQueueRef.current.enqueue(() => {
+      socket.emit('lobby:join', {
+        roomId: pendingRoomId,
+        password: passwordInput,
+        ...getPlayerIdentity(),
+      });
     });
   }, [pendingRoomId, passwordInput, getPlayerIdentity]);
 

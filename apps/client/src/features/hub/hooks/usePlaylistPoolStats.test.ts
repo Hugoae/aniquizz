@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PlaylistPoolStats } from '@aniquizz/shared';
+import { SOCKET_READY_SETTLE_MS } from '@/lib/socketReady';
 import { PLAYLIST_POOL_STATS_DEBOUNCE_MS, usePlaylistPoolStats } from './usePlaylistPoolStats';
 
 const socketMock = vi.hoisted(() => {
@@ -8,6 +9,7 @@ const socketMock = vi.hoisted(() => {
   return {
     handlers,
     socket: {
+      connected: true,
       on: vi.fn((event: string, cb: (payload: PlaylistPoolStats) => void) => {
         handlers.set(event, cb);
       }),
@@ -76,6 +78,9 @@ describe('usePlaylistPoolStats', () => {
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
     });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
     const emitted = socketMock.socket.emit.mock.calls[0]?.[1] as { requestId: number };
     expect(emitted.requestId).toEqual(expect.any(Number));
@@ -103,17 +108,26 @@ describe('usePlaylistPoolStats', () => {
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
     });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     rerender({ ...baseRequest, difficulty: ['easy'] });
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
     });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     rerender({ ...baseRequest, difficulty: ['hard'] });
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
+    });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(2);
   });
@@ -125,11 +139,17 @@ describe('usePlaylistPoolStats', () => {
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
     });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     rerender({ ...baseRequest, soundCount: 50 });
     act(() => {
       vi.advanceTimersByTime(PLAYLIST_POOL_STATS_DEBOUNCE_MS);
+    });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
   });

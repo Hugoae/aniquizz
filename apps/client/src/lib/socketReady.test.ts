@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   SESSION_REPLACED_GHOST_WINDOW_MS,
   SOCKET_READY_SETTLE_MS,
+  createOnceReadyQueue,
+  onceWhenSocketReady,
   shouldReconnectAfterSessionReplaced,
   subscribeWhenSocketReady,
 } from './socketReady';
@@ -69,6 +71,68 @@ describe('subscribeWhenSocketReady', () => {
     const emit = vi.fn();
     const stop = subscribeWhenSocketReady(socket, emit);
     stop();
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(emit).not.toHaveBeenCalled();
+  });
+});
+
+describe('onceWhenSocketReady', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('unsubscribes after the first successful emit', () => {
+    vi.useFakeTimers();
+    const socket = mockSocket(true);
+    const emit = vi.fn();
+    onceWhenSocketReady(socket, emit);
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(emit).toHaveBeenCalledTimes(1);
+    socket.drop();
+    socket.emitConnect();
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries on a later connect if the first settle dropped', () => {
+    vi.useFakeTimers();
+    const socket = mockSocket(true);
+    const emit = vi.fn();
+    onceWhenSocketReady(socket, emit);
+    socket.drop();
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(emit).not.toHaveBeenCalled();
+    socket.emitConnect();
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createOnceReadyQueue', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('cancels the previous queued emit', () => {
+    vi.useFakeTimers();
+    const socket = mockSocket(true);
+    const queue = createOnceReadyQueue(socket);
+    const first = vi.fn();
+    const second = vi.fn();
+    queue.enqueue(first);
+    queue.enqueue(second);
+    vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not emit after cancel', () => {
+    vi.useFakeTimers();
+    const socket = mockSocket(true);
+    const queue = createOnceReadyQueue(socket);
+    const emit = vi.fn();
+    queue.enqueue(emit);
+    queue.cancel();
     vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     expect(emit).not.toHaveBeenCalled();
   });

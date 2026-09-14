@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SOCKET_READY_SETTLE_MS } from '@/lib/socketReady';
 import { useWatchedPoolStats } from './useWatchedPoolStats';
 
 const socketMock = vi.hoisted(() => {
@@ -24,10 +25,15 @@ vi.mock('@/lib/socket', () => ({ socket: socketMock.socket }));
 
 describe('useWatchedPoolStats', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     socketMock.handlers.clear();
     socketMock.socket.emit.mockClear();
     socketMock.socket.on.mockClear();
     socketMock.socket.off.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('re-resolves the preview when a room list source changes', () => {
@@ -38,6 +44,9 @@ describe('useWatchedPoolStats', () => {
         enabled: true,
       }),
     );
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     act(() => {
@@ -64,6 +73,9 @@ describe('useWatchedPoolStats', () => {
         },
       },
     );
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     rerender({
@@ -72,6 +84,9 @@ describe('useWatchedPoolStats', () => {
       enabled: true,
       difficulty: ['easy'],
     });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
+    });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
 
     rerender({
@@ -79,6 +94,9 @@ describe('useWatchedPoolStats', () => {
       soundCount: 20,
       enabled: true,
       difficulty: ['hard'],
+    });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(2);
   });

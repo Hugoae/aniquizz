@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PlaylistPoolStats, WatchedPoolStats } from '@aniquizz/shared';
-import { resolveConfigPoolPreview } from './configPoolPreview';
+import { resolveConfigPoolPreview, formatPoolMetric, poolUnitLabel } from './configPoolPreview';
 
 const watched = (songs: number, animes: number): WatchedPoolStats => ({
   playableSongs: songs,
@@ -88,5 +88,15 @@ describe('resolveConfigPoolPreview', () => {
         playlistLoading: false,
       }).loading,
     ).toBe(true);
+  });
+});
+
+describe('formatPoolMetric', () => {
+  it('hides the unit while loading or empty so AT does not hear a stray s', () => {
+    expect(formatPoolMetric(null, true)).toEqual({ count: '…', unitVisible: false });
+    expect(formatPoolMetric(null, false)).toEqual({ count: '—', unitVisible: false });
+    expect(formatPoolMetric(12, false)).toEqual({ count: '12', unitVisible: true });
+    expect(poolUnitLabel(1, 'son', 'sons')).toBe('son');
+    expect(poolUnitLabel(12, 'son', 'sons')).toBe('sons');
   });
 });

@@ -40,3 +40,18 @@ export function resolveConfigPoolPreview(input: {
     loading: input.catalogueLoading,
   };
 }
+
+/** Hide the unit while the count is an ellipsis/dash so AT does not hear "son s". */
+export function formatPoolMetric(
+  value: number | null,
+  loading: boolean,
+): { count: string; unitVisible: boolean } {
+  if (value == null) {
+    return { count: loading ? '…' : '—', unitVisible: false };
+  }
+  return { count: value.toLocaleString('fr-FR'), unitVisible: true };
+}
+
+export function poolUnitLabel(value: number | null, singular: string, plural: string): string {
+  return value === 1 ? singular : plural;
+}

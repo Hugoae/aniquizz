@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { PlaylistPoolStats } from '@aniquizz/shared';
 import { hasPlaylistSource } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 
 export const PLAYLIST_POOL_STATS_DEBOUNCE_MS = 250;
 
@@ -61,25 +62,29 @@ export function usePlaylistPoolStats(request: PlaylistPoolStatsRequest) {
       setLoading(false);
     };
     socket.on('playlist:pool_stats', onStats);
+    let stopReady: (() => void) | undefined;
     const timeout = window.setTimeout(() => {
       setLoading(true);
-      socket.emit('playlist:get_pool_stats', {
-        requestId,
-        playlistId: playlistId ?? null,
-        decadePlaylistId: decadePlaylistId ?? null,
-        roomId,
-        soundCount: soundCountRef.current,
-        difficulty:
-          difficultyKey === null ? undefined : difficultyKey ? difficultyKey.split(',') : [],
-        types: typesKey === null ? undefined : typesKey ? typesKey.split(',') : [],
-        playlistWatched,
-        watchedMode,
-        precision,
-        allowFallback,
+      stopReady = subscribeWhenSocketReady(socket, () => {
+        socket.emit('playlist:get_pool_stats', {
+          requestId,
+          playlistId: playlistId ?? null,
+          decadePlaylistId: decadePlaylistId ?? null,
+          roomId,
+          soundCount: soundCountRef.current,
+          difficulty:
+            difficultyKey === null ? undefined : difficultyKey ? difficultyKey.split(',') : [],
+          types: typesKey === null ? undefined : typesKey ? typesKey.split(',') : [],
+          playlistWatched,
+          watchedMode,
+          precision,
+          allowFallback,
+        });
       });
     }, PLAYLIST_POOL_STATS_DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timeout);
+      stopReady?.();
       socket.off('playlist:pool_stats', onStats);
     };
   }, [

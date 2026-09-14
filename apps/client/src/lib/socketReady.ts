@@ -42,6 +42,45 @@ export function subscribeWhenSocketReady(
   };
 }
 
+/**
+ * Like `subscribeWhenSocketReady`, but unsubscribes after the first successful emit
+ * so a later reconnect does not replay a user mutator (create room, start game).
+ */
+export function onceWhenSocketReady(
+  socket: ReadySocket,
+  emit: () => void,
+  settleMs = SOCKET_READY_SETTLE_MS,
+): () => void {
+  const stop = subscribeWhenSocketReady(
+    socket,
+    () => {
+      stop();
+      emit();
+    },
+    settleMs,
+  );
+  return stop;
+}
+
+/** Last-write-wins queue for one-shot hub mutators (double-click / unmount). */
+export function createOnceReadyQueue(socket: ReadySocket) {
+  let stop: (() => void) | null = null;
+
+  return {
+    enqueue(emit: () => void) {
+      stop?.();
+      stop = onceWhenSocketReady(socket, () => {
+        stop = null;
+        emit();
+      });
+    },
+    cancel() {
+      stop?.();
+      stop = null;
+    },
+  };
+}
+
 export function shouldReconnectAfterSessionReplaced(opts: {
   connected: boolean;
   hasAuthToken: boolean;

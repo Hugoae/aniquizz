@@ -132,7 +132,7 @@ export function StatsCarousel({ items }: { items: StatItem[] }) {
                 type="button"
                 onClick={() => goTo(i)}
                 aria-label={`Page ${i + 1}`}
-                aria-current={i === page}
+                aria-current={i === page ? 'page' : undefined}
                 className={cn(
                   'flex min-h-11 min-w-11 items-center justify-center rounded-full',
                   i === page ? 'text-primary' : 'text-muted hover:text-muted-foreground',
