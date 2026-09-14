@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   hasEnoughQcmNames,
+  qcmPoolTooSmallReason,
   matchPlaylistPersistence,
   nextPlaylistPublishState,
   playlistChipsFromRecipe,
@@ -144,6 +145,13 @@ describe('hasEnoughQcmNames', () => {
     expect(hasEnoughQcmNames(3, 'qcm')).toBe(false);
     expect(hasEnoughQcmNames(3, 'mix')).toBe(false);
     expect(hasEnoughQcmNames(4, 'qcm')).toBe(true);
+  });
+});
+
+describe('qcmPoolTooSmallReason', () => {
+  it('mentions artists in artist precision', () => {
+    expect(qcmPoolTooSmallReason('artist')).toContain('artistes');
+    expect(qcmPoolTooSmallReason('anime')).toContain('animes');
   });
 });
 

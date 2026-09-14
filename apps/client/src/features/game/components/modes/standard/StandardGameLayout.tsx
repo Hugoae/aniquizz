@@ -1,4 +1,4 @@
-import { useMemo, useState, memo } from 'react';
+import { useMemo, useState, memo, type ReactNode } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
 import type { GamePlayer, Precision } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
@@ -56,6 +56,7 @@ interface StandardGameLayoutProps {
   setSidebarCollapsed: (v: boolean) => void;
   onShowLeave: () => void;
   onShowProfile: () => void;
+  onShowSettings: () => void;
   showPointsAnimation: boolean;
   pointsEarned: number | null;
   currentUserId: string;
@@ -67,6 +68,21 @@ interface StandardGameLayoutProps {
   isSprint?: boolean;
   sprintLeaderboard?: SprintLeaderboardPayload | null;
   pointsBadge?: string | null;
+  autofocusAnswer?: boolean;
+  submitOnEnter?: boolean;
+  showShortcutReminder?: boolean;
+  /** Optional meter above the video + reveal card (daily five-track tape). */
+  roundMeter?: ReactNode;
+  /** Hide pause when the mode has no pause vote (daily HTTP). */
+  showPause?: boolean;
+  /** Extra lock on the answer slot (in-flight daily HTTP, etc.). */
+  answerDisabled?: boolean;
+  /** Solo "Révéler" — defaults to socket skip when `roomId` is set. */
+  onSoloSkip?: () => void;
+  /** Hide header Round N/M bar (daily uses its own track meter). */
+  showRoundProgress?: boolean;
+  /** Daily — no running score or +pts toast. */
+  hideScores?: boolean;
 }
 
 export const StandardGameLayout = memo(StandardGameLayoutInner);
@@ -77,7 +93,7 @@ function StandardGameLayoutInner({
   isGamePaused, isPausePending, resumeCountdown, onVotePause, pauseVotes, pauseRequired, skipVotes, skipRequired, onVoteSkip,
   currentSong, myWatchedIds,
   inputMode, submittedAnswer, choices, onAction, onSwitchCarre, onSwitchDuo,
-  myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, showPointsAnimation, pointsEarned,
+  myProfile, sidebarCollapsed, setSidebarCollapsed, onShowLeave, onShowProfile, onShowSettings, showPointsAnimation, pointsEarned,
   currentUserId, gameMode, roomId,
   responseType = 'mix',
   configBadges,
@@ -86,6 +102,15 @@ function StandardGameLayoutInner({
   isSprint = false,
   sprintLeaderboard = null,
   pointsBadge,
+  autofocusAnswer = true,
+  submitOnEnter = true,
+  showShortcutReminder = true,
+  roundMeter,
+  showPause = true,
+  answerDisabled = false,
+  onSoloSkip,
+  showRoundProgress = true,
+  hideScores = false,
 }: StandardGameLayoutProps) {
   const revealSong = phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
@@ -95,6 +120,10 @@ function StandardGameLayoutInner({
   const [rosterAttention, setRosterAttention] = useState(0);
 
   const handleSoloSkip = () => {
+    if (onSoloSkip) {
+      onSoloSkip();
+      return;
+    }
     if (roomId) socket.emit('game:skip_round', { roomId });
   };
 
@@ -140,6 +169,9 @@ function StandardGameLayoutInner({
         onShowLeave={onShowLeave}
         onVotePause={onVotePause}
         onShowProfile={onShowProfile}
+        onShowSettings={onShowSettings}
+        showPause={showPause}
+        showRoundProgress={showRoundProgress}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -159,9 +191,13 @@ function StandardGameLayoutInner({
             />
           )}
 
-          <div className="relative flex h-full min-h-0 w-full max-w-[1400px] animate-fade-in flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
-            {/* Left stack: video, answer slot, players floor. */}
-            <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-hidden">
+          <div className="relative flex h-full min-h-0 w-full max-w-[1400px] animate-fade-in flex-col items-stretch justify-center gap-3">
+            {roundMeter ? (
+              <div className="flex shrink-0 justify-center">{roundMeter}</div>
+            ) : null}
+            <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
+              {/* Left stack: video, answer slot, players floor. */}
+              <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-hidden">
               <VideoStage
                 videoRef={videoRef}
                 phase={phase}
@@ -201,8 +237,11 @@ function StandardGameLayoutInner({
                     onSwitchDuo={onSwitchDuo}
                     precision={precision}
                     roundKey={currentRound}
-                    disabled={phase === 'ready'}
+                    disabled={phase === 'ready' || answerDisabled}
                     pointsBadge={pointsBadge}
+                    autoFocusEnabled={autofocusAnswer}
+                    submitOnEnter={submitOnEnter}
+                    showShortcutReminder={showShortcutReminder}
                   />
                 ) : songInfoProps ? (
                   <div className="flex w-full flex-col gap-3 lg:hidden">
@@ -227,10 +266,11 @@ function StandardGameLayoutInner({
                 players={players}
                 currentUserId={currentUserId}
                 showResult={phase === 'revealed'}
-                showPointsAnimation={showPointsAnimation}
-                pointsEarned={pointsEarned}
+                showPointsAnimation={!hideScores && showPointsAnimation}
+                pointsEarned={hideScores ? null : pointsEarned}
                 showRank={gameMode !== 'solo'}
                 onOpenRoster={handleOpenRoster}
+                hideScore={hideScores}
               />
             </div>
 
@@ -248,6 +288,7 @@ function StandardGameLayoutInner({
                   />
                 </div>
               )}
+            </div>
             </div>
           </div>
         </main>

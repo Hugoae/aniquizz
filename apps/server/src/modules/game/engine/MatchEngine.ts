@@ -26,6 +26,7 @@ import {
   type MatchSettingsSnapshot,
   pickMatchSettings,
   matchPlaylistPersistence,
+  matchHeardSongIds,
   type PeekWindow,
   scoreForAnswer,
   type SprintLeaderboardPayload,
@@ -324,7 +325,12 @@ export class MatchEngine {
     };
   }
 
-  handleAnswer(userId: string, answer: string, answerType: AnswerType): void {
+  handleAnswer(
+    userId: string,
+    answer: string,
+    answerType: AnswerType,
+    options?: { revealAfterAnswer?: boolean },
+  ): void {
     if (this.phase !== 'guessing' || this.isRoundEnded) return;
     const player = this.room.players.get(userId);
     const item = this.playlist[this.currentRoundIndex];
@@ -353,9 +359,9 @@ export class MatchEngine {
     // Anti-cheat: only signal THAT they answered — never the content/correctness.
     this.channel.emit('game:answered', { userId });
 
-    // Solo and multiplayer both run the full guess timer so players can change
-    // their pick until time runs out. Optional early reveal via `game:skip_round` (solo).
-    // Majority skip vote (`voteSkip`) can end the round early in multiplayer.
+    if (options?.revealAfterAnswer === true && this.room.isSolo) {
+      this.forceEndRound();
+    }
   }
 
   private endRound(): void {
@@ -555,7 +561,7 @@ export class MatchEngine {
           };
         }),
         rounds: this.recordedRounds,
-        songIds: this.playlist.map((s) => s.id),
+        songIds: this.heardSongIds(),
         ...matchPlaylistPersistence(this.room.settings),
       })
       .catch((e) => logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e));
@@ -798,6 +804,21 @@ export class MatchEngine {
       title: item?.title ?? null,
       endsAt: this.clock.endsAt || null,
     };
+  }
+
+  /** Catalogue ids whose clip started — leftover playlist rows stay out of SongHistory. */
+  private heardSongIds(): number[] {
+    const inProgress =
+      !this.isRoundEnded &&
+      (this.phase === 'guessing' || this.phase === 'reveal') &&
+      this.currentRoundIndex >= 0 &&
+      this.currentRoundIndex < this.playlist.length
+        ? this.playlist[this.currentRoundIndex].id
+        : null;
+    return matchHeardSongIds({
+      recordedSongIds: this.recordedRounds.map((round) => round.songId),
+      inProgressSongId: inProgress,
+    });
   }
 
   cancel(): void {

@@ -5,5 +5,5 @@ export const HOME_COPY = {
   eyebrow: '+ de 3\u00a0000 sons jouables',
   titleLead: 'Testez votre',
   titleAccent: 'culture anime',
-  sub: "Devinez l'opening ou l'ending. Solo ou multijoueur.",
+  sub: "Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !",
 } as const;

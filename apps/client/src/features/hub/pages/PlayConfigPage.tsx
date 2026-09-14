@@ -101,7 +101,11 @@ export function PlayConfigPage() {
   const soloOnlyModes = isSolo || hideRoomSettings;
 
   const watchedKey = useMemo(
-    () => lobbyPlayers.filter((p) => !p.isBot).map((p) => String(p.id)).sort().join(','),
+    () => lobbyPlayers
+      .filter((p) => !p.isBot)
+      .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
+      .sort()
+      .join(','),
     [lobbyPlayers],
   );
 

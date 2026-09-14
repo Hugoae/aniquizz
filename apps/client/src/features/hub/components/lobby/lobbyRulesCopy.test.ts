@@ -186,6 +186,16 @@ describe('buildLobbyRulesSections', () => {
     expect(flow?.lines?.some((l) => l.includes('Season 3'))).toBe(true);
   });
 
+  it('describes artist precision accepting credited units', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, precision: 'artist' },
+      { lobbyMode: 'solo' },
+    );
+    const flow = sections.find((s) => s.id === 'flow');
+    expect(flow?.lines?.some((l) => l.includes('inutile de tous les citer'))).toBe(true);
+    expect(flow?.lines?.some((l) => l.includes('ne comptent pas'))).toBe(true);
+  });
+
   it('uses podium win copy in multi victory', () => {
     const sections = buildLobbyRulesSections(baseConfig, { lobbyMode: 'multi', playerCount: 6 });
     const victory = sections.find((s) => s.id === 'victory');
@@ -224,6 +234,15 @@ describe('buildLobbyRulesSections', () => {
     );
     const victory = sections.find((s) => s.id === 'victory');
     expect(victory?.lines?.some((l) => l.includes('Seuil Bronze (Moyen) : 45 %'))).toBe(true);
+  });
+
+  it('lowers solo bronze threshold copy in artist precision', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, mode: 'solo', difficulty: ['medium'], precision: 'artist' },
+      { lobbyMode: 'solo' },
+    );
+    const victory = sections.find((s) => s.id === 'victory');
+    expect(victory?.lines?.some((l) => l.includes('Seuil Bronze (Moyen) : 42 %'))).toBe(true);
   });
 
   it('describes a staff playlist pack and Watched overlay', () => {

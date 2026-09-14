@@ -12,6 +12,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 |------|------------|-------|
 | **feature module** | Self-contained domain folder (components, hooks, copy) under `src/features/<domain>/`. | `features/` |
 | **useGameSocket** | Hook owning the in-match socket lifecycle; feeds `gameReducer`. | `features/game/` |
+| **useAnimeSearch / useArtistSearch** | Local fuzzy autocomplete; artist mode uses a separate catalogue (`artist:get_all`). | `features/game/hooks/` |
 | **gameReducer** | Client mirror of match state; merges server payloads (with lobby-config fallbacks for `videoMode`). | `features/game/` |
 | **useLobbyController** | Lobby actions (create/join, settings, `addBots`, ready). | `features/hub/` |
 | **lobbyRulesCopy** | Pure builder turning live `RoomConfig` into French rules text (unit-tested). | `features/hub/components/lobby/lobbyRulesCopy.ts` |
@@ -19,6 +20,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 | **useVideoPlayback** | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`. | `features/game/` |
 | **SoloMasteryBar / SoloScoreCard** | Game-over medal UI; take `precision` so labels match server thresholds. | `features/game/.../gameover/solo/` |
 | **adminApi** | Typed fetch client for `/admin/*` REST (Bearer JWT). | `lib/adminApi.ts` |
+| **dailyApi** | Typed fetch client for `/daily/*` (Quiz du jour). | `lib/dailyApi.ts` |
 | **socket.ts** | Singleton Socket.io client wired to Supabase auth. | `lib/socket.ts` |
 
 ## Known pitfalls
@@ -38,3 +40,6 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   animations that ignore it.
 - Route entry points are lazy-loaded; keep the Suspense/prefetch pattern
   (`DelayedRouteFallback`, `routePrefetch`) intact to avoid loading flashes.
+- **Quiz du jour has no resume.** `GET /daily/today` is metadata (`openAttemptId`
+  while in progress, never a playable round). Opening `/daily` forfeits leftover
+  rounds; play payloads come only from POST start/next/answer.

@@ -398,7 +398,11 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     }
   }
 
-  const discovered = await prisma.songHistory.groupBy({ by: ['songId'], _count: { _all: true } });
+  const discovered = await prisma.songHistory.groupBy({
+    by: ['songId'],
+    where: { song: { downloadStatus: 'COMPLETED' } },
+    _count: { _all: true },
+  });
   const discoveredSongs = discovered.length;
   const playableSongs = catalogue.completed;
 

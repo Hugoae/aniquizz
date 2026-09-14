@@ -108,6 +108,23 @@ describe('GameConfigForm', () => {
     expect(toggleSoundType).toHaveBeenCalledWith('ending');
   });
 
+  it('shows artist precision in QCM mode', () => {
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, responseType: 'qcm' }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /Artiste/i })).toBeInTheDocument();
+    expect(screen.getByText('Un artiste suffit')).toBeInTheDocument();
+  });
+
   it('shows catalogue pool counts under the config sections', () => {
     render(
       <GameConfigForm

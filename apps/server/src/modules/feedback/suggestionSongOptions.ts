@@ -1,14 +1,13 @@
 import { Prisma, prisma } from '@aniquizz/database';
-import type {
-  LibraryDifficulty,
-  LibrarySongType,
-  SuggestionSongOption,
-  SuggestionSongOptionsParams,
-  SuggestionSongOptionsResponse,
-} from '@aniquizz/shared';
 import {
+  parseCatalogueSearchQuery,
   SUGGESTION_SONG_OPTIONS_MAX_PAGE_SIZE,
   SUGGESTION_SONG_OPTIONS_PAGE_SIZE,
+  type LibraryDifficulty,
+  type LibrarySongType,
+  type SuggestionSongOption,
+  type SuggestionSongOptionsParams,
+  type SuggestionSongOptionsResponse,
 } from '@aniquizz/shared';
 import { resolveMatchingAnimeIdsForQuery } from '../catalogue/librarySearch';
 
@@ -54,25 +53,38 @@ export const searchSuggestionSongOptions = async (
   );
   if (query.length < MIN_QUERY_LENGTH) return emptyResponse(page, pageSize);
 
-  const matchingIds = await resolveMatchingAnimeIdsForQuery(query);
-  const contains = `%${escapeIlike(query)}%`;
-  const prefix = `${escapeIlike(query)}%`;
-  const exact = query.toLowerCase();
+  const parsed = parseCatalogueSearchQuery(query);
+  const text = parsed.text;
+  const matchingIds = text ? await resolveMatchingAnimeIdsForQuery(text) : [];
+  const contains = text ? `%${escapeIlike(text)}%` : '';
+  const prefix = text ? `${escapeIlike(text)}%` : '';
+  const exact = text.toLowerCase();
+  const typeSql = parsed.songType
+    ? Prisma.sql`AND s."songType" = ${parsed.songType}`
+    : Prisma.empty;
+  const seqSql =
+    parsed.sequence != null ? Prisma.sql`AND s.sequence = ${parsed.sequence}` : Prisma.empty;
   const animeIdClause =
     matchingIds.length > 0
       ? Prisma.sql`OR s."animeId" IN (${Prisma.join(matchingIds)})`
       : Prisma.empty;
-  const whereSql = Prisma.sql`
-    s."downloadStatus" = 'COMPLETED'
-    AND (
+  const textSql = text
+    ? Prisma.sql`AND (
       s.title ILIKE ${contains}
       OR s.artist ILIKE ${contains}
       OR a.name ILIKE ${contains}
       OR f.name ILIKE ${contains}
       ${animeIdClause}
-    )
+    )`
+    : Prisma.empty;
+  const whereSql = Prisma.sql`
+    s."downloadStatus" = 'COMPLETED'
+    ${typeSql}
+    ${seqSql}
+    ${textSql}
   `;
-  const orderSql = Prisma.sql`
+  const rankSql = text
+    ? Prisma.sql`
     CASE
       WHEN lower(s.title) = ${exact} OR lower(a.name) = ${exact} THEN 0
       WHEN s.title ILIKE ${prefix} OR a.name ILIKE ${prefix} THEN 1
@@ -83,7 +95,10 @@ export const searchSuggestionSongOptions = async (
       WHEN lower(COALESCE(f.name, '')) = ${exact} OR f.name ILIKE ${prefix} THEN 5
       WHEN f.name ILIKE ${contains} THEN 6
       ELSE 7
-    END,
+    END,`
+    : Prisma.empty;
+  const orderSql = Prisma.sql`
+    ${rankSql}
     a.name ASC,
     s."songType" ASC,
     s.sequence ASC

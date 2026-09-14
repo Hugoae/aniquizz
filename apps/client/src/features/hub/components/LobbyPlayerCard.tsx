@@ -19,6 +19,8 @@ export interface LobbyPlayer {
   level?: number;
   /** Whether this player has AniList or MAL linked (Watched-mode gating). */
   hasWatchedList?: boolean;
+  /** Internal fingerprint used to refresh Watched pool previews after list changes. */
+  watchedListKey?: string;
 }
 
 interface LobbyPlayerCardProps {

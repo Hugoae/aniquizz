@@ -18,6 +18,7 @@ import { DevToolsPanel } from "@/features/admin/components/DevToolsPanel";
 import { StatsPanel } from "@/features/admin/components/StatsPanel";
 import { SuggestionsPanel } from "@/features/admin/components/SuggestionsPanel";
 import { PlaylistsPanel } from "@/features/admin/components/PlaylistsPanel";
+import { DailyAdminPanel } from "@/features/admin/components/DailyAdminPanel";
 import { getAdminPanelState } from "@/features/admin/adminNavigation";
 
 const IS_DEV = import.meta.env.DEV;
@@ -108,6 +109,7 @@ export default function Admin() {
               <TabsTrigger value="rooms">Salons</TabsTrigger>
               <TabsTrigger value="catalogue">Catalogue</TabsTrigger>
               {canManage && <TabsTrigger value="playlists">Playlists</TabsTrigger>}
+              {canManage && <TabsTrigger value="daily">Quiz du jour</TabsTrigger>}
               <TabsTrigger value="suggestions">Suggestions</TabsTrigger>
               <TabsTrigger value="stats">Statistiques</TabsTrigger>
               {IS_DEV && canManage && <TabsTrigger value="dev">Dev Tools</TabsTrigger>}
@@ -129,6 +131,11 @@ export default function Admin() {
             {canManage && (
               <TabsContent value="playlists">
                 <PlaylistsPanel />
+              </TabsContent>
+            )}
+            {canManage && (
+              <TabsContent value="daily">
+                <DailyAdminPanel />
               </TabsContent>
             )}
             <TabsContent value="suggestions">

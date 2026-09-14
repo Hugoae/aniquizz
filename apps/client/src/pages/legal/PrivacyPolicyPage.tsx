@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
     >
       <h1>Politique de confidentialité</h1>
       <p className="lead text-muted-foreground">
-        Dernière mise à jour : 9 juillet 2026. AniQuizz est un jeu en ligne gratuit destiné à un
+        Dernière mise à jour : 12 septembre 2026. AniQuizz est un jeu en ligne gratuit destiné à un
         public francophone.
       </p>
 
@@ -35,11 +35,18 @@ export default function PrivacyPolicyPage() {
           solo, préférences de jeu.
         </li>
         <li>
-          <strong>Social :</strong> liste d&apos;amis, demandes d&apos;amitié, statut de blocage.
+          <strong>Social :</strong> liste d&apos;amis, demandes d&apos;amitié, statut de blocage,
+          audiences de visibilité (statut en ligne, historique récent, invitations).
         </li>
         <li>
-          <strong>AniList (optionnel) :</strong> nom d&apos;utilisateur AniList lié pour filtrer les
-          playlists « Ma liste » — nous ne stockons pas votre mot de passe AniList.
+          <strong>Listes AniList / MyAnimeList (optionnel) :</strong> pseudos liés pour filtrer le
+          mode « Ma liste » — nous ne stockons pas vos mots de passe ni la liste complète des animes.
+        </li>
+        <li>
+          <strong>Soutien Ko-fi (optionnel) :</strong> si vous choisissez de soutenir le projet,
+          Ko-fi et PayPal traitent le paiement et peuvent transmettre à l&apos;éditeur votre nom
+          d&apos;affichage, votre adresse e-mail, le montant et votre message. L&apos;application
+          AniQuizz ne collecte ni ne stocke vos informations bancaires.
         </li>
         <li>
           <strong>Technique :</strong> journaux serveur (adresse IP tronquée, horodatage, événements
@@ -52,6 +59,7 @@ export default function PrivacyPolicyPage() {
         <li>Fourniture du service et exécution du contrat (création de compte, parties, classements).</li>
         <li>Intérêt légitime : sécurité, anti-triche, modération, amélioration du service.</li>
         <li>Consentement : cookies d&apos;analyse non essentiels (voir section Cookies).</li>
+        <li>Gestion des soutiens volontaires et respect des obligations comptables et fiscales.</li>
       </ul>
 
       <h2>4. Sous-traitants et hébergement</h2>
@@ -71,8 +79,12 @@ export default function PrivacyPolicyPage() {
           <strong>Cloudflare R2</strong> — fichiers audio/vidéo des openings et endings.
         </li>
         <li>
-          <strong>AniList</strong> — récupération de votre liste d&apos;animes regardés (si vous liez
-          votre compte).
+          <strong>AniList / MyAnimeList</strong> — récupération de votre liste d&apos;animes
+          regardés (si vous liez un compte ; une seule source est active à la fois).
+        </li>
+        <li>
+          <strong>Ko-fi / PayPal</strong> — page de soutien externe et traitement des paiements
+          volontaires. Leurs propres politiques de confidentialité s&apos;appliquent.
         </li>
         <li>
           <strong>Google Fonts</strong> — polices typographiques (requête depuis votre navigateur).
@@ -87,7 +99,8 @@ export default function PrivacyPolicyPage() {
       <p>
         Les données de compte et de jeu sont conservées tant que votre compte est actif. Les journaux
         techniques sont conservés pour une durée limitée (généralement 30 à 90 jours), sauf obligation
-        légale ou enquête de modération.
+        légale ou enquête de modération. Les justificatifs liés aux soutiens sont conservés pendant la
+        durée requise par les obligations comptables et fiscales applicables.
       </p>
 
       <h2>6. Vos droits (RGPD)</h2>

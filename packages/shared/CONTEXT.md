@@ -12,13 +12,14 @@ See [`README.md`](./README.md) for the module table and build commands.
 |------|------------|-------|
 | **Socket contract** | The `ClientToServerEvents` / `ServerToClientEvents` interfaces — every event name and payload shape. Client and server both type against these; never redeclare. | `events.ts` |
 | **RoomSettings / RoomConfig** | The lobby configuration (difficulty, sounds, time, mode, responseType, precision, source). Drives the whole match. | `game.ts` |
-| **Precision** | `franchise` \| `anime`. `normalizePrecision()` maps the legacy `exact` → `anime`. | `game.ts` |
+| **Precision** | `franchise` \| `anime` \| `artist`. `normalizePrecision()` maps the legacy `exact` → `anime`. Artist typing accepts any billed `artistNames` unit (plus the display credit as free-type); QCM uses the first billed unit. Title/anime do not count. | `precision.ts`, `artistAnswers.ts` |
 | **Medal** | Solo grade Bronze → Platine. `computeMedal(score, maxScore, difficulties, precision)` compares the earned integer score against rounded tier thresholds. | `grading.ts` |
 | **Mastery ratio** | Earned / max score, blended across selected difficulties then offset by precision (`MEDALS.PRECISION_OFFSET`). | `grading.ts`, `constants.ts` |
 | **Victory** | Game-over result: solo medal or multiplayer podium. `computeVictory(input)` takes `precision`. | `victory.ts` |
 | **Fuzzy suggestions** | Ranked autocomplete matches for a typed title, capped at `FUZZY.SUGGESTION_LIMIT`. Prepare once with `prepareFuzzyCatalogue`. | `utils.ts`, `constants.ts` |
 | **Choice candidate pool** | The set of animes used to build QCM distractors; `buildChoiceCandidatePool(rows, precision, allowedAnimeIds?)` filters + dedupes. Empty `[]` is a closed universe (not global). | `selection.ts` |
 | **Thematic playlist recipe** | Staff pack membership: genres/tags/year/formats + include/exclude. Year is the song anime's `seasonYear`. | `playlist.ts` |
+| **Daily challenge** | Five-song QCM, not a Match. `decideDailySettle({ allowAdvance: false })` is GET `/today` — close a fully answered run, never start the next song. | `daily.ts` |
 
 ## Known pitfalls
 
@@ -31,7 +32,7 @@ See [`README.md`](./README.md) for the module table and build commands.
 - **Integer medal thresholds, not float ratios.** `medalMarkerScores()` is the single
   source of truth so the game-over medal matches the mastery-bar label (float compares
   like `0.9 >= 0.9000…1` previously mis-awarded a tier).
-- **Precision offset lowers tiers for `anime`.** Adding a difficulty or changing
+- **Precision offset lowers tiers for `anime` (−0.05) and `artist` (−0.08).** Adding a difficulty or changing
   `PRECISION_OFFSET` shifts every medal boundary — re-check `grading.test.ts` /
   `victory.test.ts`.
 - Keep this package free of `react`, `express`, `prisma`, or `socket.io` runtime

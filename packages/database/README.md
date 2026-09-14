@@ -30,6 +30,7 @@ packages/database/
     ├── global_build.ts         <-- Orchestrates steps 1 → 2 → 3 → 4
     ├── export_db_to_json.ts    <-- Dump DB tree to data/manual_edits.json (edit titles/tags/locks)
     ├── import_edits_to_db.ts   <-- Apply data/manual_edits.json back into the DB
+    ├── backfill_artist_names.ts <-- One-shot: fill Song.artistNames from display artist
     ├── reset_all.ts            <-- DANGER: wipe DB catalogue + empty R2 bucket + delete local JSON
     ├── seed_db.ts              <-- Reset + refill catalogue metadata from JSON (no downloads)
     ├── seed_dev_catalogue.ts   <-- DEV: quickly put a few playable openings on R2 (COMPLETED)

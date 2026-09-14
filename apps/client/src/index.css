@@ -438,14 +438,31 @@
   @apply font-semibold text-foreground;
 }
 
-/* Respect user motion preferences globally */
+/* Unlayered so duration wins over Tailwind's transition-* default 150ms.
+   Reduced / Auto+OS still win via the data-motion rules below (!important). */
+.floating-settings-morph {
+  transition-duration: 500ms;
+  transition-timing-function: cubic-bezier(0.33, 0.1, 0.2, 1);
+}
+
+/* Motion is driven by html[data-motion], set before first paint.
+   Full must override OS prefers-reduced-motion; missing attr still follows OS. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  html:not([data-motion='full']) *,
+  html:not([data-motion='full']) *::before,
+  html:not([data-motion='full']) *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
 }

@@ -2,9 +2,11 @@ import {
   ANILIST_API_DOWN_MESSAGE,
   hasEnoughQcmNames,
   normalizePrecision,
+  qcmPoolTooSmallReason,
   resolvePoolQueryFilters,
 } from '@aniquizz/shared';
 import {
+  countDistinctArtistCredits,
   countDistinctChoiceNames,
   countPlayableWatchedSongs,
   listPlayableAnimeIds,
@@ -12,10 +14,6 @@ import {
 } from './gameService';
 import type { Room } from './engine/Room';
 import { resolveWatchedPool, type WatchedPoolPlayerInput } from '../lists/watchedPoolResolve';
-
-const QCM_TOO_SMALL_REASON =
-  'Pas assez d\'animes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
-  'Passez en Typing ou élargissez les filtres.';
 
 export type WatchedPoolPlayer = WatchedPoolPlayerInput;
 export { resolveWatchedIds } from '../lists/watchedPoolResolve';
@@ -28,16 +26,20 @@ export const getWatchedPoolStatsForPlayers = async (
   precision?: string,
 ) => {
   const { ids: watchedIds, listError } = await resolveWatchedPool(watchedMode, players);
-  const resolvedFilters = resolvePoolQueryFilters(songFilters);
+  const resolvedPrecision = normalizePrecision(precision);
+  const resolvedFilters = {
+    ...resolvePoolQueryFilters(songFilters),
+    requirePlayableArtist: resolvedPrecision === 'artist',
+  };
   const playableSongs = await countPlayableWatchedSongs(watchedIds, resolvedFilters);
   const playableAnimeIds = await listPlayableAnimeIds({
     ...resolvedFilters,
     watchedIds,
   });
-  const distinctNames = await countDistinctChoiceNames(
-    normalizePrecision(precision),
-    playableAnimeIds,
-  );
+  const distinctNames =
+    resolvedPrecision === 'artist'
+      ? await countDistinctArtistCredits({ ...resolvedFilters, watchedIds })
+      : await countDistinctChoiceNames(resolvedPrecision, playableAnimeIds);
   return {
     animeCount: watchedIds.length,
     playableSongs,
@@ -61,6 +63,7 @@ export const validateWatchedStart = async (
     isBot: p.isBot,
     anilistUsername: p.anilistUsername,
     malUsername: p.malUsername,
+    activeListProvider: p.activeListProvider,
   }));
 
   const stats = await getWatchedPoolStatsForPlayers(
@@ -97,7 +100,7 @@ export const validateWatchedStart = async (
   }
 
   if (!hasEnoughQcmNames(stats.distinctNames, settings.responseType ?? 'mix')) {
-    return { ok: false, reason: QCM_TOO_SMALL_REASON };
+    return { ok: false, reason: qcmPoolTooSmallReason(settings.precision) };
   }
 
   return { ok: true };

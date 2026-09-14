@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import {
   libraryDifficultyClass,
@@ -178,9 +179,9 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                           </Button>
                           <div className="flex justify-center pr-10">
                             {videoUrl ? (
-                              <video
+                              <PrefVolumeVideo
                                 key={song.id}
-                                ref={videoRef}
+                                mediaRef={videoRef}
                                 src={videoUrl}
                                 controls
                                 autoPlay

@@ -32,6 +32,8 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
     enabled = true,
     refreshKey,
   } = request;
+  const difficultyKey = difficulty?.join(',') ?? null;
+  const typesKey = types?.join(',') ?? null;
 
   useEffect(() => {
     if (!enabled) {
@@ -48,8 +50,9 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
       socket.emit('watched:get_pool_stats', {
         roomId,
         soundCount,
-        difficulty,
-        types,
+        difficulty:
+          difficultyKey === null ? undefined : difficultyKey ? difficultyKey.split(',') : [],
+        types: typesKey === null ? undefined : typesKey ? typesKey.split(',') : [],
         watchedMode,
         precision,
       });
@@ -71,8 +74,13 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
       setLoading(true);
       emit();
     };
+    const onListChanged = () => {
+      setLoading(true);
+      emit();
+    };
 
     socket.on('watched:pool_stats', onStats);
+    socket.on('watched:list_changed', onListChanged);
     socket.on('connect', onConnect);
     socket.on('connect_error', markOffline);
 
@@ -89,10 +97,11 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
     return () => {
       window.clearTimeout(timeout);
       socket.off('watched:pool_stats', onStats);
+      socket.off('watched:list_changed', onListChanged);
       socket.off('connect', onConnect);
       socket.off('connect_error', markOffline);
     };
-  }, [roomId, soundCount, enabled, difficulty?.join(','), types?.join(','), watchedMode, precision, refreshKey]);
+  }, [roomId, soundCount, enabled, difficultyKey, typesKey, watchedMode, precision, refreshKey]);
 
   return { stats, loading, offline };
 }

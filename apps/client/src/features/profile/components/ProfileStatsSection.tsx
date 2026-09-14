@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import {
   Trophy, Target, Check, Flame, Zap, Medal,
   TrendingUp, CheckCheck, Users, User, Timer, Clock,
-  Gauge, Sparkles, Rocket, Layers,
+  Gauge, Sparkles, Rocket, Layers, Calendar,
 } from 'lucide-react';
 
 import { StatsCarousel, type StatItem } from '@/features/profile/components/StatsCarousel';
@@ -44,6 +44,66 @@ export function ProfileStatsSection({ vm }: ProfileStatsSectionProps) {
     { id: 'avgxp', icon: Sparkles, label: 'XP moyenne / partie', value: vm.avgXpPerGame.toLocaleString('fr-FR'), color: 'text-primary' },
     { id: 'multi', icon: Users, label: 'Parties multi', value: vm.multiCount, color: 'text-accent' },
     { id: 'solo', icon: User, label: 'Parties solo', value: vm.soloCount, color: 'text-warning' },
+    {
+      id: 'daily-played',
+      icon: Calendar,
+      label: 'Quiz du jour',
+      value: vm.stats.dailyCompletions ?? 0,
+      color: 'text-primary',
+    },
+    {
+      id: 'daily-wins',
+      icon: Trophy,
+      label: 'Victoires du jour',
+      value: vm.stats.dailyWins ?? 0,
+      color: 'text-accent',
+    },
+    {
+      id: 'daily-winrate',
+      icon: Medal,
+      label: 'Taux victoire du jour',
+      value: `${(vm.stats.dailyCompletions ?? 0) > 0
+        ? Math.round(((vm.stats.dailyWins ?? 0) / vm.stats.dailyCompletions) * 100)
+        : 0}%`,
+      color: 'text-success',
+    },
+    {
+      id: 'daily-streak',
+      icon: Flame,
+      label: 'Série du jour',
+      value: vm.stats.dailyStreak ?? 0,
+      color: 'text-warning',
+    },
+    {
+      id: 'daily-best-streak',
+      icon: Rocket,
+      label: 'Meilleure série du jour',
+      value: vm.stats.dailyLongestStreak ?? 0,
+      color: 'text-info',
+    },
+    {
+      id: 'daily-perfect',
+      icon: Sparkles,
+      label: 'Jours parfaits',
+      value: vm.stats.dailyPerfectDays ?? 0,
+      color: 'text-aqua',
+    },
+    {
+      id: 'daily-avg-rank',
+      icon: Medal,
+      label: 'Place moyenne du jour',
+      value: vm.stats.dailyAvgRank != null
+        ? `#${vm.stats.dailyAvgRank.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}`
+        : '—',
+      color: 'text-accent',
+    },
+    {
+      id: 'daily-avg-time',
+      icon: Timer,
+      label: 'Temps moyen du jour',
+      value: fmtAvgTime(vm.stats.dailyAvgTimeMs ?? null),
+      color: 'text-info',
+    },
   ], [vm]);
 
   return (

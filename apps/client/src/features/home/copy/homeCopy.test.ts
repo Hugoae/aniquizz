@@ -6,8 +6,9 @@ describe('HOME_COPY', () => {
     expect(HOME_COPY.eyebrow).toMatch(/3\u00a0000 sons jouables/);
   });
 
-  it('names openings and endings in the hero subtitle', () => {
-    expect(HOME_COPY.sub).toMatch(/opening/i);
-    expect(HOME_COPY.sub).toMatch(/ending/i);
+  it('advertises a free, ad-free anime-from-music pitch', () => {
+    expect(HOME_COPY.sub).toMatch(/anime à partir de la musique/i);
+    expect(HOME_COPY.sub).toMatch(/sans pubs/i);
+    expect(HOME_COPY.sub).toMatch(/gratuit/i);
   });
 });

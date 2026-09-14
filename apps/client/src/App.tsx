@@ -14,6 +14,9 @@ import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 import { SongLikesProvider } from '@/features/likes/context/SongLikesContext';
+import { PlayerPrefsProvider } from '@/features/settings/context/PlayerPrefsContext';
+import { ListsProvider } from '@/features/settings/integrations/ListsContext';
+import { NotificationFeedbackProvider } from '@/features/notifications/NotificationFeedbackProvider';
 
 import Home from '@/pages/Home';
 const GameHub = lazy(() => import('@/pages/GameHub'));
@@ -24,6 +27,7 @@ const Leaderboard = lazy(() => import('@/pages/Leaderboard'));
 const Library = lazy(() => import('@/pages/Library'));
 const Suggestions = lazy(() => import('@/features/suggestions/pages/Suggestions'));
 const Admin = lazy(() => import('@/pages/Admin'));
+const DailyPage = lazy(() => import('@/features/daily/pages/DailyPage'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 const PrivacyPolicyPage = lazy(() => import('@/pages/legal/PrivacyPolicyPage'));
@@ -188,7 +192,7 @@ const AppContent = () => {
             }
           />
 
-          <Route path="/daily" element={<Navigate to="/play" replace />} />
+          <Route path="/daily" element={<DailyPage />} />
           <Route path="/news" element={<News />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/library" element={<Library />} />
@@ -243,11 +247,17 @@ function App() {
       <CookieConsentProvider>
         <AuthModalProvider>
           <AuthProvider>
-            <SongLikesProvider>
-              <SessionFriendsProvider>
-                <AppContent />
-              </SessionFriendsProvider>
-            </SongLikesProvider>
+            <ListsProvider>
+              <SongLikesProvider>
+                <PlayerPrefsProvider>
+                  <NotificationFeedbackProvider>
+                    <SessionFriendsProvider>
+                      <AppContent />
+                    </SessionFriendsProvider>
+                  </NotificationFeedbackProvider>
+                </PlayerPrefsProvider>
+              </SongLikesProvider>
+            </ListsProvider>
           </AuthProvider>
         </AuthModalProvider>
       </CookieConsentProvider>

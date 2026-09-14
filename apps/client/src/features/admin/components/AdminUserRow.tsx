@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { MicOff, Ban, Power } from 'lucide-react';
+import { MicOff, Ban, Power, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { AdminUser, Presence, Role } from '@/lib/adminApi';
 import { adminApi } from '@/lib/adminApi';
+import { invalidateDailyToday } from '@/lib/dailyApi';
 import { cn } from '@/lib/utils';
 import {
   DURATION_OPTIONS,
@@ -319,6 +320,29 @@ export const AdminUserRow = memo(function AdminUserRow({
                 }
               >
                 <Power className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() =>
+                  onSetPending({
+                    title: `Réinitialiser le quiz du jour de ${u.username} ?`,
+                    description:
+                      "La tentative du jour est supprimée. L'XP du quiz du jour est retirée, le niveau est recalculé, et la série quotidienne est reculée d'un jour. Le joueur peut relancer le défi.",
+                    confirmLabel: 'Réinitialiser',
+                    destructive: true,
+                    action: async () => {
+                      const result = await adminApi.resetDaily(u.id);
+                      if (isSelf) invalidateDailyToday();
+                      return result;
+                    },
+                    successMsg: 'Quiz du jour réinitialisé.',
+                    targetUserId: u.id,
+                  })
+                }
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                Reset quiz du jour
               </Button>
               <Button
                 size="sm"

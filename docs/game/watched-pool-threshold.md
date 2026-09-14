@@ -2,7 +2,7 @@
 
 ## Behaviour
 
-- **Watched mode** draws songs only from resolved AniList ids (union or intersection).
+- **Watched mode** draws songs only from the player's **active** AniList or MAL list (union or intersection across the lobby). Both providers may stay linked.
 - When `playableSongs < soundCount`, the host must **explicitly opt in** via `watchedAllowFallback` (« Compléter avec l'aléatoire »).
 - **No silent fallback** to the global catalogue.
 - When `playableSongs === 0`, launch is always blocked.

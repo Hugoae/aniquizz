@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildChoices, buildDuo, buildChoiceCandidatePool } from './selection';
+import { buildChoices, buildDuo, buildChoiceCandidatePool, buildArtistChoices } from './selection';
 import { normalizeString } from './utils';
 
 describe('buildChoiceCandidatePool', () => {
@@ -89,5 +89,54 @@ describe('buildDuo', () => {
     expect(duo).toHaveLength(2);
     expect(duo).toContain('Naruto');
     expect(duo).toContain('???');
+  });
+});
+
+describe('buildArtistChoices', () => {
+  const pool = [
+    { artist: 'CHiCO, HoneyWorks', artistNames: ['CHiCO', 'HoneyWorks'] },
+    { artist: 'CHiCO with HoneyWorks', artistNames: ['CHiCO', 'HoneyWorks'] },
+    { artist: 'HoneyWorks', artistNames: ['HoneyWorks'] },
+    { artist: 'LiSA', artistNames: ['LiSA'] },
+    { artist: 'LiSA, Felix', artistNames: ['LiSA', 'Felix'] },
+    { artist: 'Aimer', artistNames: ['Aimer'] },
+    { artist: 'YOASOBI', artistNames: ['YOASOBI'] },
+    { artist: 'Official HIGE DANdism', artistNames: ['Official HIGE DANdism'] },
+  ];
+
+  it('uses the first billed unit as the correct option', () => {
+    const choices = buildArtistChoices('CHiCO, HoneyWorks', ['CHiCO', 'HoneyWorks'], pool, 4);
+    expect(choices).toContain('CHiCO');
+    expect(choices).not.toContain('CHiCO, HoneyWorks');
+    expect(choices).toHaveLength(4);
+  });
+
+  it('never puts a composite collab credit on a button', () => {
+    const choices = buildArtistChoices('LiSA', ['LiSA'], pool, 4);
+    expect(choices).toContain('LiSA');
+    expect(choices).not.toContain('CHiCO, HoneyWorks');
+    expect(choices).not.toContain('CHiCO with HoneyWorks');
+    expect(choices).not.toContain('LiSA, Felix');
+  });
+
+  it('excludes every credited unit of the answer from distractors', () => {
+    const choices = buildArtistChoices('CHiCO, HoneyWorks', ['CHiCO', 'HoneyWorks'], pool, 4);
+    expect(choices).not.toContain('HoneyWorks');
+    expect(choices).not.toContain('CHiCO with HoneyWorks');
+    for (const choice of choices) {
+      if (choice === 'CHiCO' || choice === '???') continue;
+      expect(['LiSA', 'Felix', 'Aimer', 'YOASOBI', 'Official HIGE DANdism']).toContain(choice);
+    }
+  });
+
+  it('keeps an atomic comma-in-name band as the correct option', () => {
+    const choices = buildArtistChoices(
+      'Fear, and Loathing in Las Vegas',
+      ['Fear, and Loathing in Las Vegas'],
+      pool,
+      4,
+    );
+    expect(choices).toContain('Fear, and Loathing in Las Vegas');
+    expect(choices).toHaveLength(4);
   });
 });

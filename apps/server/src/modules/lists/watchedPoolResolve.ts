@@ -6,6 +6,7 @@ export interface WatchedPoolPlayerInput {
   isBot?: boolean;
   anilistUsername?: string | null;
   malUsername?: string | null;
+  activeListProvider?: import('@aniquizz/shared').WatchedListProvider | null;
 }
 
 export const toWatchedPoolPlayer = (player: WatchedPoolPlayerInput): WatchedPoolPlayer => ({
@@ -35,6 +36,7 @@ export const resolveWatchedPool = async (
       resolvePlayerCatalogueWithMeta(player.userId, {
         anilistUsername: player.anilistUsername,
         malUsername: player.malUsername,
+        activeListProvider: player.activeListProvider,
       } satisfies WatchedListSources),
     ),
   );

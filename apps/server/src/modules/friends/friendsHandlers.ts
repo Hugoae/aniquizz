@@ -17,6 +17,17 @@ import { logger } from '../../utils/logger';
 import { friendsService, FriendServiceError } from './friendsService';
 import { isUserOnline, userRoom, presenceResolver } from './friendsPresence';
 import { getPublicProfile } from '../profile/profileService';
+import { unavailablePublicProfile } from '../profile/privacyRedaction';
+import {
+  canSendLobbyInvite,
+  normalizeLobbyInviteAudience,
+} from '@aniquizz/shared';
+import { prisma } from '@aniquizz/database';
+
+const INVITE_COOLDOWN_MS = 10_000;
+const inviteCooldownUntil = new Map<string, number>();
+
+const inviteCooldownKey = (fromId: string, toId: string) => `${fromId}:${toId}`;
 
 export const registerFriendsHandlers = (
   io: TypedServer,
@@ -154,6 +165,26 @@ export const registerFriendsHandlers = (
       if (await friendsService.isBlockedEitherWay(userId, targetId)) {
         throw new FriendServiceError('Action impossible.');
       }
+      if (!(await friendsService.areAcceptedFriends(userId, targetId))) {
+        throw new FriendServiceError('Vous devez être amis pour inviter.');
+      }
+      const targetPrivacy = await prisma.profile.findUnique({
+        where: { id: targetId },
+        select: { lobbyInviteAudience: true },
+      });
+      if (
+        !canSendLobbyInvite(
+          normalizeLobbyInviteAudience(targetPrivacy?.lobbyInviteAudience),
+          'friend',
+        )
+      ) {
+        throw new FriendServiceError("Cette personne n'accepte pas les invitations.");
+      }
+      const cooldownKey = inviteCooldownKey(userId, targetId);
+      const until = inviteCooldownUntil.get(cooldownKey) ?? 0;
+      if (Date.now() < until) {
+        throw new FriendServiceError('Patiente un peu avant de renvoyer une invitation.');
+      }
       if (!online(targetId)) throw new FriendServiceError("Cet ami n'est pas en ligne.");
 
       const me = await friendsService.getProfileLite(userId);
@@ -167,6 +198,7 @@ export const registerFriendsHandlers = (
         roomName: room.settings.name,
         isPrivate: room.settings.isPrivate,
       });
+      inviteCooldownUntil.set(cooldownKey, Date.now() + INVITE_COOLDOWN_MS);
       socket.emit('friends:info', { message: 'Invitation envoyée.' });
     } catch (e) {
       fail(e, 'invite');
@@ -179,7 +211,11 @@ export const registerFriendsHandlers = (
     try {
       if (!targetId) throw new FriendServiceError('Profil introuvable.');
       if (targetId.startsWith('bot-')) throw new FriendServiceError('Profil introuvable.');
-      const friends = await friendsService.getPublicFriends(targetId, presence);
+      if (await friendsService.isBlockedEitherWay(userId, targetId)) {
+        socket.emit('profile:public', unavailablePublicProfile(targetId));
+        return;
+      }
+      const friends = await friendsService.getPublicFriends(targetId, userId, presence);
       const profile = await getPublicProfile(userId, targetId, presence(targetId), friends);
       socket.emit('profile:public', profile);
     } catch (e) {
@@ -194,7 +230,7 @@ export const registerFriendsHandlers = (
   socket.on('friends:remove', guard(socket, 'friends', RATE_LIMITS.friends, handleRemove));
   socket.on('friends:block', guard(socket, 'friends', RATE_LIMITS.friends, handleBlock));
   socket.on('friends:unblock', guard(socket, 'friends', RATE_LIMITS.friends, handleUnblock));
-  socket.on('friends:invite', guard(socket, 'friends', RATE_LIMITS.friends, handleInvite));
+  socket.on('friends:invite', guard(socket, 'friends:invite', RATE_LIMITS.invite, handleInvite));
   socket.on('friends:set_privacy', guard(socket, 'friends', RATE_LIMITS.friends, handleSetPrivacy));
   socket.on('friends:recent', requireAuth(socket, handleRecent));
   socket.on('profile:get_public', guard(socket, 'friends', RATE_LIMITS.friends, handleGetPublic));

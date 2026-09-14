@@ -1,4 +1,4 @@
-import { LogOut, Pause, Play } from 'lucide-react';
+import { LogOut, Pause, Play, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,11 @@ interface GameTopBarProps {
   onShowLeave: () => void;
   onVotePause: () => void;
   onShowProfile: () => void;
+  onShowSettings: () => void;
+  /** HTTP daily (and similar) has no pause vote. */
+  showPause?: boolean;
+  /** Hide Round N/M + bar when a custom meter (e.g. daily tracks) is shown below. */
+  showRoundProgress?: boolean;
 }
 
 export function GameTopBar({
@@ -27,6 +32,9 @@ export function GameTopBar({
   onShowLeave,
   onVotePause,
   onShowProfile,
+  onShowSettings,
+  showPause = true,
+  showRoundProgress = true,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
 
@@ -46,19 +54,21 @@ export function GameTopBar({
           <LogOut className="h-4 w-4" />
           <span className="hidden md:inline">Quitter</span>
         </Button>
-        <Button
-          variant={isGamePaused || isPausePending || showPauseTally ? 'secondary' : 'outline'}
-          size="sm"
-          onClick={onVotePause}
-          className={cn('ml-2 gap-2', isGamePaused && 'border-none bg-warning text-warning-foreground hover:bg-warning/90')}
-        >
-          {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
-          {pauseLabel}
-        </Button>
+        {showPause && (
+          <Button
+            variant={isGamePaused || isPausePending || showPauseTally ? 'secondary' : 'outline'}
+            size="sm"
+            onClick={onVotePause}
+            className={cn('ml-2 gap-2', isGamePaused && 'border-none bg-warning text-warning-foreground hover:bg-warning/90')}
+          >
+            {isGamePaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
+            {pauseLabel}
+          </Button>
+        )}
       </div>
 
       <div className="pointer-events-none absolute left-1/2 flex h-full -translate-x-1/2 flex-col items-center justify-center pt-1">
-        <div className="mb-2 flex items-center gap-2">
+        <div className={cn('flex items-center gap-2', showRoundProgress && 'mb-2')}>
           <span className="eq h-3.5 text-primary" aria-hidden="true">
             <i></i>
             <i></i>
@@ -67,28 +77,42 @@ export function GameTopBar({
           </span>
           <span className="font-display text-xl font-extrabold leading-none tracking-tight gradient-text">AniQuizz</span>
         </div>
-        <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">          <span className="font-mono font-bold tabular-nums" aria-live="polite">
-            Round {currentRound}/{totalRounds}
-          </span>
-          <div
-            className="h-1.5 flex-1 overflow-hidden rounded-md bg-secondary"
-            role="progressbar"
-            aria-valuenow={currentRound}
-            aria-valuemin={0}
-            aria-valuemax={totalRounds}
-            aria-label="Progression de la partie"
-          >
-            <div className="h-full bg-gradient-primary transition-all duration-1000" style={{ width: `${roundProgress}%` }} />
+        {showRoundProgress && (
+          <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">
+            <span className="font-mono font-bold tabular-nums" aria-live="polite">
+              Round {currentRound}/{totalRounds}
+            </span>
+            <div
+              className="h-1.5 flex-1 overflow-hidden rounded-md bg-secondary"
+              role="progressbar"
+              aria-valuenow={currentRound}
+              aria-valuemin={0}
+              aria-valuemax={totalRounds}
+              aria-label="Progression de la partie"
+            >
+              <div className="h-full bg-gradient-primary transition-all duration-1000" style={{ width: `${roundProgress}%` }} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <ProfileButton
-        username={myProfile.username}
-        avatar={myProfile.avatar}
-        xp={myProfile.xp}
-        onClick={onShowProfile}
-      />
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onShowSettings}
+          aria-label="Paramètres"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+        <ProfileButton
+          username={myProfile.username}
+          avatar={myProfile.avatar}
+          xp={myProfile.xp}
+          onClick={onShowProfile}
+        />
+      </div>
     </header>
   );
 }

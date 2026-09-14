@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { env } from './config/env';
 import { app, httpServer, io } from './core/Server';
 import { prisma } from '@aniquizz/database';
@@ -11,6 +10,8 @@ import { registerLibraryRoutes } from './routes/library';
 import { registerSuggestionRoutes } from './routes/suggestions';
 import { registerAdminRoutes } from './modules/admin/adminRoutes';
 import { registerPlaylistRoutes } from './routes/playlists';
+import { registerDailyRoutes } from './routes/daily';
+import { startDailyHorizonJob } from './modules/daily/dailyGenerator';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
 import { GameManager } from './modules/game/gameManager';
@@ -33,6 +34,7 @@ async function main() {
     registerLibraryRoutes(app);
     registerSuggestionRoutes(app);
     registerPlaylistRoutes(app);
+    registerDailyRoutes(app);
     registerAdminRoutes(app, io, gameManager);
 
     // 3. Socket manager wires all feature handlers.
@@ -52,6 +54,7 @@ async function main() {
     void warmCatalogueCaches().catch((error) => {
       logger.warn('Catalogue cache warm-up failed (non-fatal)', 'Server', error);
     });
+    startDailyHorizonJob();
 
   } catch (error) {
     captureError(error, { context: 'Server', source: 'bootstrap' });

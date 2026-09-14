@@ -14,7 +14,7 @@ const INDEX = path.join(DIST, 'index.html');
 const SITE = 'AniQuizz';
 const HOME_TITLE = "AniQuizz - Le Blindtest d'Anime";
 const HOME_DESC =
-  "Blindtest anime en ligne. Devinez l'opening ou l'ending. Testez votre culture anime, solo ou entre amis.";
+  "Blindtest anime en ligne. Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !";
 
 function escapeHtml(s) {
   return s

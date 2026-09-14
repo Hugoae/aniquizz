@@ -6,11 +6,13 @@ import {
   ANILIST_API_DOWN_MESSAGE,
   PLAYLIST_UNAVAILABLE_REASON,
   playlistSourceIds,
+  qcmPoolTooSmallReason,
   resolvePoolQueryFilters,
   type PlaylistPoolStats,
 } from '@aniquizz/shared';
 import type { Room } from './engine/Room';
 import {
+  countDistinctArtistCredits,
   countDistinctChoiceNames,
   countPlayableSongs,
   listPlayableAnimeIds,
@@ -71,7 +73,11 @@ export const computePlaylistPoolStats = async (input: {
   if (!scope || !scope.isPublished) return { missing: true };
 
   const primaryId = input.playlistId ?? input.decadePlaylistId ?? scope.playlistIds[0] ?? '';
-  const lobbyFilters = resolvePoolQueryFilters(input.songFilters);
+  const resolvedPrecision = normalizePrecision(input.precision);
+  const lobbyFilters = {
+    ...resolvePoolQueryFilters(input.songFilters),
+    requirePlayableArtist: resolvedPrecision === 'artist',
+  };
   const filters = {
     ...lobbyFilters,
     playlistIds: scope.playlistIds,
@@ -83,13 +89,12 @@ export const computePlaylistPoolStats = async (input: {
     : filteredCount;
 
   const namesFromPack = !overlayActive || input.allowFallback;
-  const choiceAnimeIds = await listPlayableAnimeIds(
-    namesFromPack ? filters : { ...filters, watchedIds: input.watchedIds ?? [] },
-  );
-  const distinctNames = await countDistinctChoiceNames(
-    normalizePrecision(input.precision),
-    choiceAnimeIds,
-  );
+  const choiceFilters = namesFromPack ? filters : { ...filters, watchedIds: input.watchedIds ?? [] };
+  const choiceAnimeIds = await listPlayableAnimeIds(choiceFilters);
+  const distinctNames =
+    resolvedPrecision === 'artist'
+      ? await countDistinctArtistCredits(choiceFilters)
+      : await countDistinctChoiceNames(resolvedPrecision, choiceAnimeIds);
 
   return {
     playlistId: primaryId,
@@ -137,6 +142,7 @@ export const getPlaylistPoolStatsForRoom = async (
         isBot: p.isBot,
         anilistUsername: p.anilistUsername,
         malUsername: p.malUsername,
+        activeListProvider: p.activeListProvider,
       })),
     );
     watchedIds = resolved.ids;
@@ -220,9 +226,7 @@ export const validateMusicSourceStart = async (
   if (!hasEnoughQcmNames(stats.distinctNames, settings.responseType ?? 'mix')) {
     return {
       ok: false,
-      reason:
-        'Pas assez d\'animes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
-        'Passez en Typing ou élargissez le pack / les filtres.',
+      reason: qcmPoolTooSmallReason(settings.precision),
     };
   }
 

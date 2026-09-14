@@ -20,6 +20,7 @@ open or deferred.
 | `Friendship` | ON | Deny-by-default | All friendship writes via server (Prisma service role) |
 | `Match`, `MatchPlayer`, `MatchRound`, `RoundAnswer` | ON | Deny-by-default | Match history writes server-only |
 | `SongHistory` | ON | SELECT own rows | Writes server-only (`20260910194500_songhistory_server_writes`) |
+| `DailyChallenge`, `DailyChallengeRound`, `DailyAttempt`, `DailyAttemptAnswer`, `DailyPlayerStats` | ON | Deny-by-default | Quiz du jour is server-only (`20260913200000_daily_quiz`); client roles revoked |
 | `_prisma_migrations` | ON | No client policies | INFO advisor only — expected |
 | Storage `avatars` | Policies on `storage.objects` | Public read, owner write | WARN: bucket listing — deferred tighten |
 
@@ -28,7 +29,7 @@ open or deferred.
 - **Ban at connect**: `socketAuthMiddleware` rejects sockets when `Profile.bannedUntil > now`.
 - **Mute at chat**: `chatHandlers` drops messages when `socket.data.mutedUntil` is active.
 - **Anti-cheat sync**: `toPublicPlayer` strips answer fields until reveal; verified via `get_game_state` during guessing phase.
-- **Watched mode**: start aborts when no linked AniList username (no silent global fallback).
+- **Watched mode**: start aborts when no linked AniList/MAL username (no silent global fallback). Privacy audiences and blocks are enforced in `profileService` / friends handlers, not RLS.
 
 ## Remaining gaps (deferred)
 
@@ -56,4 +57,4 @@ node scripts/check-english-code.mjs
 - **2026-07-09 (9.1)**: Enable RLS deny-by-default on server-only match/social tables; revoke catalogue writes from client roles.
 - **2026-07-09 (9.2)**: Document posture; add socket integration tests for ban/mute/anti-cheat/watched abort paths.
 - **2026-09-10**: Dropped `SongHistory` `"Add to history"` INSERT policy; revoked INSERT/UPDATE/DELETE/TRUNCATE on `SongHistory` and TRUNCATE on `Profile` from `anon`/`authenticated`. Client SELECT of own history remains.
-- **2026-09-12 (HIBP)**: Intentionally not enabled because the project does not have Supabase Pro+. Advisor `auth_leaked_password_protection` remains WARN and is accepted; this is not an open 26.5 action.
+- **2026-09-13 (Daily)**: Quiz du jour tables enabled RLS and revoked `anon`/`authenticated`; Express owns every read and mutation.

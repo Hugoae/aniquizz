@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
-import { RESPONSE_MODES, PRECISION_OPTIONS, estimateMatchMinutes } from './formOptions';
+import { RESPONSE_MODES, PRECISION_OPTIONS, PRECISION_HELP, estimateMatchMinutes } from './formOptions';
 import { FiltersSection } from './FiltersSection';
 
 interface RulesSectionProps {
@@ -77,12 +77,14 @@ export function RulesSection({ config, update, toggleSoundType, toggleDifficulty
         </div>
       </div>
 
-      {/* Precision (only when typing is involved) */}
-      {(isSprint || config.responseType !== 'qcm') && (
-        <div className="space-y-2">
-          <SectionHeader icon={Target} title="Précision" tooltip="Franchise = la saga suffit. Anime = la saison précise de l'anime est requise." />
-          <div className="grid grid-cols-2 gap-2">
-            {PRECISION_OPTIONS.map(({ id, label, description, icon: Icon }) => (
+      <div className="space-y-2">
+        <SectionHeader
+          icon={Target}
+          title="Précision"
+          tooltip={PRECISION_HELP}
+        />
+        <div className="grid grid-cols-3 gap-2">
+          {PRECISION_OPTIONS.map(({ id, label, description, icon: Icon }) => (
               <OptionButton
                 key={id}
                 active={config.precision === id}
@@ -92,12 +94,11 @@ export function RulesSection({ config, update, toggleSoundType, toggleDifficulty
                 <div className="flex items-center gap-2 text-xs font-bold">
                   <Icon className="h-3.5 w-3.5" aria-hidden="true" /> {label}
                 </div>
-                <div className="mt-0.5 text-[10px] text-muted-foreground">{description}</div>
-              </OptionButton>
-            ))}
-          </div>
+              <div className="mt-0.5 text-[10px] text-muted-foreground">{description}</div>
+            </OptionButton>
+          ))}
         </div>
-      )}
+      </div>
 
       <div className="space-y-3 border-t border-border/80 pt-4">
         <FiltersSection

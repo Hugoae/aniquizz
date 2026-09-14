@@ -1,6 +1,6 @@
 import { Difficulty, SongType } from '@prisma/client';
 import { prisma } from '@aniquizz/database';
-import { shuffleArray, buildChoiceCandidatePool, selectedPoolSongTypes, type Precision } from '@aniquizz/shared';
+import { shuffleArray, buildChoiceCandidatePool, selectedPoolSongTypes, collectArtistSearchLabels, answerIdentityKey, type ArtistChoiceRow, type Precision } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { playlistMembershipAnd } from './playlistQuery';
 
@@ -38,6 +38,8 @@ export interface SongFilters {
   allowWatchedFallback?: boolean;
   /** Cumulative song ids from prior matches in this lobby (excluded when possible). */
   excludePriorMatchSongIds?: number[];
+  /** Artist precision: skip songs with no structured/playable credit. */
+  requirePlayableArtist?: boolean;
 }
 
 /** Shape of a fully-selected song (Prisma Song + anime + franchise). */
@@ -45,6 +47,7 @@ export interface SelectedSong {
   id: number;
   title: string;
   artist: string;
+  artistNames: string[];
   songType: SongType;
   sequence: number;
   videoKey: string;
@@ -121,9 +124,15 @@ const DIFFICULTY_ORDER: Difficulty[] = [Difficulty.HARD, Difficulty.MEDIUM, Diff
 
 const buildSongWhere = (
   baseWhere: Record<string, unknown>,
-  filters?: Pick<SongFilters, 'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds'>,
+  filters?: Pick<
+    SongFilters,
+    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+  >,
 ): Record<string, unknown> => {
   const where = { ...baseWhere };
+  if (filters?.requirePlayableArtist) {
+    where.artistNames = { isEmpty: false };
+  }
   if (filters?.playlistIds?.length) {
     const membership = playlistMembershipAnd(filters.playlistIds);
     if (membership.length === 1) {
@@ -350,6 +359,7 @@ export const getRandomSongs = async (
       types: filters?.types,
       playlistSongIds: filters?.playlistSongIds,
       playlistIds: filters?.playlistIds,
+      requirePlayableArtist: filters?.requirePlayableArtist,
     },
   );
 
@@ -364,7 +374,10 @@ export const getRandomSongs = async (
 };
 
 export const countPlayableSongs = async (
-  filters: Pick<SongFilters, 'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds'>,
+  filters: Pick<
+    SongFilters,
+    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+  >,
 ): Promise<number> => {
   if (isEmptyPlaylistConstraint(filters)) return 0;
   if (filters.watchedIds && filters.watchedIds.length === 0) return 0;
@@ -381,7 +394,7 @@ export const countPlayableSongs = async (
  */
 export const countPlayableWatchedSongs = async (
   watchedIds: number[],
-  filters?: Pick<SongFilters, 'difficulty' | 'types'>,
+  filters?: Pick<SongFilters, 'difficulty' | 'types' | 'requirePlayableArtist'>,
 ): Promise<number> => countPlayableSongs({ ...filters, watchedIds });
 
 export const countDistinctChoiceNames = async (
@@ -389,12 +402,41 @@ export const countDistinctChoiceNames = async (
   allowedAnimeIds: number[],
 ): Promise<number> => {
   if (!allowedAnimeIds.length) return 0;
+  if (precision === 'artist') {
+    const pool = await getArtistChoiceCandidates(allowedAnimeIds);
+    return collectArtistSearchLabels(pool).length;
+  }
   const pool = await getChoiceCandidates(precision, allowedAnimeIds);
   return pool.length;
 };
 
+export const countDistinctArtistCredits = async (
+  filters: Pick<
+    SongFilters,
+    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+  >,
+): Promise<number> => {
+  if (isEmptyPlaylistConstraint(filters)) return 0;
+  if (filters.watchedIds && filters.watchedIds.length === 0) return 0;
+  const where = buildSongWhere(
+    { downloadStatus: 'COMPLETED' },
+    { ...filters, requirePlayableArtist: true },
+  );
+  if (filters.difficulty?.length) {
+    where.difficulty = { in: filters.difficulty.map(toDifficultyEnum) };
+  }
+  const rows = await prisma.song.findMany({
+    where,
+    select: { artist: true, artistNames: true },
+  });
+  return collectArtistSearchLabels(rows).length;
+};
+
 export const listPlayableAnimeIds = async (
-  filters: Pick<SongFilters, 'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds'>,
+  filters: Pick<
+    SongFilters,
+    'difficulty' | 'types' | 'playlistSongIds' | 'playlistIds' | 'watchedIds' | 'requirePlayableArtist'
+  >,
 ): Promise<number[]> => {
   if (isEmptyPlaylistConstraint(filters)) return [];
   if (filters.watchedIds && filters.watchedIds.length === 0) return [];
@@ -485,6 +527,10 @@ export const getChoiceCandidates = async (
   precision: Precision,
   allowedAnimeIds?: number[],
 ): Promise<string[]> => {
+  if (precision === 'artist') {
+    const rows = await getArtistChoiceCandidates(allowedAnimeIds);
+    return collectArtistSearchLabels(rows);
+  }
   if (allowedAnimeIds !== undefined) {
     return loadChoiceCandidates(precision, allowedAnimeIds);
   }
@@ -504,10 +550,77 @@ export const getChoiceCandidates = async (
   return promise;
 };
 
+interface ArtistSongRow extends ArtistChoiceRow {
+  animeId: number;
+}
+
+interface ArtistRowsCacheEntry {
+  timestamp: number;
+  promise: Promise<ArtistSongRow[]>;
+}
+
+let artistRowsCache: ArtistRowsCacheEntry | null = null;
+
+const loadAllArtistChoiceRows = async (): Promise<ArtistSongRow[]> => {
+  const rows = await prisma.song.findMany({
+    where: { downloadStatus: 'COMPLETED', artistNames: { isEmpty: false } },
+    select: { artist: true, artistNames: true, animeId: true },
+  });
+  return rows.map((row) => ({
+    artist: row.artist,
+    artistNames: row.artistNames,
+    animeId: row.animeId,
+  }));
+};
+
+const getAllArtistChoiceRows = async (): Promise<ArtistSongRow[]> => {
+  const now = Date.now();
+  if (artistRowsCache && now - artistRowsCache.timestamp < CHOICE_CANDIDATES_TTL_MS) {
+    return artistRowsCache.promise;
+  }
+  const promise = loadAllArtistChoiceRows().catch((error) => {
+    artistRowsCache = null;
+    throw error;
+  });
+  artistRowsCache = { timestamp: now, promise };
+  return promise;
+};
+
+const dedupeArtistChoiceRows = (rows: ArtistSongRow[]): ArtistChoiceRow[] => {
+  const byKey = new Map<string, ArtistChoiceRow>();
+  for (const row of rows) {
+    const key = answerIdentityKey(row.artist);
+    if (!key || byKey.has(key)) continue;
+    byKey.set(key, { artist: row.artist, artistNames: row.artistNames });
+  }
+  return [...byKey.values()];
+};
+
+/** Deduped billed units for artist QCM/duo, optionally restricted to a song universe. */
+export async function getArtistChoiceCandidates(
+  allowedAnimeIds?: number[],
+): Promise<ArtistChoiceRow[]> {
+  const rows = await getAllArtistChoiceRows();
+  if (allowedAnimeIds !== undefined) {
+    const allowed = new Set(allowedAnimeIds);
+    return dedupeArtistChoiceRows(rows.filter((row) => allowed.has(row.animeId)));
+  }
+  return dedupeArtistChoiceRows(rows);
+}
+
+/** Deduped billed units for client autocomplete. */
+export async function getAllArtistSearchEntries(): Promise<
+  { name: string; franchise: null; altNames: string[] }[]
+> {
+  const rows = await getAllArtistChoiceRows();
+  return collectArtistSearchLabels(rows).map((name) => ({ name, franchise: null, altNames: [] }));
+}
+
 /** Invalidate autocomplete + QCM candidate caches (call after catalogue edits). */
 export const invalidateChoiceCandidates = (): void => {
   choiceCandidatesCache.clear();
   animeNamesCache = null;
+  artistRowsCache = null;
 };
 
 /**
@@ -516,5 +629,9 @@ export const invalidateChoiceCandidates = (): void => {
  * Best-effort and non-blocking.
  */
 export const warmCatalogueCaches = async (): Promise<void> => {
-  await Promise.all([getChoiceCandidates('franchise'), getChoiceCandidates('anime')]);
+  await Promise.all([
+    getChoiceCandidates('franchise'),
+    getChoiceCandidates('anime'),
+    getAllArtistSearchEntries(),
+  ]);
 };

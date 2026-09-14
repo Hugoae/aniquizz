@@ -4,6 +4,7 @@ import type { GameConfig } from '@aniquizz/shared';
 import {
   GAME_CONFIG,
   normalizePrecision,
+  isArtistPrecision,
   effectiveMedalThresholds,
   VIDEO_MODE_LABELS,
   normalizeVideoMode,
@@ -65,14 +66,18 @@ const sprintScoringLines = (): string[] => {
 };
 
 const scoringLinesForConfig = (config: GameConfig): string[] =>
-  config.gameType === 'sprint' ? sprintScoringLines() : scoringLines(config.responseType);
+  config.gameType === 'sprint' ? sprintScoringLines() : scoringLines(config.responseType, config.precision);
 
-const scoringLines = (responseType: GameConfig['responseType']): string[] => {
+const scoringLines = (
+  responseType: GameConfig['responseType'],
+  precision: GameConfig['precision'],
+): string[] => {
   const { SCORING } = GAME_CONFIG;
 
   const typingLine = `Typing : ${SCORING.TYPING} pts — écris toi-même la réponse au clavier.`;
-  const typingAutocompleteLine =
-    'Autocomplétion : en tapant, les titres correspondants s\'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.';
+  const typingAutocompleteLine = isArtistPrecision(precision)
+    ? 'Autocomplétion : en tapant, les artistes correspondants s\'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.'
+    : 'Autocomplétion : en tapant, les titres correspondants s\'affichent dans un menu au-dessus du champ ; sélectionne une proposition ou valide ta saisie.';
   const typingToleranceLine =
     'Une tolérance aux fautes de frappe s\'applique sur les réponses longues.';
   const qcmLine = `Carré : ${SCORING.QCM} pts — choisis parmi 4 propositions.`;
@@ -90,8 +95,12 @@ const scoringLines = (responseType: GameConfig['responseType']): string[] => {
 };
 
 const precisionFlowLine = (precision: GameConfig['precision']): string => {
-  if (normalizePrecision(precision) === 'franchise') {
+  const resolved = normalizePrecision(precision);
+  if (resolved === 'franchise') {
     return 'Précision Franchise : « My Hero Academia » suffit, inutile de préciser « My Hero Academia Season 3 ».';
+  }
+  if (resolved === 'artist') {
+    return 'Précision Artiste : un des artistes ou groupes crédités suffit, inutile de tous les citer. Le titre et l\'anime ne comptent pas.';
   }
   return 'Précision Anime : « My Hero Academia Season 3 » est requis, « My Hero Academia » seul ne suffit pas.';
 };

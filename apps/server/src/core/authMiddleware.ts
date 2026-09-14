@@ -3,7 +3,7 @@ import { prisma } from '@aniquizz/database';
 import { env } from '../config/env';
 import { logger } from '../utils/logger';
 import { supabaseAdmin } from '../lib/supabase';
-import { levelFromXp, type SocketData, type UserRole } from '@aniquizz/shared';
+import { levelFromXp, resolveActiveListProvider, type SocketData, type UserRole, type WatchedListProvider } from '@aniquizz/shared';
 import type { TypedSocket } from './socketTypes';
 
 /**
@@ -86,13 +86,14 @@ interface ModerationState {
   level: number;
   anilistUsername: string | null;
   malUsername: string | null;
+  activeListProvider: WatchedListProvider | null;
 }
 
 const loadModeration = async (userId: string): Promise<ModerationState | null> => {
   try {
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-      select: { role: true, bannedUntil: true, mutedUntil: true, xp: true, anilistUsername: true, malUsername: true },
+    select: { role: true, bannedUntil: true, mutedUntil: true, xp: true, anilistUsername: true, malUsername: true, activeListProvider: true },
     });
     if (!profile) return null;
     return {
@@ -102,6 +103,11 @@ const loadModeration = async (userId: string): Promise<ModerationState | null> =
       level: levelFromXp(profile.xp),
       anilistUsername: profile.anilistUsername,
       malUsername: profile.malUsername,
+      activeListProvider: resolveActiveListProvider({
+        anilistUsername: profile.anilistUsername,
+        malUsername: profile.malUsername,
+        activeListProvider: profile.activeListProvider,
+      }),
     };
   } catch (e) {
     logger.error('Failed to load moderation state', 'Socket', e);
@@ -133,6 +139,7 @@ export const socketAuthMiddleware = async (
   data.level = null;
   data.anilistUsername = null;
   data.malUsername = null;
+  data.activeListProvider = null;
 
   if (!token) {
     return next();
@@ -160,6 +167,7 @@ export const socketAuthMiddleware = async (
   data.level = moderation?.level ?? 1;
   data.anilistUsername = moderation?.anilistUsername ?? null;
   data.malUsername = moderation?.malUsername ?? null;
+  data.activeListProvider = moderation?.activeListProvider ?? null;
   data.mutedUntil =
     moderation?.mutedUntil && moderation.mutedUntil.getTime() > now
       ? moderation.mutedUntil.toISOString()

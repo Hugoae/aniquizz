@@ -16,6 +16,7 @@ import dotenv from "dotenv";
 import { createR2Client, getR2Bucket, getR2PublicUrl, r2UploadFile } from "./lib/r2-client";
 import { compressMp4, downloadToFile, getVideoDurationSeconds, safeUnlink } from "./lib/media";
 import { buildVideoKey, normalizePipelineSong, parsePipelineDifficulty } from "./lib/song-helpers";
+import { resolveArtistNames } from "./lib/parse-artist-names";
 import { formatSongTypeLabel } from "@aniquizz/shared";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
@@ -38,6 +39,7 @@ const COMPRESS_TIMEOUT = 120_000;
 interface RawSong {
   title: string;
   artist: string;
+  artistNames?: string[];
   songType?: string;
   type?: string;
   sequence?: number;
@@ -173,6 +175,7 @@ async function seedOne(candidate: Candidate): Promise<boolean> {
       create: {
         title: song.title,
         artist: song.artist,
+        artistNames: resolveArtistNames(song.artist, song.artistNames),
         songType,
         sequence,
         videoKey,

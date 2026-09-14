@@ -13,6 +13,7 @@ export interface SettingChipProps {
   /** Override chip colors (e.g. difficulty tiers). Defaults to neutral. */
   className?: string;
   hideLabel?: boolean;
+  size?: 'sm' | 'lg';
 }
 
 /** Compact room-setting chip — rounded-lg, fixed height, neutral by default. */
@@ -22,26 +23,37 @@ export function SettingChip({
   value,
   className = SETTING_CHIP_NEUTRAL,
   hideLabel = false,
+  size = 'sm',
 }: SettingChipProps) {
   const semantic = className !== SETTING_CHIP_NEUTRAL;
   const onGradient = className.includes('gradient-to-r');
+  const large = size === 'lg';
 
   return (
     <div
       className={cn(
-        'inline-flex h-7 max-w-full items-center gap-1.5 rounded-lg border px-2.5 text-xs font-semibold',
+        'inline-flex max-w-full items-center rounded-lg border font-semibold',
+        large ? 'h-9 gap-2 px-3 text-sm' : 'h-7 gap-1.5 px-2.5 text-xs',
         className,
       )}
     >
       <Icon
         className={cn(
-          'h-3.5 w-3.5 shrink-0',
+          'shrink-0',
+          large ? 'h-4 w-4' : 'h-3.5 w-3.5',
           onGradient ? 'text-white opacity-90' : semantic ? 'opacity-90' : 'text-muted-foreground',
         )}
         aria-hidden="true"
       />
       {label && !hideLabel && (
-        <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</span>
+        <span
+          className={cn(
+            'font-bold uppercase tracking-wide text-muted-foreground',
+            large ? 'text-xs' : 'text-[10px]',
+          )}
+        >
+          {label}
+        </span>
       )}
       <span
         className={cn('truncate capitalize', hideLabel && semantic && 'text-inherit')}

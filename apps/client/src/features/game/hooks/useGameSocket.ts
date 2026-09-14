@@ -48,7 +48,7 @@ interface UseGameSocketOptions {
 }
 
 export interface GameActions {
-  answer: (value: string, answerType: AnswerType) => void;
+  answer: (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => void;
   votePause: () => void;
   voteSkip: () => void;
   skipRound: () => void;
@@ -321,8 +321,8 @@ export function useGameSocket({
   }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, isSolo]);
 
   const answer = useCallback(
-    (value: string, answerType: AnswerType) => {
-      socket.emit('game:answer', { roomId, answer: value, answerType });
+    (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => {
+      socket.emit('game:answer', { roomId, answer: value, answerType, revealAfterAnswer });
     },
     [roomId],
   );

@@ -2,6 +2,7 @@
 // Framework-agnostic pure helpers shared by the client and the server.
 
 import { GAME_CONFIG } from './constants';
+import { normalizePrecision, type Precision } from './precision';
 
 // --- SONG TYPE HELPERS ---
 /** Display / video-key label, e.g. OP + 1 → "OP1". */
@@ -37,6 +38,30 @@ export const normalizeString = (str: string): string => {
     .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '')
     .trim();
+};
+
+/**
+ * Identity used for answer matching. Latin credits follow `normalizeString`;
+ * names that would otherwise vanish (μ, CJK) keep a punctuation-stripped NFKC key.
+ */
+export const answerIdentityKey = (value: string): string => {
+  const ascii = normalizeString(value);
+  const leftover = value
+    .normalize('NFKC')
+    .replace(/\p{P}|\p{Z}|\p{S}/gu, '')
+    .trim()
+    .toLocaleLowerCase('und');
+  if (!ascii) return leftover;
+  if (leftover.length > ascii.length) return leftover;
+  return ascii;
+};
+
+/** Typing / autocomplete may start at 1 character for non-latin artist names such as μ. */
+export const suggestionQueryReady = (query: string, precision?: Precision): boolean => {
+  const trimmed = query.trim();
+  if (trimmed.length >= GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH) return true;
+  if (!trimmed || normalizePrecision(precision) !== 'artist') return false;
+  return answerIdentityKey(trimmed).length > 0 && normalizeString(trimmed).length === 0;
 };
 
 /** Split a display string into normalized word tokens (spaces / punctuation). */
@@ -79,17 +104,19 @@ export const getLevenshteinDistance = (a: string, b: string): number => {
 // --- ANSWER VALIDATION ---
 export const isAnswerCorrect = (userAnswer: string, validAnswers: string[]): boolean => {
   if (!userAnswer) return false;
-  const normalizedUser = normalizeString(userAnswer);
+  const userKey = answerIdentityKey(userAnswer);
+  if (!userKey) return false;
   const { ANSWER_SIMILARITY, MIN_LENGTH_FOR_FUZZY } = GAME_CONFIG.FUZZY;
 
   return validAnswers.some((valid) => {
-    const normalizedValid = normalizeString(valid);
+    const validKey = answerIdentityKey(valid);
+    if (!validKey) return false;
 
-    if (normalizedUser === normalizedValid) return true;
-    if (normalizedValid.length < MIN_LENGTH_FOR_FUZZY) return false;
+    if (userKey === validKey) return true;
+    if (validKey.length < MIN_LENGTH_FOR_FUZZY) return false;
 
-    const dist = getLevenshteinDistance(normalizedUser, normalizedValid);
-    const maxLength = Math.max(normalizedUser.length, normalizedValid.length);
+    const dist = getLevenshteinDistance(userKey, validKey);
+    const maxLength = Math.max(userKey.length, validKey.length);
     const similarity = 1 - dist / maxLength;
 
     return similarity >= ANSWER_SIMILARITY;
@@ -128,7 +155,7 @@ export function prepareSearchField(raw: string): PreparedSearchField {
   const words = tokenizeWords(raw);
   return {
     raw,
-    norm: normalizeString(raw),
+    norm: answerIdentityKey(raw),
     words,
     acronym: words.length < 2 ? '' : words.map((word) => word[0]).join(''),
   };
@@ -163,13 +190,22 @@ export function findSuggestionHighlight(
   raw: string,
   query: string,
 ): { start: number; end: number } | null {
-  const term = normalizeString(query);
-  if (!term) return null;
-
-  const fullNorm = normalizeString(raw);
-  if (fullNorm.startsWith(term)) {
-    return { start: 0, end: normPrefixEndIndex(raw, term.length) };
+  const asciiTerm = normalizeString(query);
+  if (asciiTerm) {
+    const fullNorm = normalizeString(raw);
+    if (fullNorm.startsWith(asciiTerm)) {
+      return { start: 0, end: normPrefixEndIndex(raw, asciiTerm.length) };
+    }
+  } else {
+    const idTerm = answerIdentityKey(query);
+    const idRaw = answerIdentityKey(raw);
+    if (idTerm && idRaw.startsWith(idTerm)) {
+      return { start: 0, end: raw.length };
+    }
   }
+
+  const term = asciiTerm;
+  if (!term) return null;
 
   const wordRe = /[a-zA-Z0-9\u00C0-\u024F]+/g;
   let match: RegExpExecArray | null;
@@ -245,7 +281,7 @@ function scoreField(
   pre?: PreparedSearchField,
 ): FieldScore | null {
   const acronymHit = scoreAcronym(term, raw, pre?.acronym);
-  const norm = pre?.norm ?? normalizeString(raw);
+  const norm = pre?.norm ?? answerIdentityKey(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
@@ -302,7 +338,7 @@ function scoreAltField(
   pre?: PreparedSearchField,
 ): FieldScore | null {
   const acronymHit = scoreAcronym(term, raw, pre?.acronym);
-  const norm = pre?.norm ?? normalizeString(raw);
+  const norm = pre?.norm ?? answerIdentityKey(raw);
   if (!norm && !acronymHit) return null;
 
   let best = acronymHit;
@@ -442,6 +478,10 @@ function findParentFranchise(
   return null;
 }
 
+function labelPrecision(precision: Precision): 'franchise' | 'anime' {
+  return precision === 'franchise' ? 'franchise' : 'anime';
+}
+
 function bestScoreForCandidate(
   term: string,
   anime: FuzzyAnimeCandidate,
@@ -539,19 +579,21 @@ export function animeMatchesLibrarySearch(candidate: FuzzyAnimeCandidate, query:
 export const getFuzzySuggestions = (
   list: FuzzyAnimeCandidate[],
   query: string,
-  precisionMode: 'franchise' | 'anime' = 'franchise',
+  precisionMode: Precision = 'franchise',
   franchiseCountsCache?: Map<string, number>,
 ): AnimeSuggestion[] => {
-  const { SUGGESTION_MIN_QUERY_LENGTH, SUGGESTION_MIN_QUERY_FOR_FUZZY, SUGGESTION_LIMIT } =
-    GAME_CONFIG.FUZZY;
+  const { SUGGESTION_MIN_QUERY_FOR_FUZZY, SUGGESTION_LIMIT } = GAME_CONFIG.FUZZY;
+  const precision = normalizePrecision(precisionMode);
+  const labelMode = labelPrecision(precision);
 
-  if (!query || query.trim().length < SUGGESTION_MIN_QUERY_LENGTH) return [];
+  if (!suggestionQueryReady(query, precision)) return [];
 
   const trimmed = query.trim();
-  const term = normalizeString(trimmed);
+  const term = answerIdentityKey(trimmed);
+  if (!term) return [];
   const allowFuzzy = term.length >= SUGGESTION_MIN_QUERY_FOR_FUZZY;
   const franchiseCounts =
-    precisionMode === 'franchise'
+    labelMode === 'franchise'
       ? franchiseCountsCache ??
         (list[0] && isPreparedFuzzyCandidate(list[0])
           ? new Map<string, number>()
@@ -561,10 +603,10 @@ export const getFuzzySuggestions = (
   const byLabel = new Map<string, AnimeSuggestion>();
 
   for (const anime of list) {
-    const label = suggestionLabel(anime, precisionMode, franchiseCounts);
+    const label = suggestionLabel(anime, labelMode, franchiseCounts);
     if (!label) continue;
 
-    const scored = bestScoreForCandidate(term, anime, precisionMode, allowFuzzy, trimmed);
+    const scored = bestScoreForCandidate(term, anime, labelMode, allowFuzzy, trimmed);
     if (!scored) continue;
 
     const highlight = findSuggestionHighlight(label, trimmed);

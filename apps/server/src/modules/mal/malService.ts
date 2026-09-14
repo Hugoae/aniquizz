@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
+import { normalizeMalUsername } from '../lists/watchlistUsername';
 
 const MAL_API_BASE = 'https://api.myanimelist.net/v2';
 const CACHE_DURATION_MS = 10 * 60 * 1000;
@@ -10,7 +11,10 @@ const WATCHED_STATUSES = new Set(['watching', 'completed', 'on_hold']);
 
 type MalListStatusFilter = 'watching' | 'completed' | 'on_hold';
 
-export type MalVerifyResult = 'exists' | 'not_found' | 'unverified';
+export type MalVerifyResult = 'exists' | 'not_found' | 'unverified' | 'unconfigured';
+
+/** Website HEAD needs a browser-like UA; axios' default is rejected. Existence only. */
+const MAL_PROFILE_UA = 'Mozilla/5.0 AniQuizz-list-verify';
 
 interface MalListEntry {
   node?: { id?: number };
@@ -24,10 +28,22 @@ interface MalListResponse {
 
 interface CacheEntry {
   timestamp: number;
-  promise: Promise<number[]>;
+  promise: Promise<MalListResult>;
 }
 
 const userCache = new Map<string, CacheEntry>();
+const cacheKey = (username: string): string => username.trim().toLocaleLowerCase();
+
+export const invalidateMalUserCache = (username: string): void => {
+  userCache.delete(cacheKey(username));
+};
+
+export interface MalListResult {
+  ids: number[];
+  state: 'ok' | 'cache' | 'private_empty' | 'unavailable';
+  /** True only when MAL answered this fetch, including a private/empty list. */
+  fromNetwork: boolean;
+}
 
 const getClientId = (): string | null => {
   const id = process.env.MAL_CLIENT_ID?.trim();
@@ -41,29 +57,59 @@ const malHeaders = (): Record<string, string> | null => {
 };
 
 /**
- * Check whether a MAL username exists (public animelist probe).
- * `unverified` is non-fatal when MAL is unreachable or client id is missing.
+ * Official animelist 404s both missing users and private lists. Fall back to a
+ * profile HEAD so a valid private account can still be linked.
+ */
+const probeMalProfileExists = async (name: string): Promise<MalVerifyResult> => {
+  try {
+    const response = await axios.head(`https://myanimelist.net/profile/${encodeURIComponent(name)}`, {
+      timeout: 8_000,
+      maxRedirects: 5,
+      headers: { 'User-Agent': MAL_PROFILE_UA },
+      validateStatus: (status) => status === 200 || status === 404,
+    });
+    if (response.status === 200) return 'exists';
+    if (response.status === 404) return 'not_found';
+    return 'unverified';
+  } catch (error: unknown) {
+    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+    if (status === 404) return 'not_found';
+    if (status === 200) return 'exists';
+    logger.warn(`[MAL] Profile probe failed for "${name}" (status ${status ?? 'n/a'})`, 'MAL');
+    return 'unverified';
+  }
+};
+
+/**
+ * Check whether a MAL username exists.
+ * `unverified` is non-fatal when MAL is unreachable.
+ * `unconfigured` means the server has no usable `MAL_CLIENT_ID`.
  */
 export const verifyMalUser = async (username: string): Promise<MalVerifyResult> => {
-  const name = username.trim();
+  const name = normalizeMalUsername(username);
   if (!name) return 'not_found';
 
   const headers = malHeaders();
   if (!headers) {
     logger.warn('[MAL] MAL_CLIENT_ID not configured — cannot verify user', 'MAL');
-    return 'unverified';
+    return 'unconfigured';
   }
 
   try {
     const response = await axios.get<MalListResponse>(
       `${MAL_API_BASE}/users/${encodeURIComponent(name)}/animelist`,
-      { params: { limit: 1 }, headers, timeout: 12_000 },
+      { params: { limit: 1, nsfw: true }, headers, timeout: 12_000 },
     );
-    if (Array.isArray(response.data?.data)) return 'exists';
+    if (response.status >= 200 && response.status < 300) return 'exists';
     return 'not_found';
   } catch (error: unknown) {
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-    if (status === 404) return 'not_found';
+    if (status === 403) return 'exists';
+    if (status === 401) {
+      logger.warn('[MAL] MAL_CLIENT_ID rejected by MyAnimeList', 'MAL');
+      return 'unconfigured';
+    }
+    if (status === 404) return probeMalProfileExists(name);
     logger.warn(`[MAL] Could not verify user "${name}" (status ${status ?? 'n/a'})`, 'MAL');
     return 'unverified';
   }
@@ -81,7 +127,7 @@ const fetchMalIdsForStatus = async (
     const response = await axios.get<MalListResponse>(
       `${MAL_API_BASE}/users/${encodeURIComponent(username)}/animelist`,
       {
-        params: { status, limit: PAGE_LIMIT, offset, fields: 'list_status' },
+        params: { status, limit: PAGE_LIMIT, offset, fields: 'list_status', nsfw: true },
         headers,
         timeout: 20_000,
       },
@@ -113,26 +159,29 @@ const mapMalIdsToCatalogueIds = async (malIds: number[]): Promise<number[]> => {
   return rows.map((row) => row.id);
 };
 
-/**
- * Fetch a user's public MAL animelist and return internal catalogue Anime ids
- * (mapped via Anime.idMal). Returns [] when unlinked, private, or unmapped.
- */
-export const getUserAnimeIds = async (username: string): Promise<number[]> => {
-  const name = username.trim();
-  if (!name) return [];
+/** Resolve a MAL list while preserving unavailable vs private/empty semantics. */
+export const resolveMalList = async (username: string): Promise<MalListResult> => {
+  const name = normalizeMalUsername(username);
+  if (!name) return { ids: [], state: 'private_empty', fromNetwork: false };
 
   const now = Date.now();
-  const cached = userCache.get(name);
+  const key = cacheKey(name);
+  const cached = userCache.get(key);
   if (cached && now - cached.timestamp < CACHE_DURATION_MS) {
     logger.debug(`[MAL] Cache HIT for ${name}`, 'MAL');
-    return cached.promise;
+    const result = await cached.promise;
+    return {
+      ...result,
+      state: result.state === 'ok' ? 'cache' : result.state,
+      fromNetwork: false,
+    };
   }
 
   const fetchPromise = (async () => {
     const headers = malHeaders();
     if (!headers) {
       logger.error('[MAL] MAL_CLIENT_ID not configured', 'MAL');
-      return [];
+      return { ids: [], state: 'unavailable', fromNetwork: false } satisfies MalListResult;
     }
 
     try {
@@ -151,20 +200,29 @@ export const getUserAnimeIds = async (username: string): Promise<number[]> => {
         `[MAL] ${name}: ${malIds.length} MAL entries → ${catalogueIds.length} catalogue animes`,
         'MAL',
       );
-      return catalogueIds;
+      return {
+        ids: catalogueIds,
+        state: catalogueIds.length > 0 ? 'ok' : 'private_empty',
+        fromNetwork: true,
+      } satisfies MalListResult;
     } catch (error: unknown) {
-      userCache.delete(name);
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-      if (status === 404) {
-        logger.warn(`[MAL] User ${name} not found`, 'MAL');
-        return [];
+      if (status === 404 || status === 403) {
+        logger.warn(`[MAL] Animelist for ${name} is missing or private`, 'MAL');
+        return { ids: [], state: 'private_empty', fromNetwork: true } satisfies MalListResult;
       }
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`[MAL] API error for ${name}`, 'MAL', message);
-      return [];
+      return { ids: [], state: 'unavailable', fromNetwork: false } satisfies MalListResult;
     }
   })();
 
-  userCache.set(name, { timestamp: now, promise: fetchPromise });
-  return fetchPromise;
+  userCache.set(key, { timestamp: now, promise: fetchPromise });
+  const result = await fetchPromise;
+  if (result.state === 'unavailable') userCache.delete(key);
+  return result;
 };
+
+/** Return only catalogue ids for gameplay callers. */
+export const getUserAnimeIds = async (username: string): Promise<number[]> =>
+  (await resolveMalList(username)).ids;

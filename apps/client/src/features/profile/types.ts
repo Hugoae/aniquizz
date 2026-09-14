@@ -7,6 +7,17 @@ export interface ProfileBasicStats {
   accuracy: number;
   maxStreak: number;
   correctGuesses: number;
+  dailyCompletions: number;
+  dailyWins: number;
+  dailyStreak: number;
+  dailyLongestStreak: number;
+  dailyPerfectDays: number;
+  dailyTotalCorrect: number;
+  dailyTotalResponseMs: number;
+  dailyAvgRank: number | null;
+  dailyBestRank: number | null;
+  dailyAvgTimeMs: number | null;
+  dailyBestTimeMs: number | null;
 }
 
 /** Normalized view-model rendered identically for the self and public views. */
@@ -33,5 +44,6 @@ export interface ProfileVM {
   playtimeMs: number;
   stats: ProfileBasicStats;
   history: MatchHistoryEntry[];
+  historyRedacted?: boolean;
   friends: FriendSummary[];
 }

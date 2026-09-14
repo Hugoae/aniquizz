@@ -1,6 +1,6 @@
 /**
  * Profile page — serves both routes:
- *   /profile          → own profile (edit avatar, friends panel, AniList, password)
+ *   /profile          → own profile (edit avatar, friends, password, list summary)
  *   /profile/:userId  → public profile (read-only, PublicFriendsList, relation actions)
  *
  * Data: own stats via profile:get_stats socket; public card via profile:get_public.
@@ -13,15 +13,15 @@ import { toast } from 'sonner';
 import { type Area } from 'react-easy-crop';
 
 import { ArrowLeft, Disc, Music2, Medal, Award } from 'lucide-react';
-import type { MatchHistoryEntry, PublicProfile as PublicProfileData, WatchedListProvider } from '@aniquizz/shared';
+import type { MatchHistoryEntry, PublicProfile as PublicProfileData } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 
 import { Header } from '@/components/layout/Header';
+import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileStatsSection } from '@/features/profile/components/ProfileStatsSection';
 import { ProfileFavoriteSongsSection } from '@/features/profile/components/ProfileFavoriteSongsSection';
 import { AvatarCropDialog } from '@/features/profile/components/AvatarCropDialog';
-import { WatchlistLinkDialog } from '@/features/profile/components/WatchlistLinkDialog';
 import { PasswordDialog } from '@/features/profile/components/PasswordDialog';
 import { DeleteAccountDialog } from '@/features/profile/components/DeleteAccountDialog';
 import { MatchHistory } from '@/features/profile/components/MatchHistory';
@@ -60,7 +60,24 @@ interface StatsData {
   soloCount: number;
   playtimeMs: number;
   history: MatchHistoryEntry[];
-  stats: { gamesPlayed: number; winRate: number; accuracy: number; maxStreak: number; correctGuesses: number };
+  stats: {
+    gamesPlayed: number;
+    winRate: number;
+    accuracy: number;
+    maxStreak: number;
+    correctGuesses: number;
+    dailyCompletions: number;
+    dailyWins: number;
+    dailyStreak: number;
+    dailyLongestStreak: number;
+    dailyPerfectDays: number;
+    dailyTotalCorrect: number;
+    dailyTotalResponseMs: number;
+    dailyAvgRank: number | null;
+    dailyBestRank: number | null;
+    dailyAvgTimeMs: number | null;
+    dailyBestTimeMs: number | null;
+  };
 }
 
 function isStatsData(data: unknown): data is StatsData {
@@ -86,7 +103,24 @@ const INITIAL_STATS: StatsData = {
   soloCount: 0,
   playtimeMs: 0,
   history: [],
-  stats: { gamesPlayed: 0, winRate: 0, accuracy: 0, maxStreak: 0, correctGuesses: 0 },
+  stats: {
+    gamesPlayed: 0,
+    winRate: 0,
+    accuracy: 0,
+    maxStreak: 0,
+    correctGuesses: 0,
+    dailyCompletions: 0,
+    dailyWins: 0,
+    dailyStreak: 0,
+    dailyLongestStreak: 0,
+    dailyPerfectDays: 0,
+    dailyTotalCorrect: 0,
+    dailyTotalResponseMs: 0,
+    dailyAvgRank: null,
+    dailyBestRank: null,
+    dailyAvgTimeMs: null,
+    dailyBestTimeMs: null,
+  },
 };
 
 export default function Profile() {
@@ -117,10 +151,6 @@ export default function Profile() {
   const [statsData, setStatsData] = useState<StatsData>(INITIAL_STATS);
   const [publicData, setPublicData] = useState<PublicProfileData | null>(null);
 
-  const [showWatchlistModal, setShowWatchlistModal] = useState(false);
-  const [watchlistProvider, setWatchlistProvider] = useState<WatchedListProvider>('anilist');
-  const [watchlistName, setWatchlistName] = useState('');
-  const pendingWatchlistRef = useRef<{ action: 'link' | 'unlink'; provider: WatchedListProvider } | null>(null);
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -147,7 +177,6 @@ export default function Profile() {
 
   useEffect(() => {
     if (profile) {
-      setWatchlistName(profile.anilistUsername || profile.malUsername || '');
       setNewUsername(profile.username);
     }
   }, [profile]);
@@ -179,19 +208,10 @@ export default function Profile() {
       if (isStatsData(data)) setStatsData(data);
     };
     const onProfileUpdate = () => {
-      const pending = pendingWatchlistRef.current;
-      pendingWatchlistRef.current = null;
-      if (pending?.action === 'link') {
-        toast.success(pending.provider === 'mal' ? 'Compte MyAnimeList lié !' : 'Compte AniList lié !');
-      } else if (pending?.action === 'unlink') {
-        toast.success(pending.provider === 'mal' ? 'Compte MyAnimeList délié.' : 'Compte AniList délié.');
-      } else {
-        toast.success('Profil mis à jour !');
-      }
+      toast.success('Profil mis à jour !');
       setIsSaving(false); setIsEditingUsername(false); refreshProfileRef.current();
     };
     const onError = (err: { message?: string }) => {
-      pendingWatchlistRef.current = null;
       toast.error(err?.message || 'Une erreur est survenue'); setIsSaving(false);
     };
 
@@ -262,8 +282,22 @@ export default function Profile() {
         multiCount: statsData.multiCount,
         soloCount: statsData.soloCount,
         playtimeMs: statsData.playtimeMs,
-        stats: statsData.stats,
+        stats: {
+          ...statsData.stats,
+          dailyCompletions: statsData.stats.dailyCompletions ?? 0,
+          dailyWins: statsData.stats.dailyWins ?? 0,
+          dailyStreak: statsData.stats.dailyStreak ?? 0,
+          dailyLongestStreak: statsData.stats.dailyLongestStreak ?? 0,
+          dailyPerfectDays: statsData.stats.dailyPerfectDays ?? 0,
+          dailyTotalCorrect: statsData.stats.dailyTotalCorrect ?? 0,
+          dailyTotalResponseMs: statsData.stats.dailyTotalResponseMs ?? 0,
+          dailyAvgRank: statsData.stats.dailyAvgRank ?? null,
+          dailyBestRank: statsData.stats.dailyBestRank ?? null,
+          dailyAvgTimeMs: statsData.stats.dailyAvgTimeMs ?? null,
+          dailyBestTimeMs: statsData.stats.dailyBestTimeMs ?? null,
+        },
         history: statsData.history,
+        historyRedacted: false,
         friends: [],
       };
     }
@@ -289,8 +323,22 @@ export default function Profile() {
       multiCount: publicData.multiCount,
       soloCount: publicData.soloCount,
       playtimeMs: publicData.playtimeMs,
-      stats: publicData.stats,
+      stats: {
+        ...publicData.stats,
+        dailyCompletions: publicData.stats.dailyCompletions ?? 0,
+        dailyWins: publicData.stats.dailyWins ?? 0,
+        dailyStreak: publicData.stats.dailyStreak ?? 0,
+        dailyLongestStreak: publicData.stats.dailyLongestStreak ?? 0,
+        dailyPerfectDays: publicData.stats.dailyPerfectDays ?? 0,
+        dailyTotalCorrect: publicData.stats.dailyTotalCorrect ?? 0,
+        dailyTotalResponseMs: publicData.stats.dailyTotalResponseMs ?? 0,
+        dailyAvgRank: publicData.stats.dailyAvgRank ?? null,
+        dailyBestRank: publicData.stats.dailyBestRank ?? null,
+        dailyAvgTimeMs: publicData.stats.dailyAvgTimeMs ?? null,
+        dailyBestTimeMs: publicData.stats.dailyBestTimeMs ?? null,
+      },
       history: publicData.history,
+      historyRedacted: publicData.historyRedacted,
       friends: publicData.friends,
     };
   }, [isOwn, profile, user, statsData, publicData]);
@@ -303,38 +351,6 @@ export default function Profile() {
 
   // All Profile writes go through the server (socket) so the client never
   // touches the table directly — the Profile RLS update policy is locked down.
-  const openWatchlistLink = (provider: WatchedListProvider) => {
-    setWatchlistProvider(provider);
-    setWatchlistName(
-      provider === 'anilist' ? (profile?.anilistUsername || '') : (profile?.malUsername || ''),
-    );
-    setShowWatchlistModal(true);
-  };
-
-  const handleLinkWatchlist = () => {
-    const name = watchlistName.trim();
-    if (!name || !user) return;
-    pendingWatchlistRef.current = { action: 'link', provider: watchlistProvider };
-    if (watchlistProvider === 'mal') {
-      socket.emit('update_profile_data', { malUsername: name });
-    } else {
-      socket.emit('update_profile_data', { anilistUsername: name });
-    }
-    setShowWatchlistModal(false);
-  };
-
-  const handleUnlinkWatchlist = () => {
-    if (!user) return;
-    const provider = profile?.malUsername ? 'mal' : 'anilist';
-    pendingWatchlistRef.current = { action: 'unlink', provider };
-    if (provider === 'mal') {
-      socket.emit('update_profile_data', { malUsername: null });
-    } else {
-      socket.emit('update_profile_data', { anilistUsername: null });
-    }
-    setWatchlistName('');
-  };
-
   const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -381,6 +397,38 @@ export default function Profile() {
     setIsSaving(true);
   };
 
+  if (!isOwn && publicData?.unavailable) {
+    return (
+      <>
+        <SeoHead title="Profil indisponible" noindex path="/profile" />
+        <div className="min-h-screen bg-background pb-20">
+          <Header />
+          <main id="main-content" className="pt-24 container max-w-[1400px] mx-auto px-4 space-y-8">
+            <Button
+              variant="ghost"
+              onClick={handleBack}
+              className="gap-2 mb-2 text-muted-foreground hover:text-foreground pl-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              {leaderboardMetric
+                ? LEADERBOARD_COPY.backToBoard
+                : fromAdmin
+                  ? "Retour à l'administration"
+                  : 'Retour à mon profil'}
+            </Button>
+            <div className="glass-card rounded-xl border border-border bg-card/40 p-10 text-center">
+              <h1 className="text-2xl font-black">Profil indisponible</h1>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Ce profil n’est pas accessible.
+              </p>
+            </div>
+          </main>
+          <FloatingSettingsButton />
+        </div>
+      </>
+    );
+  }
+
   if (!vm) {
     return (
       <div className="min-h-screen bg-background">
@@ -420,8 +468,6 @@ export default function Profile() {
             vm={vm}
             isOwn={isOwn}
             relation={relation}
-            anilistUsername={profile?.anilistUsername}
-            malUsername={profile?.malUsername}
             isEditingUsername={isEditingUsername}
             newUsername={newUsername}
             isSaving={isSaving}
@@ -430,8 +476,6 @@ export default function Profile() {
             onSaveUsername={saveUsername}
             onCancelEditUsername={() => { setIsEditingUsername(false); setNewUsername(vm.username); }}
             onPickAvatarFile={onFileChange}
-            onOpenWatchlistLink={openWatchlistLink}
-            onUnlinkWatchlist={handleUnlinkWatchlist}
             onOpenPasswordModal={() => setShowPasswordModal(true)}
             onOpenDeleteAccountModal={() => setShowDeleteAccountModal(true)}
             onSignOut={signOut}
@@ -466,8 +510,7 @@ export default function Profile() {
                       <div className="text-sm text-muted-foreground font-medium">Sons uniques découverts</div>
                     </div>
                     <span
-                      className="inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-xs font-bold border border-border"
-                      style={{ color: currentMedal?.color }}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-md text-xs font-bold border border-border ${currentMedal?.textClass ?? 'text-muted-foreground'}`}
                     >
                       <Medal className="h-4 w-4" />
                       {currentMedal ? currentMedal.label : 'Non classé'}
@@ -487,8 +530,7 @@ export default function Profile() {
                             title={`${m.label} — ${m.min}%`}
                           >
                             <Medal
-                              className={`h-4 w-4 transition-colors ${reached ? '' : 'text-muted-foreground/30'}`}
-                              style={reached ? { color: m.color } : undefined}
+                              className={`h-4 w-4 transition-colors ${reached ? m.textClass : 'text-muted-foreground/30'}`}
                               strokeWidth={reached ? 2.25 : 2}
                             />
                           </div>
@@ -539,7 +581,7 @@ export default function Profile() {
 
             <div id="amis" className="col-span-12 lg:col-span-3 space-y-8 scroll-mt-24 animate-fade-in" style={{ animationDelay: '120ms' }}>
               {isOwn ? <FriendsPanel /> : <PublicFriendsList friends={vm.friends} onOpen={openProfile} />}
-              <MatchHistory entries={vm.history} />
+              <MatchHistory entries={vm.history} redacted={Boolean(vm.historyRedacted)} />
             </div>
           </div>
         </main>
@@ -553,24 +595,6 @@ export default function Profile() {
             image={selectedFile}
             isSaving={isSaving}
             onConfirm={uploadAvatar}
-          />
-
-          <WatchlistLinkDialog
-            provider={watchlistProvider}
-            open={showWatchlistModal}
-            onOpenChange={(open) => {
-              setShowWatchlistModal(open);
-              if (!open) {
-                setWatchlistName(
-                  watchlistProvider === 'mal'
-                    ? (profile?.malUsername || '')
-                    : (profile?.anilistUsername || ''),
-                );
-              }
-            }}
-            value={watchlistName}
-            onChange={setWatchlistName}
-            onSave={handleLinkWatchlist}
           />
 
           <PasswordDialog
@@ -591,6 +615,7 @@ export default function Profile() {
           />
         </>
       )}
+      <FloatingSettingsButton />
     </>
   );
 }

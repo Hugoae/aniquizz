@@ -1,5 +1,5 @@
 import { prisma } from '@aniquizz/database';
-import { animeMatchesLibrarySearch } from '@aniquizz/shared';
+import { animeMatchesLibrarySearch, parseCatalogueSearchQuery } from '@aniquizz/shared';
 
 const PLAYABLE_SEARCH_TTL_MS = 10 * 60 * 1000;
 
@@ -51,7 +51,7 @@ export const clearLibrarySearchCache = (): void => {
  * SQL ILIKE on name / franchise / altNames, plus acronym/fuzzy on playable rows only.
  */
 export async function resolveMatchingAnimeIdsForQuery(q: string): Promise<number[]> {
-  const trimmed = q.trim();
+  const trimmed = parseCatalogueSearchQuery(q).text.trim();
   if (!trimmed) return [];
 
   const pattern = `%${escapeIlike(trimmed)}%`;

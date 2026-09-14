@@ -12,6 +12,7 @@ import { registerGameHandlers } from '../modules/game/gameHandlers';
 import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
 import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
+import { registerListHandlers } from '../modules/lists/listHandlers';
 import { schedulePresenceBroadcast, isUserOnline, userRoom } from '../modules/friends/friendsPresence';
 
 /**
@@ -99,6 +100,7 @@ export class SocketManager {
       registerProfileHandlers(this.io, socket, this.gameManager);
       registerGeneralHandlers(this.io, socket, this.gameManager);
       registerFriendsHandlers(this.io, socket, this.gameManager);
+      registerListHandlers(this.io, socket, this.gameManager);
 
       // Tell online friends this user just came online (best-effort).
       if (userId) {

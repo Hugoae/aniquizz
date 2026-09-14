@@ -23,6 +23,7 @@ export function SongLikeButton({
   stopPropagation = false,
 }: SongLikeButtonProps) {
   const { isLiked, toggleLike, ready } = useSongLikes();
+  if (!Number.isInteger(songId) || songId <= 0) return null;
   const liked = ready ? isLiked(songId) : initialLiked;
 
   const iconSize =

@@ -1,0 +1,11 @@
+-- Player comfort prefs (motion, gameplay, in-app notification channels).
+
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "motionMode" TEXT NOT NULL DEFAULT 'auto';
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "autofocusAnswer" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "submitOnEnter" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "soloAutoReveal" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "showShortcutReminder" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "friendRequestVisual" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "friendRequestSound" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "lobbyInviteVisual" BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "lobbyInviteSound" BOOLEAN NOT NULL DEFAULT false;

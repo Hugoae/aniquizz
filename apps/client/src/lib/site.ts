@@ -4,6 +4,9 @@ export const SITE_URL = (import.meta.env.VITE_SITE_URL as string | undefined)?.r
 
 export const SITE_NAME = 'AniQuizz';
 
+/** External page for optional, no-perk support of AniQuizz. */
+export const KOFI_URL = 'https://ko-fi.com/aniquizz';
+
 /** Home `<title>` — shown as the purple link in Google results. */
 export const HOME_PAGE_TITLE = "AniQuizz - Le Blindtest d'Anime";
 
@@ -18,7 +21,7 @@ export const DEFAULT_OG_IMAGE = `${SITE_URL}/android-chrome-512x512.png`;
  * the static app-shell HTML, and no keyword lists.
  */
 export const HOME_DESCRIPTION =
-  'Blindtest anime en ligne. Devinez l\'opening ou l\'ending. Testez votre culture anime, solo ou entre amis.';
+  'Blindtest anime en ligne. Devinez l\'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !';
 
 /** Default meta description for inner pages. Keep under ~160 chars. */
 export const DEFAULT_DESCRIPTION = HOME_DESCRIPTION;
@@ -56,6 +59,7 @@ export const PAGE_TITLES = {
   suggestions: 'Boîte à idées',
   profile: 'Profil',
   admin: 'Admin',
+  daily: 'Quiz du jour',
   resetPassword: 'Mot de passe',
   notFound: '404',
   privacy: 'Confidentialité',

@@ -73,6 +73,11 @@ const mapServerPlayersToLobby = (
     role: p.role,
     level: p.level,
     hasWatchedList: Boolean(p.anilistUsername?.trim() || p.malUsername?.trim()),
+    watchedListKey: [
+      p.activeListProvider ?? '',
+      p.anilistUsername?.trim() ?? '',
+      p.malUsername?.trim() ?? '',
+    ].join(':'),
   }));
 };
 

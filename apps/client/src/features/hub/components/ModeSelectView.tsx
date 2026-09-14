@@ -1,10 +1,11 @@
 /** Play landing — mode cards, daily-quiz teaser, and navigation into solo/multi flows. */
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { ArrowLeft, User, Users, Swords } from 'lucide-react';
 import type { GameMode } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { getPlayBannedMessage, isSanctionActive, useSanctionTicker } from '@/lib/suspension';
+import { dailyApi } from '@/lib/dailyApi';
 import { ModeCard, type ModeCardData } from './ModeCard';
 import { DailyQuizCard } from './DailyQuizCard';
 
@@ -49,6 +50,10 @@ interface ModeSelectViewProps {
 export function ModeSelectView({ onSelectMode, onBack, multiplayerCount, bannedUntil }: ModeSelectViewProps) {
   const playBanned = isSanctionActive(bannedUntil);
   useSanctionTicker(playBanned);
+
+  useEffect(() => {
+    void dailyApi.today().catch(() => undefined);
+  }, []);
 
   const cards = useMemo<ModeCardData[]>(() => {
     return MODE_CARDS.map((card) => {

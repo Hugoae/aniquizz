@@ -61,9 +61,10 @@ Express + Socket.io on Render (Starter, Frankfurt). Binds `0.0.0.0:$PORT`.
 | `src/modules/admin/` | REST `/admin/*` — users, rooms, catalogue, stats, dev tools |
 | `src/modules/anilist/` | Watched-list resolution for AniList mode |
 | `src/modules/mal/` | MyAnimeList public API — username verify, animelist fetch, `idMal` catalogue mapping |
-| `src/modules/lists/` | `listResolver` + `watchedPoolResolve` — one list provider per profile (AniList **or** MAL), cross-player union/intersection |
+| `src/modules/lists/` | `listResolver` + `listHandlers` — AniList **and** MAL may stay linked; one `activeListProvider` drives Watched |
 | `src/modules/catalogue/` | `libraryService` — browse meta, franchise tree, song search/detail |
-| `src/routes/` | `/health`, `/library/*`, `/leaderboard`, `/suggestions` |
+| `src/modules/daily/` | Quiz du jour — generation, HTTP play loop, admin review |
+| `src/routes/` | `/health`, `/library/*`, `/leaderboard`, `/suggestions`, `/daily/*` |
 
 Catalogue caches (`getAllAnimeNames`, choice candidates) warm at boot to reduce
 cold-start latency on Render.
@@ -92,7 +93,7 @@ Media keys live in `Song.videoKey`; completed songs point at public R2 URLs.
 ## Realtime flow: Standard match
 
 1. Host creates/joins a lobby; settings stored server-side (`RoomSettings` / `GameConfig`).
-2. Host starts — `PlaylistBuilder` selects songs (filters, difficulty, watched mode, QCM choices). In Watched + QCM/Mix, distractors use the same watched ids as the songs ([`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md)). Watched pools resolve per player via AniList **or** MyAnimeList (one provider per profile), then union/intersection across the lobby.
+2. Host starts — `PlaylistBuilder` selects songs (filters, difficulty, watched mode, QCM choices). In Watched + QCM/Mix, distractors use the same watched ids as the songs ([`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md)). Watched pools resolve per player via the **active** AniList or MyAnimeList source (both usernames may stay linked), then union/intersection across the lobby.
 3. Each round: server emits `round_start` (R2 key + start offset), collects `game:answer`, then `round_reveal`. Solo uses the full guess timer like multiplayer; optional early reveal via `game:skip_round` after at least one answer.
 4. `MatchEngine` scores answers; anti-cheat rejects answers before reveal.
 5. `game_over` persists stats/XP; solo medals computed from mastery ratio (`packages/shared` grading, integer-rounded thresholds — see [`docs/game/solo-medals.md`](./docs/game/solo-medals.md)).
@@ -110,19 +111,27 @@ Read-only catalogue browse — no gameplay impact.
 | **Shared** | `packages/shared/src/library.ts` — browse params, response types, `animeMatchesLibrarySearch()` |
 | **DB** | Migration `20260712180000_library_franchise_popularity` — `Franchise.maxPopularity`, `Anime_altNames_gin_idx` |
 
-## Watched lists — AniList & MyAnimeList (v26.2)
+## Watched lists — AniList & MyAnimeList (v26.2, dual-link in v26.6)
 
 | Rule | Behaviour |
 | ---- | --------- |
-| **One provider per profile** | `Profile.anilistUsername` **XOR** `Profile.malUsername` — linking one clears the other at the app layer |
+| **Dual link, one active** | `Profile.anilistUsername` and `Profile.malUsername` may both stay set. `activeListProvider` selects the Watched source; unlinking the active source falls back to the remaining link |
 | **AniList** | Existing GraphQL sync → internal `Anime.id` |
-| **MAL** | Official v2 `GET /users/{name}/animelist` with header `X-MAL-CLIENT-ID` only (no OAuth). Statuses: `watching`, `completed`, `on_hold` → catalogue via `Anime.idMal` |
+| **MAL** | Official v2 `GET /users/{name}/animelist` with `X-MAL-CLIENT-ID` (no OAuth); a profile-page HEAD disambiguates missing users from private-list 404s. Statuses: `watching`, `completed`, `on_hold` → catalogue via `Anime.idMal` |
 | **Multi lobby** | Each player's pool resolved separately; host settings apply **union** or **intersection** on catalogue ids |
 | **Gates** | Same min-pool threshold and opt-in global fallback as AniList-only Watched — see [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md) |
 | **Env** | `MAL_CLIENT_ID` on server (Render prod + `apps/server/.env.example`) |
-| **DB** | Migration `20260712200000_profile_mal_username` — `Profile.malUsername`, `Anime_idMal_idx` |
+| **DB** | `Profile.malUsername` (`20260712200000`); `activeListProvider` + per-provider last-sync (`20260912161000`). `lastListSync` kept until a later contract drop |
+| **Socket** | `lists:get_status` returns persisted links immediately with `idle` health until resolved. Mutations (`link` / `set_active` / `refresh` / `unlink`) carry a request id and answer through correlated `lists:result` / `lists:error`; per-user serialization prevents link/switch races |
+| **Client state** | `ListsProvider` is the single live source for the profile badge, settings cards, active-source switch, and the auth-profile compatibility snapshot |
+| **Sync semantics** | Linking and switching commit before any provider fetch. Manual sync updates the provider timestamp only after a successful/private-empty response; unavailable/stale responses remain explicit and do not masquerade as success |
+| **Lobby coherence** | List mutations update the live `GamePlayer` snapshot; `watched:list_changed` makes active room pool previews resolve again after source changes and successful syncs |
 
-Shared helpers: `packages/shared/src/watchedList.ts` (`hasWatchedListLink`, `watchedListProvider`). Socket payloads expose `malUsername` on `GamePlayer` / `SocketData` alongside AniList.
+Shared helpers: `packages/shared/src/watchedList.ts` (`hasWatchedListLink`, `resolveActiveListProvider`). Socket payloads expose both usernames plus `activeListProvider` on `GamePlayer` / `SocketData`.
+
+## Player settings (v26.6)
+
+Comfort prefs (`PlayerPrefs`: audio, motion, gameplay, internal notification flags) are local-first (`aniquizz-player-prefs-v2`) and synced with `profile:update_prefs`. Privacy audiences and list links are account-only, written through Socket.io/Prisma (no Profile UPDATE RLS). Server redaction: blocked either way → generic unavailable profile; hidden status is `hidden` (never a fake `offline`); recent history can be empty with `historyRedacted` while aggregates stay.
 
 ## Environment
 
@@ -135,6 +144,7 @@ per-package `.env.example` files for the required subset.
 | --- | ----- |
 | [`docs/game/solo-medals.md`](./docs/game/solo-medals.md) | Solo medal tiers, mastery bar, rounding fix |
 | [`docs/game/watched-qcm-choices.md`](./docs/game/watched-qcm-choices.md) | Watched AniList QCM/Duo distractor pool |
+| [`docs/game/artist-precision.md`](./docs/game/artist-precision.md) | Artist answer precision (credits, QCM, autocomplete) |
 | [`docs/game/watched-pool-threshold.md`](./docs/game/watched-pool-threshold.md) | Watched min-pool gates (AniList + MAL) |
 | [`docs/admin/moderation.md`](./docs/admin/moderation.md) | Mute/ban behaviour |
 | [`docs/security/delete-account.md`](./docs/security/delete-account.md) | RGPD account deletion flow |

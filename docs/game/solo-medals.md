@@ -55,6 +55,8 @@ Same boundary on typing: **45/50** medium.
 
 `packages/shared/src/victory.test.ts` — end-to-end `computeVictory` QCM regression.
 
+Anime precision subtracts `PRECISION_OFFSET.anime` (−0.05) from every tier; artist precision subtracts `PRECISION_OFFSET.artist` (−0.08). Franchise is unchanged.
+
 ## Medium difficulty reference (QCM, max 20 pts)
 
 | Tier | Ratio | Rounded pts |

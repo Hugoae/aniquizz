@@ -67,6 +67,7 @@ enum StoredResponseType {
 enum StoredPrecision {
   FRANCHISE
   ANIME
+  ARTIST
 }
 
 enum StoredSoloMedal {
@@ -97,6 +98,20 @@ enum SuggestionCorrectionField {
   OTHER
 }
 
+enum DailyChallengeStatus {
+  DRAFT
+  READY
+  CANCELLED
+}
+
+enum DailyAttemptState {
+  IN_PROGRESS
+  COMPLETED
+  FORFEITED
+  /// Leftover from the abandoned 15-minute attempt budget. New runs use FORFEITED or COMPLETED.
+  EXPIRED
+}
+
 // --- IDENTITY ---
 model Profile {
   // = auth.users.id — populated by the Supabase `handle_new_user()` trigger.
@@ -108,9 +123,17 @@ model Profile {
   level Int @default(1)
   xp    Int @default(0)
 
+  // Privacy audiences (v26.6) — server-enforced; never trust the client.
+  onlineStatusAudience  String  @default("everyone")
+  matchHistoryAudience  String  @default("everyone")
+  lobbyInviteAudience   String  @default("friends")
+
   anilistUsername String?
   malUsername     String?
   lastListSync    DateTime?
+  activeListProvider String?
+  anilistLastSync    DateTime?
+  malLastSync        DateTime?
 
   role UserRole @default(USER)
 
@@ -123,6 +146,18 @@ model Profile {
   allowFriendRequests Boolean @default(true)
   // When false, the favorites section is hidden on the public profile.
   showFavoriteSongs    Boolean @default(true)
+  // Player comfort prefs (v26.6) — lobby/room settings stay host-scoped.
+  audioVolume            Int     @default(20)
+  audioMuted             Boolean @default(false)
+  motionMode             String  @default("auto")
+  autofocusAnswer        Boolean @default(true)
+  submitOnEnter          Boolean @default(true)
+  soloAutoReveal         Boolean @default(false)
+  showShortcutReminder   Boolean @default(true)
+  friendRequestVisual    Boolean @default(true)
+  friendRequestSound     Boolean @default(false)
+  lobbyInviteVisual      Boolean @default(true)
+  lobbyInviteSound       Boolean @default(false)
 
   gamesPlayed    Int @default(0)
   gamesWon       Int @default(0)
@@ -144,6 +179,9 @@ model Profile {
   // Social (Phase 7). Friendship rows where this profile is the requester / addressee.
   sentRequests     Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
+  dailyAttempts    DailyAttempt[]
+  dailyStats       DailyPlayerStats?
+  reviewedDailyChallenges DailyChallenge[] @relation("DailyReviewer")
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
@@ -308,7 +346,13 @@ model Anime {
 model Song {
   id             Int            @id @default(autoincrement())
   title          String
+  /** Display credit — collaborations stay joined with ", ". */
   artist         String
+  /**
+   * Credited people/units for artist-precision answers.
+   * One name for a band (even with a comma in the title); several for a collab.
+   */
+  artistNames    String[]       @default([])
   songType       SongType
   sequence       Int            @default(1)
   videoKey       String         @unique
@@ -332,6 +376,7 @@ model Song {
   suggestions Suggestion[]
   rounds  MatchRound[]
   thematicPlaylists ThematicPlaylistSong[]
+  dailyRounds       DailyChallengeRound[]
 
   @@index([animeId])
   @@index([downloadStatus])
@@ -469,4 +514,109 @@ model ThematicPlaylistSong {
 
   @@id([playlistId, songId])
   @@index([songId])
+}
+
+/// Globally shared five-song daily QCM (v26.6). Server-only; see docs/game/daily-quiz.md.
+model DailyChallenge {
+  id              String               @id @default(uuid())
+  /// Paris civil date stored as DATE (YYYY-MM-DD), never inferred by clients.
+  challengeDate   DateTime             @unique @db.Date
+  challengeNumber Int                  @unique
+  status          DailyChallengeStatus @default(DRAFT)
+  rulesVersion    Int                  @default(1)
+  generatedAt     DateTime             @default(now())
+  reviewedAt      DateTime?
+  reviewedById    String?
+  reviewedBy      Profile?             @relation("DailyReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  rounds   DailyChallengeRound[]
+  attempts DailyAttempt[]
+
+  @@index([status, challengeDate])
+}
+
+model DailyChallengeRound {
+  id             String   @id @default(uuid())
+  challengeId    String
+  position       Int
+  songId         Int?
+  /// Frozen PlaylistItem-style payload: clip offset, four choices, reveal metadata.
+  snapshot       Json
+  videoStartTime Int
+  choices        String[]
+  voided         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  challenge DailyChallenge       @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  song      Song?                @relation(fields: [songId], references: [id], onDelete: SetNull)
+  answers   DailyAttemptAnswer[]
+
+  @@unique([challengeId, position])
+  @@index([songId])
+}
+
+model DailyAttempt {
+  id                   String            @id @default(uuid())
+  challengeId          String
+  profileId            String
+  state                DailyAttemptState @default(IN_PROGRESS)
+  currentRound         Int               @default(1)
+  startedAt            DateTime          @default(now())
+  /// Leftover NOT NULL column from the abandoned 15-minute budget. Not a play clock.
+  expiresAt            DateTime
+  completedAt          DateTime?
+  currentRoundStartedAt DateTime?
+  revealUntil          DateTime?
+  correctCount         Int               @default(0)
+  /// Snapshot of playable rounds at settle — voided songs can shrink the day.
+  activeRoundCount     Int               @default(5)
+  /// Recap victory (`isDailyVictory`) persisted so history/stats stay stable.
+  won                  Boolean           @default(false)
+  /// Leftover match-score snapshot. Ranking is correct then time, not these points.
+  points               Int               @default(0)
+  totalResponseMs      Int               @default(0)
+  xpAwarded            Int               @default(0)
+  /// Live standing among that day's finishers (ties share a rank: 1-2-2-4).
+  rank                 Int?
+
+  challenge DailyChallenge       @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  profile   Profile              @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  answers   DailyAttemptAnswer[]
+
+  @@unique([challengeId, profileId])
+  @@index([profileId, startedAt(sort: Desc)])
+  @@index([profileId, state, completedAt(sort: Desc)])
+  @@index([challengeId, state, correctCount(sort: Desc), totalResponseMs, completedAt])
+}
+
+model DailyAttemptAnswer {
+  id           String   @id @default(uuid())
+  attemptId    String
+  roundId      String
+  selectedLabel String?
+  isCorrect    Boolean  @default(false)
+  responseMs   Int      @default(0)
+  answeredAt   DateTime @default(now())
+
+  attempt DailyAttempt        @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  round   DailyChallengeRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+
+  @@unique([attemptId, roundId])
+  @@index([roundId])
+}
+
+model DailyPlayerStats {
+  profileId          String   @id
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  completions        Int      @default(0)
+  wins               Int      @default(0)
+  perfectDays        Int      @default(0)
+  lastCompletionDate DateTime? @db.Date
+  updatedAt          DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 }

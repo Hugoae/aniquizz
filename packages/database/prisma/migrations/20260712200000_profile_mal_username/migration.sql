@@ -1,4 +1,4 @@
--- MyAnimeList username link (mutually exclusive with anilistUsername at app layer).
+-- MyAnimeList username link. Dual-link support was added later through activeListProvider.
 
 ALTER TABLE "Profile" ADD COLUMN IF NOT EXISTS "malUsername" TEXT;
 

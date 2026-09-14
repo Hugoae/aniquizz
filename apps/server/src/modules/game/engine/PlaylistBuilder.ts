@@ -1,17 +1,27 @@
 import {
   GAME_CONFIG,
+  buildArtistChoices,
   buildChoices,
   buildDuo,
   formatSongTypeLabel,
   normalizePrecision,
   normalizeSongStartMode,
   playlistSourceIds,
+  resolveRoundAnswerSet,
+  type ArtistChoiceRow,
   type Precision,
   type RoomSettings,
   type SongStartMode,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
-import { getChoiceCandidates, getRandomSongs, listPlayableAnimeIds, type SelectedSong, type SongFilters } from '../gameService';
+import {
+  getArtistChoiceCandidates,
+  getChoiceCandidates,
+  getRandomSongs,
+  listPlayableAnimeIds,
+  type SelectedSong,
+  type SongFilters,
+} from '../gameService';
 import { loadPlaylistPoolScope } from '../playlistRecipeService';
 import { resolveWatchedIds } from '../watchedPoolService';
 import type { PlaylistItem, RoomPlayer } from './types';
@@ -26,6 +36,11 @@ export interface BuiltPlaylist {
   /** Set when the build failed for a known reason (empty playlist). */
   abortReason?: PlaylistAbortReason;
 }
+
+type ChoicePool = {
+  names: string[];
+  artistRows: ArtistChoiceRow[];
+};
 
 /**
  * Builds the full playlist for a match at start time:
@@ -66,6 +81,7 @@ export class PlaylistBuilder {
           isBot: p.isBot,
           anilistUsername: p.anilistUsername,
           malUsername: p.malUsername,
+          activeListProvider: p.activeListProvider,
         })),
       );
       if (!watchedIds.length && !(playlistWatched && settings.watchedAllowFallback)) {
@@ -74,6 +90,7 @@ export class PlaylistBuilder {
       if (!watchedIds.length) watchedIds = undefined;
     }
 
+    const precision: Precision = normalizePrecision(settings.precision);
     const filters: SongFilters = {
       difficulty: settings.difficulty,
       types: settings.soundTypes,
@@ -81,35 +98,37 @@ export class PlaylistBuilder {
       playlistIds,
       allowWatchedFallback: settings.watchedAllowFallback ?? false,
       excludePriorMatchSongIds: options?.excludePriorMatchSongIds,
+      requirePlayableArtist: precision === 'artist',
     };
 
-    const precision: Precision = normalizePrecision(settings.precision);
     const needsChoices = (settings.responseType ?? 'mix') !== 'typing';
 
     const startedAt = Date.now();
     const overlayRestrictsChoices = playlistWatched && Boolean(watchedIds?.length) && !settings.watchedAllowFallback;
-    const [songsResult, candidatePool] = await Promise.all([
+    const [songsResult, choicePool] = await Promise.all([
       getRandomSongs(settings.soundCount || 10, filters),
       needsChoices
-        ? (async () => {
+        ? (async (): Promise<ChoicePool> => {
             if (playlistIds) {
               snapshotAnimeIds = await listPlayableAnimeIds({
                 playlistIds,
+                requirePlayableArtist: precision === 'artist',
                 ...(overlayRestrictsChoices ? { watchedIds } : {}),
               });
             }
-            return getChoiceCandidates(
-              precision,
-              this.choiceAnimeIds(
-                isWatchedMode,
-                watchedIds,
-                snapshotAnimeIds,
-                playlistWatched,
-                settings.watchedAllowFallback,
-              ),
+            const allowedIds = this.choiceAnimeIds(
+              isWatchedMode,
+              watchedIds,
+              snapshotAnimeIds,
+              playlistWatched,
+              settings.watchedAllowFallback,
             );
+            if (precision === 'artist') {
+              return { names: [], artistRows: await getArtistChoiceCandidates(allowedIds) };
+            }
+            return { names: await getChoiceCandidates(precision, allowedIds), artistRows: [] };
           })()
-        : Promise.resolve<string[]>([]),
+        : Promise.resolve<ChoicePool>({ names: [], artistRows: [] }),
     ]);
     const { songs, fallbackUsed, priorMatchReuse, difficultyRelaxed } = songsResult;
 
@@ -119,9 +138,15 @@ export class PlaylistBuilder {
 
     const guessDuration = settings.guessDuration || 20;
     const songStartMode = normalizeSongStartMode(settings.songStartMode);
-    const playlist = songs.map((song) =>
-      this.toPlaylistItem(song, precision, candidatePool, guessDuration, needsChoices, songStartMode),
-    );
+    const playlist = songs
+      .map((song) =>
+        this.toPlaylistItem(song, precision, choicePool, guessDuration, needsChoices, songStartMode),
+      )
+      .filter((item) => precision !== 'artist' || item.validAnswers.length > 0);
+
+    if (!playlist.length) {
+      return { playlist: [], fallbackUsed, difficultyRelaxed, abortReason: 'no_songs' };
+    }
 
     logger.info(
       `[PlaylistBuilder] Built ${playlist.length} rounds in ${Date.now() - startedAt}ms ` +
@@ -153,28 +178,33 @@ export class PlaylistBuilder {
   private toPlaylistItem(
     song: SelectedSong,
     precision: Precision,
-    candidatePool: string[],
+    choicePool: ChoicePool,
     guessDuration: number,
     needsChoices: boolean,
     songStartMode: SongStartMode,
   ): PlaylistItem {
     const franchise = song.anime.franchise?.name ?? null;
-    const correctTarget = precision === 'franchise' ? franchise || song.anime.name : song.anime.name;
+    const answers = resolveRoundAnswerSet({
+      precision,
+      animeName: song.anime.name,
+      altNames: song.anime.altNames,
+      franchise,
+      artist: song.artist,
+      artistNames: song.artistNames ?? [],
+    });
 
-    const choices = needsChoices ? buildChoices(correctTarget, candidatePool, 4) : [];
-    const duo = needsChoices ? buildDuo(correctTarget, choices) : [];
-
-    const baseAnswers = [song.anime.name, ...(song.anime.altNames || [])];
-    const validAnswers =
-      precision === 'franchise' && franchise
-        ? ([...baseAnswers, franchise] as string[])
-        : (baseAnswers.filter(Boolean) as string[]);
+    const choices = !needsChoices
+      ? []
+      : precision === 'artist'
+        ? buildArtistChoices(song.artist, song.artistNames ?? [], choicePool.artistRows, 4)
+        : buildChoices(answers.correctTarget, choicePool.names, 4);
+    const duo = needsChoices ? buildDuo(answers.correctTarget, choices) : [];
 
     return {
       id: song.id,
       anime: song.anime.name,
       franchise,
-      validAnswers,
+      validAnswers: answers.validAnswers,
       title: song.title,
       artist: song.artist,
       typeLabel: formatSongTypeLabel(song.songType, song.sequence),

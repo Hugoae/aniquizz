@@ -3,11 +3,11 @@ import { Lightbulb, Music, Play, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { HOME_COPY } from '@/features/home/copy/homeCopy';
 import { useNavigate } from 'react-router-dom';
+import { dailyApi } from '@/lib/dailyApi';
 import { prefetchGameHub, prefetchRoute } from '@/lib/routePrefetch';
 import { isFirstLandingPaint } from '@/lib/initialPaint';
 import { cn } from '@/lib/utils';
 
-import { HomeNewBadge } from './HomeNewBadge';
 import { NewsSection } from './NewsSection';
 
 export function HeroSection() {
@@ -56,8 +56,14 @@ export function HeroSection() {
               variant="glow"
               size="xxl"
               onClick={() => startTransition(() => navigate('/play'))}
-              onMouseEnter={prefetchGameHub}
-              onFocus={prefetchGameHub}
+              onMouseEnter={() => {
+                prefetchGameHub();
+                void dailyApi.today();
+              }}
+              onFocus={() => {
+                prefetchGameHub();
+                void dailyApi.today();
+              }}
               className="group font-display"
             >
               <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
@@ -83,12 +89,10 @@ export function HeroSection() {
                 onClick={() => navigate('/leaderboard')}
                 onMouseEnter={() => prefetchRoute('leaderboard')}
                 onFocus={() => prefetchRoute('leaderboard')}
-                className="hover-lift relative gap-2 overflow-visible"
-                aria-label={`Classement, ${HOME_COPY.newBadgeAria}`}
+                className="hover-lift gap-2"
               >
                 <Trophy className="h-5 w-5" />
                 Classement
-                <HomeNewBadge delayMs={120} />
               </Button>
               <Button
                 variant="glass"
@@ -96,12 +100,10 @@ export function HeroSection() {
                 onClick={() => navigate('/suggestions')}
                 onMouseEnter={() => prefetchRoute('suggestions')}
                 onFocus={() => prefetchRoute('suggestions')}
-                className="hover-lift relative gap-2 overflow-visible"
-                aria-label={`Idées, ${HOME_COPY.newBadgeAria}`}
+                className="hover-lift gap-2"
               >
                 <Lightbulb className="h-5 w-5" />
                 Idées
-                <HomeNewBadge delayMs={220} />
               </Button>
             </div>
           </div>

@@ -15,12 +15,12 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 | **Room** | Live lobby/match state: roster, settings, active `MatchEngine`, `priorMatchSongIds`. | `modules/game/.../Room.ts` |
 | **MatchEngine** | Round loop for one match: song → guess → reveal → score; emits `round_start` (carries `videoMode`, `peekWindow`, `videoStartTime`). | `modules/game/engine/MatchEngine.ts` |
 | **PlaylistBuilder** | Draws songs + QCM distractors; applies Watched `watchedIds`, thematic playlist membership, precision, and cross-match exclusion. | `modules/game/engine/PlaylistBuilder.ts` |
-| **gameService** | Catalogue access + choice-candidate caching (`getChoiceCandidates(precision, allowedAnimeIds?)`). | `modules/game/gameService.ts` |
+| **gameService** | Catalogue access + choice-candidate caching (`getChoiceCandidates`, `getArtistChoiceCandidates`). | `modules/game/gameService.ts` |
 | **SocketManager** | Registers every handler module and wires shared deps (e.g. passes `gameManager` to profile handlers). | `core/SocketManager.ts` |
 | **authMiddleware** | Verifies the Supabase JWT on handshake → `socket.data` (`userId`, `role`, `mutedUntil`). | `core/authMiddleware.ts` |
 | **guards** | Per-action rate limits (chat, answers, anime search, `deleteAccount`, …). | `core/guards.ts` |
 | **Watched pool** | AniList-list resolution + playable-song counting for a room. | `modules/anilist/`, `watchedPoolService` |
-| **Eject** | `gameManager.ejectUserFromAllRooms(userId)` — force-leave every room (used by ban + account deletion). | `modules/game/gameManager.ts` |
+| **Daily challenge** | Globally shared five-song QCM for one Paris calendar day. Frozen round snapshots; HTTP play loop (no Socket.io room). Heard clips upsert `SongHistory` (pokédex). | `modules/daily/`, `routes/daily.ts`, `docs/game/daily-quiz.md` |
 
 ## Known pitfalls
 
@@ -30,6 +30,12 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   from `packages/shared/dist/`; a stale `dist` crashes `ts-node` on startup.
 - **Import cycle:** `PlaylistBuilder` ↔ `watchedPoolService` ↔ `Room`. Touch Watched
   mode carefully; prefer adding pure helpers in `packages/shared` (`playlist.ts`, `selection.ts`).
+  Daily admin tools import `dailyResults`, never `dailyService`.
+  Daily lineup edits are locked for past days and for today once an attempt exists
+  (void a broken live round instead of replacing it).
+  `GET /daily/today` settles with `allowAdvance: false`: it may complete a fully
+  answered run, never start the next song or time out the current guess, and never
+  returns a playable round. Reopening `/daily` forfeits `IN_PROGRESS`.
 - **`round_start` must stay reconnect-safe.** `videoMode` / `peekWindow` / `videoStartTime`
   are echoed on the payload so a reconnecting client re-renders identically.
 - **Watched vs Random distractors differ.** In Watched / playlist mode QCM candidates must use the

@@ -9,11 +9,12 @@ import {
   normalizePipelineSong,
   parsePipelineDifficulty,
 } from './lib/song-helpers';
+import { resolveArtistNames } from './lib/parse-artist-names';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const prisma = new PrismaClient();
-// Priorité au fichier manuel s'il existe, sinon le fichier brut
+// Prefer the manual export when it exists, otherwise the pipeline snapshot.
 const MANUAL_FILE = path.join(__dirname, '../data/manual_edits.json');
 const GENERATED_FILE = path.join(__dirname, '../data/data_step2.json');
 
@@ -50,7 +51,7 @@ async function main() {
 
   for (const fData of franchisesData) {
 
-    // Création Franchise
+    // Create franchise
     const franchise = await prisma.franchise.create({
       data: {
         name: fData.franchiseName || fData.name, // Supporte les deux formats
@@ -63,7 +64,7 @@ async function main() {
     for (const aData of fData.animes) {
       if (insertedAnimeIds.has(aData.id)) continue;
 
-      // Création Anime
+      // Create anime
       const anime = await prisma.anime.create({
         data: {
           id: aData.id,
@@ -98,6 +99,7 @@ async function main() {
           data: {
             title: sData.title,
             artist: sData.artist,
+            artistNames: resolveArtistNames(sData.artist, sData.artistNames),
             songType,
             sequence,
             videoKey,

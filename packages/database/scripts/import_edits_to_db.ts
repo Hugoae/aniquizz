@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dotenv from 'dotenv';
 import { normalizePipelineSong, parsePipelineDifficulty } from './lib/song-helpers';
+import { resolveArtistNames } from './lib/parse-artist-names';
 import { syncPipelineSerialSequences } from './lib/sync-serial-sequences';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
@@ -112,6 +113,7 @@ async function main() {
             data: {
               title: song.title,
               artist: song.artist,
+              artistNames: resolveArtistNames(song.artist, song.artistNames),
               difficulty: parsePipelineDifficulty(song.difficulty),
               songType,
               sequence,

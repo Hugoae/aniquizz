@@ -1,6 +1,17 @@
 import { prisma, isBotId } from '@aniquizz/database';
 import type { PublicProfile, PresenceStatus, FriendSummary } from '@aniquizz/shared';
+import {
+  canViewAudience,
+  mergeProfileHistory,
+  normalizeAccountPrivacy,
+  PROFILE_HISTORY_TAKE,
+  summarizeDailyCareer,
+  toDailyHistoryEntry,
+  type PrivacyViewerKind,
+} from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
+import { friendsService } from '../friends/friendsService';
+import { redactPresence, unavailablePublicProfile } from './privacyRedaction';
 
 const PLAYABLE_SONGS_TTL_MS = 10 * 60 * 1000;
 let playableSongsCache: { count: number; at: number } | null = null;
@@ -17,8 +28,9 @@ const countPlayableSongs = async (): Promise<number> => {
 };
 
 /** Full stats + identity for a user; shared by the personal and public profile. */
-const computeRichStats = async (userId: string) => {
+const computeRichStats = async (userId: string, opts?: { includeHistory?: boolean }) => {
     if (isBotId(userId)) throw new Error('Profil introuvable.');
+    const includeHistory = opts?.includeHistory !== false;
     try {
         // Single DB round-trip wave: none of these depend on each other, so we
         // issue every profile query at once instead of two sequential batches.
@@ -28,6 +40,9 @@ const computeRichStats = async (userId: string) => {
             profile,
             best,
             historyRows,
+            dailyHistoryRows,
+            dailyStats,
+            dailyCareerRows,
             scoreAgg,
             timeAgg,
             roundsPlayed,
@@ -35,7 +50,7 @@ const computeRichStats = async (userId: string) => {
         ] = await Promise.all([
             countPlayableSongs(),
             prisma.songHistory.count({
-                where: { profileId: userId },
+                where: { profileId: userId, song: { downloadStatus: 'COMPLETED' } },
             }),
             prisma.profile.findUnique({
                 where: { id: userId },
@@ -58,28 +73,63 @@ const computeRichStats = async (userId: string) => {
                 where: { profileId: userId },
                 _max: { score: true },
             }),
-            prisma.matchPlayer.findMany({
-                where: { profileId: userId, match: { status: 'FINISHED' } },
-                select: {
-                    score: true,
-                    rank: true,
-                    isWinner: true,
-                    correctCount: true,
-                    xpEarned: true,
-                    answers: { select: { answerType: true } },
-                    match: {
-                        select: {
-                            id: true,
-                            mode: true,
-                            totalRounds: true,
-                            startedAt: true,
-                            endedAt: true,
-                            _count: { select: { players: true } },
+            includeHistory
+                ? prisma.matchPlayer.findMany({
+                    where: { profileId: userId, match: { status: 'FINISHED' } },
+                    select: {
+                        score: true,
+                        rank: true,
+                        isWinner: true,
+                        correctCount: true,
+                        xpEarned: true,
+                        answers: { select: { answerType: true } },
+                        match: {
+                            select: {
+                                id: true,
+                                mode: true,
+                                totalRounds: true,
+                                startedAt: true,
+                                endedAt: true,
+                                _count: { select: { players: true } },
+                            },
                         },
                     },
+                    orderBy: { match: { startedAt: 'desc' } },
+                    take: PROFILE_HISTORY_TAKE,
+                })
+                : Promise.resolve([]),
+            includeHistory
+                ? prisma.dailyAttempt.findMany({
+                    where: { profileId: userId, state: { in: ['COMPLETED', 'FORFEITED', 'EXPIRED'] } },
+                    select: {
+                        id: true,
+                        completedAt: true,
+                        startedAt: true,
+                        correctCount: true,
+                        activeRoundCount: true,
+                        xpAwarded: true,
+                        won: true,
+                        totalResponseMs: true,
+                        rank: true,
+                        challenge: { select: { challengeNumber: true } },
+                    },
+                    orderBy: { completedAt: 'desc' },
+                    take: PROFILE_HISTORY_TAKE,
+                })
+                : Promise.resolve([]),
+            prisma.dailyPlayerStats.findUnique({
+                where: { profileId: userId },
+                select: {
+                    completions: true,
+                    wins: true,
+                    currentStreak: true,
+                    longestStreak: true,
+                    perfectDays: true,
                 },
-                orderBy: { match: { startedAt: 'desc' } },
-                take: 5,
+            }),
+            prisma.dailyAttempt.findMany({
+                where: { profileId: userId, state: { in: ['COMPLETED', 'FORFEITED', 'EXPIRED'] } },
+                select: { rank: true, totalResponseMs: true, correctCount: true },
             }),
             // Cumulative score/XP + answer time (avg & min) + rounds + multi/solo split + playtime.
             prisma.matchPlayer.aggregate({ where: { profileId: userId }, _sum: { score: true, xpEarned: true } }),
@@ -114,7 +164,7 @@ const computeRichStats = async (userId: string) => {
             return 'Mix';
         };
 
-        const history = historyRows.map((row) => {
+        const matchHistory = historyRows.map((row) => {
             const m = row.match;
             const start = m.startedAt;
             const end = m.endedAt;
@@ -122,6 +172,7 @@ const computeRichStats = async (userId: string) => {
                 id: m.id,
                 playedAt: (end ?? start).toISOString(),
                 mode: m.mode as string,
+                kind: 'match' as const,
                 answerMode: resolveAnswerMode(row.answers.map((a) => a.answerType)),
                 totalRounds: m.totalRounds,
                 score: row.score,
@@ -133,6 +184,21 @@ const computeRichStats = async (userId: string) => {
                 durationMs: end ? end.getTime() - start.getTime() : null,
             };
         });
+        const dailyHistory = dailyHistoryRows.map((row) =>
+            toDailyHistoryEntry({
+                id: row.id,
+                playedAt: row.completedAt ?? row.startedAt,
+                challengeNumber: row.challenge.challengeNumber,
+                correctCount: row.correctCount,
+                activeRoundCount: row.activeRoundCount,
+                xpAwarded: row.xpAwarded,
+                won: row.won,
+                totalResponseMs: row.totalResponseMs,
+                rank: row.rank,
+            }),
+        );
+        const history = mergeProfileHistory(matchHistory, dailyHistory);
+        const dailyCareer = summarizeDailyCareer(dailyCareerRows);
 
         let multiCount = 0;
         let soloCount = 0;
@@ -172,6 +238,7 @@ const computeRichStats = async (userId: string) => {
             soloCount,
             playtimeMs,
             history,
+            historyRedacted: !includeHistory,
             stats: {
                 gamesPlayed: profile.gamesPlayed,
                 gamesWon: profile.gamesWon,
@@ -179,7 +246,18 @@ const computeRichStats = async (userId: string) => {
                 correctGuesses: profile.correctGuesses,
                 maxStreak: profile.maxStreak,
                 winRate,
-                accuracy
+                accuracy,
+                dailyCompletions: dailyStats?.completions ?? 0,
+                dailyWins: dailyStats?.wins ?? 0,
+                dailyStreak: dailyStats?.currentStreak ?? 0,
+                dailyLongestStreak: dailyStats?.longestStreak ?? 0,
+                dailyPerfectDays: dailyStats?.perfectDays ?? 0,
+                dailyTotalCorrect: dailyCareer.dailyTotalCorrect,
+                dailyTotalResponseMs: dailyCareer.dailyTotalResponseMs,
+                dailyAvgRank: dailyCareer.dailyAvgRank,
+                dailyBestRank: dailyCareer.dailyBestRank,
+                dailyAvgTimeMs: dailyCareer.dailyAvgTimeMs,
+                dailyBestTimeMs: dailyCareer.dailyBestTimeMs,
             }
         };
 
@@ -213,25 +291,66 @@ const resolveRelation = async (
   return fr.requesterId === viewerId ? 'outgoing' : 'incoming';
 };
 
+const viewerKindFromRelation = (
+  relation: PublicProfile['relation'],
+): PrivacyViewerKind => {
+  if (relation === 'self') return 'self';
+  if (relation === 'friends') return 'friend';
+  if (relation === 'blocked') return 'blocked';
+  return 'stranger';
+};
+
 /** Public profile card + stats for any user, viewed by `viewerId`. */
 export const getPublicProfile = async (
   viewerId: string,
   targetId: string,
-  presence: { status: PresenceStatus },
+  presence: { status: PresenceStatus; roomId?: string | null; roomName?: string | null; joinable?: boolean },
   friends: FriendSummary[] = [],
 ): Promise<PublicProfile> => {
   if (isBotId(targetId)) throw new Error('Profil introuvable.');
 
-  const [rich, relation] = await Promise.all([
-    computeRichStats(targetId),
+  if (viewerId !== targetId && (await friendsService.isBlockedEitherWay(viewerId, targetId))) {
+    return unavailablePublicProfile(targetId);
+  }
+
+  const [privacyRow, relation] = await Promise.all([
+    prisma.profile.findUnique({
+      where: { id: targetId },
+      select: {
+        onlineStatusAudience: true,
+        matchHistoryAudience: true,
+        showFavoriteSongs: true,
+        allowFriendRequests: true,
+        lobbyInviteAudience: true,
+      },
+    }),
     resolveRelation(viewerId, targetId),
   ]);
+
+  const privacy = normalizeAccountPrivacy(privacyRow);
+  const viewerKind = viewerKindFromRelation(relation);
+  const canHistory = canViewAudience(privacy.matchHistoryAudience, viewerKind);
+  const canStatus = canViewAudience(privacy.onlineStatusAudience, viewerKind);
+
+  const rich = await computeRichStats(targetId, { includeHistory: canHistory });
+  const pr = redactPresence(
+    {
+      status: presence.status,
+      roomId: presence.roomId,
+      roomName: presence.roomName,
+      joinable: presence.joinable,
+    },
+    canStatus,
+  );
 
   return {
     ...rich,
     id: targetId,
-    status: presence.status,
+    status: pr.status,
+    lastSeenAt: canStatus ? rich.lastSeenAt : null,
     friends,
     relation,
+    history: canHistory ? rich.history : [],
+    historyRedacted: !canHistory,
   };
 };

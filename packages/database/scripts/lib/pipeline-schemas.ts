@@ -7,6 +7,8 @@ const songSchema = z
     id: z.number().int().positive().optional(),
     title: z.string().optional(),
     artist: z.string().optional(),
+    /** Structured credits; when omitted, import parses `artist`. */
+    artistNames: z.array(z.string()).optional(),
     songType: z.enum(['OP', 'ED', 'INSERT']).optional(),
     sequence: z.number().int().positive().optional(),
     /** @deprecated legacy pipeline field — use songType + sequence */

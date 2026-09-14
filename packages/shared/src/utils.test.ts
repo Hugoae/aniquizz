@@ -84,7 +84,13 @@ describe('getFuzzySuggestions', () => {
 
   it('returns nothing for empty or too-short queries', () => {
     expect(getFuzzySuggestions(list, '')).toEqual([]);
-    expect(getFuzzySuggestions(list, 'a')).toEqual([]);
+    expect(labels(getFuzzySuggestions(list, 'a'))).toEqual([]);
+  });
+
+  it('suggests a one-character Greek artist name in artist precision', () => {
+    const artists = [{ name: 'μ', franchise: null, altNames: [] }];
+    expect(labels(getFuzzySuggestions(artists, 'μ', 'artist'))).toEqual(['μ']);
+    expect(getFuzzySuggestions(artists, 'μ', 'anime')).toEqual([]);
   });
 
   it('matches on prefixes and ranks them first', () => {
@@ -395,5 +401,11 @@ describe('isAnswerCorrect', () => {
   it('rejects unrelated answers', () => {
     expect(isAnswerCorrect('bleach', ['Naruto'])).toBe(false);
     expect(isAnswerCorrect('', ['Naruto'])).toBe(false);
+    expect(isAnswerCorrect('???', ['Naruto'])).toBe(false);
+  });
+
+  it('matches a Greek-letter artist unit without collapsing it to empty', () => {
+    expect(isAnswerCorrect('μ', ['μ'])).toBe(true);
+    expect(isAnswerCorrect('μ', ['Velvet.kodhy'])).toBe(false);
   });
 });

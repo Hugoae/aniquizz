@@ -4,6 +4,7 @@
 
 import type { WatchedPoolStats } from './watchedPool';
 import { isWatchedPoolInsufficient } from './watchedPool';
+import { normalizePrecision } from './precision';
 
 export const MIN_QCM_DISTINCT_NAMES = 4;
 
@@ -210,6 +211,19 @@ export interface CataloguePoolStats {
 
 export const hasEnoughQcmNames = (distinctNames: number, responseType: string): boolean =>
   responseType === 'typing' || distinctNames >= MIN_QCM_DISTINCT_NAMES;
+
+export const qcmPoolTooSmallReason = (precision?: unknown): string => {
+  if (normalizePrecision(precision) === 'artist') {
+    return (
+      'Pas assez d\'artistes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
+      'Passez en Typing ou élargissez les filtres.'
+    );
+  }
+  return (
+    'Pas assez d\'animes distincts dans ce pool pour le QCM (il en faut au moins 4). ' +
+    'Passez en Typing ou élargissez les filtres.'
+  );
+};
 
 const hasSome = (haystack: string[], needles: string[] | undefined): boolean => {
   if (!needles?.length) return true;

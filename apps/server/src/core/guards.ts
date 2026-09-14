@@ -137,12 +137,21 @@ export const RATE_LIMITS = {
   /** Private-room password guesses + join spam. Per-socket and per-IP (reconnect does not reset IP). */
   joinLobby: { points: 8, durationMs: 60_000 },
   friends: { points: 15, durationMs: 10_000 },
+  /** Dedicated invite cap + per-target cooldown in the handler. */
+  invite: { points: 6, durationMs: 60_000 },
   /** Autocomplete: client debounces (~10/s worst case); drop silently past this. */
   animeSearch: { points: 30, durationMs: 5_000 },
   /** Playlist/catalogue pool preview. Client debounces; drop silently past this. */
   poolStats: { points: 20, durationMs: 10_000 },
   /** Full catalogue fetch: once per session; allow a few retries on reconnect. */
   animeCatalogue: { points: 8, durationMs: 10_000 },
+  /** Player comfort prefs: client debounces (~700 ms); cap slider spam. */
+  updatePrefs: { points: 12, durationMs: 10_000 },
+  /** Privacy audiences: infrequent, still capped. */
+  updatePrivacy: { points: 8, durationMs: 10_000 },
+  /** Manual list sync is expensive (AniList/MAL); keep it tight. */
+  listsMutate: { points: 8, durationMs: 60_000 },
+  listsRefresh: { points: 3, durationMs: 60_000 },
   /** Account deletion: strict cap to slow abuse / accidental double-submit. */
   deleteAccount: { points: 3, durationMs: 60 * 60_000 },
 } as const;

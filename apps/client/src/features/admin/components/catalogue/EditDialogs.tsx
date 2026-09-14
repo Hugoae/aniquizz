@@ -23,6 +23,7 @@ import {
   type SongType,
 } from "@/lib/adminApi";
 import { getVideoUrl } from "@/lib/video";
+import { PrefVolumeVideo } from "@/features/settings/components/PrefVolumeVideo";
 
 const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : "Erreur.");
 
@@ -525,7 +526,7 @@ export function VideoPreviewDialog({
           <DialogDescription className="font-mono text-xs">{song?.videoKey}</DialogDescription>
         </DialogHeader>
         {url ? (
-          <video src={url} controls autoPlay className="max-h-[70vh] w-full rounded bg-black" />
+          <PrefVolumeVideo src={url} controls autoPlay className="max-h-[70vh] w-full rounded bg-black" />
         ) : (
           <p className="text-sm text-muted-foreground">
             URL vidéo indisponible (VITE_R2_PUBLIC_URL manquant).

@@ -20,7 +20,6 @@ import type {
   FriendsState,
   FriendSummary,
   FriendPresencePayload,
-  LobbyInvitePayload,
   RecentPlayer,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
@@ -122,9 +121,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       reconcileOptimistic(s);
     };
-    const onRequest = (payload: { from: FriendSummary }) => {
-      toast.info(`${payload.from.username} vous a envoyé une demande d'ami.`);
-    };
     const onPresence = (p: FriendPresencePayload) => {
       setState((prev) => ({
         ...prev,
@@ -143,15 +139,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       }));
     };
     const onRecent = (payload: { players: RecentPlayer[] }) => setRecentPlayers(payload.players);
-    const onInvite = (p: LobbyInvitePayload) => {
-      toast.info(`${p.from.username} vous invite dans « ${p.roomName} »`, {
-        action: {
-          label: 'Rejoindre',
-          onClick: () => navigate('/play', { state: { fromInvite: true, roomId: p.roomId } }),
-        },
-        duration: 15_000,
-      });
-    };
     const onInfo = (p: { message: string }) => toast.success(p.message);
     const onError = (e: { message: string }) => {
       for (const userId of [...pendingOptimisticRef.current.keys()]) {
@@ -165,10 +152,8 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     };
 
     socket.on('friends:state', onState);
-    socket.on('friends:request_received', onRequest);
     socket.on('friends:presence', onPresence);
     socket.on('friends:recent', onRecent);
-    socket.on('friends:invite_received', onInvite);
     socket.on('friends:info', onInfo);
     socket.on('friends:error', onError);
     socket.on('connect', requestSnapshot);
@@ -177,15 +162,13 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       socket.off('friends:state', onState);
-      socket.off('friends:request_received', onRequest);
       socket.off('friends:presence', onPresence);
       socket.off('friends:recent', onRecent);
-      socket.off('friends:invite_received', onInvite);
       socket.off('friends:info', onInfo);
       socket.off('friends:error', onError);
       socket.off('connect', requestSnapshot);
     };
-  }, [user, navigate, reconcileOptimistic, clearOptimisticForUser]);
+  }, [user, reconcileOptimistic, clearOptimisticForUser]);
 
   const sendRequest = useCallback((username: string) => {
     const trimmed = username.trim();
@@ -242,7 +225,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   );
 
   const onlineCount = useMemo(
-    () => state.friends.filter((f) => f.status !== 'offline').length,
+    () => state.friends.filter((f) => f.status !== 'offline' && f.status !== 'hidden').length,
     [state.friends],
   );
 

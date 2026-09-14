@@ -30,6 +30,7 @@ import { cn } from '@/lib/utils';
 import { libraryApi, LibraryApiError } from '@/lib/libraryApi';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { socket } from '@/lib/socket';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
@@ -180,7 +181,7 @@ export function ProfilePinnedFavoritesDialog({
         </Button>
         <div className="flex justify-center pr-8">
           {videoUrl ? (
-            <video
+            <PrefVolumeVideo
               key={song.id}
               src={videoUrl}
               controls

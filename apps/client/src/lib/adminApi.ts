@@ -388,6 +388,54 @@ export interface PlaylistUpsertInput {
   recipe: unknown;
 }
 
+export interface DailyAdminRound {
+  id: string;
+  position: number;
+  voided: boolean;
+  songId: number | null;
+  videoKey: string;
+  videoStartTime: number;
+  choices: string[];
+  anime: string;
+  title: string;
+  artist: string;
+  typeLabel: string;
+  difficulty: string;
+  cover: string | null;
+  franchise: string | null;
+  year: number | null;
+}
+
+export interface DailyAdminChallenge {
+  id: string;
+  challengeDate: string;
+  challengeNumber: number;
+  status: string;
+  attemptCount: number;
+  locked: boolean;
+  canVoid: boolean;
+  warnings: Array<{ code: string; message: string }>;
+  rounds: DailyAdminRound[];
+}
+
+export interface DailySongSearchHit {
+  id: number;
+  title: string;
+  artist: string;
+  songType: "OP" | "ED";
+  sequence: number;
+  typeLabel: string;
+  difficulty: SongDifficulty;
+  anime: string;
+  cover: string | null;
+  videoKey: string;
+}
+
+export interface DailyAdminList {
+  today: string;
+  challenges: DailyAdminChallenge[];
+}
+
 // --- ENDPOINTS --------------------------------------------------------------
 
 export const adminApi = {
@@ -418,6 +466,8 @@ export const adminApi = {
   mute: (id: string, minutes: number | null) =>
     request(`/users/${id}/mute`, { method: "POST", body: JSON.stringify({ minutes }) }),
   resetStats: (id: string) => request(`/users/${id}/reset-stats`, { method: "POST" }),
+  resetDaily: (id: string) =>
+    request<{ reset: boolean; xpReverted: number }>(`/users/${id}/reset-daily`, { method: "POST" }),
   disconnectUser: (id: string) =>
     request<{ disconnected: number }>(`/users/${id}/disconnect`, { method: "POST" }),
   getUserProfile: (id: string) => request<AdminUserProfile>(`/users/${id}/profile`),
@@ -515,6 +565,47 @@ export const adminApi = {
   refreshPlaylist: (id: string) =>
     request<{ snapshotCount: number }>(`/playlists/${id}/refresh`, { method: "POST" }),
   deletePlaylist: (id: string) => request<void>(`/playlists/${id}`, { method: "DELETE" }),
+
+  listDaily: () => request<DailyAdminList>("/daily"),
+  searchDailySongs: (
+    opts: { query?: string; exclude?: number[]; signal?: AbortSignal } = {},
+  ) => {
+    const params = new URLSearchParams();
+    if (opts.query) params.set("query", opts.query);
+    if (opts.exclude?.length) params.set("exclude", opts.exclude.join(","));
+    const qs = params.toString();
+    return request<{ songs: DailySongSearchHit[] }>(`/daily/songs${qs ? `?${qs}` : ""}`, {
+      signal: opts.signal,
+    });
+  },
+  setDailyStatus: (id: string, status: "ready" | "draft") =>
+    request<DailyAdminList>(`/daily/${id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status }),
+    }),
+  regenerateDaily: (date: string) =>
+    request<DailyAdminList>("/daily/regenerate", {
+      method: "POST",
+      body: JSON.stringify({ date }),
+    }),
+  replaceDailyRound: (id: string, roundId: string, songId: number) =>
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/replace`, {
+      method: "POST",
+      body: JSON.stringify({ songId }),
+    }),
+  regenerateDailyRound: (id: string, roundId: string) =>
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/regenerate`, { method: "POST" }),
+  reshuffleDailyRoundClip: (id: string, roundId: string) =>
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/clip`, { method: "POST" }),
+  voidDailyRound: (id: string, roundId: string) =>
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/void`, { method: "POST" }),
+  restoreDailyRound: (id: string, roundId: string) =>
+    request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/restore`, { method: "POST" }),
+  reorderDailyRounds: (id: string, orderedIds: string[]) =>
+    request<DailyAdminList>(`/daily/${id}/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ orderedIds }),
+    }),
 
   // Stats
   stats: () => request<AdminStats>("/stats"),

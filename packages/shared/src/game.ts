@@ -334,9 +334,10 @@ export interface LevelUpPayload {
 /**
  * Rich presence, computed server-side from the socket rooms + GameManager.
  * `offline` = no live socket; `online` = connected but idle (menu);
- * `in_lobby` = in a waiting room; `in_game` = in a running match.
+ * `in_lobby` = in a waiting room; `in_game` = in a running match;
+ * `hidden` = the viewer is not allowed to see this presence (never a fake offline).
  */
-export type PresenceStatus = 'offline' | 'online' | 'in_lobby' | 'in_game';
+export type PresenceStatus = 'offline' | 'online' | 'in_lobby' | 'in_game' | 'hidden';
 
 /** A user in the friends UI (confirmed friend or the other party of a request). */
 export interface FriendSummary {
@@ -434,6 +435,8 @@ export interface ProfileStats {
   /** Collection completion, 0–100. */
   progressPercent: number;
   history: MatchHistoryEntry[];
+  /** True when recent matches were withheld for the viewer (aggregates stay). */
+  historyRedacted?: boolean;
   stats: {
     gamesPlayed: number;
     gamesWon: number;
@@ -442,6 +445,17 @@ export interface ProfileStats {
     maxStreak: number;
     winRate: number;
     accuracy: number;
+    dailyCompletions: number;
+    dailyWins: number;
+    dailyStreak: number;
+    dailyLongestStreak: number;
+    dailyPerfectDays: number;
+    dailyTotalCorrect: number;
+    dailyTotalResponseMs: number;
+    dailyAvgRank: number | null;
+    dailyBestRank: number | null;
+    dailyAvgTimeMs: number | null;
+    dailyBestTimeMs: number | null;
   };
 }
 
@@ -457,15 +471,19 @@ export interface PublicProfile extends ProfileStats {
   friends: FriendSummary[];
   /** Relationship of the viewer to this profile. */
   relation: 'self' | 'friends' | 'incoming' | 'outgoing' | 'blocked' | 'none';
+  /** Blocked either way — UI must show a generic unavailable state, not a card. */
+  unavailable?: boolean;
 }
 
 /** A finished match as shown in the profile match-history list. */
 export interface MatchHistoryEntry {
-  /** Match id. */
+  /** Match id, or daily attempt id. */
   id: string;
   /** When the match ended (or started, as a fallback). */
   playedAt: string;
   mode: string;
+  /** `daily` rows use the Quiz-du-jour card; omitted on older match payloads. */
+  kind?: 'match' | 'daily';
   /** Answer style used: 'Typing' | 'QCM' | 'Duo' | 'Mix' (null if unknown). */
   answerMode: string | null;
   totalRounds: number;
@@ -479,6 +497,10 @@ export interface MatchHistoryEntry {
   playerCount: number;
   /** Match duration in ms, when both timestamps are known. */
   durationMs: number | null;
+  /** Daily challenge number, when `kind` is `daily`. */
+  challengeNumber?: number;
+  /** Daily cumulative guess time in ms, when `kind` is `daily`. */
+  totalResponseMs?: number;
 }
 
 // --- CHAT ---

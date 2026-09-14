@@ -21,6 +21,40 @@ export const typeConfig: Record<NewsItem['type'] | 'default', TypeConfig> = {
 
 export const allNews: NewsItem[] = [
   {
+    id: 8,
+    title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
+    description:
+      'Défi quotidien, paramètres joueur, précision Artiste, bouton Soutenir, et un passage catalogue.',
+    content:
+      '**Quiz du jour**\n' +
+      '• Cinq QCM identiques pour tout le monde, précision **Anime**, compte requis.\n' +
+      '• Une seule tentative officielle : quitter, rafraîchir ou fermer l’onglet abandonne les questions restantes. Pas de reprise au milieu.\n' +
+      '• 15 secondes pour deviner, 15 secondes de révélation par manche. Reset à minuit **heure de Paris**. Le n°1 correspond au 14 septembre 2026.\n' +
+      '• Score sur 5, classement du jour (trouvés, puis le temps), série quotidienne même à 0/5, un peu d’XP.\n' +
+      '• Victoire dès 3 trouvés, bonus si 5/5.\n' +
+      '• Le classement du jour est visible. À la révélation, vous pouvez liker le son comme en solo / multi.\n' +
+      '• L’historique du profil mélange désormais ces runs (badge Quiz du jour).\n\n' +
+      '**Paramètres joueur**\n' +
+      '• Le panneau n’est plus un placeholder : onglets **Général**, **Social** et **Compte**.\n' +
+      '• Volume et mute s’appliquent partout (partie, librairie, profil, aperçus admin, sons de notif).\n' +
+      '• Animations Auto / Réduit / Complet, autofocus, Entrée, révélation solo, rappel des raccourcis.\n' +
+      '• Notifications internes (toasts, optionnellement un petit son — désactivé par défaut). Pas de push navigateur.\n' +
+      '• Confidentialité : qui voit votre statut, votre historique, qui peut vous inviter. Liste des comptes bloqués.\n' +
+      '• AniList et MyAnimeList peuvent rester liés en même temps ; une seule source active pour le mode Watched.\n\n' +
+      '**Précision Artiste**\n' +
+      '• En plus de Franchise et Anime, vous pouvez demander jouer avec la précision **Artiste**.\n' +
+      '• En saisie, un des artistes / groupes crédités suffit. En QCM, la bonne réponse est le premier nom facturé.\n' +
+      '**Soutenir**\n' +
+      '• Nouveau bouton **Soutenir** dans le header (vers Ko-fi). Volontaire, sans contrepartie en jeu, le site reste gratuit et sans pubs, mais si vous voulez soutenir mon travail et aider à payer les infrastructures c\'est avec plaisir !.\n' +
+      '**Catalogue**\n' +
+      '• Les studios AniList sont enfin remplis sur les fiches (ils n’étaient jamais enregistrés).\n' +
+      '• Titres et crédits manquants repris là où c’était sûr.\n' +
+      '• La recherche comprend mieux les requêtes du type **bleach ED5** (librairie, admin, suggestions).\n\n' +
+      'Bon quiz, et à demain pour le suivant !',
+    date: '2026-09-14T12:00:00Z',
+    type: 'update',
+  },
+  {
     id: 7,
     title: 'Mise à jour v26.5 - Endings & Playlists',
     description:

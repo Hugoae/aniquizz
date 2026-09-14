@@ -10,7 +10,7 @@ export const roadmapData: RoadmapItem[] = [
   {
     title: 'Lancement v26.0',
     description:
-      'Blindtest anime solo et multijoueur, AniList, amis, XP, médailles et catalogue de openings/endings.',
+      'Blindtest anime solo et multijoueur, AniList, amis, XP, médailles et catalogue de sons.',
     status: 'done',
     date: 'Juillet 2026',
   },
@@ -59,7 +59,7 @@ export const roadmapData: RoadmapItem[] = [
   {
     title: 'Endings',
     description:
-      'Plus de 1800 endings dans le catalogue, 3000 sons au total, et filtre Openings / Endings en partie.',
+      'Plus de 1800 endings dans le catalogue, 3000 sons au total.',
     status: 'done',
     date: '5 septembre 2026, v26.5',
   },
@@ -71,15 +71,16 @@ export const roadmapData: RoadmapItem[] = [
     date: '11 septembre 2026, v26.5',
   },
   {
-    title: 'Graphiques statistiques (profil)',
+    title: 'Quiz du jour',
     description:
-      'Répartition visuelle de vos parties (solo/multi, types de sons, difficulté, médailles) avec filtre par période.',
-    status: 'planned',
-    date: 'Q3 2026',
+      'Cinq QCM identiques pour tous, une tentative, série dédiée, classement du jour, reset minuit Paris.',
+    status: 'done',
+    date: '14 septembre 2026, v26.6',
   },
   {
-    title: 'Quiz du jour',
-    description: 'Un défi quotidien solo pour tester votre culture anime chaque jour.',
+    title: 'Refonte du profil',
+    description:
+      'Refonte de l\'historique de jeu, des statistiques et ajout de stats complémentaires.',
     status: 'planned',
     date: 'Q4 2026',
   },
@@ -87,18 +88,18 @@ export const roadmapData: RoadmapItem[] = [
     title: 'Succès & collection',
     description: 'Badges de progression, objectifs à débloquer et suivi de vos exploits en jeu.',
     status: 'planned',
-    date: 'Q1 2027',
+    date: 'Q4 2026',
   },
   {
     title: 'Mode Compétitif',
     description: 'Parties classées avec ladder et saisons : montez en grade et affrontez les meilleurs.',
     status: 'planned',
-    date: 'Q2 2027',
+    date: '2027',
   },
   {
     title: 'Traduction anglaise',
     description: 'Version anglaise complète du site pour jouer partout dans le monde.',
     status: 'planned',
-    date: 'Q3 2027',
+    date: '2027',
   },
 ];

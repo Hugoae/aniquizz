@@ -1,4 +1,4 @@
-import { getFuzzySuggestions, hasPlaylistSource, hasWatchedListLink, normalizePrecision, resolvePoolQueryFilters, type AnimeSearchInput } from '@aniquizz/shared';
+import { getFuzzySuggestions, hasPlaylistSource, hasWatchedListLink, normalizePrecision, resolvePoolQueryFilters, type AnimeSearchInput, type ArtistSearchInput } from '@aniquizz/shared';
 import { getWatchedPoolStatsForPlayers } from './watchedPoolService';
 import {
   computePlaylistPoolStats,
@@ -10,8 +10,10 @@ import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import type { GameManager } from './gameManager';
 import {
   getAllAnimeNames,
+  getAllArtistSearchEntries,
   countPlayableWatchedSongs,
   countPlayableSongs,
+  countDistinctArtistCredits,
   countDistinctChoiceNames,
   listPlayableAnimeIds,
 } from './gameService';
@@ -56,12 +58,14 @@ export const registerGameHandlers = (
     roomId,
     answer,
     answerType,
+    revealAfterAnswer,
   }: {
     roomId: string;
     answer: string;
     answerType: 'typing' | 'qcm' | 'duo';
+    revealAfterAnswer?: boolean;
   }) => {
-    gameManager.getRoom(roomId)?.handleAnswer(uid(), answer, answerType);
+    gameManager.getRoom(roomId)?.handleAnswer(uid(), answer, answerType, { revealAfterAnswer });
   };
 
   const votePause = ({ roomId }: { roomId: string }) => {
@@ -141,6 +145,7 @@ export const registerGameHandlers = (
             isBot: p.isBot,
             anilistUsername: p.anilistUsername,
             malUsername: p.malUsername,
+            activeListProvider: p.activeListProvider,
           })),
           songFilters,
           soundCount,
@@ -158,7 +163,7 @@ export const registerGameHandlers = (
 
       const profile = await prisma.profile.findUnique({
         where: { id: userId },
-        select: { anilistUsername: true, malUsername: true },
+        select: { anilistUsername: true, malUsername: true, activeListProvider: true },
       });
       if (!profile || !hasWatchedListLink(profile)) {
         socket.emit('watched:pool_stats', {
@@ -171,12 +176,18 @@ export const registerGameHandlers = (
         return;
       }
       const { ids, listError } = await resolvePlayerCatalogueWithMeta(userId, profile);
-      const playableSongs = await countPlayableWatchedSongs(ids, songFilters);
-      const playableAnimeIds = await listPlayableAnimeIds({ ...songFilters, watchedIds: ids });
-      const distinctNames = await countDistinctChoiceNames(
-        normalizePrecision(input?.precision),
-        playableAnimeIds,
-      );
+      const resolvedPrecision = normalizePrecision(input?.precision);
+      const artistFilters = {
+        ...songFilters,
+        watchedIds: ids,
+        requirePlayableArtist: resolvedPrecision === 'artist',
+      };
+      const playableSongs = await countPlayableWatchedSongs(ids, artistFilters);
+      const playableAnimeIds = await listPlayableAnimeIds(artistFilters);
+      const distinctNames =
+        resolvedPrecision === 'artist'
+          ? await countDistinctArtistCredits(artistFilters)
+          : await countDistinctChoiceNames(resolvedPrecision, playableAnimeIds);
       socket.emit('watched:pool_stats', {
         animeCount: ids.length,
         playableSongs,
@@ -222,6 +233,27 @@ export const registerGameHandlers = (
     } catch (error) {
       captureError(error, { context: 'Game', source: 'anime:get_all' });
       socket.emit('anime:all_names', { animes: [] });
+    }
+  };
+
+  const artistSearch = async ({ requestId, query }: ArtistSearchInput) => {
+    try {
+      const list = await getAllArtistSearchEntries();
+      const results = getFuzzySuggestions(list, query, 'artist');
+      socket.emit('artist:search_results', { requestId, results });
+    } catch (error) {
+      captureError(error, { context: 'Game', source: 'artist:search' });
+      socket.emit('artist:search_results', { requestId, results: [] });
+    }
+  };
+
+  const sendAllArtistNames = async () => {
+    try {
+      const artists = await getAllArtistSearchEntries();
+      socket.emit('artist:all_names', { artists });
+    } catch (error) {
+      captureError(error, { context: 'Game', source: 'artist:get_all' });
+      socket.emit('artist:all_names', { artists: [] });
     }
   };
 
@@ -284,7 +316,7 @@ export const registerGameHandlers = (
       if (playlistWatched) {
         const profile = await prisma.profile.findUnique({
           where: { id: userId },
-          select: { anilistUsername: true, malUsername: true },
+          select: { anilistUsername: true, malUsername: true, activeListProvider: true },
         });
         if (profile && hasWatchedListLink(profile)) {
           const resolved = await resolvePlayerCatalogueWithMeta(userId, profile);
@@ -353,4 +385,6 @@ export const registerGameHandlers = (
   socket.on('catalogue:get_pool_stats', requireAuth(socket, getCataloguePoolStats));
   socket.on('anime:search', guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch));
   socket.on('anime:get_all', guardSilent(socket, 'anime:get_all', RATE_LIMITS.animeCatalogue, sendAllAnimeNames));
+  socket.on('artist:search', guardSilent(socket, 'artist:search', RATE_LIMITS.animeSearch, artistSearch));
+  socket.on('artist:get_all', guardSilent(socket, 'artist:get_all', RATE_LIMITS.animeCatalogue, sendAllArtistNames));
 };

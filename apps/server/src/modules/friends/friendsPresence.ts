@@ -7,6 +7,11 @@ import { prisma } from '@aniquizz/database';
 import type { GameManager } from '../game/gameManager';
 import type { TypedServer } from '../../core/socketTypes';
 import type { PresenceInfo } from './friendsService';
+import {
+  canViewAudience,
+  normalizePrivacyAudience,
+  DEFAULT_ONLINE_STATUS_AUDIENCE,
+} from '@aniquizz/shared';
 
 const PRESENCE_DEBOUNCE_MS = 400;
 
@@ -100,18 +105,29 @@ export const broadcastPresence = async (
 ): Promise<void> => {
   try {
     const pr = resolvePresence(io, gameManager, userId);
-    if (shouldSkipPresenceBroadcast(userId, pr)) return;
-    const lastSeenAt = new Date().toISOString();
+    const privacy = await prisma.profile.findUnique({
+      where: { id: userId },
+      select: { onlineStatusAudience: true },
+    });
+    const canView = canViewAudience(
+      normalizePrivacyAudience(privacy?.onlineStatusAudience, DEFAULT_ONLINE_STATUS_AUDIENCE),
+      'friend',
+    );
+    const emitted: PresenceInfo = canView
+      ? pr
+      : { status: 'hidden', roomId: null, roomName: null, joinable: false };
+    if (shouldSkipPresenceBroadcast(userId, emitted)) return;
+    const lastSeenAt = canView ? new Date().toISOString() : null;
     const friendIds = await acceptedFriendIds(userId);
     for (const friendId of friendIds) {
       if (isUserOnline(io, friendId)) {
         io.to(userRoom(friendId)).emit('friends:presence', {
           userId,
-          status: pr.status,
+          status: emitted.status,
           lastSeenAt,
-          roomId: pr.roomId ?? null,
-          roomName: pr.roomName ?? null,
-          joinable: pr.joinable ?? false,
+          roomId: emitted.roomId ?? null,
+          roomName: emitted.roomName ?? null,
+          joinable: emitted.joinable ?? false,
         });
       }
     }

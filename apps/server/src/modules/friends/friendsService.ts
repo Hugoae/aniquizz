@@ -12,6 +12,13 @@ import type {
   PresenceStatus,
   RecentPlayer,
   UserRole,
+  PrivacyAudience,
+  PrivacyViewerKind,
+} from '@aniquizz/shared';
+import {
+  canViewAudience,
+  normalizePrivacyAudience,
+  DEFAULT_ONLINE_STATUS_AUDIENCE,
 } from '@aniquizz/shared';
 
 const PROFILE_SELECT = {
@@ -62,8 +69,67 @@ const toSummary = (p: ProfileLite, presence: ResolvePresence): FriendSummary => 
   };
 };
 
+const hidePresence = (summary: FriendSummary): FriendSummary => ({
+  ...summary,
+  status: 'hidden',
+  lastSeenAt: null,
+  roomId: null,
+  roomName: null,
+  joinable: false,
+});
+
+const applyAudience = (
+  summary: FriendSummary,
+  audience: PrivacyAudience,
+  viewer: PrivacyViewerKind,
+): FriendSummary =>
+  canViewAudience(audience, viewer) ? summary : hidePresence(summary);
+
 const statusRank = (s: PresenceStatus): number =>
-  s === 'in_game' ? 0 : s === 'in_lobby' ? 1 : s === 'online' ? 2 : 3;
+  s === 'in_game' ? 0 : s === 'in_lobby' ? 1 : s === 'online' ? 2 : s === 'hidden' ? 3 : 4;
+
+const loadStatusAudiences = async (
+  ids: string[],
+): Promise<Map<string, PrivacyAudience>> => {
+  if (ids.length === 0) return new Map();
+  const rows = await prisma.profile.findMany({
+    where: { id: { in: ids } },
+    select: { id: true, onlineStatusAudience: true },
+  });
+  return new Map(
+    rows.map((row) => [
+      row.id,
+      normalizePrivacyAudience(row.onlineStatusAudience, DEFAULT_ONLINE_STATUS_AUDIENCE),
+    ]),
+  );
+};
+
+const loadViewerKinds = async (
+  viewerId: string,
+  ids: string[],
+): Promise<Map<string, PrivacyViewerKind>> => {
+  const kinds = new Map<string, PrivacyViewerKind>();
+  for (const id of ids) {
+    if (id === viewerId) kinds.set(id, 'self');
+    else kinds.set(id, 'stranger');
+  }
+  if (ids.length === 0) return kinds;
+  const rows = await prisma.friendship.findMany({
+    where: {
+      OR: [
+        { requesterId: viewerId, addresseeId: { in: ids } },
+        { addresseeId: viewerId, requesterId: { in: ids } },
+      ],
+    },
+    select: { requesterId: true, addresseeId: true, status: true },
+  });
+  for (const row of rows) {
+    const otherId = row.requesterId === viewerId ? row.addresseeId : row.requesterId;
+    if (row.status === 'BLOCKED') kinds.set(otherId, 'blocked');
+    else if (row.status === 'ACCEPTED') kinds.set(otherId, 'friend');
+  }
+  return kinds;
+};
 
 const getState = async (userId: string, presence: ResolvePresence): Promise<FriendsState> => {
   const [rows, me] = await Promise.all([
@@ -102,6 +168,24 @@ const getState = async (userId: string, presence: ResolvePresence): Promise<Frie
       }
     }
   }
+
+  const otherIds = [
+    ...friends.map((f) => f.id),
+    ...incoming.map((r) => r.user.id),
+    ...outgoing.map((r) => r.user.id),
+  ];
+  const audiences = await loadStatusAudiences(otherIds);
+  const redact = (summary: FriendSummary, viewer: PrivacyViewerKind) =>
+    applyAudience(
+      summary,
+      audiences.get(summary.id) ?? DEFAULT_ONLINE_STATUS_AUDIENCE,
+      viewer,
+    );
+  for (let i = 0; i < friends.length; i++) {
+    friends[i] = redact(friends[i]!, 'friend');
+  }
+  for (const req of incoming) req.user = redact(req.user, 'stranger');
+  for (const req of outgoing) req.user = redact(req.user, 'stranger');
 
   // Most-active presence first, then alphabetical.
   friends.sort(
@@ -350,6 +434,7 @@ const getProfileLite = (userId: string) =>
 /** A user's confirmed friends (read-only), for their public profile. */
 const getPublicFriends = async (
   targetId: string,
+  viewerId: string,
   presence: ResolvePresence,
 ): Promise<FriendSummary[]> => {
   const rows = await prisma.friendship.findMany({
@@ -359,10 +444,36 @@ const getPublicFriends = async (
   const friends = rows.map((r) =>
     toSummary(r.requesterId === targetId ? r.addressee : r.requester, presence),
   );
-  friends.sort(
+  const ids = friends.map((f) => f.id);
+  const [audiences, kinds] = await Promise.all([
+    loadStatusAudiences(ids),
+    loadViewerKinds(viewerId, ids),
+  ]);
+  const redacted = friends.map((summary) =>
+    applyAudience(
+      summary,
+      audiences.get(summary.id) ?? DEFAULT_ONLINE_STATUS_AUDIENCE,
+      kinds.get(summary.id) ?? 'stranger',
+    ),
+  );
+  redacted.sort(
     (a, b) => statusRank(a.status) - statusRank(b.status) || a.username.localeCompare(b.username),
   );
-  return friends;
+  return redacted;
+};
+
+const areAcceptedFriends = async (a: string, b: string): Promise<boolean> => {
+  const row = await prisma.friendship.findFirst({
+    where: {
+      status: 'ACCEPTED',
+      OR: [
+        { requesterId: a, addresseeId: b },
+        { requesterId: b, addresseeId: a },
+      ],
+    },
+    select: { id: true },
+  });
+  return !!row;
 };
 
 export const friendsService = {
@@ -378,5 +489,6 @@ export const friendsService = {
   getRecentPlayers,
   getPublicFriends,
   isBlockedEitherWay,
+  areAcceptedFriends,
   toSummary,
 };

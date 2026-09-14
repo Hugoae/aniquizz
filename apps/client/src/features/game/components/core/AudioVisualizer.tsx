@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useMotionReduced } from '@/features/settings/context/PlayerPrefsContext';
 
 interface AudioVisualizerProps {
   isPlaying?: boolean;
@@ -6,12 +7,10 @@ interface AudioVisualizerProps {
   barCount?: number;
 }
 
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
 /** CSS-only equalizer — no setState tick loop during guessing. */
 export function AudioVisualizer({ isPlaying = true, className, barCount = 32 }: AudioVisualizerProps) {
-  const animate = isPlaying && !prefersReducedMotion();
+  const reduceMotion = useMotionReduced();
+  const animate = isPlaying && !reduceMotion;
 
   return (
     <div

@@ -179,6 +179,60 @@ describe('MatchEngine', () => {
     });
   });
 
+  describe('handleAnswer — artist precision', () => {
+    const artistPlaylist = [
+      makePlaylistItem({
+        anime: 'Kokoro Connect',
+        title: 'Kimiiro Signal',
+        artist: 'CHiCO, HoneyWorks',
+        validAnswers: ['CHiCO', 'HoneyWorks', 'CHiCO, HoneyWorks'],
+        choices: ['CHiCO', 'LiSA', 'Aimer', 'YOASOBI'],
+        duo: ['CHiCO', 'LiSA'],
+      }),
+      makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['LiSA'] }),
+    ];
+
+    it('accepts a credited unit as a correct typing answer', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'typing', precision: 'artist' },
+        playlist: artistPlaylist,
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'HoneyWorks', 'typing');
+      engine.forceEndRound();
+
+      const player = getPlayer(room, 'player-1');
+      expect(player.isCorrect).toBe(true);
+      expect(player.roundPoints).toBe(GAME_CONFIG.SCORING.TYPING);
+    });
+
+    it('rejects the anime title and the song title', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'typing', precision: 'artist' },
+        playlist: artistPlaylist,
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Kokoro Connect', 'typing');
+      engine.forceEndRound();
+      expect(getPlayer(room, 'player-1').isCorrect).toBe(false);
+    });
+
+    it('accepts the billed-first unit on QCM', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'qcm', precision: 'artist' },
+        playlist: artistPlaylist,
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'CHiCO', 'qcm');
+      engine.forceEndRound();
+      expect(getPlayer(room, 'player-1').isCorrect).toBe(true);
+      expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.QCM);
+    });
+  });
+
   describe('answer change before round end', () => {
     it('lets a player replace a wrong answer with a correct one before reveal', async () => {
       const { room, engine } = createEngineHarness({
@@ -334,6 +388,33 @@ describe('MatchEngine', () => {
 
       const answered = emitted.find((e) => e.event === 'game:answered');
       expect(answered?.payload).toEqual({ userId: 'player-1' });
+      expect(engine.getSyncState().phase).toBe('guessing');
+    });
+
+    it('reveals immediately in solo when revealAfterAnswer is set', async () => {
+      const { emitted, engine } = createEngineHarness({
+        settings: { mode: 'solo', maxPlayers: 1 },
+        playerIds: ['player-1'],
+      });
+      await advanceToGuessing(engine);
+      emitted.length = 0;
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing', { revealAfterAnswer: true });
+
+      expect(emitted.some((e) => e.event === 'game:answered')).toBe(true);
+      expect(emitted.some((e) => e.event === 'round_reveal')).toBe(true);
+      expect(engine.getSyncState().phase).toBe('reveal');
+    });
+
+    it('ignores revealAfterAnswer in multiplayer', async () => {
+      const { emitted, engine } = createEngineHarness();
+      await advanceToGuessing(engine);
+      emitted.length = 0;
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing', { revealAfterAnswer: true });
+
+      expect(emitted.some((e) => e.event === 'game:answered')).toBe(true);
+      expect(emitted.some((e) => e.event === 'round_reveal')).toBe(false);
       expect(engine.getSyncState().phase).toBe('guessing');
     });
 
@@ -498,6 +579,28 @@ describe('MatchEngine', () => {
       const sync = room.getSyncState();
       expect(sync.status).toBe('finished');
       expect(sync.victoryData).toBeDefined();
+    });
+
+    it('persists SongHistory ids for started rounds only', async () => {
+      const { engine, repo } = createEngineHarness({
+        playlist: [
+          makePlaylistItem({ id: 11 }),
+          makePlaylistItem({ id: 22, anime: 'Bleach', validAnswers: ['Bleach'] }),
+        ],
+        playerIds: ['player-1'],
+        settings: { maxPlayers: 1, mode: 'solo', soundCount: 2 },
+      });
+      await advanceToGuessing(engine);
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(vi.mocked(repo.persistMatch)).toHaveBeenCalled();
+      const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as { songIds: number[] };
+      expect(persisted.songIds).toEqual([11, 22]);
     });
   });
 

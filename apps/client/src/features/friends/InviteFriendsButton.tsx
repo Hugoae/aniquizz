@@ -22,7 +22,9 @@ interface InviteFriendsButtonProps {
 export function InviteFriendsButton({ excludeIds = [] }: InviteFriendsButtonProps) {
   const { friends, invite } = useFriends();
   const excluded = new Set(excludeIds.map(String));
-  const online = friends.filter((f) => f.status !== 'offline' && !excluded.has(String(f.id)));
+  const online = friends.filter(
+    (f) => f.status !== 'offline' && f.status !== 'hidden' && !excluded.has(String(f.id)),
+  );
 
   return (
     <DropdownMenu>

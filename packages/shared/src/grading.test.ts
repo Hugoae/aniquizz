@@ -48,6 +48,11 @@ describe('medalMarkerScores', () => {
     const scores = medalMarkerScores(20, mediumSongs(10), 'anime');
     expect(scores).toEqual({ bronze: 9, silver: 11, gold: 13, platinum: 17 });
   });
+
+  it('lowers every tier by 8 pp in artist precision (medium QCM)', () => {
+    const scores = medalMarkerScores(20, mediumSongs(10), 'artist');
+    expect(scores).toEqual({ bronze: 8, silver: 10, gold: 12, platinum: 16 });
+  });
 });
 
 describe('computeMedal - anime precision offset', () => {
@@ -61,5 +66,13 @@ describe('computeMedal - anime precision offset', () => {
     const difficulties = mediumSongs(10);
     expect(computeMedal(18, 20, difficulties, 'franchise')).toBe('platinum');
     expect(computeMedal(17, 20, difficulties, 'franchise')).toBe('gold');
+  });
+});
+
+describe('computeMedal - artist precision offset', () => {
+  it('awards platinum at 16/20 medium QCM (82 % bar)', () => {
+    const difficulties = mediumSongs(10);
+    expect(computeMedal(16, 20, difficulties, 'artist')).toBe('platinum');
+    expect(computeMedal(15, 20, difficulties, 'artist')).toBe('gold');
   });
 });

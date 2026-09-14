@@ -193,7 +193,7 @@ export const VideoStage = memo(function VideoStage({
             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
           <Slider
-            value={[isMuted ? 0 : volume]}
+            value={[volume]}
             onValueChange={([v]) => onVolumeChange(v)}
             max={100}
             aria-label="Volume"

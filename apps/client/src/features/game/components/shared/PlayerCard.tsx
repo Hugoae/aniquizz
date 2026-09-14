@@ -9,9 +9,10 @@ interface PlayerCardProps {
   rankPending?: boolean;
   flash?: boolean;
   onClick?: () => void;
+  hideScore?: boolean;
 }
 
-export function PlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick }: PlayerCardProps) {
+export function PlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick, hideScore }: PlayerCardProps) {
   return (
     <StandardPlayerCard
       player={player}
@@ -21,6 +22,7 @@ export function PlayerCard({ player, isCurrentUser, showResult, rank, rankPendin
       rankPending={rankPending}
       flash={flash}
       onClick={onClick}
+      hideScore={hideScore}
     />
   );
 }

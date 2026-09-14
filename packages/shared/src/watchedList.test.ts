@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasWatchedListLink, watchedListProvider } from './watchedList';
+import { hasWatchedListLink, resolveActiveListProvider, watchedListProvider } from './watchedList';
 
 describe('hasWatchedListLink', () => {
   it('returns false when both providers are empty', () => {
@@ -15,8 +15,28 @@ describe('hasWatchedListLink', () => {
   });
 });
 
-describe('watchedListProvider', () => {
-  it('prefers AniList when set', () => {
+describe('resolveActiveListProvider', () => {
+  it('uses the stored active source when that username is still linked', () => {
+    expect(
+      resolveActiveListProvider({
+        anilistUsername: 'A',
+        malUsername: 'M',
+        activeListProvider: 'mal',
+      }),
+    ).toBe('mal');
+  });
+
+  it('falls back to the remaining link when the active source was unlinked', () => {
+    expect(
+      resolveActiveListProvider({
+        anilistUsername: null,
+        malUsername: 'M',
+        activeListProvider: 'anilist',
+      }),
+    ).toBe('mal');
+  });
+
+  it('prefers AniList when both are set and no preference is stored', () => {
     expect(watchedListProvider({ anilistUsername: 'A', malUsername: 'M' })).toBe('anilist');
   });
 

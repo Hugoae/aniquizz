@@ -1,6 +1,6 @@
 import type { User } from '@supabase/supabase-js';
 import type { RoomConfig } from '@aniquizz/shared';
-import { ANILIST_API_DOWN_MESSAGE, hasEnoughQcmNames, hasWatchedListLink } from '@aniquizz/shared';
+import { ANILIST_API_DOWN_MESSAGE, hasEnoughQcmNames, hasWatchedListLink, qcmPoolTooSmallReason } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 /** Watched source is selectable in the UI but cannot launch until a list provider is linked. */
@@ -26,8 +26,7 @@ export const WATCHED_ANILIST_BLOCKED_MESSAGE = ANILIST_API_DOWN_MESSAGE;
 export const WATCHED_ANILIST_STALE_MESSAGE =
   "AniList est instable : la liste affichée peut dater de quelques minutes.";
 
-export const WATCHED_QCM_TOO_SMALL_MESSAGE =
-  'Pas assez d\'animes distincts dans ce pool pour le QCM. Passez en Typing ou élargissez les filtres.';
+export const WATCHED_QCM_TOO_SMALL_MESSAGE = qcmPoolTooSmallReason('franchise');
 
 export const WATCHED_SERVER_OFFLINE =
   "Le serveur de jeu n'est pas joignable (port 3001). Lance-le avec pnpm run dev, puis réessaie.";
@@ -54,6 +53,7 @@ export function checkWatchedPoolLaunch(
   } | null,
   watchedAllowFallback?: boolean,
   responseType: RoomConfig['responseType'] = 'mix',
+  precision?: RoomConfig['precision'],
 ): WatchedPoolLaunchCheck {
   if (soundSelection !== 'watched' || !stats) {
     return { blocked: false, reason: null };
@@ -91,7 +91,7 @@ export function checkWatchedPoolLaunch(
     typeof stats.distinctNames === 'number' &&
     !hasEnoughQcmNames(stats.distinctNames, responseType ?? 'mix')
   ) {
-    return { blocked: true, reason: WATCHED_QCM_TOO_SMALL_MESSAGE };
+    return { blocked: true, reason: qcmPoolTooSmallReason(precision) };
   }
 
   return { blocked: false, reason: null };

@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { getVideoUrl } from '@/lib/video';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import {
@@ -129,9 +130,9 @@ export function LibrarySongsGrid({ songs, onSelectSong }: LibrarySongsGridProps)
                 </Button>
                 <div className="flex justify-center pr-10">
                   {videoUrl ? (
-                    <video
+                    <PrefVolumeVideo
                       key={song.id}
-                      ref={videoRef}
+                      mediaRef={videoRef}
                       src={videoUrl}
                       controls
                       autoPlay

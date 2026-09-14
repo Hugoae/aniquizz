@@ -12,7 +12,7 @@ async function main() {
   console.log("💾 EXPORTATION DE LA BDD VERS JSON...");
   console.log("   Ce fichier permet de sauvegarder les IDs et l'état de verrouillage.");
 
-  // Récupération de l'arbre complet
+  // Full catalogue tree: franchises → animes → songs.
   const data = await prisma.franchise.findMany({
     include: {
       animes: {
@@ -27,6 +27,18 @@ async function main() {
     },
     orderBy: { name: 'asc' }
   });
+
+  const nameRows = await prisma.$queryRaw<Array<{ id: number; artistNames: string[] }>>`
+    SELECT id, "artistNames" FROM "Song"
+  `;
+  const namesById = new Map(nameRows.map((row) => [row.id, row.artistNames ?? []]));
+  for (const franchise of data) {
+    for (const anime of franchise.animes) {
+      for (const song of anime.songs) {
+        (song as { artistNames: string[] }).artistNames = namesById.get(song.id) ?? [];
+      }
+    }
+  }
 
   fs.mkdirSync(path.dirname(EXPORT_FILE), { recursive: true });
   fs.writeFileSync(EXPORT_FILE, JSON.stringify(data, null, 2));

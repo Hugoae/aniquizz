@@ -22,10 +22,27 @@ export type Profile = {
   anilistUsername?: string | null;
   malUsername?: string | null;
   lastListSync?: string | null;
+  activeListProvider?: 'anilist' | 'mal' | null;
+  anilistLastSync?: string | null;
+  malLastSync?: string | null;
   showFavoriteSongs?: boolean;
+  allowFriendRequests?: boolean;
+  onlineStatusAudience?: 'everyone' | 'friends' | 'nobody';
+  matchHistoryAudience?: 'everyone' | 'friends' | 'nobody';
+  lobbyInviteAudience?: 'friends' | 'nobody';
+  audioVolume?: number;
+  audioMuted?: boolean;
+  motionMode?: 'auto' | 'reduced' | 'full';
+  autofocusAnswer?: boolean;
+  submitOnEnter?: boolean;
+  soloAutoReveal?: boolean;
+  showShortcutReminder?: boolean;
+  friendRequestVisual?: boolean;
+  friendRequestSound?: boolean;
+  lobbyInviteVisual?: boolean;
+  lobbyInviteSound?: boolean;
   totalGuesses?: number;
   correctGuesses?: number;
-  history?: { count: number }[];
 };
 
 type AuthContextType = {
@@ -40,6 +57,7 @@ type AuthContextType = {
   isAdmin: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  patchProfile: (patch: Partial<Profile>, expectedUserId?: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await client
         .from("Profile")
-        .select("*, history:SongHistory(count)")
+        .select("*")
         .eq("id", userId)
         .single();
 
@@ -183,6 +201,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session?.user, fetchProfile]);
 
+  const patchProfile = useCallback((patch: Partial<Profile>, expectedUserId?: string) => {
+    setProfile((current) =>
+      current && (!expectedUserId || current.id === expectedUserId)
+        ? { ...current, ...patch }
+        : current,
+    );
+  }, []);
+
   const isAdmin = profile?.role === "ADMIN";
 
   const value = useMemo(() => ({
@@ -195,7 +221,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     signOut,
     refreshProfile,
-  }), [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile]);
+    patchProfile,
+  }), [session, profile, authReady, profileLoading, isAdmin, signOut, refreshProfile, patchProfile]);
 
   return (
     <AuthContext.Provider value={value}>

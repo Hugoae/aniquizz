@@ -6,16 +6,16 @@ export interface CollectionMedal {
   label: string;
   /** Completion threshold (%) required to reach this medal. */
   min: number;
-  /** Metallic accent color (hex) used for the icon/label. */
-  color: string;
+  /** Tailwind text token for the icon/label (no hex). */
+  textClass: string;
 }
 
 // Ascending by threshold — also drives the caps drawn on the progress bar.
 export const COLLECTION_MEDALS: CollectionMedal[] = [
-  { key: 'bronze', label: 'Bronze', min: 25, color: '#C67B48' },
-  { key: 'silver', label: 'Argent', min: 50, color: '#CBD5E1' },
-  { key: 'gold', label: 'Or', min: 75, color: '#FACC15' },
-  { key: 'platinum', label: 'Platine', min: 100, color: '#22D3EE' },
+  { key: 'bronze', label: 'Bronze', min: 25, textClass: 'text-medal-bronze' },
+  { key: 'silver', label: 'Argent', min: 50, textClass: 'text-silver' },
+  { key: 'gold', label: 'Or', min: 75, textClass: 'text-warning' },
+  { key: 'platinum', label: 'Platine', min: 100, textClass: 'text-aqua' },
 ];
 
 /** Highest medal earned for a given completion percentage (null under 25 %). */

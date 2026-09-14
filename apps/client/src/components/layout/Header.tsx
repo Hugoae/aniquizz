@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { hasRole } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
-import { LogIn, Shield } from 'lucide-react';
+import { Coffee, LogIn, Shield } from 'lucide-react';
 
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { prefetchRoute } from '@/lib/routePrefetch';
+import { KOFI_URL } from '@/lib/site';
 
 export function Header() {
   const navigate = useNavigate();
@@ -37,6 +38,23 @@ export function Header() {
 
       <div className="flex min-w-[2.75rem] items-center justify-end gap-3">
         {user && profile && <SuspensionBadge />}
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="border-primary/35 bg-primary/[0.04] px-2.5 text-muted-foreground hover:border-primary/60 hover:bg-primary/10 hover:text-foreground sm:px-3"
+        >
+          <a
+            href={KOFI_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Soutenir AniQuizz sur Ko-fi (nouvel onglet)"
+            title="Soutenir AniQuizz sur Ko-fi"
+          >
+            <Coffee className="text-primary" aria-hidden />
+            <span className="hidden sm:inline">Soutenir</span>
+          </a>
+        </Button>
         {user && profile && isStaff && (
           <Button
             variant="ghost"
@@ -52,7 +70,7 @@ export function Header() {
             <span className="hidden md:inline text-sm font-semibold">Admin</span>
           </Button>
         )}
-        {user && profile && isStaff && (
+        {user && profile && (
           <div className="h-6 w-px bg-border/70" aria-hidden="true" />
         )}
         {showProfileLoading ? (

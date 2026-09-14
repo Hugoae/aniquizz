@@ -26,7 +26,7 @@ export const GAME_CONFIG = {
   // medal; harder songs are more lenient. Platinum keeps a small margin (not a
   // strict 100%). For a mixed-difficulty match the effective threshold is the
   // mean across the songs actually played (see effectiveMedalThresholds).
-  // Anime precision (exact season) subtracts PRECISION_OFFSET.anime from each tier.
+  // Anime / artist precision subtract PRECISION_OFFSET from each medal tier.
   MEDALS: {
     THRESHOLDS: {
       easy: { bronze: 0.55, silver: 0.65, gold: 0.8, platinum: 0.95 },
@@ -37,6 +37,7 @@ export const GAME_CONFIG = {
     PRECISION_OFFSET: {
       franchise: 0,
       anime: -0.05,
+      artist: -0.08,
     },
     // Highest → lowest, used to resolve a medal from an accuracy.
     TIERS: ['platinum', 'gold', 'silver', 'bronze'] as const,

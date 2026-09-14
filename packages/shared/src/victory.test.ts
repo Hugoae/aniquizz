@@ -110,6 +110,18 @@ describe('computeVictory - solo (mastery-ratio medals)', () => {
     expect(res.soloTargetRatio).toBeCloseTo(0.45);
     expect(res.soloMedal).toBe('platinum');
   });
+
+  it('lowers medal thresholds in artist precision (platinum at 16/20 QCM)', () => {
+    const res = computeVictory({
+      ...base,
+      isSolo: true,
+      responseType: 'qcm',
+      precision: 'artist',
+      players: [player('solo', 16, 9, 10)],
+    });
+    expect(res.soloTargetRatio).toBeCloseTo(0.42);
+    expect(res.soloMedal).toBe('platinum');
+  });
 });
 
 describe('computeVictory - multiplayer (no medals)', () => {

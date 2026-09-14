@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { logger } from '../../utils/logger';
+import { normalizeAnilistUsername } from '../lists/watchlistUsername';
 import {
   anilistListGate,
   isAnilistUnavailableStatus,
@@ -110,7 +111,7 @@ export const isAnilistUnavailableError = (error: unknown): boolean => {
  * a transient AniList outage never blocks a legitimate link.
  */
 export const verifyAnilistUser = async (username: string): Promise<AnilistVerifyResult> => {
-  const name = username.trim();
+  const name = normalizeAnilistUsername(username);
   if (!name) return 'not_found';
   if (anilistListGate.isInBackoff()) {
     logger.warn(`[AniList] Skip verify for "${name}" — AniList backoff active`, 'AniList');
@@ -188,6 +189,7 @@ export const resolveAnilistList = async (username: string): Promise<AnilistListR
 
       if (!lists?.length) {
         logger.warn(`No AniList MediaListCollection for ${username} (private or empty)`, 'AniList');
+        anilistListGate.rememberSuccess(username, []);
         return { ids: [], blocked: false, stale: false };
       }
 
@@ -215,7 +217,7 @@ export const resolveAnilistList = async (username: string): Promise<AnilistListR
       if (stale?.length) {
         return { ids: stale, blocked: true, stale: true };
       }
-      return { ids: [], blocked: false, stale: false };
+      return { ids: [], blocked: true, stale: false };
     } finally {
       inflight.delete(username);
     }

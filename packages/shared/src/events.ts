@@ -9,6 +9,14 @@ import type { AnimeSuggestion } from './utils';
 import type { WatchedPoolStats } from './watchedPool';
 import type { CataloguePoolStats, PlaylistPoolStats } from './playlist';
 import type { Precision } from './game';
+import type { PlayerPrefs, PlayerPrefsInput } from './playerPrefs';
+import type { AccountPrivacy, AccountPrivacyInput } from './privacyAudience';
+import type {
+  ListOperationError,
+  ListOperationResult,
+  ListsStatusPayload,
+  WatchedListProvider,
+} from './watchedList';
 import type {
   AnswerType,
   ChatMessage,
@@ -53,8 +61,10 @@ export interface SocketData {
   level: number | null;
   /** Linked AniList username (server-resolved) or null. Used for Watched-mode gating. */
   anilistUsername: string | null;
-  /** Linked MyAnimeList username (server-resolved) or null. Mutually exclusive with anilistUsername. */
+  /** Linked MyAnimeList username (server-resolved) or null. Both may be set; one is active. */
   malUsername: string | null;
+  /** Which linked list feeds Watched mode. Null when none is linked. */
+  activeListProvider: WatchedListProvider | null;
 }
 
 // --- CLIENT → SERVER INPUT PAYLOADS ---
@@ -85,6 +95,8 @@ export interface AnswerInput {
   roomId: string;
   answer: string;
   answerType: AnswerType;
+  /** Solo-only: reveal the round immediately after this answer is recorded. */
+  revealAfterAnswer?: boolean;
 }
 
 // --- FRIENDS (Phase 7) ---
@@ -167,11 +179,17 @@ export interface ServerToClientEvents {
   'anime:search_results': (payload: AnimeSearchResults) => void;
   /** Full catalogue name list for client-side instant autocomplete (fetched once). */
   'anime:all_names': (payload: AllAnimeNamesPayload) => void;
+  /** Ranked artist autocomplete matches (echoes `requestId`). */
+  'artist:search_results': (payload: AnimeSearchResults) => void;
+  /** Deduped artist credits + units for client-side instant autocomplete. */
+  'artist:all_names': (payload: AllArtistNamesPayload) => void;
   my_watched_list: (ids: number[]) => void;
   /** Size of the caller's AniList list + how many map to playable songs. */
   watched_count: (payload: { listSize: number; playableSongs: number }) => void;
   /** Resolved Watched pool stats (solo list or lobby union/intersection). */
   'watched:pool_stats': (payload: WatchedPoolStats) => void;
+  /** A linked account/source changed; active lobby previews must be resolved again. */
+  'watched:list_changed': () => void;
   /** Playlist source pool stats (pack ± Watched overlay). */
   'playlist:pool_stats': (payload: PlaylistPoolStats) => void;
   /** Random-source catalogue pool (OP/ED + difficulty). */
@@ -184,6 +202,16 @@ export interface ServerToClientEvents {
   /** Sanction applied or lifted — keeps client profile/badge in sync without a reload. */
   'profile:sanction_updated': (payload: SanctionUpdatePayload) => void;
   user_profile: (payload: { success: boolean }) => void;
+  /** Stored (and server-clamped) player prefs after `profile:update_prefs`. */
+  'profile:prefs': (payload: PlayerPrefs) => void;
+  /** Stored privacy audiences after `profile:update_privacy`. */
+  'profile:privacy': (payload: AccountPrivacy) => void;
+  /** Linked list status after get/link/unlink/set_active/refresh. */
+  'lists:status': (payload: ListsStatusPayload) => void;
+  /** Correlated success for one list mutation. */
+  'lists:result': (payload: ListOperationResult) => void;
+  /** Correlated failure for one list mutation. */
+  'lists:error': (payload: ListOperationError) => void;
   /** Account permanently deleted — client should sign out and leave. */
   'profile:account_deleted': () => void;
   home_stats: (stats: { animes: number; users: number; songs: number; online: number; inMultiplayer: number }) => void;
@@ -279,6 +307,10 @@ export interface ClientToServerEvents {
   'anime:search': (payload: AnimeSearchInput) => void;
   /** Request the full catalogue name list once for client-side matching. */
   'anime:get_all': () => void;
+  /** Server-side artist autocomplete while the client catalogue is warming. */
+  'artist:search': (payload: ArtistSearchInput) => void;
+  /** Request the deduped artist name list once for client-side matching. */
+  'artist:get_all': () => void;
 
   // Chat / profile / general
   'chat:sendMessage': (payload: { roomId: string; content: string }) => void;
@@ -286,12 +318,34 @@ export interface ClientToServerEvents {
   update_profile_data: (payload: {
     username?: string;
     avatarUrl?: string;
-    anilistUsername?: string | null;
-    malUsername?: string | null;
     showFavoriteSongs?: boolean;
   }) => void;
+  /** Persist player comfort prefs. Rate-limited; omitted keys keep the stored value. */
+  'profile:update_prefs': (payload: PlayerPrefsInput) => void;
+  /** Persist account privacy audiences. Rate-limited; omitted keys keep the stored value. */
+  'profile:update_privacy': (payload: AccountPrivacyInput) => void;
   'profile:delete_account': (payload: DeleteAccountInput) => void;
   get_home_stats: () => void;
+
+  // List integrations (AniList / MAL)
+  'lists:get_status': () => void;
+  'lists:link': (payload: {
+    requestId: string;
+    provider: WatchedListProvider;
+    username: string;
+  }) => void;
+  'lists:set_active': (payload: {
+    requestId: string;
+    provider: WatchedListProvider;
+  }) => void;
+  'lists:refresh': (payload: {
+    requestId: string;
+    provider: WatchedListProvider;
+  }) => void;
+  'lists:unlink': (payload: {
+    requestId: string;
+    provider: WatchedListProvider;
+  }) => void;
 
   // Friends (Phase 7)
   'friends:list': () => void;
@@ -316,6 +370,11 @@ export interface AnimeSearchInput {
   precision: Precision;
 }
 
+export interface ArtistSearchInput {
+  requestId: number;
+  query: string;
+}
+
 /** Ranked matches for a single `anime:search` request (≤ SUGGESTION_LIMIT, scrollable dropdown). */
 export interface AnimeSearchResults {
   requestId: number;
@@ -332,6 +391,10 @@ export interface AnimeNameEntry {
 /** Full catalogue name list, sent once so the client can match locally (instant). */
 export interface AllAnimeNamesPayload {
   animes: AnimeNameEntry[];
+}
+
+export interface AllArtistNamesPayload {
+  artists: AnimeNameEntry[];
 }
 
 export type { GamePlayer };

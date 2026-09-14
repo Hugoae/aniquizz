@@ -7,6 +7,7 @@ import {
   Shuffle,
   Ungroup,
   Target,
+  Mic2,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -58,7 +59,7 @@ export interface ResponseModeOption {
 }
 
 export const RESPONSE_MODES: ResponseModeOption[] = [
-  { id: 'typing', label: 'Typing', description: 'Écris le titre', icon: Keyboard },
+  { id: 'typing', label: 'Typing', description: 'Écris la réponse', icon: Keyboard },
   { id: 'qcm', label: 'QCM', description: '4 propositions', icon: MousePointer },
   { id: 'mix', label: 'Mix', description: 'Typing + QCM', icon: Shuffle },
 ];
@@ -69,6 +70,9 @@ export interface PrecisionOption {
   description: string;
   icon: LucideIcon;
 }
+
+export const PRECISION_HELP =
+  'Franchise = la saga suffit. Anime = la saison précise. Artiste = un des artistes ou groupes crédités suffit, inutile de tous les citer.';
 
 export const PRECISION_OPTIONS: PrecisionOption[] = [
   {
@@ -82,6 +86,12 @@ export const PRECISION_OPTIONS: PrecisionOption[] = [
     label: PRECISION_META.anime.label,
     description: PRECISION_META.anime.description,
     icon: Target,
+  },
+  {
+    id: 'artist',
+    label: PRECISION_META.artist.label,
+    description: PRECISION_META.artist.description,
+    icon: Mic2,
   },
 ];
 

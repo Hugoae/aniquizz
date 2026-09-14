@@ -14,6 +14,7 @@ import { SongInfoCard } from '@/features/game/components/shared/SongInfoCard';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 
 interface LibrarySongDrawerProps {
   song: LibrarySong | null;
@@ -75,9 +76,9 @@ export function LibrarySongDrawer({
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto custom-scrollbar bg-card p-0 gap-0">
         <div className="border-b border-border/60 bg-black">
           {videoUrl ? (
-            <video
+            <PrefVolumeVideo
               key={`${song.id}-${resumeAt?.toFixed(1) ?? '0'}-${autoPlay ? '1' : '0'}`}
-              ref={videoRef}
+              mediaRef={videoRef}
               src={videoUrl}
               controls
               autoPlay={autoPlay}

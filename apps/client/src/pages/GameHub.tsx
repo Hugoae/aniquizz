@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
+import { dailyApi } from '@/lib/dailyApi';
 import { prefetchGame } from '@/lib/routePrefetch';
 import type { RoomConfig } from '@aniquizz/shared';
 import { isAdmin } from '@aniquizz/shared';
@@ -74,6 +75,7 @@ function PlayPasswordDialog() {
 function PlayHomePage() {
   useEffect(() => {
     prefetchGame();
+    void dailyApi.today().catch(() => undefined);
   }, []);
 
   const {
@@ -102,7 +104,11 @@ function PlayHomePage() {
   const isSoloLobby = roomConfig.maxPlayers === 1;
 
   const watchedPlayersKey = useMemo(
-    () => lobbyPlayers.filter((p) => !p.isBot).map((p) => String(p.id)).sort().join(','),
+    () => lobbyPlayers
+      .filter((p) => !p.isBot)
+      .map((p) => `${String(p.id)}:${p.watchedListKey ?? ''}`)
+      .sort()
+      .join(','),
     [lobbyPlayers],
   );
 

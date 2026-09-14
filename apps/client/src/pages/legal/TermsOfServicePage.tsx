@@ -9,7 +9,7 @@ export default function TermsOfServicePage() {
       path="/legal/cgu"
     >
       <h1>Conditions générales d&apos;utilisation</h1>
-      <p className="lead text-muted-foreground">Dernière mise à jour : 9 juillet 2026.</p>
+      <p className="lead text-muted-foreground">Dernière mise à jour : 12 septembre 2026.</p>
 
       <h2>1. Objet</h2>
       <p>
@@ -46,32 +46,45 @@ export default function TermsOfServicePage() {
         métadonnées proviennent notamment d&apos;AniList.
       </p>
 
-      <h2>5. Disponibilité</h2>
+      <h2>5. Soutien volontaire</h2>
+      <p>
+        AniQuizz peut proposer un lien vers Ko-fi permettant de soutenir volontairement le projet par
+        une contribution financière libre et ponctuelle. Cette contribution est facultative, sans
+        contrepartie, et n&apos;accorde aucun avantage, contenu ou accès particulier. AniQuizz reste
+        accessible gratuitement et sans publicité.
+      </p>
+      <p>
+        Les paiements sont traités hors d&apos;AniQuizz par Ko-fi et PayPal, selon leurs propres
+        conditions. AniQuizz ne collecte ni ne stocke les informations bancaires et ne délivre aucun
+        reçu ouvrant droit à une réduction fiscale.
+      </p>
+
+      <h2>6. Disponibilité</h2>
       <p>
         Le service est fourni « en l&apos;état », sans garantie de disponibilité permanente. Des
         maintenance, mises à jour ou interruptions peuvent survenir (version alpha).
       </p>
 
-      <h2>6. Limitation de responsabilité</h2>
+      <h2>7. Limitation de responsabilité</h2>
       <p>
         Dans les limites autorisées par la loi, AniQuizz ne saurait être tenu responsable des dommages
         indirects liés à l&apos;utilisation du service. Aucun gain financier n&apos;est garanti.
       </p>
 
-      <h2>7. Résiliation</h2>
+      <h2>8. Résiliation</h2>
       <p>
         Vous pouvez cesser d&apos;utiliser le service à tout moment. Nous pouvons suspendre ou
         supprimer un compte en cas de violation des présentes conditions.
       </p>
 
-      <h2>8. Droit applicable</h2>
+      <h2>9. Droit applicable</h2>
       <p>
         Les présentes conditions sont soumises au droit français. En cas de litige, les tribunaux
         français seront compétents, sous réserve des dispositions impératives protectrices des
         consommateurs.
       </p>
 
-      <h2>9. Contact</h2>
+      <h2>10. Contact</h2>
       <p>
         Questions :{' '}
         <a href="https://github.com/Hugoae/aniquizz/issues" target="_blank" rel="noopener noreferrer">

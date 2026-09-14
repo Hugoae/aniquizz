@@ -21,6 +21,8 @@ export interface PlayerCardBaseProps {
   topRightContent?: React.ReactNode;
   topLeftContent?: React.ReactNode;
   bubbleContent?: React.ReactNode;
+  /** Daily (and similar) — identity only, no running score. */
+  hideScore?: boolean;
 }
 
 export function PlayerCardBase({
@@ -32,6 +34,7 @@ export function PlayerCardBase({
   topRightContent,
   topLeftContent,
   bubbleContent,
+  hideScore = false,
 }: PlayerCardBaseProps) {
   const displayName = player.name || player.username || 'Joueur';
   const hasChildren = React.Children.count(children) > 0;
@@ -78,10 +81,12 @@ export function PlayerCardBase({
           <span className={cn('min-w-0 flex-1 truncate text-sm font-bold', isCurrentUser ? 'text-primary' : 'text-foreground')} title={displayName}>
             {displayName}
           </span>
-          <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-xl font-black leading-none tracking-tight">
-            {player.score}
-            <span className="text-[10px] font-normal text-muted-foreground">pts</span>
-          </div>
+          {!hideScore && (
+            <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-xl font-black leading-none tracking-tight">
+              {player.score}
+              <span className="text-[10px] font-normal text-muted-foreground">pts</span>
+            </div>
+          )}
         </div>
 
         {hasChildren && <div className="mt-1 flex h-4 w-full animate-in items-center justify-between fade-in">{children}</div>}

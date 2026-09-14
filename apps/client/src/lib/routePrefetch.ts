@@ -11,6 +11,7 @@ const importers = {
   library: () => import('@/pages/Library'),
   suggestions: () => import('@/features/suggestions/pages/Suggestions'),
   leaderboard: () => import('@/pages/Leaderboard'),
+  daily: () => import('@/features/daily/pages/DailyPage'),
 } as const;
 
 type RouteKey = keyof typeof importers;

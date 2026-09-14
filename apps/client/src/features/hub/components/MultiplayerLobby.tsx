@@ -124,6 +124,7 @@ export function MultiplayerLobby({
     watchedStats,
     gameSettings?.watchedAllowFallback,
     gameSettings?.responseType,
+    gameSettings?.precision,
   );
   const { playlists } = usePublishedPlaylists(gameSettings?.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, gameSettings ?? {});
@@ -147,6 +148,7 @@ export function MultiplayerLobby({
     gameSettings?.responseType ?? 'mix',
     playlistStats,
     gameSettings?.watchedAllowFallback,
+    gameSettings?.precision,
   );
   const sourceBlocked = isHost && (watchedCheck.blocked || poolCheck.blocked || playlistPoolCheck.blocked);
   const watchedBlockReason = watchedCheck.blocked

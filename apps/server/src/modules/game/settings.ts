@@ -17,7 +17,7 @@ const settingsSchema = z
     soundSelection: z.enum(['random', 'mix', 'watched', 'playlist']).default('random'),
     precision: z.preprocess(
       (val) => normalizePrecision(val),
-      z.enum(['anime', 'franchise']).default('franchise'),
+      z.enum(['anime', 'franchise', 'artist']).default('franchise'),
     ),
     watchedMode: z.enum(['union', 'intersection']).optional(),
     watchedAllowFallback: z.boolean().default(false),

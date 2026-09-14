@@ -1,14 +1,34 @@
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
 import { logger } from '../../utils/logger';
 import { getProfileStats } from './profileService';
-import { verifyAnilistUser } from '../anilist/anilistService';
-import { verifyMalUser } from '../mal/malService';
 import { prisma } from '@aniquizz/database';
-import { isTrustedSupabaseAvatarUrl } from '@aniquizz/shared';
+import {
+  isTrustedSupabaseAvatarUrl,
+  mergePlayerPrefsPatch,
+  normalizeAccountPrivacy,
+  normalizePlayerPrefs,
+  type AccountPrivacyInput,
+  type PlayerPrefsInput,
+} from '@aniquizz/shared';
 import { env } from '../../config/env';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { GameManager } from '../game/gameManager';
 import { DeleteAccountError, deleteUserAccount } from './deleteAccount';
+import { schedulePresenceBroadcast } from '../friends/friendsPresence';
+
+const PLAYER_PREFS_SELECT = {
+  audioVolume: true,
+  audioMuted: true,
+  motionMode: true,
+  autofocusAnswer: true,
+  submitOnEnter: true,
+  soloAutoReveal: true,
+  showShortcutReminder: true,
+  friendRequestVisual: true,
+  friendRequestSound: true,
+  lobbyInviteVisual: true,
+  lobbyInviteSound: true,
+} as const;
 
 export const registerProfileHandlers = (
   io: TypedServer,
@@ -28,8 +48,6 @@ export const registerProfileHandlers = (
   const handleUpdateProfile = async (payload: {
     username?: string;
     avatarUrl?: string;
-    anilistUsername?: string | null;
-    malUsername?: string | null;
     showFavoriteSongs?: boolean;
   }) => {
     const userId = socket.data.userId as string;
@@ -43,38 +61,6 @@ export const registerProfileHandlers = (
           return;
         }
         updateData.avatar = payload.avatarUrl;
-      }
-
-      if (payload.anilistUsername !== undefined) {
-        const trimmed = typeof payload.anilistUsername === 'string' ? payload.anilistUsername.trim() : null;
-        const value = trimmed && trimmed.length > 0 ? trimmed : null;
-        if (value) {
-          const check = await verifyAnilistUser(value);
-          if (check === 'not_found') {
-            socket.emit('error', { message: "Compte AniList introuvable. Vérifie l'orthographe de ton pseudo." });
-            return;
-          }
-          updateData.anilistUsername = value;
-          updateData.malUsername = null;
-        } else {
-          updateData.anilistUsername = null;
-        }
-      }
-
-      if (payload.malUsername !== undefined) {
-        const trimmed = typeof payload.malUsername === 'string' ? payload.malUsername.trim() : null;
-        const value = trimmed && trimmed.length > 0 ? trimmed : null;
-        if (value) {
-          const check = await verifyMalUser(value);
-          if (check === 'not_found') {
-            socket.emit('error', { message: "Compte MyAnimeList introuvable. Vérifie l'orthographe de ton pseudo." });
-            return;
-          }
-          updateData.malUsername = value;
-          updateData.anilistUsername = null;
-        } else {
-          updateData.malUsername = null;
-        }
       }
 
       if (payload.showFavoriteSongs !== undefined) {
@@ -118,8 +104,76 @@ export const registerProfileHandlers = (
     }
   };
 
+  const handleUpdatePrefs = async (payload: PlayerPrefsInput) => {
+    const userId = socket.data.userId as string;
+
+    try {
+      const current = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: PLAYER_PREFS_SELECT,
+      });
+      if (!current) {
+        socket.emit('error', { message: 'Impossible de mettre à jour les préférences.' });
+        return;
+      }
+
+      const next = mergePlayerPrefsPatch(normalizePlayerPrefs(current), payload);
+
+      await prisma.profile.update({
+        where: { id: userId },
+        data: next,
+      });
+
+      socket.emit('profile:prefs', next);
+    } catch (error) {
+      logger.error('Failed to update player prefs', 'Profile', error);
+      socket.emit('error', { message: 'Impossible de mettre à jour les préférences.' });
+    }
+  };
+
+  const handleUpdatePrivacy = async (payload: AccountPrivacyInput) => {
+    const userId = socket.data.userId as string;
+    try {
+      const current = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: {
+          onlineStatusAudience: true,
+          matchHistoryAudience: true,
+          lobbyInviteAudience: true,
+          showFavoriteSongs: true,
+          allowFriendRequests: true,
+        },
+      });
+      if (!current) {
+        socket.emit('error', { message: 'Impossible de mettre à jour la confidentialité.' });
+        return;
+      }
+      const next = normalizeAccountPrivacy({
+        ...current,
+        ...(payload && typeof payload === 'object' ? payload : {}),
+      });
+      await prisma.profile.update({
+        where: { id: userId },
+        data: next,
+      });
+      socket.emit('profile:privacy', next);
+      schedulePresenceBroadcast(io, gameManager, userId, { immediate: true });
+    } catch (error) {
+      logger.error('Failed to update privacy', 'Profile', error);
+      socket.emit('error', { message: 'Impossible de mettre à jour la confidentialité.' });
+    }
+  };
+
   socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
   socket.on('update_profile_data', requireAuth(socket, handleUpdateProfile));
+  socket.on(
+    'profile:update_prefs',
+    guard(socket, 'profile:update_prefs', RATE_LIMITS.updatePrefs, handleUpdatePrefs),
+  );
+  socket.on(
+    'profile:update_privacy',
+    guard(socket, 'profile:update_privacy', RATE_LIMITS.updatePrivacy, handleUpdatePrivacy),
+  );
   socket.on(
     'profile:delete_account',
     guard(socket, 'profile:delete_account', RATE_LIMITS.deleteAccount, handleDeleteAccount),

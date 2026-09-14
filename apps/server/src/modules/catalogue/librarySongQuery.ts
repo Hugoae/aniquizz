@@ -1,11 +1,13 @@
 import { prisma, type Prisma } from '@aniquizz/database';
-import type {
-  LibraryBrowseParams,
-  LibraryDifficulty,
-  LibraryFranchiseGroup,
-  LibrarySong,
-  LibrarySongType,
-  LibrarySort,
+import {
+  parseCatalogueSearchQuery,
+  resolveCatalogueSongTypes,
+  type LibraryBrowseParams,
+  type LibraryDifficulty,
+  type LibraryFranchiseGroup,
+  type LibrarySong,
+  type LibrarySongType,
+  type LibrarySort,
 } from '@aniquizz/shared';
 import { resolveMatchingAnimeIdsForQuery } from './librarySearch';
 import { resolveLikedIds } from './songLikeService';
@@ -18,7 +20,9 @@ export const buildLibrarySongWhere = (
   matchingAnimeIds?: number[],
   userId?: string | null,
 ): Prisma.SongWhereInput => {
-  const q = opts.q?.trim();
+  const parsed = parseCatalogueSearchQuery(opts.q ?? '');
+  const q = parsed.text;
+  const songTypes = resolveCatalogueSongTypes(opts.songType, parsed.songType);
   const andClauses: Prisma.SongWhereInput[] = [];
 
   const base: Prisma.SongWhereInput = {
@@ -27,9 +31,17 @@ export const buildLibrarySongWhere = (
     ...(opts.franchiseId !== undefined
       ? { anime: { franchiseId: opts.franchiseId } }
       : {}),
-    ...(opts.songType?.length ? { songType: { in: opts.songType } } : {}),
+    ...(songTypes?.length ? { songType: { in: songTypes } } : {}),
     ...(opts.difficulty?.length ? { difficulty: { in: opts.difficulty } } : {}),
   };
+
+  // Query token conflicts with the type chips (library OP + "bleach ED5").
+  if (songTypes && songTypes.length === 0) {
+    andClauses.push({ id: { in: [-1] } });
+  }
+  if (parsed.sequence != null) {
+    andClauses.push({ sequence: parsed.sequence });
+  }
 
   if (opts.discovered === 'heard' && userId) {
     andClauses.push({ history: { some: { profileId: userId } } });

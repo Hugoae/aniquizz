@@ -25,6 +25,7 @@ import { useAuth } from '@/features/auth/context/AuthContext';
 import { GAME_CONFIG, type AnswerType, type GamePlayer, type RoomSettings, isBanSanctionReason, getPrecisionChipLabel, normalizePrecision, normalizeVideoMode, hasWatchedListLink, maxSprintPointsPerRound, playlistSourceDisplayName } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
+import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { parseGameNavState } from '@/features/game/gameNavState';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
@@ -76,9 +77,33 @@ export default function Game() {
 
   const { phase, players, currentSong } = state;
 
-  // Video element lifecycle (load per round, volume, pause, autoplay recovery).
-  const { videoRef, preloadRef, warmVideo, volume, setVolume, isMuted, toggleMute, autoplayBlocked, resumeCurrent } =
-    useVideoPlayback({ currentSong, phase, isGamePaused: state.isGamePaused });
+  // Video element lifecycle (load per round, pause, autoplay recovery).
+  const {
+    audioVolume,
+    audioMuted,
+    setAudioVolume,
+    setAudioMuted,
+    toggleMute,
+    soloAutoReveal,
+    autofocusAnswer,
+    submitOnEnter,
+    showShortcutReminder,
+  } = usePlayerPrefs();
+  const { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent } = useVideoPlayback({
+    currentSong,
+    phase,
+    isGamePaused: state.isGamePaused,
+    volume: audioVolume,
+    isMuted: audioMuted,
+  });
+
+  const onVolumeChange = useCallback(
+    (v: number) => {
+      setAudioVolume(v);
+      if (audioMuted && v > 0) setAudioMuted(false);
+    },
+    [audioMuted, setAudioMuted, setAudioVolume],
+  );
 
   // --- Local UI state ---
   const [inputMode, setInputMode] = useState<InputMode>(() =>
@@ -203,9 +228,13 @@ export default function Game() {
     (val: string) => {
       if (!val) return;
       setSubmittedAnswer(val);
-      actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode]);
+      actions.answer(
+        val,
+        INPUT_TO_ANSWER_TYPE[inputMode],
+        gameMode === 'solo' && soloAutoReveal,
+      );
     },
-    [actions.answer, inputMode],
+    [actions.answer, gameMode, inputMode, soloAutoReveal],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -262,7 +291,7 @@ export default function Game() {
   const commonProps = {
     phase, players, currentRound: state.currentRound, totalRounds: state.totalRounds,
     phaseEndsAt: state.phaseEndsAt, phaseDurationSeconds: state.phaseDurationSeconds,
-    volume, isMuted, onVolumeChange: setVolume, onToggleMute: toggleMute,
+    volume: audioVolume, isMuted: audioMuted, onVolumeChange, onToggleMute: toggleMute,
     videoRef, autoplayBlocked,
     onSafePlay: resumeCurrent,
     isGamePaused: state.isGamePaused, isPausePending: state.isPausePending,
@@ -275,6 +304,7 @@ export default function Game() {
     myProfile, sidebarCollapsed, setSidebarCollapsed,
     onShowLeave: () => setShowLeaveChoice(true),
     onShowProfile: () => setHardLeavePrompt('profile'),
+    onShowSettings: () => setShowSettings(true),
     currentUserId, gameMode, roomId, configBadges,
     videoMode: state.videoMode ?? normalizeVideoMode(settings.videoMode),
   };
@@ -344,6 +374,9 @@ export default function Game() {
             isSprint={isSprint}
             sprintLeaderboard={state.sprintLeaderboard}
             pointsBadge={pointsBadge}
+            autofocusAnswer={autofocusAnswer}
+            submitOnEnter={submitOnEnter}
+            showShortcutReminder={showShortcutReminder}
           />
         </DevRenderProfiler>
       )}

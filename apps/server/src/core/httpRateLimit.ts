@@ -10,6 +10,8 @@ let consumeCount = 0;
 export const HTTP_RATE_LIMITS = {
   publicRead: { max: 90, windowMs: 60_000 },
   userMutation: { max: 30, windowMs: 60_000 },
+  /** Answer + next + a few retries across five rounds without starving the loop. */
+  dailyPlay: { max: 80, windowMs: 60_000 },
   suggestionCreate: { max: 5, windowMs: 24 * 60 * 60 * 1000 },
 } as const;
 

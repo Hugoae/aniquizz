@@ -7,7 +7,7 @@ import type { Room } from '../game/engine/Room';
 import { mergeRoomSettings, normalizeRoomSettings } from '../game/settings';
 import { assertPublishedPlaylistSource } from '../game/playlistRecipeService';
 import { resolvePlayerCatalogueIds } from '../lists/listResolver';
-import { hasWatchedListLink, toClientRoomSettings } from '@aniquizz/shared';
+import { hasWatchedListLink, resolveActiveListProvider, toClientRoomSettings } from '@aniquizz/shared';
 import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import type { BotConfig } from '../game/engine/types';
 import { LOBBY_LIST_ROOM } from './lobbyRooms';
@@ -31,12 +31,13 @@ const warmWatchedList = async (room: Room, userId: string): Promise<void> => {
 
   const profile = await prisma.profile.findUnique({
     where: { id: userId },
-    select: { anilistUsername: true, malUsername: true },
+    select: { anilistUsername: true, malUsername: true, activeListProvider: true },
   });
   if (!profile || !hasWatchedListLink(profile)) return;
 
   if (profile.anilistUsername) player.anilistUsername = profile.anilistUsername;
   if (profile.malUsername) player.malUsername = profile.malUsername;
+  player.activeListProvider = resolveActiveListProvider(profile);
 
   try {
     await resolvePlayerCatalogueIds(userId, profile);
@@ -87,6 +88,7 @@ export const registerLobbyHandlers = (
         level: socket.data.level,
         anilistUsername: socket.data.anilistUsername,
         malUsername: socket.data.malUsername,
+        activeListProvider: socket.data.activeListProvider,
       });
 
       logger.info(
@@ -147,6 +149,7 @@ export const registerLobbyHandlers = (
         level: socket.data.level,
         anilistUsername: socket.data.anilistUsername,
         malUsername: socket.data.malUsername,
+        activeListProvider: socket.data.activeListProvider,
       });
       // Entering the lobby view means this player is no longer on the game-over
       // screen; clears their "in game" badge and can settle the room to waiting.

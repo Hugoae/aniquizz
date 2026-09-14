@@ -51,9 +51,11 @@ export const metricSpec = (metric: LeaderboardMetric): MetricSpec => {
       return {
         extraJoin: Prisma.sql`
           INNER JOIN (
-            SELECT "profileId", COUNT(*)::int AS discoveries
-            FROM "SongHistory"
-            GROUP BY "profileId"
+            SELECT sh."profileId", COUNT(*)::int AS discoveries
+            FROM "SongHistory" sh
+            INNER JOIN "Song" s ON s.id = sh."songId"
+            WHERE s."downloadStatus" = 'COMPLETED'
+            GROUP BY sh."profileId"
           ) d ON d."profileId" = p.id
         `,
         extraSelect: Prisma.sql`d.discoveries`,

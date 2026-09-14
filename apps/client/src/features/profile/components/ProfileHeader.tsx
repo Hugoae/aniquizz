@@ -1,10 +1,10 @@
 import { useMemo, useRef } from 'react';
 import {
-  LogOut, Loader2, Camera, Check, X, Edit2, CalendarDays, Unlink,
+  LogOut, Loader2, Camera, Check, X, Edit2, CalendarDays,
   Clock, UserPlus, UserMinus, Ban, MoreVertical, KeyRound, Sword, Gavel, Trash2,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { levelProgress, watchedListProvider, type WatchedListProvider } from '@aniquizz/shared';
+import { levelProgress, type WatchedListProvider } from '@aniquizz/shared';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -18,6 +18,9 @@ import { cn } from '@/lib/utils';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from '@/features/friends/presence';
 import type { Relation } from '@/features/friends/FriendsContext';
 import type { ProfileVM } from '@/features/profile/types';
+import { openSettings } from '@/features/settings/lib/openSettings';
+import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useLists } from '@/features/settings/integrations/listsContextValue';
 
 const ANILIST_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/6/61/AniList_logo.svg';
 const MAL_LOGO = '/logos/mal.png';
@@ -54,27 +57,10 @@ function ListProviderBadge({ provider, username }: { provider: WatchedListProvid
   );
 }
 
-function ListLinkButton({ provider, onClick }: { provider: WatchedListProvider; onClick: () => void }) {
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="h-7 gap-1.5 px-2.5 text-xs"
-      onClick={onClick}
-      aria-label={`Lier ${PROVIDER_LABEL[provider]}`}
-    >
-      Lier
-      <ProviderLogo provider={provider} />
-    </Button>
-  );
-}
-
 interface ProfileHeaderProps {
   vm: ProfileVM;
   isOwn: boolean;
   relation: Relation;
-  anilistUsername: string | null | undefined;
-  malUsername: string | null | undefined;
   isEditingUsername: boolean;
   newUsername: string;
   isSaving: boolean;
@@ -83,8 +69,6 @@ interface ProfileHeaderProps {
   onSaveUsername: () => void;
   onCancelEditUsername: () => void;
   onPickAvatarFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onOpenWatchlistLink: (provider: WatchedListProvider) => void;
-  onUnlinkWatchlist: () => void;
   onOpenPasswordModal: () => void;
   onOpenDeleteAccountModal: () => void;
   onSignOut: () => void;
@@ -95,18 +79,22 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({
-  vm, isOwn, relation, anilistUsername, malUsername,
+  vm, isOwn, relation,
   isEditingUsername, newUsername, isSaving,
   onStartEditUsername, onChangeNewUsername, onSaveUsername, onCancelEditUsername,
-  onPickAvatarFile, onOpenWatchlistLink, onUnlinkWatchlist,
+  onPickAvatarFile,
   onOpenPasswordModal, onOpenDeleteAccountModal, onSignOut,
   onAddFriend, onBlock, onRemoveFriend, onUnblock,
 }: ProfileHeaderProps) {
+  const { status: listsStatus } = useLists();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lvl = useMemo(() => levelProgress(vm.xp), [vm.xp]);
   const roleMeta = ROLE_META[vm.role];
-  const linkedProvider = watchedListProvider({ anilistUsername, malUsername });
-  const linkedUsername = anilistUsername?.trim() || malUsername?.trim() || '';
+  const anilistUsername = listsStatus.anilist.username;
+  const malUsername = listsStatus.mal.username;
+  const activeListProvider = listsStatus.active;
+  const anilistLinked = listsStatus.anilist.linked;
+  const malLinked = listsStatus.mal.linked;
 
   const memberSince = useMemo(() => {
     if (!vm.createdAt) return null;
@@ -242,41 +230,49 @@ export function ProfileHeader({
               </span>
             )}
             {isOwn && (
-              linkedProvider ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        'h-7 gap-1.5 px-2.5 text-xs',
-                        linkedProvider === 'anilist'
-                          ? 'bg-info/10 text-info border-info/30 hover:bg-info/20 hover:text-info'
-                          : 'bg-primary/10 text-primary border-primary/30 hover:bg-primary/20',
-                      )}
-                    >
-                      <ListProviderBadge provider={linkedProvider} username={linkedUsername} />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-48">
-                    <DropdownMenuItem onClick={() => onOpenWatchlistLink(linkedProvider)} className="gap-2">
-                      <Edit2 className="h-4 w-4" /> Modifier le pseudo
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={onUnlinkWatchlist}
-                      className="gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
-                    >
-                      <Unlink className="h-4 w-4" /> Délier le compte
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <ListLinkButton provider="anilist" onClick={() => onOpenWatchlistLink('anilist')} />
-                  <ListLinkButton provider="mal" onClick={() => onOpenWatchlistLink('mal')} />
-                </div>
-              )
+              <div className="flex flex-wrap items-center justify-center gap-2 md:justify-start">
+                {anilistLinked ? (
+                  <span
+                    className={cn(
+                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs',
+                      activeListProvider === 'anilist'
+                        ? 'border-info/30 bg-info/10 text-info'
+                        : 'border-border/50 bg-secondary/40 text-muted-foreground',
+                    )}
+                    title={PROVIDER_LABEL.anilist}
+                  >
+                    <ListProviderBadge provider="anilist" username={anilistUsername!.trim()} />
+                    {activeListProvider === 'anilist' ? (
+                      <span className="font-medium">{SETTINGS_COPY.listActive}</span>
+                    ) : null}
+                  </span>
+                ) : null}
+                {malLinked ? (
+                  <span
+                    className={cn(
+                      'inline-flex h-7 items-center gap-1.5 rounded-md border px-2.5 text-xs',
+                      activeListProvider === 'mal'
+                        ? 'border-primary/30 bg-primary/10 text-primary'
+                        : 'border-border/50 bg-secondary/40 text-muted-foreground',
+                    )}
+                    title={PROVIDER_LABEL.mal}
+                  >
+                    <ListProviderBadge provider="mal" username={malUsername!.trim()} />
+                    {activeListProvider === 'mal' ? (
+                      <span className="font-medium">{SETTINGS_COPY.listActive}</span>
+                    ) : null}
+                  </span>
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2.5 text-xs"
+                  onClick={() => openSettings('account')}
+                >
+                  {SETTINGS_COPY.integrationsManage}
+                </Button>
+              </div>
             )}
           </div>
 

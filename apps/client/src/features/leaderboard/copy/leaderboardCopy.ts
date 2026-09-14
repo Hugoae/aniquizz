@@ -5,7 +5,7 @@ export const LEADERBOARD_COPY = {
   title: 'Classement global',
   eyebrow: 'Toute la communauté',
   subtitle:
-    'Les classements XP, victoires, nombre de parties, Pokédex musical et précision portent sur tous les modes et toutes les parties terminées.',
+    'L’XP compte aussi le quiz du jour. Victoires, parties et précision viennent des parties classiques. Le Pokédex compte chaque son entendu, y compris les extraits du quiz du jour.',
   back: "Retour à l'accueil",
   loadError: 'Impossible de charger le classement.',
   retry: 'Réessayer',

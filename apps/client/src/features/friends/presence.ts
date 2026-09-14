@@ -5,6 +5,7 @@ export const PRESENCE_DOT: Record<PresenceStatus, string> = {
   in_game: 'bg-warning',
   in_lobby: 'bg-aqua',
   online: 'bg-success',
+  hidden: 'bg-muted-foreground/40',
   offline: 'bg-muted-foreground/40',
 };
 
@@ -17,6 +18,8 @@ export function presenceLabel(status: PresenceStatus): string {
       return 'Dans un salon';
     case 'online':
       return 'En ligne';
+    case 'hidden':
+      return 'Statut masqué';
     default:
       return 'Hors ligne';
   }

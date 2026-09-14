@@ -13,6 +13,7 @@ import { formatDuration, Progress, Tally } from './lib/progress';
 import { isSongExcluded, loadAllPipelineExclusions } from './lib/load-pipeline-exclusions';
 import { recomputeFranchiseMaxPopularity } from './lib/franchise-popularity';
 import { syncPipelineSerialSequences } from './lib/sync-serial-sequences';
+import { resolveArtistNames } from './lib/parse-artist-names';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -107,6 +108,8 @@ async function main() {
       if (existingAnime && existingAnime.isLocked) {
         // Locked anime: skip updates
       } else {
+        const studioName =
+          typeof aData.studio === 'string' ? aData.studio.trim() : '';
         const animeFields = {
           name: aData.name ?? String(aData.id),
           siteUrl: aData.siteUrl,
@@ -125,6 +128,10 @@ async function main() {
           idMal: aData.idMal ?? null,
           popularity: aData.popularity || 0,
           franchiseId: franchiseId,
+          // Step 1 stores AniList's main studio; skip the French fallback so
+          // unlocked imports do not persist a placeholder as a real credit.
+          studio:
+            studioName && studioName !== 'Studio Inconnu' ? studioName : null,
         };
 
         await prisma.anime.upsert({
@@ -183,6 +190,10 @@ async function main() {
             data: {
               title: sData.title ?? existingSong.title,
               artist: sData.artist ?? existingSong.artist,
+              artistNames: resolveArtistNames(
+                sData.artist ?? existingSong.artist,
+                sData.artistNames,
+              ),
               songType,
               sequence,
               tags: sData.tags || [],
@@ -198,6 +209,7 @@ async function main() {
             data: {
               title: sData.title ?? 'Unknown Title',
               artist: sData.artist ?? 'Unknown Artist',
+              artistNames: resolveArtistNames(sData.artist, sData.artistNames),
               songType,
               sequence,
               videoKey: canonicalKey,

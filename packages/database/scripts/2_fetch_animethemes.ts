@@ -16,6 +16,7 @@ import {
   type SelectableAnime,
 } from "./lib/animethemes-selection";
 import { fetchLiveTopAniListIds } from "./lib/anilist-ranking";
+import { normalizeArtistNames, resolveArtistNames } from "./lib/parse-artist-names";
 
 dotenv.config({ path: path.join(__dirname, "../.env") });
 
@@ -380,12 +381,18 @@ async function enrichData() {
         const best = chooseBestVideo(allVideos);
         if (!best?.link) continue;
 
-        const rawTitle = theme?.song?.title ?? "Unknown Title";
-        const artistsArr = (theme?.song?.artists ?? [])
-          .map((a: any) => a?.name)
-          .filter(Boolean);
-
-        const artist = artistsArr.length ? artistsArr.join(", ") : "Unknown Artist";
+        const rawTitle = String(theme?.song?.title ?? "Unknown Title")
+          .replace(/[\t\n\r]+/g, " ")
+          .trim();
+        const sourceArtistNames = normalizeArtistNames(
+          (theme?.song?.artists ?? [])
+            .map((a: { name?: string } | null) => a?.name)
+            .filter((name: string | undefined): name is string => Boolean(name)),
+        );
+        const artist = sourceArtistNames.length
+          ? sourceArtistNames.join(", ")
+          : "Unknown Artist";
+        const artistNames = resolveArtistNames(artist, sourceArtistNames);
         const sourceUrl = normalizeVideoLink(best.link);
         const videoKey = buildVideoKey(anime.name, anime.id, themeType, seq);
 
@@ -397,6 +404,7 @@ async function enrichData() {
         songsForThisAnime.push({
           title: rawTitle,
           artist,
+          artistNames,
           songType: themeType,
           sequence: seq,
           sourceUrl,

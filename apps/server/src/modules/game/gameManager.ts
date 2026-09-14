@@ -1,5 +1,5 @@
 import { customAlphabet } from 'nanoid';
-import type { RoomListItem, RoomListSettingsSummary, RoomSettings } from '@aniquizz/shared';
+import type { RoomListItem, RoomListSettingsSummary, RoomSettings, WatchedListProvider } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
 import type { TypedServer } from '../../core/socketTypes';
@@ -143,6 +143,33 @@ export class GameManager {
 
   getRoom(roomId: string): Room | undefined {
     return this.rooms.get(roomId);
+  }
+
+  /** Push linked-list fields onto a player already sitting in a lobby/match. */
+  applyListSources(
+    userId: string,
+    sources: {
+      anilistUsername: string | null;
+      malUsername: string | null;
+      activeListProvider: WatchedListProvider | null;
+    },
+  ): void {
+    for (const room of this.rooms.values()) {
+      const player = room.players.get(userId);
+      if (!player) continue;
+      player.anilistUsername = sources.anilistUsername;
+      player.malUsername = sources.malUsername;
+      player.activeListProvider = sources.activeListProvider;
+      room.emitLobbyUpdate();
+      this.io.to(room.id).emit('watched:list_changed');
+    }
+  }
+
+  /** Re-resolve active Watched previews after a provider sync completes. */
+  notifyWatchedListChanged(userId: string): void {
+    for (const room of this.rooms.values()) {
+      if (room.players.has(userId)) this.io.to(room.id).emit('watched:list_changed');
+    }
   }
 
   /**

@@ -121,3 +121,6 @@ export const requireRole = (minimum: UserRole) => {
     next();
   };
 };
+
+/** Authenticated player (any role). Banned accounts are rejected. */
+export const requireUser = requireRole('USER');

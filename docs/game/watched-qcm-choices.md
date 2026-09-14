@@ -1,6 +1,6 @@
 # Watched mode — QCM / Duo choice pool
 
-In **Watched** (`soundSelection: 'watched'`), songs are drawn from players' resolved AniList ids (union or intersection). QCM (**Carré**, 4 choices) and **Duo** (2 choices) wrong answers must come from the **same pool**, or the mode becomes trivially easy.
+In **Watched** (`soundSelection: 'watched'`), songs are drawn from players' resolved **active** AniList or MAL ids (union or intersection). QCM (**Carré**, 4 choices) and **Duo** (2 choices) wrong answers must come from the **same pool**, or the mode becomes trivially easy.
 
 ## Symptom (pre-fix)
 
@@ -25,7 +25,7 @@ Multiplayer uses the lobby's resolved ids:
 - **Union** — distractors from any human's watched anime in the lobby
 - **Intersection** — distractors only from anime every linked human has seen
 
-Precision (`anime` vs `franchise`, legacy wire value `exact` → `anime`) applies the same way as before: franchise mode uses franchise display names from watched rows only; anime mode requires the specific catalogue anime/season entry.
+Precision (`anime` vs `franchise` vs `artist`, legacy wire value `exact` → `anime`) applies the same restricted universe. Artist mode uses billed units (`Song.artistNames`) and excludes distractors that typing would accept for the round — see [artist-precision.md](./artist-precision.md).
 
 ## Source of truth
 

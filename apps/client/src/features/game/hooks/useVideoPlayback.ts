@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CurrentSong, GamePhase, GuessingSong } from '@/features/game/state/gameReducer';
+import { applyPlayerAudioToMedia } from '@/features/settings/lib/applyPlayerAudioToMedia';
 import { getVideoUrl } from '@/lib/video';
 
 interface UseVideoPlaybackArgs {
@@ -9,8 +10,10 @@ interface UseVideoPlaybackArgs {
   phase: GamePhase;
   /** Whether the match is paused (pauses the media element). */
   isGamePaused: boolean;
-  /** Initial volume, 0–100. */
-  initialVolume?: number;
+  /** Player volume 0–100 (owned by player prefs, not this hook). */
+  volume: number;
+  /** Player mute flag (owned by player prefs, not this hook). */
+  isMuted: boolean;
 }
 
 interface UseVideoPlaybackResult {
@@ -19,10 +22,6 @@ interface UseVideoPlaybackResult {
   preloadRef: React.RefObject<HTMLVideoElement>;
   /** Buffer a clip ahead of time so the main player starts it from cache. */
   warmVideo: (videoKey: string | null | undefined, startTime?: number) => void;
-  volume: number;
-  setVolume: (v: number) => void;
-  isMuted: boolean;
-  toggleMute: () => void;
   /** Autoplay was blocked by the browser — show the "activer le son" affordance. */
   autoplayBlocked: boolean;
   /** Resume the current video without reloading it (after autoplay was blocked). */
@@ -106,21 +105,20 @@ export function useVideoPlayback({
   currentSong,
   phase,
   isGamePaused,
-  initialVolume = 20,
+  volume,
+  isMuted,
 }: UseVideoPlaybackArgs): UseVideoPlaybackResult {
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement>(null);
-  const volumeRef = useRef(initialVolume);
-  const isMutedRef = useRef(false);
+  const volumeRef = useRef(volume);
+  const isMutedRef = useRef(isMuted);
   const loadedClipRef = useRef<string | null>(null);
   const warmedClipRef = useRef<string | null>(null);
 
-  const [volume, setVolume] = useState(initialVolume);
-  const [isMuted, setIsMuted] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   const applyVolume = (el: HTMLVideoElement) => {
-    el.volume = isMutedRef.current ? 0 : volumeRef.current / 100;
+    applyPlayerAudioToMedia(el, volumeRef.current, isMutedRef.current);
   };
 
   const playElement = async (el: HTMLVideoElement, signal?: AbortSignal): Promise<void> => {
@@ -177,7 +175,7 @@ export function useVideoPlayback({
   useEffect(() => {
     volumeRef.current = volume;
     isMutedRef.current = isMuted;
-    if (videoRef.current) videoRef.current.volume = isMuted ? 0 : volume / 100;
+    if (videoRef.current) applyPlayerAudioToMedia(videoRef.current, volume, isMuted);
   }, [volume, isMuted]);
 
   // Load once per guessing round; seek before play; skip reload on reveal (RevealSong).
@@ -215,8 +213,6 @@ export function useVideoPlayback({
     if (isGamePaused) videoRef.current?.pause();
   }, [isGamePaused]);
 
-  const toggleMute = () => setIsMuted((m) => !m);
-
   const resumeCurrent = () => {
     const el = videoRef.current;
     if (!el) return;
@@ -225,5 +221,5 @@ export function useVideoPlayback({
       .catch(() => {});
   };
 
-  return { videoRef, preloadRef, warmVideo, volume, setVolume, isMuted, toggleMute, autoplayBlocked, resumeCurrent };
+  return { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent };
 }

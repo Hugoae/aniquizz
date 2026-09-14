@@ -17,6 +17,8 @@ import * as adminService from './adminService';
 import * as playlistAdmin from './thematicPlaylistAdmin';
 import { handlePrismaError } from './prismaHttpError';
 import { assertModerationAllowed } from '../../config/protectedAccounts';
+import { registerAdminDailyRoutes } from './adminDailyRoutes';
+import { resetDailyProgress } from '../daily/dailyAdmin';
 
 const ROLES = ['USER', 'MODERATOR', 'ADMIN'] as const;
 const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'] as const;
@@ -266,6 +268,21 @@ export function registerAdminRoutes(
       const result = await adminService.resetUserStats(targetId);
       logger.info(
         `Admin ${req.actor!.username} reset stats on ${targetId} (${result.matchPlayers} participations, ${result.songHistory} pokédex rows, ${result.orphanMatches} orphan matches)`,
+        'Admin',
+      );
+      res.json(result);
+    }),
+  );
+
+  router.post(
+    '/users/:id/reset-daily',
+    requireRole('ADMIN'),
+    wrap(async (req, res) => {
+      const targetId = pid(req);
+      if (!(await guardProtectedTarget(req, res, targetId, { allowSelf: true }))) return;
+      const result = await resetDailyProgress(targetId);
+      logger.info(
+        `Admin ${req.actor!.username} reset daily quiz on ${targetId} (reset=${result.reset}, xp=${result.xpReverted})`,
         'Admin',
       );
       res.json(result);
@@ -694,6 +711,8 @@ export function registerAdminRoutes(
     }),
   );
 
+  registerAdminDailyRoutes(router);
+
   // --- THEMATIC PLAYLISTS (v26.5) -------------------------------------------
 
   router.get(
@@ -829,7 +848,7 @@ export function registerAdminRoutes(
           guessDuration: z.coerce.number().int().min(5).max(120).optional(),
           precision: z.preprocess(
             (val) => (val === undefined ? undefined : normalizePrecision(val)),
-            z.enum(['anime', 'franchise']).optional(),
+            z.enum(['anime', 'franchise', 'artist']).optional(),
           ),
           soundSelection: z.enum(['random', 'mix', 'watched', 'playlist']).optional(),
           config: botConfigSchema,

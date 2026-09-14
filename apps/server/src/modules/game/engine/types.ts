@@ -1,4 +1,4 @@
-import type { AnswerType, GamePlayer, UserRole } from '@aniquizz/shared';
+import type { AnswerType, GamePlayer, UserRole, WatchedListProvider } from '@aniquizz/shared';
 
 /**
  * Behaviour of a DEV-only simulated player.
@@ -23,6 +23,7 @@ export interface RoomPlayer {
   isReady: boolean;
   anilistUsername: string | null;
   malUsername: string | null;
+  activeListProvider: WatchedListProvider | null;
   /** Trusted account role (from socket auth), for the staff badge. */
   role?: UserRole;
   /** Player level (from lifetime XP, resolved at socket auth). */

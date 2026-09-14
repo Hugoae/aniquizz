@@ -1,18 +1,18 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Grid2X2, Columns2, Send } from 'lucide-react';
-import { GAME_CONFIG, type Precision } from '@aniquizz/shared';
-import { normalizePrecision } from '@aniquizz/shared';
+import { isArtistPrecision, normalizePrecision, suggestionQueryReady, type Precision } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { useAnimeSearch } from '@/features/game/hooks/useAnimeSearch';
+import { useArtistSearch } from '@/features/game/hooks/useArtistSearch';
 import { useSuggestionPanelPosition } from '@/features/game/hooks/useSuggestionPanelPosition';
 import type { InputMode } from './types';
+import { ShortcutReminder } from './ShortcutReminder';
 
 const SUGGESTION_LIST_ID = 'answer-suggestions';
-const MIN_SUBMIT_LENGTH = GAME_CONFIG.FUZZY.SUGGESTION_MIN_QUERY_LENGTH;
 
 interface AnswerInputProps {
   responseType: 'typing' | 'qcm' | 'mix';
@@ -29,6 +29,9 @@ interface AnswerInputProps {
   disabled?: boolean;
   /** Custom badge next to send. Undefined = "+5 pts". null = hidden. */
   pointsBadge?: string | null;
+  autoFocusEnabled?: boolean;
+  submitOnEnter?: boolean;
+  showShortcutReminder?: boolean;
 }
 
 function SuggestionLabel({
@@ -63,35 +66,48 @@ function AnswerInputInner({
   roundKey,
   disabled = false,
   pointsBadge,
+  autoFocusEnabled = true,
+  submitOnEnter = true,
+  showShortcutReminder = true,
 }: AnswerInputProps) {
   const [draft, setDraft] = useState('');
   const [activeIndex, setActiveIndex] = useState(0);
   const [panelOpen, setPanelOpen] = useState(false);
   const inputRowRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const showTyping = inputMode === 'typing' || (disabled && choices.length === 0);
   const canType = showTyping && !disabled;
 
-  const { suggestions, isSearching } = useAnimeSearch({
-    query: draft,
-    precision: normalizePrecision(precision),
-    enabled: canType,
-  });
+  const resolvedPrecision = normalizePrecision(precision);
+  const artistMode = isArtistPrecision(resolvedPrecision);
+  const queryReady = suggestionQueryReady(draft, resolvedPrecision);
 
-  const queryReady = draft.trim().length >= MIN_SUBMIT_LENGTH;
+  const { suggestions: animeSuggestions, isSearching: animeSearching } = useAnimeSearch({
+    query: draft,
+    precision: resolvedPrecision,
+    enabled: canType && !artistMode,
+  });
+  const { suggestions: artistSuggestions, isSearching: artistSearching } = useArtistSearch({
+    query: draft,
+    enabled: canType && artistMode,
+  });
+  const suggestions = artistMode ? artistSuggestions : animeSuggestions;
+  const isSearching = artistMode ? artistSearching : animeSearching;
   const showPanel = panelOpen && queryReady && canType;
   const panelPosition = useSuggestionPanelPosition(inputRowRef, showPanel);
 
   const submitAnswer = useCallback(
     (value: string) => {
       const trimmed = value.trim();
-      if (trimmed.length < MIN_SUBMIT_LENGTH) return;
+      if (!trimmed) return;
+      if (showTyping && !suggestionQueryReady(trimmed, resolvedPrecision)) return;
       setDraft('');
       setPanelOpen(false);
       setActiveIndex(0);
       onAction(trimmed);
     },
-    [onAction],
+    [onAction, showTyping, resolvedPrecision],
   );
 
   useEffect(() => {
@@ -99,6 +115,11 @@ function AnswerInputInner({
     setPanelOpen(false);
     setActiveIndex(0);
   }, [roundKey]);
+
+  useEffect(() => {
+    if (!autoFocusEnabled || disabled) return;
+    inputRef.current?.focus();
+  }, [roundKey, autoFocusEnabled, disabled]);
 
   useEffect(() => {
     setActiveIndex(0);
@@ -114,7 +135,7 @@ function AnswerInputInner({
           <div
             id={SUGGESTION_LIST_ID}
             role="listbox"
-            aria-label="Suggestions d'animes"
+            aria-label={artistMode ? "Suggestions d'artistes" : "Suggestions d'animes"}
             className="custom-scrollbar fixed z-[200] flex flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
             style={{
               left: panelPosition.left,
@@ -147,7 +168,7 @@ function AnswerInputInner({
                   onClick={() => submitAnswer(suggestion.label)}
                 >
                   <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
-                  {idx === activeIndex && (
+                  {idx === activeIndex && submitOnEnter && (
                     <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
                       ENTRÉE
                     </span>
@@ -189,17 +210,24 @@ function AnswerInputInner({
           {suggestionPanel}
 
           <Input
+            ref={inputRef}
             value={draft}
             onChange={(e) => {
               const next = e.target.value;
               setDraft(next);
-              if (next.trim().length >= MIN_SUBMIT_LENGTH) setPanelOpen(true);
+              if (next.trim().length > 0 && suggestionQueryReady(next, resolvedPrecision)) setPanelOpen(true);
               else setPanelOpen(false);
             }}
             onFocus={() => {
-              if (draft.trim().length >= MIN_SUBMIT_LENGTH) setPanelOpen(true);
+              if (suggestionQueryReady(draft, resolvedPrecision)) setPanelOpen(true);
             }}
-            placeholder={submittedAnswer ? 'Modifier votre réponse…' : 'Nom de l\'anime…'}
+            placeholder={
+              submittedAnswer
+                ? 'Modifier votre réponse…'
+                : artistMode
+                  ? "Nom de l'artiste…"
+                  : "Nom de l'anime…"
+            }
             aria-label="Votre réponse"
             role="combobox"
             aria-expanded={showPanel}
@@ -207,7 +235,7 @@ function AnswerInputInner({
             aria-activedescendant={showPanel ? `answer-suggestion-${activeIndex}` : undefined}
             autoComplete="off"
             className="h-14 flex-1 rounded-lg border-primary/20 bg-card/90 pl-4 text-lg focus-visible:ring-primary/50"
-            autoFocus={!disabled}
+            autoFocus={autoFocusEnabled && !disabled}
             disabled={disabled}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -228,11 +256,11 @@ function AnswerInputInner({
                 setActiveIndex((i) => Math.max(i - 1, 0));
                 return;
               }
-              if (e.key === 'Enter') {
+              if (e.key === 'Enter' && submitOnEnter) {
                 e.preventDefault();
                 if (showPanel && suggestions[activeIndex]) {
                   submitAnswer(suggestions[activeIndex].label);
-                } else if (draft.trim().length >= MIN_SUBMIT_LENGTH) {
+                } else if (suggestionQueryReady(draft, resolvedPrecision)) {
                   submitAnswer(draft);
                 }
               }
@@ -248,7 +276,7 @@ function AnswerInputInner({
               variant="glow"
               size="lg"
               onClick={() => submitAnswer(draft)}
-              disabled={disabled || draft.trim().length < MIN_SUBMIT_LENGTH}
+              disabled={disabled || (showTyping && !suggestionQueryReady(draft, resolvedPrecision))}
               aria-label="Valider la réponse"
               className="h-14 w-14 rounded-lg p-0"
             >
@@ -257,6 +285,10 @@ function AnswerInputInner({
           </div>
         </div>
       )}
+
+      {canType ? (
+        <ShortcutReminder enabled={showShortcutReminder} submitOnEnter={submitOnEnter} />
+      ) : null}
 
       {showChoices && (
         <div className="grid w-full grid-cols-2 gap-3">

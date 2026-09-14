@@ -1,4 +1,4 @@
-import type { GamePlayer, GameStatus, GameSyncState, RoomSettings, UserRole } from '@aniquizz/shared';
+import type { GamePlayer, GameStatus, GameSyncState, RoomSettings, UserRole, WatchedListProvider } from '@aniquizz/shared';
 import { toClientRoomSettings } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
@@ -64,6 +64,7 @@ export class Room {
       asHost?: boolean;
       anilistUsername?: string | null;
       malUsername?: string | null;
+      activeListProvider?: WatchedListProvider | null;
       role?: UserRole | null;
       level?: number | null;
     } = {},
@@ -78,6 +79,7 @@ export class Room {
       existing.avatar = avatar || existing.avatar;
       if (opts.anilistUsername !== undefined) existing.anilistUsername = opts.anilistUsername;
       if (opts.malUsername !== undefined) existing.malUsername = opts.malUsername;
+      if (opts.activeListProvider !== undefined) existing.activeListProvider = opts.activeListProvider;
       if (opts.role) existing.role = opts.role;
       if (opts.level != null) existing.level = opts.level;
       logger.info(`[Room ${this.id}] Reconnected: ${safeUsername} (${userId})`, 'Lobby');
@@ -94,6 +96,7 @@ export class Room {
       isReady: opts.asHost === true || userId === this.hostId,
       anilistUsername: opts.anilistUsername ?? null,
       malUsername: opts.malUsername ?? null,
+      activeListProvider: opts.activeListProvider ?? null,
       role: opts.role ?? 'USER',
       level: opts.level ?? 1,
       score: 0,
@@ -136,6 +139,7 @@ export class Room {
       isReady: true,
       anilistUsername: null,
       malUsername: null,
+      activeListProvider: null,
       isBot: true,
       botConfig: config,
       score: 0,
@@ -478,8 +482,13 @@ export class Room {
     }
   }
 
-  handleAnswer(userId: string, answer: string, answerType: GamePlayer['answerType']): void {
-    this.engine?.handleAnswer(userId, answer, answerType ?? 'typing');
+  handleAnswer(
+    userId: string,
+    answer: string,
+    answerType: GamePlayer['answerType'],
+    options?: { revealAfterAnswer?: boolean },
+  ): void {
+    this.engine?.handleAnswer(userId, answer, answerType ?? 'typing', options);
   }
 
   votePause(userId: string): void {

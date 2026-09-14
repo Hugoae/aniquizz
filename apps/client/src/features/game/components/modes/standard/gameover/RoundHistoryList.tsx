@@ -10,6 +10,8 @@ interface RoundHistoryListProps {
   showType?: boolean;
   /** Sprint match — show speed rank, time, and point breakdown per round. */
   isSprint?: boolean;
+  /** Hide the +N / 0 column (daily has no points). */
+  showPoints?: boolean;
 }
 
 function SprintPointsBreakdown({ round }: { round: RoundHistoryEntry }) {
@@ -35,7 +37,12 @@ function SprintPointsBreakdown({ round }: { round: RoundHistoryEntry }) {
 }
 
 /** Per-round recap rows shared by the solo panel and the multi detail dialog. */
-export function RoundHistoryList({ history, showType = true, isSprint = false }: RoundHistoryListProps) {
+export function RoundHistoryList({
+  history,
+  showType = true,
+  isSprint = false,
+  showPoints = true,
+}: RoundHistoryListProps) {
   const sprintSummary = useMemo(() => {
     if (!isSprint || history.length === 0) return null;
 
@@ -142,20 +149,22 @@ export function RoundHistoryList({ history, showType = true, isSprint = false }:
               ))}
           </div>
 
-          <div className="min-w-[60px] text-right">
-            {isSprint ? (
-              <SprintPointsBreakdown round={round} />
-            ) : (
-              <div
-                className={cn(
-                  'text-lg font-bold',
-                  round.isCorrect ? 'text-success' : 'text-muted-foreground/50',
-                )}
-              >
-                {round.isCorrect ? `+${round.points}` : '0'}
-              </div>
-            )}
-          </div>
+          {showPoints && (
+            <div className="min-w-[60px] text-right">
+              {isSprint ? (
+                <SprintPointsBreakdown round={round} />
+              ) : (
+                <div
+                  className={cn(
+                    'text-lg font-bold',
+                    round.isCorrect ? 'text-success' : 'text-muted-foreground/50',
+                  )}
+                >
+                  {round.isCorrect ? `+${round.points}` : '0'}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       ))}
     </div>

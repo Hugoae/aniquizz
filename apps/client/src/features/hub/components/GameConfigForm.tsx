@@ -83,6 +83,13 @@ export function GameConfigForm<T extends GameConfig>({
 
   const noTypes = (cfg.soundTypes?.length ?? 0) === 0;
   const missingPassword = showRoomSettings && cfg.isPrivate && !cfg.password;
+  const ownWatchedListKey = [
+    profile?.activeListProvider ?? '',
+    profile?.anilistUsername?.trim() ?? '',
+    profile?.malUsername?.trim() ?? '',
+    profile?.anilistLastSync ?? '',
+    profile?.malLastSync ?? '',
+  ].join(':');
   const watchedBlocked = isWatchedSourceBlocked(cfg.soundSelection, user, profile, cfg.playlistWatched);
   const playlistBlocked = isPlaylistSourceBlocked(cfg.soundSelection, cfg.playlistId, cfg.decadePlaylistId);
   const { stats: watchedStatsRaw, loading: watchedLoading, offline: watchedOffline } = useWatchedPoolStats({
@@ -93,7 +100,7 @@ export function GameConfigForm<T extends GameConfig>({
     watchedMode: cfg.watchedMode,
     precision: cfg.precision,
     enabled: cfg.soundSelection === 'watched' && (isRoom || hasWatchedListLink(profile ?? {})),
-    refreshKey: isRoom ? watchedPlayersKey : undefined,
+    refreshKey: isRoom ? watchedPlayersKey : ownWatchedListKey,
   });
   const watchedStats = withWatchedPoolSoundCount(watchedStatsRaw, cfg.soundCount);
   const watchedPoolCheck = checkWatchedPoolLaunch(
@@ -101,6 +108,7 @@ export function GameConfigForm<T extends GameConfig>({
     watchedStats,
     cfg.watchedAllowFallback,
     cfg.responseType,
+    cfg.precision,
   );
   const { stats: catalogueStats, loading: catalogueLoading } = useCataloguePoolStats({
     soundCount: cfg.soundCount,
@@ -128,6 +136,7 @@ export function GameConfigForm<T extends GameConfig>({
     cfg.responseType,
     playlistStats,
     cfg.watchedAllowFallback,
+    cfg.precision,
   );
   const poolPreview = resolveConfigPoolPreview({
     soundSelection: cfg.soundSelection,

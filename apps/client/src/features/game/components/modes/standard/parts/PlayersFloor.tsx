@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 import type { GamePlayer } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { useMotionReduced } from '@/features/settings/context/PlayerPrefsContext';
 import { PlayerCard } from '../../../shared/PlayerCard';
 import { PointsBadge } from '../../../shared/PointsBadge';
 import { computeRanks, activeMatchPlayers, hasRankingSpread } from '../../../../utils/ranking';
@@ -20,6 +21,7 @@ interface PlayersFloorProps {
   showRank?: boolean;
   /** Opens the side roster (full ranking) when players overflow the cap. */
   onOpenRoster?: () => void;
+  hideScore?: boolean;
 }
 
 export function PlayersFloor({
@@ -30,8 +32,9 @@ export function PlayersFloor({
   pointsEarned,
   showRank = true,
   onOpenRoster,
+  hideScore = false,
 }: PlayersFloorProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useMotionReduced();
   const roster = useMemo(() => activeMatchPlayers(players), [players]);
 
   // The local player is always pinned first; the rest are the top scorers.
@@ -110,8 +113,9 @@ export function PlayersFloor({
                 rank={showRank ? ranks.get(String(p.id)) : undefined}
                 rankPending={showRank && !rankingEstablished}
                 flash={showRank && rankingEstablished && climbers.has(String(p.id))}
+                hideScore={hideScore}
               />
-              {isMe && showPointsAnimation && pointsEarned && (
+              {isMe && !hideScore && showPointsAnimation && pointsEarned && (
                 <div className="absolute -right-2 -top-4 z-20 animate-fade-in">
                   <PointsBadge points={pointsEarned} />
                 </div>
@@ -136,4 +140,4 @@ export function PlayersFloor({
     </div>
   );
 }
-
+

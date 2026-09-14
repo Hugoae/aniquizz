@@ -15,9 +15,10 @@ interface StandardPlayerCardProps {
   /** Briefly glow + lift the card (e.g. when the player climbs the ranking). */
   flash?: boolean;
   onClick?: () => void;
+  hideScore?: boolean;
 }
 
-export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick }: StandardPlayerCardProps) {
+export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, rankPending, flash, onClick, hideScore }: StandardPlayerCardProps) {
   const isCorrect = player.isCorrect === true;
   const isWrong = showResult && !isCorrect;
   const displayedAnswer = player.currentAnswer || '…';
@@ -76,6 +77,7 @@ export function StandardPlayerCard({ player, isCurrentUser, showResult, rank, ra
       player={player}
       isCurrentUser={isCurrentUser}
       onClick={onClick}
+      hideScore={hideScore}
       bubbleContent={bubble}
       topLeftContent={
         <>

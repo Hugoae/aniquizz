@@ -147,7 +147,7 @@ export function SongInfoCard({
         className="group relative flex w-full animate-scale-in overflow-hidden rounded-xl border border-border bg-card shadow-xl transition-all duration-300 hover:border-primary/30"
         style={accentStyle}
       >
-        {coverImage && (
+        {coverImage ? (
           <div className="relative w-[104px] shrink-0 overflow-hidden">
             {accent && <div className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-t from-black/40 to-transparent mix-blend-multiply" style={{ backgroundColor: `${accent}22` }} />}
             <img src={coverImage} alt={animeName} className="h-full w-full object-cover" loading="lazy" decoding="async" />
@@ -163,7 +163,7 @@ export function SongInfoCard({
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 p-3">
           {franchise && (
@@ -200,6 +200,11 @@ export function SongInfoCard({
             ))}
           </div>
         </div>
+        {showLikeButton && songId != null && !coverImage && (
+          <div className="flex shrink-0 items-center pr-3">
+            <SongLikeButton songId={songId} size="md" className="shadow-lg" />
+          </div>
+        )}
       </div>
     );
   }

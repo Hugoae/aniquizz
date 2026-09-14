@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { useMotionReduced } from '@/features/settings/context/PlayerPrefsContext';
 import type { ConfettiDot } from './confettiPresets';
 
 interface ConfettiLayerProps {
@@ -8,6 +9,9 @@ interface ConfettiLayerProps {
 
 /** Full-viewport decorative particles (fixed — intentional for game-over hero). */
 export function ConfettiLayer({ dots, glowClassName }: ConfettiLayerProps) {
+  const reduceMotion = useMotionReduced();
+  if (reduceMotion) return null;
+
   return (
     <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
       <div className={cn('absolute left-1/2 top-0 h-[45vh] w-full -translate-x-1/2 blur-3xl', glowClassName)} />

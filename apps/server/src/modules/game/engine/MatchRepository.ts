@@ -1,9 +1,10 @@
 import { randomUUID } from 'crypto';
 import { AnswerType as PrismaAnswerType, Prisma, StoredPrecision, StoredResponseType, StoredSoloMedal } from '@prisma/client';
 import { prisma, isBotId } from '@aniquizz/database';
-import type { AnswerType } from '@aniquizz/shared';
+import type { AnswerType, Precision } from '@aniquizz/shared';
 import type { MedalTier } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
+import { recordHeardSongs } from '../../catalogue/songHistoryService';
 import type { RecordedRound } from './types';
 
 export interface PersistPlayerInput {
@@ -36,9 +37,10 @@ export interface PersistMatchInput {
   startedAt: Date;
   endedAt: Date;
   responseType: 'typing' | 'qcm' | 'mix';
-  precision: 'anime' | 'franchise';
+  precision: Precision;
   players: PersistPlayerInput[];
   rounds: RecordedRound[];
+  /** Catalogue ids whose clip started (song history). Not leftover playlist rows. */
   songIds: number[];
   playlistId?: string | null;
   decadePlaylistId?: string | null;
@@ -58,8 +60,16 @@ const toStoredResponseType = (responseType: 'typing' | 'qcm' | 'mix'): StoredRes
   }
 };
 
-const toStoredPrecision = (precision: 'anime' | 'franchise'): StoredPrecision =>
-  precision === 'anime' ? StoredPrecision.ANIME : StoredPrecision.FRANCHISE;
+const toStoredPrecision = (precision: Precision): StoredPrecision => {
+  switch (precision) {
+    case 'anime':
+      return StoredPrecision.ANIME;
+    case 'artist':
+      return StoredPrecision.ARTIST;
+    default:
+      return StoredPrecision.FRANCHISE;
+  }
+};
 
 const toStoredSoloMedal = (medal: MedalTier): StoredSoloMedal | null => {
   if (!medal) return null;
@@ -242,30 +252,10 @@ export class MatchRepository {
       });
 
       const correctSet = new Set(player.correctSongIds);
-      await Promise.all(
-        songIds.map((songId) => {
-          const wasCorrect = correctSet.has(songId);
-          return prisma.songHistory
-            .upsert({
-              where: { profileId_songId: { profileId: player.userId, songId } },
-              create: {
-                profileId: player.userId,
-                songId,
-                playCount: 1,
-                correctCount: wasCorrect ? 1 : 0,
-                lastPlayedAt: new Date(),
-              },
-              update: {
-                playCount: { increment: 1 },
-                correctCount: wasCorrect ? { increment: 1 } : undefined,
-                lastPlayedAt: new Date(),
-              },
-            })
-            .catch((err: unknown) => {
-              const message = err instanceof Error ? err.message : String(err);
-              logger.warn(`[MatchRepository] SongHistory upsert failed (${songId}): ${message}`, 'Scoring');
-            });
-        }),
+      await recordHeardSongs(
+        prisma,
+        player.userId,
+        songIds.map((songId) => ({ songId, correct: correctSet.has(songId) })),
       );
     } catch (error) {
       logger.error(`[MatchRepository] Aggregate stats failed for ${player.userId}`, 'Scoring', error);

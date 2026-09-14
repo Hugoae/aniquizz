@@ -200,7 +200,7 @@ const fetchAniListMedia = createCachedFetcher(async (id: number) => {
  */
 function normalizeSeason(s: any) {
   const alts = [s.title.english, s.title.native, ...(s.synonyms || [])].filter(Boolean);
-  const studioName = s.studios?.nodes?.[0]?.name || "Studio Inconnu";
+  const studioName = s.studios?.nodes?.[0]?.name || null;
 
   return {
     id: s.id,

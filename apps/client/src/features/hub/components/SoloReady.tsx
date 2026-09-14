@@ -73,6 +73,7 @@ export function SoloReady({
     watchedStats,
     gameSettings?.watchedAllowFallback,
     gameSettings?.responseType,
+    gameSettings?.precision,
   );
   const { playlists } = usePublishedPlaylists(gameSettings?.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, gameSettings ?? {});
@@ -95,6 +96,7 @@ export function SoloReady({
     gameSettings?.responseType ?? 'mix',
     playlistStats,
     gameSettings?.watchedAllowFallback,
+    gameSettings?.precision,
   );
   const canPlay =
     !isLaunchStarting && !watchedBlocked && !playlistBlocked && !poolCheck.blocked && !playlistPoolCheck.blocked;

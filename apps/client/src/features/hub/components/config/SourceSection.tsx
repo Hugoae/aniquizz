@@ -8,6 +8,8 @@ import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylist
 import { watchedPoolModeLabel, showWatchedFusionMode, WATCHED_LIST_UNAVAILABLE, WATCHED_ANILIST_BLOCKED_MESSAGE, WATCHED_ANILIST_STALE_MESSAGE, WATCHED_SERVER_OFFLINE } from './watchedSource';
 import { PlaylistPicker } from './PlaylistPicker';
 import { PLAYLISTS_COPY } from './playlistsCopy';
+import { openSettings } from '@/features/settings/lib/openSettings';
+import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 
 type Source = RoomConfig['soundSelection'];
 type SourceTab = 'random' | 'watched' | 'playlist';
@@ -154,6 +156,13 @@ export function SourceSection({
               Pioche uniquement parmi les animes de vos listes <b className="text-foreground">Completed</b>,{' '}
               <b className="text-foreground">Watching</b> et <b className="text-foreground">On-Hold</b> (AniList ou MyAnimeList).
               {!watchedListLinked && !isRoom && ' Liez AniList ou MyAnimeList pour lancer une partie.'}
+              <button
+                type="button"
+                className="mt-2 block font-semibold text-info underline-offset-2 hover:underline"
+                onClick={() => openSettings('account')}
+              >
+                {SETTINGS_COPY.integrationsManage}
+              </button>
             </div>
 
             {watchedEnabled && (

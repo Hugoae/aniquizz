@@ -139,6 +139,7 @@ export function RouteSkeletonFallback() {
 
   if (pathname === '/') return null;
   if (pathname.startsWith('/play')) return <HubRouteSkeleton />;
+  if (pathname.startsWith('/daily')) return <HubRouteSkeleton />;
   if (pathname.startsWith('/game')) return <GameRouteSkeleton />;
   if (pathname.startsWith('/profile') || pathname.startsWith('/admin')) return <ProfileRouteSkeleton />;
   if (pathname.startsWith('/news')) return <NewsRouteSkeleton />;

@@ -21,6 +21,7 @@ import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import { useSongLikes } from '@/features/likes/context/SongLikesContext';
 import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import {
   isRevealAccentColor,
 } from '@/features/game/lib/revealMeta';
@@ -146,7 +147,7 @@ function FavoriteSongRow({
           </Button>
           <div className="flex justify-center pr-10">
             {videoUrl ? (
-              <video
+              <PrefVolumeVideo
                 key={song.id}
                 src={videoUrl}
                 controls

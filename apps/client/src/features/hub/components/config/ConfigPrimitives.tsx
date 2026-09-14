@@ -32,7 +32,7 @@ export function SectionHeader({
               <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="right" className="max-w-[250px] text-xs">
+          <TooltipContent side="right" className="max-w-[280px] text-xs">
             <p>{tooltip}</p>
           </TooltipContent>
         </Tooltip>

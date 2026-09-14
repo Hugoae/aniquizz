@@ -6,8 +6,11 @@ import App from './App';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { captureClientError } from '@/lib/errorReporter';
 import { waitForAppStylesheet } from '@/lib/appShell';
+import { applyStoredMotionAttribute } from '@/features/settings/lib/motionRuntime';
 import './fonts.css';
 import './index.css';
+
+applyStoredMotionAttribute();
 
 window.addEventListener('error', (event) => {
   captureClientError(event.error ?? event.message, { source: 'window_error' });
