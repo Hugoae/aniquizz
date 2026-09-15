@@ -64,7 +64,6 @@ export const GAME_CONFIG = {
     RESUME_COUNTDOWN: 3000,
     GAME_LOOP_TICK: 100,
     ROUND_DURATION: 30000,
-    GUESS_REVEAL: 10000,
     /** Load head-start added before the guess clock (absorbs video buffering). */
     GUESS_START_BUFFER: 250,
     /** Extra time after the chosen guess duration so the countdown visibly

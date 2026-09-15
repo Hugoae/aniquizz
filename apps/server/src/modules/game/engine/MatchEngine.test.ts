@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAME_CONFIG } from '@aniquizz/shared';
+import { GAME_CONFIG, revealDurationMs } from '@aniquizz/shared';
 import { sprintScoring } from './ScoringStrategy';
 import {
   advanceToGuessing,
@@ -280,7 +280,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
 
       engine.handleAnswer('player-1', 'Bleach', 'typing');
       engine.forceEndRound();
@@ -301,7 +301,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
 
       engine.handleAnswer('player-1', 'Wrong Anime', 'typing');
       engine.forceEndRound();
@@ -430,10 +430,57 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().phase).toBe('reveal');
       expect(engine.getSyncState().currentRound).toBe(1);
 
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
 
       expect(engine.getSyncState().phase).toBe('guessing');
       expect(engine.getSyncState().currentRound).toBe(2);
+    });
+
+    it('uses a reveal window equal to a short guess clock', async () => {
+      const playlist = [
+        makePlaylistItem({ id: 1, guessDuration: 5 }),
+        makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'], guessDuration: 5 }),
+      ];
+      const { engine, emitted } = createEngineHarness({
+        playlist,
+        settings: { guessDuration: 5 },
+      });
+      await advanceToGuessing(engine);
+      engine.forceEndRound();
+
+      const reveal = emitted.find((e) => e.event === 'round_reveal');
+      expect((reveal?.payload as { durationSeconds: number }).durationSeconds).toBe(5);
+      expect(engine.getSyncState().reveal?.durationSeconds).toBe(5);
+
+      await vi.advanceTimersByTimeAsync(4000);
+      expect(engine.getSyncState().phase).toBe('reveal');
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(2);
+    });
+
+    it('caps the reveal window at 15s when the guess clock is longer', async () => {
+      const playlist = [
+        makePlaylistItem({ id: 1, guessDuration: 20 }),
+        makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'], guessDuration: 20 }),
+      ];
+      const { engine, emitted } = createEngineHarness({
+        playlist,
+        settings: { guessDuration: 20 },
+      });
+      await advanceToGuessing(engine);
+      engine.forceEndRound();
+
+      const reveal = emitted.find((e) => e.event === 'round_reveal');
+      expect((reveal?.payload as { durationSeconds: number }).durationSeconds).toBe(15);
+      expect(engine.getSyncState().reveal?.durationSeconds).toBe(15);
+
+      await vi.advanceTimersByTimeAsync(14000);
+      expect(engine.getSyncState().phase).toBe('reveal');
+
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(engine.getSyncState().phase).toBe('guessing');
     });
   });
 
@@ -572,7 +619,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'qcm');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
       await Promise.resolve();
       await Promise.resolve();
 
@@ -593,9 +640,9 @@ describe('MatchEngine', () => {
       });
       await advanceToGuessing(engine);
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.GUESS_REVEAL);
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
       await Promise.resolve();
       await Promise.resolve();
 

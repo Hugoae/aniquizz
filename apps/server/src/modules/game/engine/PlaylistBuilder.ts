@@ -1,5 +1,4 @@
 import {
-  GAME_CONFIG,
   buildArtistChoices,
   buildChoices,
   buildDuo,
@@ -8,6 +7,7 @@ import {
   normalizeSongStartMode,
   playlistSourceIds,
   resolveRoundAnswerSet,
+  revealDurationSeconds,
   type ArtistChoiceRow,
   type Precision,
   type RoomSettings,
@@ -243,7 +243,9 @@ export class PlaylistBuilder {
     if (normalizeSongStartMode(songStartMode) === 'beginning') return 0;
 
     const total = totalDuration || 0;
-    const revealTime = GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000;
+    // Must track the match reveal clock: a leftover fixed 10s would start audio
+    // too late (short guess) or clip the reveal (guess ≥ 15s now reveals 15s).
+    const revealTime = revealDurationSeconds(guessDuration);
     const safetyMargin = 2;
     const maxStart = total - (guessDuration + revealTime + safetyMargin);
     return maxStart > 1 ? Math.floor(Math.random() * maxStart) : 0;

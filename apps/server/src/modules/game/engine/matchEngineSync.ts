@@ -1,6 +1,6 @@
 import {
-  GAME_CONFIG,
   matchHeardSongIds,
+  revealDurationSeconds,
   type GameReadyPayload,
   type GameSyncState,
   type RoundRevealPayload,
@@ -70,7 +70,7 @@ export function buildMatchSyncState(host: MatchEngineHost): GameSyncState {
       nextVideoStartTime: nextItem?.videoStartTime ?? null,
       serverNow: Date.now(),
       endsAt: host.clock.endsAt,
-      durationSeconds: Math.max(1, Math.round(GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000)),
+      durationSeconds: revealDurationSeconds(item.guessDuration),
     };
   }
 

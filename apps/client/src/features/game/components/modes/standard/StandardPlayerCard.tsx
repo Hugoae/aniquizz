@@ -3,6 +3,7 @@ import type { GamePlayer } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { rankAccent, rankNeutralAccent } from '../../../utils/ranking';
 import { PlayerCardBase } from '../../shared/PlayerCardBase';
+import { RevealAnswerTypeIcon } from './RevealAnswerTypeIcon';
 
 interface StandardPlayerCardProps {
   player: GamePlayer;
@@ -65,9 +66,12 @@ export function StandardPlayerCard({
           : 'border-destructive/60 bg-destructive text-destructive-foreground',
       )}
     >
-      <span className="line-clamp-2 w-full whitespace-normal break-words leading-tight">
-        {displayedAnswer}
-      </span>
+      <div className="flex flex-col items-center gap-0.5">
+        <RevealAnswerTypeIcon answerType={player.answerType} />
+        <span className="line-clamp-2 w-full whitespace-normal break-words leading-tight">
+          {displayedAnswer}
+        </span>
+      </div>
       <div
         className={cn(
           'absolute -bottom-1.5 left-1/2 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r',

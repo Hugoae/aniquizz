@@ -10,7 +10,12 @@ import {
   Mic2,
   type LucideIcon,
 } from 'lucide-react';
-import { GAME_CONFIG, PRECISION_META, type GameConfig, type Precision } from '@aniquizz/shared';
+import {
+  PRECISION_META,
+  revealDurationSeconds,
+  type GameConfig,
+  type Precision,
+} from '@aniquizz/shared';
 
 export {
   normalizePrecision,
@@ -101,7 +106,7 @@ export const PRECISION_OPTIONS: PrecisionOption[] = [
 export function estimateMatchMinutes(
   config: Pick<GameConfig, 'soundCount' | 'guessDuration'>,
 ): number {
-  const revealPerSong = GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000;
+  const revealPerSong = revealDurationSeconds(config.guessDuration);
   const totalSeconds = config.soundCount * (config.guessDuration + revealPerSong);
   return Math.max(1, Math.round(totalSeconds / 60));
 }

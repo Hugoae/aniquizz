@@ -9,6 +9,7 @@ export * from './difficulty';
 export * from './poolFilters';
 export * from './scoring';
 export * from './answerType';
+export * from './revealDuration';
 export * from './grading';
 export * from './ranking';
 export * from './victory';

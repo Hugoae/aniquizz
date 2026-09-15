@@ -84,7 +84,7 @@ export function PlayersFloor({
         // Reveal shows an answer bubble above every card, so we need generous
         // vertical room. While guessing there are no bubbles → stay compact so a
         // 4-choice QCM never pushes the floor into a scroll.
-        showResult ? 'pt-16' : 'pt-6',
+        showResult ? 'pt-20' : 'pt-6',
       )}
     >
       {/* Fixed column count keeps the floor to two predictable rows. */}

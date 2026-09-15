@@ -1,7 +1,7 @@
 import {
-  GAME_CONFIG,
   generatePeekWindow,
   normalizeVideoMode,
+  revealDurationSeconds,
   scoreForAnswer,
   type RoundRevealPayload,
   type SprintLeaderboardPayload,
@@ -135,7 +135,7 @@ export function endRound(host: MatchEngineHost): void {
   }
   host.recordedRounds.push(recorded);
 
-  const revealSeconds = Math.max(1, Math.round(GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000));
+  const revealSeconds = revealDurationSeconds(item.guessDuration);
   const revealMs = revealSeconds * 1000;
   host.clock.start(revealMs, () => {
     if (host.isPausePending) {
