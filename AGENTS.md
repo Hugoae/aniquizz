@@ -21,6 +21,7 @@ per-package `CONTEXT.md` (role, business glossary, known pitfalls). Read the con
 relevant to your task before scanning the package. See `docs/agents/domain.md` for how
 to consume them; [`ARCHITECTURE.md`](./ARCHITECTURE.md) has the full system detail.
 Full-feature audit prompt (all lenses, **French**): [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md).
+New-chat kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md).
 
 ---
 
@@ -197,6 +198,8 @@ Per project discipline ([`PLAN.md`](./PLAN.md) / [`PROGRESS.md`](./PROGRESS.md))
 2. At phase boundary: update `PROGRESS.md` (what changed, decisions, state, next step).
 3. Propose a **Conventional Commits** message before opening a new chat or merging.
 4. Run the CI pre-flight commands above when the change is non-trivial.
+
+New conversations start from [`docs/agents/kickoff.md`](./docs/agents/kickoff.md), not from a stale paste.
 
 ---
 

@@ -10,9 +10,10 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.3**  | ✅ Shipped | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                              |
 | **26.4**  | ✅ Shipped | Song likes, suggestions, library views, community leaderboard                                                         |
 | **26.5**  | ✅ Shipped | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
-| **26.6**  | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
-| **26.7**  | 🔮 Next    | Profile pokédex found bar · heard / found / liked playlists                                                           |
-| **26.x+** | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
+| **26.6**    | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
+| **26.6.1**  | 🔮 Next    | Reveal answer-type icon · reveal duration = min(guess, 15s) · Home / menu life                                        |
+| **26.7**    | 🔮 Later   | Profile pokédex (found bar, heard / found / liked) · **Admin panel rework**                                           |
+| **26.x+**   | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
 
@@ -323,9 +324,82 @@ today (attempt + XP + daily streak + pokédex rows from that run). Doc: [`docs/g
 
 ---
 
-## Update 26.7 — Pokédex depth (planned)
+## Update 26.6.1 — Match UX polish & Home life (planned)
 
-Goal: make collection progress readable, and let players replay what they already know.
+Goal: make multi reveal readable at a glance, keep the post-guess window proportional to
+the guess clock (capped so long guesses do not drag), and add a bit of visual life on
+Home and menus. Post-26.6 SPA audit is closed; this is the next **patch** after tagged
+`26.6`. Do not rewrite shipped **26.6** history.
+
+Do not start **26.7** (pokédex / Admin rework) in this pass.
+
+### 1. Answer-type icon on the reveal bubble
+
+In multi, the green (and red) answer bubble above the player card should show **how**
+that player submitted: typing, carré (QCM), or duo. Useful in Mix so the table can see
+who typed vs who picked a square.
+
+- Surface: `StandardPlayerCard` reveal bubble (`showResult`), not the guessing-time
+  Check badge (that badge stays content-free / anti-cheat).
+- Data: `GamePlayer.answerType` is already sent at reveal (`toPublicPlayer` with
+  `revealAnswers`) and **nulled while guessing** — keep that split. Do not add the type
+  to `game:answered` (`{ userId }` only).
+- Icons (Lucide, design tokens, decorative `aria-hidden` or a short French label):
+  keyboard → `typing`; 2×2 squares (`LayoutGrid`) → `qcm` / carré; two columns
+  (`Columns2`) → `duo`. Show the **effective** type they submitted, never `mix`.
+- Check Sprint / other cards only if they reuse the same bubble pattern.
+
+### 2. Reveal duration = min(guess, 15s)
+
+Today `GAME_CONFIG.TIMERS.GUESS_REVEAL` is a **fixed 10s**. Replace that with a
+**derived** reveal window:
+
+`revealSeconds = min(guessDurationSeconds, 15)` (floor at 1s like the current round
+helper).
+
+Examples: 5s guess → 5s reveal; 15s guess → 15s reveal; 20s+ guess → **15s reveal**
+(do not let a 30s guess become a 30s reveal).
+
+**Must stay in sync** — one shared helper in `packages/shared` (e.g.
+`revealDurationSeconds` / `revealDurationMs`), used by:
+
+| Consumer | Why |
+| -------- | --- |
+| `MatchEngine` round / sync (`matchEngineRound`, `matchEngineSync`) | Actual reveal clock |
+| `PlaylistBuilder.pickStartTime` | Random clip start: `maxStart = total − (guess + reveal + 2s safety)`. A shorter reveal **widens** the random window; a longer reveal (15s vs today's 10s on a 15s+ guess) **narrows** it. Using a leftover 10s constant would start audio too late and clip the reveal. |
+| `estimateMatchMinutes` (`formOptions.ts`) | Lobby « ≈ N min » hint |
+| `MatchEngine` tests | `advanceTimersByTimeAsync` must follow the room's guess duration, not a global 10s |
+
+Daily quiz stays on its own 15s-per-round clock — do not fold it into this helper unless
+a later pass explicitly unifies them. Beginning-of-song start mode (`videoStartTime = 0`)
+is unchanged.
+
+### 3. Home and menu life
+
+Small design / motion details on the landing screen and surrounding menus (hero, header,
+hub chrome) — not a redesign.
+
+- Tokens only (`index.css` / Tailwind semantic classes). No hardcoded theme hex.
+- Respect global `prefers-reduced-motion`.
+- Keep copy French, isolated. Do not bump `SITE_VERSION` / news until the 26.6.1 release
+  pass (`26.6.1`, not a new minor).
+
+### 26.6.1 checklist (at boundary)
+
+- [ ] Reveal bubble answer-type icons (typing / carré / duo), guessing badge unchanged.
+- [ ] Shared reveal-duration helper; MatchEngine + `pickStartTime` + lobby estimate + tests.
+- [ ] Home / menu life, tokens + reduced-motion.
+- [ ] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
+
+---
+
+## Update 26.7 — Pokédex depth & Admin rework (planned)
+
+Goal: make collection progress readable, let players replay what they already know, and
+rebuild the staff console so the tools shipped in the post-26.6 audit (journal, repair
+queue, spectator, bounded MODERATOR) sit in a coherent panel.
+
+Do not start this while **26.6.1** is open.
 
 ### 1. Profile pokédex — found bar
 
@@ -349,10 +423,29 @@ Goal: make collection progress readable, and let players replay what they alread
 - Same pool gates as Heard/Found: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
 - Solo/multi: host likes in multi unless a later pass adds union/intersection. Distinct from staff thematic packs (26.5) and from player-created playlists (26.x+ backlog).
 
+### 5. Rework Admin panel
+
+UX / IA pass on `/admin` (`Admin.tsx` + `features/admin/`), not a dump of new operator
+features. The audit already added Journal, catalogue « À réparer », salon spectateur,
+UUID lookup, and MODERATOR write bounds — this pass should make that set **usable as one
+console**.
+
+- Restyle and restructure the staff shell (nav, density, hierarchy of Users / Rooms /
+  Catalogue / Stats / Suggestions / Playlists / Daily / Journal / Dev). Tokens only;
+  French `adminCopy`; `jsx-a11y` error; `prefers-reduced-motion`.
+- Keep server authority and role split: MODERATOR stays bounded (no catalogue writes,
+  no Reset / playlists / daily / dev). Do not weaken `guardProtectedTarget` / owner
+  emails / `ALLOW_DEV_CLAIM_ADMIN`.
+- Relocate or group existing tools (repair queue, spectator dialog, audit journal) so
+  they are not a pile of extra tabs. Split panels that blow the ~300–400 line cap.
+- Logged-in staff smoke (`admin_dev`) on the reworked tabs. No mute / ban / reset / seed
+  unless the task explicitly asks.
+
 ### 26.7 checklist (at boundary)
 
 - [ ] Profile found bar + tests.
 - [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
+- [ ] Admin panel rework (shell + existing tools, role bounds unchanged).
 - [ ] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
 
 ---
@@ -393,7 +486,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 - Sentry on `errorReporter.ts` · expanded e2e · spectator mode.
 - Supabase HIBP is not planned while the project remains below Pro+; the advisor WARN is accepted.
-- Split god-files (`MatchEngine`, admin) when a feature touches them.
+- Split remaining god-files (admin) when a feature touches them. `MatchEngine` / `Game.tsx` were split in the post-26.6 leftover pass.
 - Audit leftovers: friend invites without friendship, public profile `roomId`, admin PATCH role without `guardProtectedTarget`, `claim-admin` outside production.
 
 **Quality gates — wave 1 (done in tree):** playbook committed (`AGENTS.md`, `PLAN.md`, `PROGRESS.md`, `docs/agents/`, `.cursor/rules/`) · client `tsc` in CI · ESLint on server + shared (`eqeqeq`, `no-explicit-any`, `no-floating-promises`) · Zod on mutating socket events (`game:answer`, settings, start, votes).
@@ -406,11 +499,11 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.4 (SPA tooling, in tree):** removed `lovable-tagger` from Vite (dev-only Lovable leftover).
 
-**Quality gates — wave 2.5 (jsx-a11y warn, in tree):** `eslint-plugin-jsx-a11y` recommended as warn on the client (14 findings). Flip to error after cleanup.
+**Quality gates — wave 2.5 (jsx-a11y, in tree):** `eslint-plugin-jsx-a11y` recommended as **error** on the client (leftover pass, 2026-09-15). Do not demote to warn.
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — wave 2 remaining:** dedicated `jsx-a11y` cleanup (14 warns) then promote to error. Then Auth + Home feature audits.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. Next ship is **26.6.1**.
 
 ---
 

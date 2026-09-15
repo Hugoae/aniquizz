@@ -3,9 +3,9 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
+## Current phase: **26.6.1** · Match UX + Home life (planned) (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix + in-match pause/skip/F5 smoke). **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Lists is closed** (P1 + P2). **Follow-up closed:** `jsx-a11y` recommended is **error**; Prisma `PlayerAnimeList` dropped; MatchEngine / `Game.tsx` under the soft cap; in-match chat echo; dual-link `set_active` notifies the Watched pool. **Parked:** HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. Post-26.6 SPA audit is **closed** (Auth → Lists + leftover pass `ceec1bf` on `main`). Next ship is **26.6.1**: answer-type icon on the reveal bubble, reveal duration = min(guess, 15s) including `pickStartTime` / lobby estimate, Home/menu life. **Parked:** HIBP (Supabase Pro+); **26.7** pokédex + Admin panel rework. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -17,10 +17,10 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Prompt**              | [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) — French deliverable; 10 lenses (code, split, project rules, security, perf, logic, design/a11y, tests, **phone/responsive**, **SEO/alt/links**). Code/commits stay English.                        |
 | **Earlier global pass** | 26.5 product-audit hardening (canvas `full-product-audit`, 10–11 Sept.): Mix scoring, `skip_round`, SongHistory RLS, votes, peek, join rate-limit, etc. Still recorded under 26.5 below. Daily / leaderboard / suggestions were audited in their own 26.4–26.6 work. |
-| **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
-| **Parked**              | HIBP leaked-password · 26.7                                                                                                                                                                                                                                          |
+| **This phase**          | Closed: quality gates (waves 1–2.6) · feature-audit prompt · Auth → Lists · leftover pass (`ceec1bf`). Current ship is **26.6.1**.                                                                                                                                   |
+| **Parked**              | HIBP leaked-password · 26.7 (pokédex + Admin rework)                                                                                                                                                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2). Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole. Post-26.6 SPA audit queue is empty; do not start 26.7.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2) → leftover pass ✅. Post-26.6 SPA audit queue is empty. Current ship: **26.6.1**. Do not start **26.7**.
 
 ### Audit — quality gates ✅
 
@@ -410,7 +410,19 @@ Follow-up after Lists P1/P2. Do not start 26.7. Identity stays JWT `userId`.
 
 **Browser (`admin_dev`, :8080):** Compte still shows AniList **Non lié** / MAL `Hugo_ae · Source active`. AniList link `Hugo_ae` did not persist (handle is not an AniList user). Hub Watched with the existing session hit `Rejected socket with invalid token` then the vousvoiement offline card. Logout succeeded (fresh-JWT path); password fill in the login modal was not automated. Relogin is needed locally. Dual-link + unlink + pool notify are covered by integration tests with a fresh token. Watched MAL `Hugo_ae`: 254 entries → 196 catalogue animes.
 
-**Next:** Relogin on :8080 if you were logged out. `pnpm db:generate` if the Prisma engine was locked by `pnpm dev`. Do not start 26.7.
+**Next:** Relogin on :8080 if you were logged out. `pnpm db:generate` if the Prisma engine was locked by `pnpm dev`. Start **26.6.1** when asked; do not start **26.7**.
+
+### 26.6.1 — planned (not implemented) (2026-09-15)
+
+Logged in `PLAN.md` after leftover `ceec1bf`. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md).
+
+| Item | Intent |
+| ---- | ------ |
+| **Answer-type icon** | Lucide on the Standard reveal bubble (green/red), from `GamePlayer.answerType` at reveal only. Guessing Check badge stays type-free. |
+| **Reveal duration** | `min(guess, 15s)` shared helper. `PlaylistBuilder.pickStartTime` and `estimateMatchMinutes` must use it (not a leftover 10s `GUESS_REVEAL`). Daily quiz clock stays separate. |
+| **Home / menus** | Small life, tokens, reduced-motion. No `SITE_VERSION` bump until the 26.6.1 release pass. |
+
+**26.7** (later): pokédex found bar + heard/found/liked sources + **Admin panel rework**.
 
 ### Audit — Lists P2 ✅ (2026-09-15)
 
@@ -1155,8 +1167,10 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.3**  | Engine tests + doc ✅ · GameForm ✅ · Sprint ✅ · polish ✅ · snapshots data ✅ · release content ✅ · lobby reconnect fix ✅ · admin catalogue search fix ✅ · tag `26.3` |
 | **26.4**  | Song likes full ✅ · library views ✅ · **boîte à idées** ✅ · **classement global** ✅ (5 metrics) · release content aligned ✅ · tag `26.4`                              |
 | **26.5**  | Endings catalogue ✅ · OP/ED filter ✅ · artist credits + locks imported ✅ · staff playlists ✅ · hardening ✅ · tag `26.5`                                               |
-| **26.6**  | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
-| **26.x+** | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
+| **26.6**    | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
+| **26.6.1**  | Reveal answer-type icon · reveal = min(guess, 15s) · Home/menu life — planned                                                                                            |
+| **26.7**    | Pokédex found bar · heard / found / liked playlists · Admin panel rework — parked until 26.6.1 ships                                                                     |
+| **26.x+**   | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions
 

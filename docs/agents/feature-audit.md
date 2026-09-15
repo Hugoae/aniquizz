@@ -13,8 +13,9 @@ pas.
 
 ```
 Audite FEATURE de bout en bout. N’implémente rien tant que je ne demande pas
-explicitement de corriger un finding. Ne démarre pas 26.7 ni le travail en
-parking.
+explicitement de corriger un finding. Ne démarre pas 26.7 (pokédex / rework
+Admin) ni le travail en parking (HIBP). La phase courante est **26.6.1**
+(voir PLAN.md).
 
 Repo : pnpm + Turborepo. Graphify d’abord (`.cursor/rules/graphify.mdc`).
 Lis CONTEXT-MAP.md et les CONTEXT.md des packages concernés avant de scanner.
@@ -52,9 +53,8 @@ dis ce qui doit rester cohérent (n’audite pas ces voisins en entier).
    `docs/security`).
 7. **Design / a11y / UX** — tokens, primitives shadcn, `.glass-card`,
    `FOCUS_RING`, `prefers-reduced-motion`, jsx-a11y, copy française.
-   Parking : 14 warns jsx-a11y existants (FriendsPanel, GameSidebar,
-   PlayerCardBase, …) — note si FEATURE en ajoute de nouveaux ; ne « répare
-   pas le backlog » sauf si FEATURE possède ces fichiers.
+   `eslint-plugin-jsx-a11y` recommended est **error** — ne pas repasser en
+   warn. Corriger tout finding que FEATURE introduit.
 8. **Tests** — cas manquants sur les chemins risqués que tu as trouvés.
 9. **Responsive / téléphone** — pas le pixel-perfect, mais aucun manque
    grossier. Vérifier au moins : largeur ~390px, landscape court (~700×400),
