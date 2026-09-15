@@ -1,20 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send } from 'lucide-react';
+import type { ChatMessage } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { socket } from '@/lib/socket';
-
-interface ChatMessage {
-  id: string;
-  senderId: string;
-  username: string;
-  avatar?: string;
-  content: string;
-  timestamp: number;
-  isSystem?: boolean;
-}
+import {
+  createLocalChatMessage,
+  dropLastLocalChatMessage,
+  isLocalChatMessage,
+  mergeChatMessage,
+} from '@/features/game/utils/mergeChatMessages';
 
 interface LobbyChatProps {
   roomId: string;
@@ -33,6 +30,7 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
   const [draft, setDraft] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
+  const pendingSendAtRef = useRef(0);
 
   const scrollToBottom = () => {
     setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -40,20 +38,40 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
 
   useEffect(() => {
     const onMessage = (msg: ChatMessage) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => mergeChatMessage(prev, msg));
       scrollToBottom();
     };
+    const onSendFailed = () => {
+      if (Date.now() - pendingSendAtRef.current > 4_000) return;
+      pendingSendAtRef.current = 0;
+      setMessages((prev) => dropLastLocalChatMessage(prev, String(currentUserId)));
+    };
     socket.on('chat:message', onMessage);
+    socket.on('error', onSendFailed);
     return () => {
       socket.off('chat:message', onMessage);
+      socket.off('error', onSendFailed);
     };
-  }, []);
+  }, [currentUserId]);
 
   const send = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!draft.trim() || !roomId) return;
-    socket.emit('chat:sendMessage', { roomId, content: draft });
+    const trimmed = draft.trim();
+    if (!trimmed || !roomId) return;
+    const lastOwn = [...messages]
+      .reverse()
+      .find((msg) => String(msg.senderId) === String(currentUserId));
+    const local = createLocalChatMessage({
+      senderId: String(currentUserId),
+      username: lastOwn?.username || 'Moi',
+      avatar: lastOwn?.avatar,
+      content: trimmed,
+    });
+    setMessages((prev) => [...prev, local]);
+    pendingSendAtRef.current = Date.now();
+    socket.emit('chat:sendMessage', { roomId, content: trimmed });
     setDraft('');
+    scrollToBottom();
   };
 
   return (
@@ -83,7 +101,11 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
           return (
             <div
               key={msg.id || index}
-              className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}
+              className={cn(
+                'flex flex-col text-sm',
+                isMe ? 'items-end' : 'items-start',
+                isLocalChatMessage(msg) && 'opacity-70',
+              )}
             >
               <div className="mb-0.5 flex items-center gap-2">
                 {!isMe && (

@@ -33,8 +33,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   type gate. Keep `noUnusedLocals` / `noUnusedParameters` off.
 - **Do not import `apps/server` or `@aniquizz/database`.** Talk to the API over
   HTTP / Socket.io. ESLint `no-restricted-imports` enforces this.
-- **`jsx-a11y` is warn**, not error. Fix findings in a dedicated pass; don't
-  disable the plugin to ship.
+- **`jsx-a11y` recommended is error.** Fix findings; don't disable the plugin to ship.
 - **User-facing copy is French; code/comments English.** Keep strings isolated
   (e.g. `gameCopy.ts`, `hubCopy.ts`, `lobbyRulesCopy.ts`, `adminCopy.ts`) for future i18n — don't inline French in logic.
 - **Design tokens only** — style via Tailwind semantic classes (`bg-primary`,

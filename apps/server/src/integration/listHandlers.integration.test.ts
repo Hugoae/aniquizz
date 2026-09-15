@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@aniquizz/database';
-import type { ListOperationResult, ListsStatusPayload } from '@aniquizz/shared';
+import type { ListOperationResult, ListsStatusPayload, LobbyJoinedPayload } from '@aniquizz/shared';
 import { INVALID_SOCKET_PAYLOAD_MESSAGE } from '../core/parseSocketPayload';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
@@ -75,6 +75,20 @@ describe.skipIf(!hasIntegrationEnv)('list handlers integration', () => {
       status: { active: 'mal' },
     });
     expect((await loadRow()).activeListProvider).toBe('mal');
+  });
+
+  it('notifies the watched pool after set_active while the player is in a lobby', async () => {
+    socket.emit('lobby:create', {
+      username: 'admin_dev',
+      avatar: 'player1',
+      settings: { soundSelection: 'watched', maxPlayers: 1, mode: 'solo' },
+    });
+    await onceEvent<LobbyJoinedPayload>(socket, 'lobby:joined');
+    const changed = onceEvent<void>(socket, 'watched:list_changed');
+    const resultPromise = onceEvent<ListOperationResult>(socket, 'lists:result');
+    socket.emit('lists:set_active', { requestId: 'pool-keep-mal', provider: 'mal' });
+    await changed;
+    expect((await resultPromise).status.active).toBe('mal');
   });
 
   it('atomically unlinks the active provider and falls back to the remaining link', async () => {

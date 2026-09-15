@@ -148,6 +148,7 @@ export const registerListHandlers = (
           select: LIST_STATUS_SELECT,
         });
         applyRuntimeSources(userId, row, socket, gameManager);
+        gameManager.notifyWatchedListChanged(userId);
         const status = publishStatus(io, userId, row);
         socket.emit('lists:result', {
           requestId,
@@ -263,6 +264,7 @@ export const registerListHandlers = (
           else invalidateMalUserCache(removedUsername);
         }
         applyRuntimeSources(userId, row, socket, gameManager);
+        gameManager.notifyWatchedListChanged(userId);
         const status = publishStatus(io, userId, row);
         socket.emit('lists:result', {
           requestId,

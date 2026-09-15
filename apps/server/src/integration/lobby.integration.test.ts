@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import type { LobbyJoinedPayload, RoomListItem } from '@aniquizz/shared';
+import type { ChatMessage, LobbyJoinedPayload, RoomListItem } from '@aniquizz/shared';
 import { INVALID_SOCKET_PAYLOAD_MESSAGE } from '../core/parseSocketPayload';
 import { normalizeRoomSettings } from '../modules/game/settings';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
@@ -10,7 +10,7 @@ import {
   onceEvent,
   type TestSocket,
 } from '../test/socketHelpers';
-import { getTestAccessToken } from '../test/testJwt';
+import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -162,5 +162,25 @@ describe.skipIf(!hasIntegrationEnv)('lobby handlers integration', () => {
     socket.emit('lobby:subscribe_list');
     const rooms = await roomsPromise;
     expect(rooms.some((room) => room.id === roomId)).toBe(true);
+  });
+
+  it('echoes a chat message back to the sender', async () => {
+    const messagePromise = onceEvent<ChatMessage>(socket, 'chat:message');
+    socket.emit('chat:sendMessage', { roomId, content: 'ping salon' });
+    const message = await messagePromise;
+    expect(message).toMatchObject({
+      senderId: TEST_USER_IDS.admin,
+      content: 'ping salon',
+      isSystem: false,
+    });
+    expect(message.id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+    );
+  });
+
+  it('rejects chat for a room the player is not in', async () => {
+    const errorPromise = onceEvent<{ message: string }>(socket, 'error');
+    socket.emit('chat:sendMessage', { roomId: 'ZZZZZZ', content: 'nope' });
+    expect((await errorPromise).message).toBe("Vous n'êtes pas dans ce salon.");
   });
 });

@@ -5,19 +5,6 @@ import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tseslint from 'typescript-eslint';
 
-/** Demote jsx-a11y recommended from error to warn until a dedicated cleanup. */
-const jsxA11yWarnRules = Object.fromEntries(
-  Object.entries(jsxA11y.flatConfigs.recommended.rules).map(([rule, setting]) => {
-    if (setting === 'off' || (Array.isArray(setting) && setting[0] === 'off')) {
-      return [rule, setting];
-    }
-    if (Array.isArray(setting)) {
-      return [rule, ['warn', ...setting.slice(1)]];
-    }
-    return [rule, 'warn'];
-  }),
-);
-
 export default tseslint.config(
   { ignores: ['dist'] },
   {
@@ -35,7 +22,7 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      ...jsxA11yWarnRules,
+      ...jsxA11y.flatConfigs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/no-explicit-any': 'error',

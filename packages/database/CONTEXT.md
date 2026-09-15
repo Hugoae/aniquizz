@@ -41,6 +41,8 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
   deletes local JSON. Never run against production data casually.
 - **Media live on R2, not the DB.** A song can be `COMPLETED` in Postgres yet corrupt/missing
   on R2 — use `pnpm r2:scan` and `repair_video.ts` to reconcile.
+- **Watched lists are not a Prisma table.** AniList / MAL handles live on `Profile`;
+  catalogues are in-memory caches. `PlayerAnimeList` was dropped (`20260915180000_drop_player_anime_list`).
 - **Regenerate the client after schema changes** (`pnpm db:generate` at the root) so both
   apps see new fields — otherwise the server sees stale Prisma types.
 - **`artist` is the verified display credit.** Backfill, import, and pipeline writes fill

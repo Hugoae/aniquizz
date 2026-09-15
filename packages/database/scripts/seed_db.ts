@@ -32,7 +32,6 @@ async function main() {
   // 1. NETTOYAGE
   console.log('🧹 Nettoyage des anciennes données...');
   await prisma.songHistory.deleteMany();
-  await prisma.playerAnimeList.deleteMany();
   await prisma.song.deleteMany();
   await prisma.anime.deleteMany();
   await prisma.franchise.deleteMany();

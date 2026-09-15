@@ -256,7 +256,6 @@ function AnswerInputInner({
             aria-activedescendant={showPanel ? `answer-suggestion-${activeIndex}` : undefined}
             autoComplete="off"
             className="h-14 flex-1 rounded-lg border-primary/20 bg-card/90 pl-4 text-lg focus-visible:ring-primary/50"
-            autoFocus={autoFocusEnabled && !disabled}
             disabled={disabled}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {

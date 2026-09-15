@@ -27,7 +27,7 @@ Goal: polish the core Standard experience before bigger features (librairie, cha
 ### 1. Delete account (RGPD)
 
 - Profile action **« Supprimer mon compte »** with explicit confirmation.
-- Server-authoritative: Supabase Auth delete + Prisma cascade (`Profile`, `MatchPlayer`, `RoundAnswer`, `SongHistory`, `PlayerAnimeList`, `Friendship`) + avatar in Storage.
+- Server-authoritative: Supabase Auth delete + Prisma cascade (`Profile`, `MatchPlayer`, `RoundAnswer`, `SongHistory`, `Friendship`) + avatar in Storage.
 - Aligns with privacy policy (right to erasure).
 
 ### 2. AniList — minimum intersection threshold

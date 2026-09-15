@@ -133,7 +133,7 @@ Integration tests need Supabase test users: `pnpm test:setup` (see [`CONTRIBUTIN
 - **Mutating socket payloads** (`game:answer`, `update_room_settings`, `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, `game:return_to_lobby`, `game:cancel`, `get_game_state`, `chat:sendMessage`, `update_profile_data`, `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account`, `friends:set_privacy` as a legacy alias of `allowFriendRequests`, `lists:link`, `lists:set_active`, `lists:refresh`, `lists:unlink`) must be parsed with Zod schemas in `packages/shared/src/socketPayloads.ts` at the handler. Types on the wire are not a runtime boundary. UI writes `allowFriendRequests` via `profile:update_privacy` only.
 - **ESLint (server + shared):** `eqeqeq` (`null` ignore), `@typescript-eslint/no-explicit-any`, `@typescript-eslint/no-floating-promises`. Socket.io never awaits listeners — `requireAuth` / `guard` settle returned promises. **Client:** same `eqeqeq` + `no-explicit-any`; `no-unused-vars` stays off (shadcn / catch noise).
 - **Package boundaries:** ESLint `no-restricted-imports` — client ↛ `apps/server` / `@aniquizz/database` / `express` / Prisma; shared ↛ `react` / `express` / Prisma / Socket.io runtime; server ↛ `react` / `apps/client`. Zod is allowed in shared.
-- **Client a11y:** `eslint-plugin-jsx-a11y` recommended runs as **warn**. Do not flip to error until a dedicated cleanup; do not disable the plugin to silence a warning.
+- **Client a11y:** `eslint-plugin-jsx-a11y` recommended runs as **error**. Do not disable the plugin to silence a finding.
 - **Pure logic** (scoring, medals, victory, fuzzy match, watched pool, selection) belongs in `packages/shared` with unit tests in the same package (e.g. `grading.test.ts`, `victory.test.ts`).
 - **Player identity** is always JWT `userId` (`socket.data.userId`), never `socket.id`.
 
@@ -162,13 +162,13 @@ Token reference (HSL custom properties): `--primary`, `--accent`, `--aqua`, `--s
 
 **Existing patterns to follow:**
 
-| Area               | Pattern                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Server game engine | `apps/server/src/modules/game/engine/` — `MatchEngine`, `PlaylistBuilder`, `RoundClock`, `MatchRepository`, `Room` |
-| Server handlers    | One module per domain: `lobbyHandlers`, `gameHandlers`, `profileHandlers`, …                                       |
-| Client features    | `apps/client/src/features/<domain>/` — components, hooks, copy                                                     |
-| Lobby copy         | Isolated builders e.g. `lobbyRulesCopy.ts` + tests                                                                 |
-| Shared pure logic  | One concern per file in `packages/shared/src/`                                                                     |
+| Area               | Pattern                                                                                                                                                                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server game engine | `apps/server/src/modules/game/engine/` — `MatchEngine` plus `matchEngineStart` / `matchEngineRound` / `matchEngineFinish` / `matchEngineSync`, `PlaylistBuilder`, `RoundClock`, `MatchRepository`, `Room` |
+| Server handlers    | One module per domain: `lobbyHandlers`, `gameHandlers`, `profileHandlers`, …                                                                                                                              |
+| Client features    | `apps/client/src/features/<domain>/` — components, hooks, copy                                                                                                                                            |
+| Lobby copy         | Isolated builders e.g. `lobbyRulesCopy.ts` + tests                                                                                                                                                        |
+| Shared pure logic  | One concern per file in `packages/shared/src/`                                                                                                                                                            |
 
 **Prefer extracting:** hooks (`hooks/`), subcomponents, pure helpers in `packages/shared` — not growing a page or handler file.
 

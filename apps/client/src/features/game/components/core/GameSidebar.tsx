@@ -9,7 +9,7 @@ import {
   Flame,
   WifiOff,
 } from 'lucide-react';
-import type { GamePlayer } from '@aniquizz/shared';
+import type { ChatMessage, GamePlayer } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
@@ -23,16 +23,12 @@ import {
   activeMatchPlayers,
   hasRankingSpread,
 } from '@/features/game/utils/ranking';
-
-interface ChatMessage {
-  id: string;
-  senderId: string;
-  username: string;
-  avatar?: string;
-  content: string;
-  timestamp: number;
-  isSystem?: boolean;
-}
+import {
+  createLocalChatMessage,
+  dropLastLocalChatMessage,
+  isLocalChatMessage,
+  mergeChatMessage,
+} from '@/features/game/utils/mergeChatMessages';
 
 interface GameSidebarProps {
   players: GamePlayer[];
@@ -73,6 +69,7 @@ export function GameSidebar({
   const chatEndRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef(activeTab);
   const isCollapsedRef = useRef(isCollapsed);
+  const pendingSendAtRef = useRef(0);
 
   const roster = activeMatchPlayers(players);
   const sortedPlayers = hideScores ? roster : [...roster].sort((a, b) => b.score - a.score);
@@ -102,24 +99,43 @@ export function GameSidebar({
 
   useEffect(() => {
     const handleNewMessage = (msg: ChatMessage) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => mergeChatMessage(prev, msg));
       if (activeTabRef.current !== 'chat' || isCollapsedRef.current) {
         setUnreadCount((prev) => prev + 1);
       } else {
         scrollToBottom();
       }
     };
+    const handleSendFailed = () => {
+      if (!meId) return;
+      if (Date.now() - pendingSendAtRef.current > 4_000) return;
+      pendingSendAtRef.current = 0;
+      setMessages((prev) => dropLastLocalChatMessage(prev, String(meId)));
+    };
     socket.on('chat:message', handleNewMessage);
+    socket.on('error', handleSendFailed);
     return () => {
       socket.off('chat:message', handleNewMessage);
+      socket.off('error', handleSendFailed);
     };
-  }, []);
+  }, [meId]);
 
   const handleSendMessage = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!chatMessage.trim() || !roomId) return;
-    socket.emit('chat:sendMessage', { roomId, content: chatMessage });
+    const trimmed = chatMessage.trim();
+    if (!trimmed || !roomId || !meId) return;
+    const me = players.find((player) => String(player.id) === String(meId));
+    const local = createLocalChatMessage({
+      senderId: String(meId),
+      username: me?.username || 'Moi',
+      avatar: me?.avatar,
+      content: trimmed,
+    });
+    setMessages((prev) => [...prev, local]);
+    pendingSendAtRef.current = Date.now();
+    socket.emit('chat:sendMessage', { roomId, content: trimmed });
     setChatMessage('');
+    scrollToBottom();
   };
 
   return (
@@ -312,7 +328,11 @@ export function GameSidebar({
                   return (
                     <div
                       key={msg.id || index}
-                      className={cn('flex flex-col text-sm', isMe ? 'items-end' : 'items-start')}
+                      className={cn(
+                        'flex flex-col text-sm',
+                        isMe ? 'items-end' : 'items-start',
+                        isLocalChatMessage(msg) && 'opacity-70',
+                      )}
                     >
                       <div className="mb-0.5 flex items-center gap-2">
                         {!isMe && (

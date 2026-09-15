@@ -1,63 +1,33 @@
 import {
   GAME_CONFIG,
-  computeVictory,
-  computeCompetitionRanks,
   isAnswerCorrect,
-  levelFromXp,
-  xpForMatch,
-  generatePeekWindow,
-  normalizeVideoMode,
-  normalizePrecision,
   resolveEffectiveAnswerType,
-  toClientRoomSettings,
   type AnswerType,
-  type CorrectByDifficulty,
-  type GamePlayer,
-  type GameReadyPayload,
   type GameSyncState,
-  type ResponseType,
-  type RoundStartPayload,
-  type RoundRevealPayload,
-  type SongDifficulty,
-  type VictoryData,
-  type RoundHistoryEntry,
-  type GameOverPayload,
   type MatchSettingsSnapshot,
-  pickMatchSettings,
-  matchPlaylistPersistence,
-  matchHeardSongIds,
   type PeekWindow,
-  scoreForAnswer,
-  type SprintLeaderboardPayload,
+  type RoundHistoryEntry,
+  type VictoryData,
 } from '@aniquizz/shared';
-import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
-import { logger } from '../../../utils/logger';
 import { RoundClock } from './RoundClock';
-import type { PlaylistBuilder } from './PlaylistBuilder';
-import type { MatchRepository } from './MatchRepository';
-import type { ScoringStrategy } from './ScoringStrategy';
 import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
-import { scheduleBotAnswers } from './matchEngineBots';
-import { buildRoundHistoryByUser, toRevealSong } from './matchEngineReveal';
 import {
   countActiveVotes,
   isHumanVoter,
   playerCanVote,
   requiredVoteCount,
 } from './matchEngineVotes';
-
-interface EngineDeps {
-  builder: PlaylistBuilder;
-  repo: MatchRepository;
-  scoring: ScoringStrategy;
-}
-
-const START_BUFFER_MS = GAME_CONFIG.TIMERS.GUESS_START_BUFFER;
-// Extra grace after the chosen guess duration so the countdown visibly reaches
-// (and lingers on) 0 instead of cutting the instant time runs out. Answers are
-// still accepted during this window; it only softens the round's end.
-const GUESS_END_GRACE_MS = GAME_CONFIG.TIMERS.GUESS_END_GRACE;
+import type { EngineDeps, MatchEngineHost } from './matchEngineHost';
+import { startMatch } from './matchEngineStart';
+import {
+  buildRoundStartPayload,
+  emitSprintLeaderboard,
+  endRound,
+  startRound,
+} from './matchEngineRound';
+import { finishMatch } from './matchEngineFinish';
+import { buildAdminProgress, buildMatchSyncState, heardSongIds } from './matchEngineSync';
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
 export class MatchEngine {
@@ -97,152 +67,12 @@ export class MatchEngine {
     this.deps = deps;
   }
 
-  // --- START ----------------------------------------------------------------
+  private asHost(): MatchEngineHost {
+    return this as unknown as MatchEngineHost;
+  }
 
   async start(): Promise<boolean> {
-    this.resetMatchState();
-    this.startedAt = new Date();
-    this.room.status = 'playing';
-    this.currentRoundIndex = -1;
-    this.phase = 'intro';
-
-    const introStartedAt = Date.now();
-
-    // Send everyone to the game screen immediately, then build the playlist while
-    // the intro countdown plays. The DB/AniList work is thus hidden behind the
-    // countdown instead of blocking the lobby. `firstVideo` is intentionally null
-    // here (unused for preload; the client loads the clip at `round_start`).
-    this.channel.emit('game_started', {
-      roomId: this.room.id,
-      settings: toClientRoomSettings(this.room.settings),
-      players: this.room.toPublicPlayers(),
-      introDuration: GAME_CONFIG.TIMERS.INTRO_DELAY,
-      firstVideo: null,
-    });
-
-    let built;
-    try {
-      built = await this.deps.builder.build(this.room.settings, [...this.room.players.values()], {
-        excludePriorMatchSongIds: this.room.getPriorMatchSongIds(),
-      });
-    } catch (e) {
-      logger.error(`[MatchEngine ${this.room.id}] Playlist build crashed`, 'Game', e);
-      return this.abortStart('Erreur technique lors de la préparation.');
-    }
-
-    if (!built.playlist.length) {
-      const settings = this.room.settings;
-      let message = 'Aucun son trouvé pour ces paramètres.';
-      if (built.abortReason === 'watched_empty') {
-        message =
-          settings.watchedMode === 'intersection'
-            ? "Mode Commun impossible : au moins un joueur n'a pas de liste AniList utilisable."
-            : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
-      } else if (
-        built.abortReason === 'playlist_missing' ||
-        built.abortReason === 'playlist_empty'
-      ) {
-        message = "Cette playlist n'est plus disponible ou n'a aucun son jouable.";
-      }
-      logger.error(
-        `[MatchEngine ${this.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`,
-        'Game',
-      );
-      return this.abortStart(message);
-    }
-
-    this.playlist = built.playlist;
-    this.room.registerMatchPlaylistSongIds(this.playlist.map((item) => item.id));
-
-    logger.info(
-      `[MatchEngine ${this.room.id}] Match start — ${this.playlist.length} songs, ${this.room.players.size} players.`,
-      'Game',
-    );
-
-    // Warm the round-1 clip while the intro countdown plays out, so playback is
-    // instant when the first round starts (no cold buffering). The locator is a
-    // signed Worker URL when MEDIA_PLAYBACK_URL is set — never the R2 filename.
-    const first = this.playlist[0];
-    if (first) {
-      this.channel.emit('game:preload', {
-        videoKey: toPlaybackUrl(first.videoKey),
-        videoStartTime: first.videoStartTime,
-      });
-    }
-
-    if (built.fallbackUsed) {
-      setTimeout(() => {
-        const message =
-          this.room.settings.soundSelection === 'playlist'
-            ? "Liste insuffisante : des sons du pack complètent la partie (vous l'avez autorisé)."
-            : "Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l'avez autorisé).";
-        this.channel.emit('game:fallback_notification', { message });
-      }, 1000);
-    }
-
-    if (built.difficultyRelaxed) {
-      setTimeout(
-        () => {
-          this.channel.emit('game:fallback_notification', {
-            message:
-              'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
-          });
-        },
-        built.fallbackUsed ? 2500 : 1000,
-      );
-    }
-
-    // Start round 1 once the intro has visibly elapsed AND the playlist is ready.
-    // The build usually finishes within the intro, so the round starts exactly at
-    // the end of the countdown; a slow build only pushes it slightly later.
-    const remaining = Math.max(0, GAME_CONFIG.TIMERS.INTRO_DELAY - (Date.now() - introStartedAt));
-    this.introTimer = setTimeout(() => this.beginRound1Ready(), remaining);
-    return true;
-  }
-
-  /**
-   * Round-1 only: show the game UI with a short "À vous !" beat before audio and
-   * the guess timer start. Later rounds call `startRound()` directly from reveal.
-   */
-  private beginRound1Ready(): void {
-    this.introTimer = null;
-    if (this.currentRoundIndex >= 0) {
-      this.startRound();
-      return;
-    }
-
-    const first = this.playlist[0];
-    if (!first) {
-      void this.finish();
-      return;
-    }
-
-    const readyMs = GAME_CONFIG.TIMERS.ROUND1_READY_DELAY;
-    const serverNow = Date.now();
-    const startsAt = serverNow + readyMs;
-
-    this.phase = 'ready';
-    this.readyStartsAt = startsAt;
-    this.channel.emit('game:ready', {
-      serverNow,
-      startsAt,
-      durationSeconds: first.guessDuration,
-    });
-
-    this.readyTimer = setTimeout(() => {
-      this.readyTimer = null;
-      this.readyStartsAt = null;
-      this.startRound();
-    }, readyMs);
-  }
-
-  /** Bail out after `game_started` was already sent: send players back to the
-   *  lobby (cancel) and reset the room so a retry can start cleanly. */
-  private abortStart(message: string): boolean {
-    this.room.status = 'waiting';
-    this.channel.emit('error', { message });
-    this.channel.emit('game_cancelled', { reason: message });
-    return false;
+    return startMatch(this.asHost());
   }
 
   private resetMatchState(): void {
@@ -269,86 +99,12 @@ export class MatchEngine {
     p.speedBonus = 0;
   }
 
-  // --- ROUND LOOP -----------------------------------------------------------
-
   private startRound(): void {
-    this.readyStartsAt = null;
-    this.clock.clear();
-    this.clearBotTimers();
-    this.room.touch();
-    this.isRoundLoading = true;
-    this.currentRoundIndex++;
-
-    if (this.currentRoundIndex >= this.playlist.length) {
-      void this.finish();
-      return;
-    }
-
-    const item = this.playlist[this.currentRoundIndex];
-    this.phase = 'guessing';
-    this.isRoundEnded = false;
-    this.skipVotes.clear();
-    this.pauseVotes.clear();
-    this.isPausePending = false;
-
-    for (const p of this.room.players.values()) this.resetRoundState(p);
-
-    const required = this.requiredVotes();
-    this.channel.emit('vote_update', { type: 'skip', count: 0, required });
-    this.channel.emit('vote_update', { type: 'pause', count: 0, required, isPending: false });
-
-    const videoMode = normalizeVideoMode(this.room.settings.videoMode);
-    this.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
-
-    const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
-    this.guessStartAt = Date.now();
-    this.clock.start(guessDurationMs, () => {
-      try {
-        this.endRound();
-      } catch (error) {
-        logger.error(
-          `[MatchEngine ${this.room.id}] endRound crashed after timer`,
-          'GameLoop',
-          error,
-        );
-      }
-    });
-    this.botTimers.push(
-      ...scheduleBotAnswers({
-        players: this.room.players.values(),
-        item,
-        responseType: this.room.settings.responseType,
-        handleAnswer: (userId, answer, answerType) => this.handleAnswer(userId, answer, answerType),
-      }),
-    );
-    this.isRoundLoading = false;
-
-    logger.info(
-      `[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1}/${this.playlist.length} — ${item.anime}`,
-      'GameLoop',
-    );
-
-    const payload: RoundStartPayload = this.buildRoundStartPayload(item);
-    this.channel.emit('round_start', payload);
+    startRound(this.asHost());
   }
 
-  private buildRoundStartPayload(item: PlaylistItem): RoundStartPayload {
-    const videoMode = normalizeVideoMode(this.room.settings.videoMode);
-
-    return {
-      round: this.currentRoundIndex + 1,
-      totalRounds: this.playlist.length,
-      videoKey: toPlaybackUrl(item.videoKey),
-      videoStartTime: item.videoStartTime,
-      startBuffer: START_BUFFER_MS,
-      serverNow: Date.now(),
-      endsAt: this.clock.endsAt,
-      durationSeconds: item.guessDuration,
-      choices: item.choices,
-      duo: item.duo,
-      peekWindow: this.currentPeekWindow ?? undefined,
-      videoMode,
-    };
+  private buildRoundStartPayload(item: PlaylistItem) {
+    return buildRoundStartPayload(this.asHost(), item);
   }
 
   handleAnswer(
@@ -383,7 +139,6 @@ export class MatchEngine {
       ? this.deps.scoring.scoreFor(effectiveType, { timeMs, durationMs: item.guessDuration * 1000 })
       : 0;
 
-    // Anti-cheat: only signal THAT they answered — never the content/correctness.
     this.channel.emit('game:answered', { userId });
 
     if (options?.revealAfterAnswer === true && this.room.isSolo) {
@@ -392,314 +147,12 @@ export class MatchEngine {
   }
 
   private endRound(): void {
-    if (this.isRoundLoading || this.isRoundEnded) return;
-
-    const item = this.playlist[this.currentRoundIndex];
-    if (!item) {
-      logger.error(
-        `[MatchEngine ${this.room.id}] endRound called with no playlist item (index=${this.currentRoundIndex}).`,
-        'GameLoop',
-      );
-      return;
-    }
-
-    this.isRoundEnded = true;
-    this.phase = 'reveal';
-    this.clock.clear();
-    this.clearBotTimers();
-
-    const recorded: RecordedRound = {
-      roundNumber: this.currentRoundIndex + 1,
-      songId: item.id,
-      answers: [],
-    };
-
-    const rankedCorrect = [...this.room.players.values()]
-      .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
-      .sort((a, b) => (a.answerTimeMs ?? 0) - (b.answerTimeMs ?? 0))
-      .map((p) => ({ userId: p.userId, timeMs: p.answerTimeMs ?? 0 }));
-
-    const roundBonuses = this.deps.scoring.roundBonus(rankedCorrect);
-
-    for (const p of this.room.players.values()) {
-      const bonus = roundBonuses.get(p.userId) ?? 0;
-      p.speedBonus = bonus;
-      p.speedRank = rankedCorrect.findIndex((r) => r.userId === p.userId);
-      p.speedRank = p.speedRank >= 0 ? p.speedRank + 1 : null;
-      if (bonus > 0) {
-        p.roundPoints = (p.roundPoints || 0) + bonus;
-      }
-
-      p.score += p.roundPoints || 0;
-      if (p.isCorrect === true) {
-        p.streak += 1;
-        p.matchCorrectCount += 1;
-        p.correctSongIds.add(item.id);
-      } else {
-        p.streak = 0;
-      }
-      p.maxStreak = Math.max(p.maxStreak, p.streak);
-      p.matchTotalCount += 1;
-
-      if (p.hasAnswered) {
-        recorded.answers.push({
-          userId: p.userId,
-          answer: p.currentAnswer,
-          isCorrect: p.isCorrect === true,
-          answerType: p.answerType ?? 'typing',
-          timeMs: p.answerTimeMs,
-          pointsAwarded: p.roundPoints || 0,
-          speedRank: p.speedRank,
-          speedBonus: p.speedBonus > 0 ? p.speedBonus : undefined,
-        });
-      }
-    }
-    this.recordedRounds.push(recorded);
-
-    const revealSeconds = Math.max(1, Math.round(GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000));
-    const revealMs = revealSeconds * 1000;
-    this.clock.start(revealMs, () => {
-      if (this.isPausePending) {
-        this.pause();
-      } else {
-        this.startRound();
-      }
-    });
-
-    logger.info(
-      `[MatchEngine ${this.room.id}] Round ${this.currentRoundIndex + 1} reveal.`,
-      'GameLoop',
-    );
-
-    this.emitSprintLeaderboard();
-
-    const next = this.playlist[this.currentRoundIndex + 1];
-    const payload: RoundRevealPayload = {
-      round: this.currentRoundIndex + 1,
-      song: toRevealSong(item),
-      players: this.room.toPublicPlayers(true),
-      nextVideo: next ? toPlaybackUrl(next.videoKey) : null,
-      nextVideoStartTime: next?.videoStartTime ?? null,
-      serverNow: Date.now(),
-      endsAt: this.clock.endsAt,
-      durationSeconds: revealSeconds,
-    };
-    this.channel.emit('round_reveal', payload);
+    endRound(this.asHost());
   }
 
   private async finish(): Promise<void> {
-    this.phase = null;
-    this.clock.clear();
-    this.room.status = 'finished';
-
-    const settings = this.room.settings;
-    const responseType = (settings.responseType ?? 'mix') as ResponseType;
-
-    const songDifficulties = this.playlist.map((s) =>
-      MatchEngine.normalizeDifficulty(s.difficulty),
-    );
-
-    const competitors = [...this.room.players.values()].filter((p) => !p.isBot);
-    const result = computeVictory({
-      players: competitors.map((p) => ({
-        userId: p.userId,
-        score: p.score,
-        correctCount: p.matchCorrectCount,
-        totalCount: p.matchTotalCount,
-      })),
-      totalRounds: this.playlist.length,
-      responseType,
-      isSolo: this.room.isSolo,
-      difficulties: settings.difficulty ?? [],
-      songDifficulties,
-      precision: normalizePrecision(settings.precision),
-    });
-
-    const rankByUser = computeCompetitionRanks(
-      result.rankings.map((r) => ({ id: r.userId, score: r.score })),
-    );
-    const publicPlayers = this.room.toPublicPlayers(true);
-    const rankings = [...publicPlayers].sort((a, b) => b.score - a.score);
-    const winner =
-      result.winnerIds.length > 0
-        ? (rankings.find((p) => String(p.id) === result.winnerIds[0]) ?? null)
-        : null;
-
-    // --- XP / leveling (Phase 7) ---
-    const xpByUser = await this.computeMatchXp(result.winnerIds, rankByUser, rankings.length);
-
-    // Reveal per-player XP on the game-over screen.
-    for (const rp of rankings) {
-      const outcome = xpByUser.get(String(rp.id));
-      if (outcome) rp.xpEarned = outcome.earned;
-    }
-
-    const victoryData: VictoryData = {
-      winner,
-      winnerIds: result.winnerIds,
-      rankings,
-      totalMaxScore: result.maxPossibleScore,
-      soloTargetRatio: result.soloTargetRatio,
-      soloMedal: result.soloMedal,
-      soloDifficulty: result.soloDifficultyLabel,
-      multiWinnerCount: result.multiWinnerCount,
-    };
-
-    const roundHistoryByUserId = buildRoundHistoryByUser(this.playlist, this.recordedRounds, [
-      ...this.room.players.keys(),
-    ]);
-    const matchSettings = pickMatchSettings(this.room.settings);
-    this.finishedVictoryData = victoryData;
-    this.finishedRoundHistoryByUserId = roundHistoryByUserId;
-    this.finishedMatchSettings = matchSettings;
-
-    logger.info(
-      `[MatchEngine ${this.room.id}] Match over. Winners: ${result.winnerIds.length || 'none'}.`,
-      'Game',
-    );
-
-    const gameOverPayload: GameOverPayload = { victoryData, roundHistoryByUserId, matchSettings };
-    this.channel.emit('game_over', gameOverPayload);
-
-    // Push a level-up to each player's own socket (never broadcast).
-    for (const p of this.room.players.values()) {
-      const outcome = xpByUser.get(p.userId);
-      if (outcome && outcome.newLevel > outcome.oldLevel && p.socketId) {
-        this.room.io.to(p.socketId).emit('level_up', {
-          oldLevel: outcome.oldLevel,
-          newLevel: outcome.newLevel,
-          xp: outcome.newXp,
-        });
-      }
-    }
-
-    void this.deps.repo
-      .persistMatch({
-        gameType: this.room.settings.gameType === 'sprint' ? 'sprint' : 'standard',
-        totalRounds: this.playlist.length,
-        startedAt: this.startedAt,
-        endedAt: new Date(),
-        responseType: (this.room.settings.responseType ?? 'mix') as 'typing' | 'qcm' | 'mix',
-        precision: normalizePrecision(this.room.settings.precision),
-        players: [...this.room.players.values()]
-          .filter((p) => !p.isBot)
-          .map((p) => {
-            const outcome = xpByUser.get(p.userId);
-            return {
-              userId: p.userId,
-              score: p.score,
-              rank: rankByUser.get(p.userId) ?? 0,
-              isWinner: result.winnerIds.includes(p.userId),
-              correctCount: p.matchCorrectCount,
-              totalCount: p.matchTotalCount,
-              maxStreak: p.maxStreak,
-              xpEarned: outcome?.earned ?? 0,
-              newLevel: outcome?.newLevel,
-              newWinStreak: outcome?.newWinStreak,
-              correctSongIds: [...p.correctSongIds],
-              soloMedal: this.room.isSolo ? result.soloMedal : null,
-            };
-          }),
-        rounds: this.recordedRounds,
-        songIds: this.heardSongIds(),
-        ...matchPlaylistPersistence(this.room.settings),
-      })
-      .catch((e) =>
-        logger.error(`[MatchEngine ${this.room.id}] persistMatch failed`, 'Scoring', e),
-      );
+    await finishMatch(this.asHost());
   }
-
-  /**
-   * Computes per-player match XP + level transitions. Bots and guests (no
-   * Profile) are excluded. Best-effort: on any failure the match still ends
-   * (players simply earn no XP this round).
-   */
-  private async computeMatchXp(
-    winnerIds: string[],
-    rankByUser: Map<string, number>,
-    playerCount: number,
-  ): Promise<
-    Map<
-      string,
-      { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }
-    >
-  > {
-    const outcomes = new Map<
-      string,
-      { earned: number; oldLevel: number; newLevel: number; newXp: number; newWinStreak: number }
-    >();
-
-    const humans = [...this.room.players.values()].filter((p) => !p.isBot);
-    if (!humans.length) return outcomes;
-
-    const difficultyBySong = new Map<number, SongDifficulty>(
-      this.playlist.map((s) => [s.id, MatchEngine.normalizeDifficulty(s.difficulty)]),
-    );
-
-    try {
-      const priors = await this.deps.repo.getXpState(humans.map((p) => p.userId));
-      for (const player of humans) {
-        const prior = priors.get(player.userId);
-        if (!prior) continue; // guest without a Profile row
-
-        const isWinner = winnerIds.includes(player.userId);
-        const newWinStreak = isWinner ? prior.currentWinStreak + 1 : 0;
-
-        const earned = xpForMatch({
-          correctByDifficulty: this.tallyCorrectByDifficulty(
-            player.correctSongIds,
-            difficultyBySong,
-          ),
-          roundsPlayed: player.matchTotalCount,
-          score: player.score,
-          isWinner,
-          rank: rankByUser.get(player.userId) ?? playerCount,
-          playerCount,
-          isSolo: this.room.isSolo,
-          winStreak: newWinStreak,
-        });
-
-        const oldLevel = levelFromXp(prior.xp);
-        const newXp = prior.xp + earned;
-        outcomes.set(player.userId, {
-          earned,
-          oldLevel,
-          newLevel: levelFromXp(newXp),
-          newXp,
-          newWinStreak,
-        });
-      }
-    } catch (e) {
-      logger.error(`[MatchEngine ${this.room.id}] XP computation failed`, 'Scoring', e);
-    }
-
-    return outcomes;
-  }
-
-  private tallyCorrectByDifficulty(
-    correctSongIds: Set<number>,
-    difficultyBySong: Map<number, SongDifficulty>,
-  ): CorrectByDifficulty {
-    const tally: CorrectByDifficulty = { easy: 0, medium: 0, hard: 0 };
-    for (const songId of correctSongIds) {
-      const diff = difficultyBySong.get(songId);
-      if (diff) tally[diff] += 1;
-    }
-    return tally;
-  }
-
-  private static normalizeDifficulty(raw: string): SongDifficulty {
-    switch ((raw ?? '').toLowerCase()) {
-      case 'easy':
-        return 'easy';
-      case 'hard':
-        return 'hard';
-      default:
-        return 'medium';
-    }
-  }
-
-  // --- VOTES ----------------------------------------------------------------
 
   votePause(userId: string): void {
     if (this.isRoundLoading) return;
@@ -790,91 +243,16 @@ export class MatchEngine {
     }, GAME_CONFIG.TIMERS.RESUME_COUNTDOWN);
   }
 
-  // --- SYNC / TEARDOWN ------------------------------------------------------
-
   getSyncState(): GameSyncState {
-    const item = this.currentRoundIndex >= 0 ? this.playlist[this.currentRoundIndex] : null;
-    const base: GameSyncState = {
-      status: this.room.status,
-      currentRound:
-        this.currentRoundIndex >= 0 ? this.currentRoundIndex + 1 : this.phase === 'ready' ? 1 : 0,
-      totalRounds: this.playlist.length,
-      players: this.room.toPublicPlayers(this.phase === 'reveal'),
-      phase: this.phase,
-      round: null as RoundStartPayload | null,
-      reveal: null as RoundRevealPayload | null,
-      ready: null as GameReadyPayload | null,
-      introFirstVideo:
-        this.phase === 'intro'
-          ? this.playlist[0]
-            ? toPlaybackUrl(this.playlist[0].videoKey)
-            : null
-          : undefined,
-    };
-
-    if (this.room.status === 'finished' && this.finishedVictoryData) {
-      base.victoryData = this.finishedVictoryData;
-      base.roundHistoryByUserId = this.finishedRoundHistoryByUserId ?? undefined;
-      base.matchSettings = this.finishedMatchSettings ?? undefined;
-      return base;
-    }
-
-    if (this.phase === 'ready' && this.playlist[0] && this.readyStartsAt) {
-      base.ready = {
-        serverNow: Date.now(),
-        startsAt: this.readyStartsAt,
-        durationSeconds: this.playlist[0].guessDuration,
-      };
-    } else if (this.phase === 'guessing' && item) {
-      base.round = this.buildRoundStartPayload(item);
-    } else if (this.phase === 'reveal' && item) {
-      const nextItem = this.playlist[this.currentRoundIndex + 1];
-      base.reveal = {
-        round: this.currentRoundIndex + 1,
-        song: toRevealSong(item),
-        players: this.room.toPublicPlayers(true),
-        nextVideo: nextItem ? toPlaybackUrl(nextItem.videoKey) : null,
-        nextVideoStartTime: nextItem?.videoStartTime ?? null,
-        serverNow: Date.now(),
-        endsAt: this.clock.endsAt,
-        durationSeconds: Math.max(1, Math.round(GAME_CONFIG.TIMERS.GUESS_REVEAL / 1000)),
-      };
-    }
-
-    return base;
+    return buildMatchSyncState(this.asHost());
   }
 
-  /** Admin-only live progress snapshot (may reveal the current anime/title). */
   getAdminProgress(): AdminMatchProgress {
-    const item = this.currentRoundIndex >= 0 ? this.playlist[this.currentRoundIndex] : null;
-    return {
-      currentRound: Math.max(0, this.currentRoundIndex + 1),
-      totalRounds: this.playlist.length,
-      phase: this.phase,
-      anime: item?.anime ?? null,
-      title: item?.title ?? null,
-      artist: item?.artist ?? null,
-      typeLabel: item?.typeLabel ?? null,
-      videoKey: item?.videoKey ?? null,
-      videoStartTime: item?.videoStartTime ?? null,
-      cover: item?.cover ?? null,
-      endsAt: this.clock.endsAt || null,
-    };
+    return buildAdminProgress(this.asHost());
   }
 
-  /** Catalogue ids whose clip started — leftover playlist rows stay out of SongHistory. */
   private heardSongIds(): number[] {
-    const inProgress =
-      !this.isRoundEnded &&
-      (this.phase === 'guessing' || this.phase === 'reveal') &&
-      this.currentRoundIndex >= 0 &&
-      this.currentRoundIndex < this.playlist.length
-        ? this.playlist[this.currentRoundIndex].id
-        : null;
-    return matchHeardSongIds({
-      recordedSongIds: this.recordedRounds.map((round) => round.songId),
-      inProgressSongId: inProgress,
-    });
+    return heardSongIds(this.asHost());
   }
 
   cancel(): void {
@@ -890,71 +268,25 @@ export class MatchEngine {
     this.phase = null;
   }
 
-  // --- BOTS (DEV ONLY) ------------------------------------------------------
-
   private clearBotTimers(): void {
     for (const t of this.botTimers) clearTimeout(t);
     this.botTimers = [];
   }
-
-  // --- HELPERS --------------------------------------------------------------
 
   private requiredVotes(): number {
     const humans = [...this.room.players.values()].filter(isHumanVoter).length;
     return requiredVoteCount(humans);
   }
 
-  /** Clamp a claimed answer type to what the room's response mode permits. */
   private effectiveAnswerType(claimed: AnswerType): AnswerType {
     return resolveEffectiveAnswerType(claimed, this.room.settings.responseType);
   }
 
-  /** Typed broadcast channel for this room. */
   private get channel() {
     return this.room.io.to(this.room.id);
   }
 
-  /** Sprint: final top-3 correct times + personalized "you" row (reveal only). */
   private emitSprintLeaderboard(): void {
-    if (this.room.settings.gameType !== 'sprint') return;
-
-    const rankedCorrect = [...this.room.players.values()]
-      .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
-      .sort((a, b) => (a.answerTimeMs ?? 0) - (b.answerTimeMs ?? 0))
-      .map((p) => ({ userId: p.userId, timeMs: p.answerTimeMs ?? 0 }));
-
-    const top = rankedCorrect.slice(0, 3).map((entry) => {
-      const p = this.room.players.get(entry.userId)!;
-      return {
-        userId: entry.userId,
-        username: p.username,
-        avatar: p.avatar,
-        timeMs: entry.timeMs,
-      };
-    });
-
-    const basePoints = scoreForAnswer('typing');
-    const bonuses = this.deps.scoring.roundBonus(rankedCorrect);
-
-    for (const viewer of this.room.players.values()) {
-      if (viewer.isBot || !viewer.socketId) continue;
-
-      const finalPoints =
-        viewer.isCorrect === true
-          ? basePoints + (bonuses.get(viewer.userId) ?? 0)
-          : viewer.hasAnswered
-            ? 0
-            : null;
-
-      const payload: SprintLeaderboardPayload = {
-        top,
-        you: {
-          timeMs: viewer.isCorrect === true ? viewer.answerTimeMs : null,
-          isCorrect: viewer.isCorrect,
-          projectedPoints: finalPoints,
-        },
-      };
-      this.room.io.to(viewer.socketId).emit('sprint:leaderboard', payload);
-    }
+    emitSprintLeaderboard(this.asHost());
   }
 }

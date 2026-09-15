@@ -185,7 +185,6 @@ model Profile {
   songLikes    SongLike[]
   suggestions  Suggestion[]
   suggestionVotes SuggestionVote[]
-  myList       PlayerAnimeList[]
   // Social (Phase 7). Friendship rows where this profile is the requester / addressee.
   sentRequests     Friendship[] @relation("SentRequests")
   receivedRequests Friendship[] @relation("ReceivedRequests")
@@ -348,7 +347,6 @@ model Anime {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   songs       Song[]
-  playerLists PlayerAnimeList[]
 
   @@index([franchiseId])
   @@index([popularity(sort: Desc)])
@@ -502,20 +500,6 @@ model HttpRateLimitBucket {
   updatedAt   DateTime @updatedAt
 
   @@index([expiresAt])
-}
-
-model PlayerAnimeList {
-  id        String   @id @default(uuid())
-  profileId String
-  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  animeId   Int
-  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
-  status    String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([profileId, animeId])
-  @@index([animeId])
 }
 
 /// Staff-curated music pack (v26.5). Recipe is resolved into a frozen snapshot on publish.

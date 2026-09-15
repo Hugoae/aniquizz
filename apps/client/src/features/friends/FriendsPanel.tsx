@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import {
   Users,
   UserPlus,
@@ -187,7 +187,13 @@ export function FriendsPanel() {
   } = useFriends();
   const [username, setUsername] = useState('');
   const [adding, setAdding] = useState(false);
+  const addInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!adding) return;
+    addInputRef.current?.focus();
+  }, [adding]);
 
   // Online first, then offline; alphabetical within each group.
   const sortedFriends = useMemo(
@@ -229,21 +235,26 @@ export function FriendsPanel() {
           <Users className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-bold">Amis ({friends.length})</h2>
         </div>
-        <label className="flex items-center gap-2 text-[11px] text-muted-foreground cursor-pointer">
-          Demandes
-          <Switch checked={allowFriendRequests} onCheckedChange={setPrivacy} />
-        </label>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span id="friends-allow-requests-label">Demandes</span>
+          <Switch
+            checked={allowFriendRequests}
+            onCheckedChange={setPrivacy}
+            aria-labelledby="friends-allow-requests-label"
+          />
+        </div>
       </div>
 
       <div className="glass-card bg-card/40 rounded-xl flex flex-col overflow-hidden">
         {adding ? (
           <form onSubmit={handleAdd} className="p-3 border-b border-border/60 flex gap-2">
             <Input
+              ref={addInputRef}
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Pseudo exact…"
               className="h-9 bg-background/50"
-              autoFocus
+              aria-label="Pseudo exact"
             />
             <Button
               type="submit"
@@ -251,6 +262,7 @@ export function FriendsPanel() {
               variant="glow"
               className="h-9 w-9 shrink-0"
               title="Envoyer la demande"
+              aria-label="Envoyer la demande"
             >
               <Check className="h-4 w-4" />
             </Button>
@@ -260,6 +272,7 @@ export function FriendsPanel() {
               variant="ghost"
               className="h-9 w-9 shrink-0 text-muted-foreground"
               title="Annuler"
+              aria-label="Annuler"
               onClick={cancelAdd}
             >
               <X className="h-4 w-4" />

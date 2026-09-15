@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix + in-match pause/skip/F5 smoke). **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Lists is closed** (P1 + P2; `PlayerAnimeList` drop parked). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix + in-match pause/skip/F5 smoke). **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Lists is closed** (P1 + P2). **Follow-up closed:** `jsx-a11y` recommended is **error**; Prisma `PlayerAnimeList` dropped; MatchEngine / `Game.tsx` under the soft cap; in-match chat echo; dual-link `set_active` notifies the Watched pool. **Parked:** HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -18,13 +18,13 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **Prompt**              | [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) — French deliverable; 10 lenses (code, split, project rules, security, perf, logic, design/a11y, tests, **phone/responsive**, **SEO/alt/links**). Code/commits stay English.                        |
 | **Earlier global pass** | 26.5 product-audit hardening (canvas `full-product-audit`, 10–11 Sept.): Mix scoring, `skip_round`, SongHistory RLS, votes, peek, join rate-limit, etc. Still recorded under 26.5 below. Daily / leaderboard / suggestions were audited in their own 26.4–26.6 work. |
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
-| **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
+| **Parked**              | HIBP leaked-password · 26.7                                                                                                                                                                                                                                          |
 
 **Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2). Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole. Post-26.6 SPA audit queue is empty; do not start 26.7.
 
 ### Audit — quality gates ✅
 
-Playbook and CI now match what `AGENTS.md` claimed. Shipped on `main` as `0b0685c` (ahead of origin until this push). Wave 2 remaining for toolchain: none. Do not disable `jsx-a11y` to ship; promote to error after a dedicated cleanup.
+Playbook and CI now match what `AGENTS.md` claimed. Shipped on `main` as `0b0685c` (ahead of origin until this push). Wave 2 remaining for toolchain: none. `jsx-a11y` recommended is **error**.
 
 #### Wave 1
 
@@ -395,6 +395,22 @@ Canvas: `lists-feature-audit`. No P0. Identity stays JWT `userId`. Overlay Param
 | **Tests**        | Shared: URL paste, bogus provider, oversized username/`requestId`. Integration: invalid `lists:set_active` does not write.                                                                             |
 
 **Next:** Lists P2 (closed in the next section). Do not start 26.7.
+
+### Audit — leftover pass (a11y error, PlayerAnimeList, splits, chat, lists) ✅ (2026-09-15)
+
+Follow-up after Lists P1/P2. Do not start 26.7. Identity stays JWT `userId`.
+
+| Item                | What changed                                                                                                                                                                                                                        |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **jsx-a11y error**  | Client plugin recommended is `error`. Pagination renders `{children}`; FriendsPanel `Demandes` uses `aria-labelledby` + Switch (no native `<label>` wrap); add-friend and answer inputs focus via ref, not `autoFocus`.             |
+| **PlayerAnimeList** | Dropped from Prisma schema, seed/reset scripts, GDPR docs. Migration `20260915180000_drop_player_anime_list` applied on Supabase (`migrate status` up to date). Lists stay on Profile usernames + in-memory caches.                 |
+| **File cap**        | `MatchEngine.ts` 292 lines (`matchEngineStart` / `Round` / `Finish` / `Sync`). `Game.tsx` 101 lines; logic in `useGamePage.ts` (336).                                                                                               |
+| **Chat**            | Server echoes `chat:message` to the sender (`socket.emit` + `socket.to`); membership miss returns a French `error`. Client optimistic local row + merge/dedupe (GameSidebar + LobbyChat). Integration: echo UUID + reject `ZZZZZZ`. |
+| **Lists pool**      | `lists:set_active` and `lists:unlink` emit `watched:list_changed` so Hub refetch uses the new active source. Integration: dual-link switch in a lobby notifies the pool; unlink MAL falls back to AniList.                          |
+
+**Browser (`admin_dev`, :8080):** Compte still shows AniList **Non lié** / MAL `Hugo_ae · Source active`. AniList link `Hugo_ae` did not persist (handle is not an AniList user). Hub Watched with the existing session hit `Rejected socket with invalid token` then the vousvoiement offline card. Logout succeeded (fresh-JWT path); password fill in the login modal was not automated. Relogin is needed locally. Dual-link + unlink + pool notify are covered by integration tests with a fresh token. Watched MAL `Hugo_ae`: 254 entries → 196 catalogue animes.
+
+**Next:** Relogin on :8080 if you were logged out. `pnpm db:generate` if the Prisma engine was locked by `pnpm dev`. Do not start 26.7.
 
 ### Audit — Lists P2 ✅ (2026-09-15)
 

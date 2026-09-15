@@ -10,7 +10,7 @@ Self-service **right to erasure** for authenticated users. Available from the ow
    - Validate username confirmation (case-sensitive, trimmed)
    - Require a fresh Supabase sign-in (`last_sign_in_at` within 10 minutes)
    - `gameManager.ejectUserFromAllRooms()` — leave every live lobby/match
-   - `prisma.profile.delete` — cascades `Friendship`, `MatchPlayer` → `RoundAnswer`, `SongHistory`, `PlayerAnimeList`
+   - `prisma.profile.delete` — cascades `Friendship`, `MatchPlayer` → `RoundAnswer`, `SongHistory`
    - Supabase Storage — remove `{userId}/avatar.jpg` if custom upload (best-effort)
    - `supabaseAdmin.auth.admin.deleteUser(userId)`
    - Emit `profile:account_deleted` + `force_logout` on all user sockets, then disconnect
