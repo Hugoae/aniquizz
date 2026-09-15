@@ -51,7 +51,9 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 - **Public profile load failures use `profile:error`.** Do not navigate home on
   `friends:error` — add/block toasts must not abort `/profile/:userId`.
 - **Favorite visibility is `profile:update_privacy` only.** Do not emit
-  `showFavoriteSongs` on `update_profile_data`.
+  `showFavoriteSongs` on `update_profile_data`. The same event owns
+  `allowFriendRequests` (Settings Social and the profile « Demandes » switch).
+  Do not emit `friends:set_privacy` from the UI.
 - **Guest `/profile` and `/play` store a same-origin returnTo** in sessionStorage
   (`authReturnTo.ts`) so login restores the deep link. Canonical `SeoHead` on
   profile uses the current pathname; keep `noindex`. Static `index.html` still

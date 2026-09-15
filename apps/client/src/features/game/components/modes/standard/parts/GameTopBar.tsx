@@ -2,7 +2,9 @@ import { LogOut, Pause, Play, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
+import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 import type { MyProfile } from './types';
+
 interface GameTopBarProps {
   currentRound: number;
   totalRounds: number;
@@ -118,7 +120,7 @@ export function GameTopBar({
           variant="ghost"
           size="icon"
           onClick={onShowSettings}
-          aria-label="Paramètres"
+          aria-label={SETTINGS_COPY.openAria}
           className="text-muted-foreground hover:text-foreground"
         >
           <Settings className="h-4 w-4" />

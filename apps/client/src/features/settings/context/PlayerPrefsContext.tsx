@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { toast } from 'sonner';
 import {
   clampAudioVolume,
   hasAccountPlayerPrefs,
@@ -28,8 +29,16 @@ import {
   readOsPrefersReduced,
   subscribeOsPrefersReduced,
 } from '@/features/settings/lib/motionRuntime';
+import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 
 export const PLAYER_PREFS_SYNC_MS = 700;
+
+const PREFS_SYNC_ERROR = 'Impossible de mettre à jour les préférences.';
+const RATE_LIMIT_ERROR = 'Trop de requêtes, veuillez patienter un instant.';
+
+function isPrefsSyncError(message: string | undefined): boolean {
+  return message === PREFS_SYNC_ERROR || message === RATE_LIMIT_ERROR;
+}
 
 interface PlayerPrefsContextValue extends PlayerPrefs {
   setAudioVolume: (volume: number) => void;
@@ -46,11 +55,15 @@ interface PlayerPrefsContextValue extends PlayerPrefs {
 const PlayerPrefsContext = createContext<PlayerPrefsContextValue | null>(null);
 
 export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
-  const { user, profile } = useAuth();
+  const { user, profile, authReady } = useAuth();
   const [prefs, setPrefs] = useState<PlayerPrefs>(() => normalizePlayerPrefs(readPlayerPrefs()));
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
+  const lastAckedRef = useRef(prefs);
   const pendingRef = useRef(false);
+  const wasGuestRef = useRef(false);
+  const keepLocalOnAccountRef = useRef(false);
+  const skipAccountHydrateRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [osReduced, setOsReduced] = useState(readOsPrefersReduced);
 
@@ -67,7 +80,7 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
     }
     if (!socket.connected) return;
     socket.emit('profile:update_prefs', prefsRef.current);
-    pendingRef.current = false;
+    // Keep pending until profile:prefs matches so a stale account snapshot cannot win.
   }, [user]);
 
   const flush = useCallback(() => {
@@ -98,15 +111,41 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (!hasAccountPlayerPrefs(profile)) return;
+    if (!authReady) return;
+    if (!user) {
+      wasGuestRef.current = true;
+      keepLocalOnAccountRef.current = false;
+      skipAccountHydrateRef.current = false;
+      return;
+    }
+    // Guest → signed-in: keep this device's local comfort prefs and push them.
+    if (wasGuestRef.current) {
+      wasGuestRef.current = false;
+      keepLocalOnAccountRef.current = true;
+      skipAccountHydrateRef.current = true;
+      pendingRef.current = true;
+      scheduleSync();
+    }
+  }, [authReady, user, scheduleSync]);
+
+  useEffect(() => {
+    if (!user || !hasAccountPlayerPrefs(profile)) return;
+    if (keepLocalOnAccountRef.current || skipAccountHydrateRef.current) {
+      if (keepLocalOnAccountRef.current) {
+        pendingRef.current = true;
+        scheduleSync();
+      }
+      return;
+    }
     const resolved = resolvePlayerPrefs({
       local: prefsRef.current,
       account: profile,
       preferLocal: pendingRef.current,
     });
     if (playerPrefsEqual(resolved, prefsRef.current)) return;
+    lastAckedRef.current = resolved;
     apply(resolved);
-  }, [apply, profile]);
+  }, [apply, profile, scheduleSync, user]);
 
   useEffect(() => {
     applyMotionAttribute(prefs.motionMode, osReduced);
@@ -132,16 +171,30 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
       if (pendingRef.current) emitIfConnected();
     };
     const onPrefs = (stored: PlayerPrefs) => {
-      if (pendingRef.current) return;
       const next = normalizePlayerPrefs(stored);
+      if (pendingRef.current && !playerPrefsEqual(next, prefsRef.current)) return;
+      pendingRef.current = false;
+      keepLocalOnAccountRef.current = false;
+      lastAckedRef.current = next;
       if (playerPrefsEqual(next, prefsRef.current)) return;
       apply(next);
     };
+    const onError = (payload: { message?: string }) => {
+      if (!pendingRef.current || !isPrefsSyncError(payload?.message)) return;
+      pendingRef.current = false;
+      toast.error(SETTINGS_COPY.prefsSyncError);
+      if (keepLocalOnAccountRef.current) return;
+      if (!playerPrefsEqual(lastAckedRef.current, prefsRef.current)) {
+        apply(lastAckedRef.current);
+      }
+    };
     socket.on('connect', onConnect);
     socket.on('profile:prefs', onPrefs);
+    socket.on('error', onError);
     return () => {
       socket.off('connect', onConnect);
       socket.off('profile:prefs', onPrefs);
+      socket.off('error', onError);
     };
   }, [apply, emitIfConnected]);
 
@@ -200,8 +253,4 @@ export function usePlayerPrefs(): PlayerPrefsContextValue {
     throw new Error('usePlayerPrefs must be used within a PlayerPrefsProvider');
   }
   return ctx;
-}
-
-export function useMotionReduced(): boolean {
-  return usePlayerPrefs().motionReduced;
 }

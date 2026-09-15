@@ -17,7 +17,8 @@ import { guard, requireAuth, RATE_LIMITS } from '../../core/guards';
 import { parseSocketPayload } from '../../core/parseSocketPayload';
 import type { GameManager } from '../game/gameManager';
 import { DeleteAccountError, deleteUserAccount } from './deleteAccount';
-import { schedulePresenceBroadcast } from '../friends/friendsPresence';
+import { schedulePresenceBroadcast, presenceResolver, userRoom } from '../friends/friendsPresence';
+import { friendsService } from '../friends/friendsService';
 
 const PLAYER_PREFS_SELECT = {
   audioVolume: true,
@@ -165,6 +166,13 @@ export const registerProfileHandlers = (
         data: next,
       });
       socket.emit('profile:privacy', next);
+      if (parsed.allowFriendRequests !== undefined) {
+        const friendsState = await friendsService.getState(
+          userId,
+          presenceResolver(io, gameManager),
+        );
+        io.to(userRoom(userId)).emit('friends:state', friendsState);
+      }
       schedulePresenceBroadcast(io, gameManager, userId, { immediate: true });
     } catch (error) {
       logger.error('Failed to update privacy', 'Profile', error);

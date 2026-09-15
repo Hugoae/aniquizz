@@ -109,4 +109,10 @@ describe.skipIf(!hasIntegrationEnv)('account privacy', () => {
     socket.emit('update_profile_data', { showFavoriteSongs: true } as never);
     expect((await rejected).message).toBe(INVALID_SOCKET_PAYLOAD_MESSAGE);
   });
+
+  it('patches allowFriendRequests through profile:update_privacy', async () => {
+    const ack = onceEvent<AccountPrivacy>(socket, 'profile:privacy', 8_000);
+    socket.emit('profile:update_privacy', { allowFriendRequests: false });
+    expect((await ack).allowFriendRequests).toBe(false);
+  });
 });

@@ -165,6 +165,13 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
         ),
       }));
     };
+    const onPrivacy = (payload: { allowFriendRequests?: boolean }) => {
+      const allow = payload.allowFriendRequests;
+      if (typeof allow !== 'boolean') return;
+      setState((prev) =>
+        prev.allowFriendRequests === allow ? prev : { ...prev, allowFriendRequests: allow },
+      );
+    };
     const onRecent = (payload: { players: RecentPlayer[] }) => setRecentPlayers(payload.players);
     const onInfo = (p: { message: string }) => toast.success(p.message);
     const onError = (e: { message: string }) => {
@@ -181,6 +188,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
     socket.on('friends:state', onState);
     socket.on('friends:presence', onPresence);
+    socket.on('profile:privacy', onPrivacy);
     socket.on('friends:recent', onRecent);
     socket.on('friends:info', onInfo);
     socket.on('friends:error', onError);
@@ -192,6 +200,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(timeout);
       socket.off('friends:state', onState);
       socket.off('friends:presence', onPresence);
+      socket.off('profile:privacy', onPrivacy);
       socket.off('friends:recent', onRecent);
       socket.off('friends:info', onInfo);
       socket.off('friends:error', onError);
@@ -227,10 +236,10 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const block = useCallback((userId: string) => socket.emit('friends:block', { userId }), []);
   const unblock = useCallback((userId: string) => socket.emit('friends:unblock', { userId }), []);
   const invite = useCallback((userId: string) => socket.emit('friends:invite', { userId }), []);
-  const setPrivacy = useCallback(
-    (allow: boolean) => socket.emit('friends:set_privacy', { allow }),
-    [],
-  );
+  const setPrivacy = useCallback((allow: boolean) => {
+    setState((prev) => ({ ...prev, allowFriendRequests: allow }));
+    socket.emit('profile:update_privacy', { allowFriendRequests: allow });
+  }, []);
   const refreshRecent = useCallback(() => socket.emit('friends:recent'), []);
 
   const openProfile = useCallback(

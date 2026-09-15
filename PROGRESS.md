@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → **Admin** → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → **Admin** → lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -228,12 +228,12 @@ Socket.io does not auto-reconnect after `io server disconnect`. A same-tab overl
 
 Canvas: `library-feature-audit`. No P0. Identity stays JWT `userId`. Browse stays HTTP (`optionalAuth` / `requireRole`). Server still owns likes / pins / playable `COMPLETED`.
 
-| Item                     | What changed                                                                                                                                                                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deep-link page**       | `nextDebouncedLibraryQuery` only `setPage(1)` when the trimmed `q` actually changes. Initial query is set from the URL (no 300 ms wipe). Smoke: `/library?view=songs&page=3` stays page 3, `aria-current` 3.                          |
-| **Likes race**           | `mergeLikedIdsFromServer` keeps in-flight optimistic ids. GET `/likes/ids` errors no longer empty the set. `resolveSongLikedState` does not fall back to `initialLiked` while a toggle is pending. Undo re-likes via `likeSong`.     |
-| **Personal filters**     | Shared `libraryBrowseNeedsActor`. Client waits `authReady` before fetching liked/discovered. Without an actor the server returns an empty page (not the 3002-song catalogue). Guest `?liked=liked` drops the filter after authReady. |
-| **Skip link**            | Library `<main id="main-content" tabIndex={-1}>`. Skip « Aller au contenu principal » focuses the catalogue.                                                                                                                          |
+| Item                 | What changed                                                                                                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Deep-link page**   | `nextDebouncedLibraryQuery` only `setPage(1)` when the trimmed `q` actually changes. Initial query is set from the URL (no 300 ms wipe). Smoke: `/library?view=songs&page=3` stays page 3, `aria-current` 3.                         |
+| **Likes race**       | `mergeLikedIdsFromServer` keeps in-flight optimistic ids. GET `/likes/ids` errors no longer empty the set. `resolveSongLikedState` does not fall back to `initialLiked` while a toggle is pending. Undo re-likes via `likeSong`.     |
+| **Personal filters** | Shared `libraryBrowseNeedsActor`. Client waits `authReady` before fetching liked/discovered. Without an actor the server returns an empty page (not the 3002-song catalogue). Guest `?liked=liked` drops the filter after authReady. |
+| **Skip link**        | Library `<main id="main-content" tabIndex={-1}>`. Skip « Aller au contenu principal » focuses the catalogue.                                                                                                                         |
 
 **Left for leftover P2:** (closed 2026-09-15 follow-up) nested cap, unlike COMPLETED, 429 likes, prerender copy, phone viewport. **Not started:** 26.7.
 
@@ -241,15 +241,15 @@ Canvas: `library-feature-audit`. No P0. Identity stays JWT `userId`. Browse stay
 
 Canvas: `library-feature-audit`. Library audit is **closed** (P1 + P2 + logged-in smoke). Do not start 26.7.
 
-| Item                    | What changed                                                                                                                                                                                                                                   |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Copy / i18n**         | Remaining FR strings in `LIBRARY_COPY` (`retry`, `backHome`, pagination, preview Pause/Fermer, `filtersAria`, `animeSongCount`, `typeInsert`, `emptyPersonalHint`). `HTTP_AUTH_ERROR.missingBearer` in French. Dialog close: `Fermer`.          |
-| **Partition**           | URL parse / debounce / `pageHref` in `libraryBrowseParams.ts`. Hook ~407 lines (was 421). `libraryTree` popularity no longer loads every franchise in JS (~409). `routes/library.ts` ~351. TreeView / Filters stay under the soft cap.         |
-| **Popularity SQL**      | Tree `sort=popularity` uses `Franchise.maxPopularity` `orderBy` + skip/take. Nested songs capped at `MAX_NESTED_SONGS_PER_ANIME` (24) with honest `songCount` + « N sons de plus » link. |
-| **Likes read / ids**    | `library:read` rate limit on GET likes/ids and pinned. `getLikedSongIds` filters `COMPLETED` and caps at `MAX_LIKED_IDS` (5000). Pin of a song that is not liked → `NOT_FOUND` → HTTP 400.                                                     |
-| **A11y / UX**           | Like `sm` target 36px (`h-9`). Pagination page numbers are real `/library?...` hrefs. Drawer chrome uses `bg-background`. INSERT chip in type filters.                                                                                         |
-| **SEO**                 | `stripUnmanagedSeoMeta` drops leftover Home description / og:title. `collectionPageJsonLd` on `/library`. Description = `LIBRARY_COPY.heroSubtitle`.                                                                                           |
-| **Tests**               | Shared `libraryBrowseNeedsActor` + `capNestedSongs`. Client debounce/page href + likes merge + SEO strip + prerender copy ≡ heroSubtitle. Server empty personal browse. Integration: guest liked empty, 401 FR, JWT liked-only, unknown like 404, pin-not-liked 400, nested cap, unlike non-COMPLETED 404, PUT like 429. |
+| Item                 | What changed                                                                                                                                                                                                                                                                                                             |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Copy / i18n**      | Remaining FR strings in `LIBRARY_COPY` (`retry`, `backHome`, pagination, preview Pause/Fermer, `filtersAria`, `animeSongCount`, `typeInsert`, `emptyPersonalHint`). `HTTP_AUTH_ERROR.missingBearer` in French. Dialog close: `Fermer`.                                                                                   |
+| **Partition**        | URL parse / debounce / `pageHref` in `libraryBrowseParams.ts`. Hook ~407 lines (was 421). `libraryTree` popularity no longer loads every franchise in JS (~409). `routes/library.ts` ~351. TreeView / Filters stay under the soft cap.                                                                                   |
+| **Popularity SQL**   | Tree `sort=popularity` uses `Franchise.maxPopularity` `orderBy` + skip/take. Nested songs capped at `MAX_NESTED_SONGS_PER_ANIME` (24) with honest `songCount` + « N sons de plus » link.                                                                                                                                 |
+| **Likes read / ids** | `library:read` rate limit on GET likes/ids and pinned. `getLikedSongIds` filters `COMPLETED` and caps at `MAX_LIKED_IDS` (5000). Pin of a song that is not liked → `NOT_FOUND` → HTTP 400.                                                                                                                               |
+| **A11y / UX**        | Like `sm` target 36px (`h-9`). Pagination page numbers are real `/library?...` hrefs. Drawer chrome uses `bg-background`. INSERT chip in type filters.                                                                                                                                                                   |
+| **SEO**              | `stripUnmanagedSeoMeta` drops leftover Home description / og:title. `collectionPageJsonLd` on `/library`. Description = `LIBRARY_COPY.heroSubtitle`.                                                                                                                                                                     |
+| **Tests**            | Shared `libraryBrowseNeedsActor` + `capNestedSongs`. Client debounce/page href + likes merge + SEO strip + prerender copy ≡ heroSubtitle. Server empty personal browse. Integration: guest liked empty, 401 FR, JWT liked-only, unknown like 404, pin-not-liked 400, nested cap, unlike non-COMPLETED 404, PUT like 429. |
 
 **Browser (admin_dev, localhost:8083):** page=3 holds; skip focuses `#main-content`; like stays « Retirer des favoris » after ~2.6 s; `/library?liked=liked` shows 4 songs (not 3002). Guest like still opens AuthModal. Follow-up: One Piece nested list caps at 24 + « 28 sons de plus »; PUT like burst → 429 `Trop de requêtes.` ; 390×844 overflowX false, like 36px, first anime row ~666px (was below the fold); landscape 700×400 overflowX false. Compact hero + hide stats under `md`.
 
@@ -259,15 +259,53 @@ Canvas: `library-feature-audit`. Library audit is **closed** (P1 + P2 + logged-i
 
 Canvas: `library-feature-audit`. Nested cap 24 stays. Do not start 26.7.
 
-| Item | What changed |
-| ---- | ------------ |
-| **See-all `animeId`** | `libraryAnimeSongsHref(id)` → `/library?view=songs&animeId=N`. URL builder prefers `animeId` over `q`. Typing a new search clears the id. Songs page size 96 for one anime (`LIBRARY_ANIME_SONGS_PAGE_SIZE`). |
-| **Anime row hit target** | Vue Anime: whole header is the expand button (`min-h-11`, ~768×65). Tree already had a full-width row; added `aria-label` + `min-h-11`. |
-| **Prerender from copy** | `scripts/library-copy.mjs` reads `heroTitle` / `heroSubtitle` from `LIBRARY_COPY`. `prerender-routes.mjs` no longer duplicates the sentence. |
-| **Concurrent like** | `createMany({ skipDuplicates: true })` then increment `likeCount` only if inserted. No P2002 on overlapping PUT. |
-| **Virtual songs view** | `LibrarySongsGrid` uses `VirtualScroll` (threshold 12, `min(70dvh, 48rem)`). Tree still caps nested songs at 24. |
+| Item                     | What changed                                                                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **See-all `animeId`**    | `libraryAnimeSongsHref(id)` → `/library?view=songs&animeId=N`. URL builder prefers `animeId` over `q`. Typing a new search clears the id. Songs page size 96 for one anime (`LIBRARY_ANIME_SONGS_PAGE_SIZE`). |
+| **Anime row hit target** | Vue Anime: whole header is the expand button (`min-h-11`, ~768×65). Tree already had a full-width row; added `aria-label` + `min-h-11`.                                                                       |
+| **Prerender from copy**  | `scripts/library-copy.mjs` reads `heroTitle` / `heroSubtitle` from `LIBRARY_COPY`. `prerender-routes.mjs` no longer duplicates the sentence.                                                                  |
+| **Concurrent like**      | `createMany({ skipDuplicates: true })` then increment `likeCount` only if inserted. No P2002 on overlapping PUT.                                                                                              |
+| **Virtual songs view**   | `LibrarySongsGrid` uses `VirtualScroll` (threshold 12, `min(70dvh, 48rem)`). Tree still caps nested songs at 24.                                                                                              |
 
 **Browser:** One Piece row click expands. See-all href `/library?view=songs&animeId=21`. Songs view: 52 found, no `q`, ~11 DOM rows (virtualized). Integration: `GET /library/songs?animeId=` only that anime; likes 429 suite still green.
+
+**Next:** Admin audit. Do not start 26.7.
+
+### Audit — Settings P1 ✅ (2026-09-15)
+
+Canvas: `settings-feature-audit`. Overlay, not `/settings`. Identity stays JWT `userId`. Prefs = `profile:update_prefs` + localStorage v2. Privacy = `profile:update_privacy` (Zod). No P0.
+
+| Item                        | What changed                                                                                                                                                                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Guest login keeps local** | Guest → account no longer hydrates the profile snapshot over this device’s comfort prefs. `wasGuestRef` / `keepLocalOnAccountRef` / `skipAccountHydrateRef` push local (`profile:update_prefs`) instead. Test: guest volume 70 + mute vs account 20 → stay 70 and sync. |
+| **Prefs ACK**               | `pending` stays until `profile:prefs`. Sync/rate-limit `error` rolls back to `lastAcked` (except while still pushing guest-local) and toasts `SETTINGS_COPY.prefsSyncError`.                                                                                            |
+| **Friend-request Zod**      | Legacy `friends:set_privacy` parses `friendPrivacyInputSchema` (`allow: z.boolean()`, fail-closed). Empty payload no longer re-opens requests. UI no longer emits that event (see follow-up).                                                                           |
+
+### Audit — Settings P2 ✅ (2026-09-15)
+
+| Item              | What changed                                                                                                                                                                                                                                  |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Copy / i18n**   | Remaining FR chrome in `SETTINGS_COPY` (open/close/panel, legal, Annuler, sign-in CTA). Match `GameTopBar` aria-label uses the same open string.                                                                                              |
+| **A11y**          | FAB `role=dialog` + `aria-modal` when open. `cycleTabWithin` traps Tab/Shift+Tab. Mute `h-9 w-9` (36px). Tabs `h-12`. `useMotionReduced` extracted (clears react-refresh on the provider). PrefVolumeVideo caption eslint same as VideoStage. |
+| **FAB surface**   | One `FloatingSettingsButton` in `App.tsx`. Removed per-page FABs (Home, Hub, Profile, PlayJoin, ProfileUnavailable). `suppressFloatingSettings` on `/game` and DailyPlay so the match/daily overlay keeps its own panel.                      |
+| **Guest CTA**     | `SettingsSignInHint` opens AuthModal from Général (copy already said to sign in).                                                                                                                                                             |
+| **Safe-area**     | FAB `bottom/right: max(1.5rem, env(safe-area-inset-*))`. Panel `max-h` accounts for the header on short landscape.                                                                                                                            |
+| **Privacy ACK**   | `profile:privacy` + `error` + 8 s timeout; toast + `refreshProfile` on failure.                                                                                                                                                               |
+| **Rate limit**    | `RATE_LIMITS.updatePrefs` 24 / 10 s (700 ms debounce ≈ 14 emits).                                                                                                                                                                             |
+| **Single import** | `SettingsPrivacySection` one React import.                                                                                                                                                                                                    |
+
+### Audit — Settings follow-up (privacy unify, toaster, smoke) ✅ (2026-09-15)
+
+| Item                      | What changed                                                                                                                                                                                                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **`allowFriendRequests`** | Settings Social + profile « Demandes » emit `profile:update_privacy` only. Deleted `SettingsFriendRequestsRow`. `profile:update_privacy` also pushes `friends:state` so FriendsPanel stays in sync. `friends:set_privacy` stays a Zod server alias and emits `profile:privacy`. |
+| **Toaster vs FAB**        | Sonner `offset` / `mobileOffset` `{ bottom: 96 }` so toasts sit above the 56px FAB.                                                                                                                                                                                             |
+| **Tests**                 | Shared `friendPrivacyInputSchema` fail-closed. Client `cycleTabWithin` wrap. Integration: `profile:update_privacy` patches `allowFriendRequests`.                                                                                                                               |
+| **Docs**                  | Client CONTEXT: UI must not emit `friends:set_privacy`. Server CONTEXT + AGENTS: alias remains Zod-parsed.                                                                                                                                                                      |
+
+**Browser (admin_dev, localhost:8080 + API :3001):** guest volume 40 survives login (slider `aria-valuenow` 40). Tab from « Fermer les paramètres » wraps to Général (`wrapped: true`). Hide « titres favoris » → own profile **Masqué**; guest `GET /library/users/00000000-0000-4000-8000-000000000001/favorites` `{ visible: false }`. Restored public favorites after the check.
+
+**Not in this pass:** jsx-a11y backlog · HIBP · 26.7 · physical iPhone (emulation only).
 
 **Next:** Admin audit. Do not start 26.7.
 

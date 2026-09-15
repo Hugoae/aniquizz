@@ -107,6 +107,13 @@ export const updatePrivacyInputSchema = z
   })
   .strip();
 
+/** Fail-closed: omitting `allow` must not re-enable friend requests. */
+export const friendPrivacyInputSchema = z
+  .object({
+    allow: z.boolean(),
+  })
+  .strip();
+
 /** Generous cap so a legacy long username can still confirm deletion. */
 export const deleteAccountInputSchema = z
   .object({
@@ -124,4 +131,5 @@ export type ChatSendMessageInputParsed = z.infer<typeof chatSendMessageInputSche
 export type UpdateProfileDataInputParsed = z.infer<typeof updateProfileDataInputSchema>;
 export type UpdatePrefsInputParsed = z.infer<typeof updatePrefsInputSchema>;
 export type UpdatePrivacyInputParsed = z.infer<typeof updatePrivacyInputSchema>;
+export type FriendPrivacyInputParsed = z.infer<typeof friendPrivacyInputSchema>;
 export type DeleteAccountInputParsed = z.infer<typeof deleteAccountInputSchema>;

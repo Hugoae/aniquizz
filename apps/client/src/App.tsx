@@ -18,6 +18,7 @@ import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 import { SongLikesProvider } from '@/features/likes/context/SongLikesContext';
 import { PlayerPrefsProvider } from '@/features/settings/context/PlayerPrefsContext';
 import { ListsProvider } from '@/features/settings/integrations/ListsContext';
+import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { NotificationFeedbackProvider } from '@/features/notifications/NotificationFeedbackProvider';
 
 import Home from '@/pages/Home';
@@ -234,8 +235,16 @@ const AppContent = () => {
         </Suspense>
       )}
 
+      <FloatingSettingsButton />
+
       <CookieConsentBanner />
-      <Toaster position="bottom-right" richColors closeButton />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        offset={{ bottom: 96, right: 24 }}
+        mobileOffset={{ bottom: 96, right: 16 }}
+      />
     </div>
   );
 };

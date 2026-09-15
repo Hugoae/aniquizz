@@ -3,7 +3,6 @@ import { useEffect } from 'react';
 
 import { SeoHead } from '@/components/seo/SeoHead';
 import { Header } from '@/components/layout/Header';
-import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { RoomListView } from '@/features/hub/components/RoomListView';
 import { PAGE_TITLES } from '@/lib/site';
 import { prefetchGame } from '@/lib/routePrefetch';
@@ -42,7 +41,6 @@ export function PlayJoinPage() {
             />
           </div>
         </main>
-        <FloatingSettingsButton />
       </div>
     </>
   );

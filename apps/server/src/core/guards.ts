@@ -153,8 +153,8 @@ export const RATE_LIMITS = {
   poolStats: { points: 20, durationMs: 10_000 },
   /** Full catalogue fetch: once per session; allow a few retries on reconnect. */
   animeCatalogue: { points: 8, durationMs: 10_000 },
-  /** Player comfort prefs: client debounces (~700 ms); cap slider spam. */
-  updatePrefs: { points: 12, durationMs: 10_000 },
+  /** Player comfort prefs: client debounces (~700 ms) ≈ 14 emits / 10 s; leave headroom. */
+  updatePrefs: { points: 24, durationMs: 10_000 },
   /** Privacy audiences: infrequent, still capped. */
   updatePrivacy: { points: 8, durationMs: 10_000 },
   /** Username / avatar / favorite-visibility writes. Same order as privacy. */

@@ -21,7 +21,6 @@ import {
 } from '@/components/ui/dialog';
 
 import { Header } from '@/components/layout/Header';
-import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { MultiplayerLobby } from '@/features/hub/components/MultiplayerLobby';
 import { SoloReady } from '@/features/hub/components/SoloReady';
 import { ModeSelectView } from '@/features/hub/components/ModeSelectView';
@@ -190,7 +189,6 @@ function PlayHomePage() {
             />
           </div>
         </main>
-        <FloatingSettingsButton />
       </div>
     </>
   );

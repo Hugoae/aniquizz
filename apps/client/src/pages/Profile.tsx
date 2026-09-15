@@ -9,7 +9,6 @@ import { ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { Button } from '@/components/ui/button';
-import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { ProfileHeader } from '@/features/profile/components/ProfileHeader';
 import { ProfileStatsSection } from '@/features/profile/components/ProfileStatsSection';
 import { ProfileFavoriteSongsSection } from '@/features/profile/components/ProfileFavoriteSongsSection';
@@ -146,7 +145,6 @@ export default function Profile() {
           />
         </>
       )}
-      <FloatingSettingsButton />
     </>
   );
 }

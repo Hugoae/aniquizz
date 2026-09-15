@@ -8,6 +8,7 @@ import {
   roomIdInputSchema,
   chatSendMessageInputSchema,
   deleteAccountInputSchema,
+  friendPrivacyInputSchema,
   updatePrefsInputSchema,
   updatePrivacyInputSchema,
   updateProfileDataInputSchema,
@@ -292,6 +293,19 @@ describe('updatePrefsInputSchema', () => {
   it('rejects a non-object payload or an invalid motion mode', () => {
     expect(updatePrefsInputSchema.safeParse(undefined).success).toBe(false);
     expect(updatePrefsInputSchema.safeParse({ motionMode: 'off' }).success).toBe(false);
+  });
+});
+
+describe('friendPrivacyInputSchema', () => {
+  it('requires an explicit boolean and strips unknown keys', () => {
+    expect(friendPrivacyInputSchema.parse({ allow: false, extra: true })).toEqual({ allow: false });
+    expect(friendPrivacyInputSchema.parse({ allow: true })).toEqual({ allow: true });
+  });
+
+  it('rejects a missing or non-boolean allow (fail-closed)', () => {
+    expect(friendPrivacyInputSchema.safeParse(undefined).success).toBe(false);
+    expect(friendPrivacyInputSchema.safeParse({}).success).toBe(false);
+    expect(friendPrivacyInputSchema.safeParse({ allow: 'yes' }).success).toBe(false);
   });
 });
 

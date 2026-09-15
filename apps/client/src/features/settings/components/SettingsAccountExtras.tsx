@@ -6,9 +6,9 @@ import { useCookieConsent } from '@/features/legal/CookieConsentContext';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 
 const legalLinks = [
-  { to: '/legal/confidentialite', label: 'Confidentialité', icon: Shield },
-  { to: '/legal/cgu', label: "Conditions d'utilisation", icon: FileText },
-  { to: '/legal/mentions', label: 'Mentions légales', icon: Scale },
+  { to: '/legal/confidentialite', label: SETTINGS_COPY.legalPrivacy, icon: Shield },
+  { to: '/legal/cgu', label: SETTINGS_COPY.legalTerms, icon: FileText },
+  { to: '/legal/mentions', label: SETTINGS_COPY.legalNotice, icon: Scale },
 ] as const;
 
 export function SettingsAccountExtras() {

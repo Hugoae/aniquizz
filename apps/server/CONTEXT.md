@@ -32,7 +32,8 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 - **Mutating socket events are Zod-parsed.** `game:answer`, `update_room_settings`,
   `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, `game:return_to_lobby`,
   `game:cancel`, `get_game_state`, `chat:sendMessage`, `update_profile_data`,
-  `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account`, plus lobby
+  `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account`,
+  `friends:set_privacy` (legacy alias of `allowFriendRequests`; UI uses privacy), plus lobby
   `create` / `join` / `kick` / `transfer_host` / `leave_room` / `toggle_ready`. Invalid JSON
   still yields a generic `Requête invalide.` — do not leak Zod paths.
   Room settings patches are then re-validated by `normalizeRoomSettings`.

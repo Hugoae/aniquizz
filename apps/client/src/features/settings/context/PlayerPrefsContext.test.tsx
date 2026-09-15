@@ -26,6 +26,7 @@ const socketMock = vi.hoisted(() => {
 
 const authMock = vi.hoisted(() => ({
   user: { id: 'user-1' } as { id: string } | null,
+  authReady: true,
   profile: {
     id: 'user-1',
     audioVolume: 20,
@@ -35,7 +36,11 @@ const authMock = vi.hoisted(() => ({
 
 vi.mock('@/lib/socket', () => ({ socket: socketMock.socket }));
 vi.mock('@/features/auth/context/AuthContext', () => ({
-  useAuth: () => ({ user: authMock.user, profile: authMock.profile }),
+  useAuth: () => ({
+    user: authMock.user,
+    profile: authMock.profile,
+    authReady: authMock.authReady,
+  }),
 }));
 
 import { PLAYER_PREFS_SYNC_MS, PlayerPrefsProvider, usePlayerPrefs } from './PlayerPrefsContext';
@@ -55,6 +60,7 @@ describe('PlayerPrefsProvider', () => {
     socketMock.socket.off.mockClear();
     socketMock.socket.emit.mockClear();
     authMock.user = { id: 'user-1' };
+    authMock.authReady = true;
     authMock.profile = { id: 'user-1', audioVolume: 20, audioMuted: false };
   });
 
@@ -62,6 +68,66 @@ describe('PlayerPrefsProvider', () => {
     vi.useRealTimers();
     localStorage.removeItem(PLAYER_PREFS_STORAGE_KEY);
     localStorage.removeItem(PLAYER_PREFS_LEGACY_STORAGE_KEY);
+  });
+
+  it('keeps guest-written prefs when the account snapshot loads and syncs them', () => {
+    authMock.user = null;
+    authMock.profile = null;
+    localStorage.setItem(
+      PLAYER_PREFS_STORAGE_KEY,
+      JSON.stringify({ audioVolume: 70, audioMuted: true, motionMode: 'reduced' }),
+    );
+    const { result, rerender } = renderHook(() => usePlayerPrefs(), { wrapper });
+    expect(result.current.audioVolume).toBe(70);
+
+    act(() => {
+      authMock.user = { id: 'user-1' };
+      authMock.profile = { id: 'user-1', audioVolume: 20, audioMuted: false, motionMode: 'full' };
+    });
+    rerender();
+
+    expect(result.current.audioVolume).toBe(70);
+    expect(result.current.audioMuted).toBe(true);
+    expect(result.current.motionMode).toBe('reduced');
+
+    act(() => {
+      vi.advanceTimersByTime(PLAYER_PREFS_SYNC_MS);
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {
+      ...PLAYER_PREFS_DEFAULTS,
+      audioVolume: 70,
+      audioMuted: true,
+      motionMode: 'reduced',
+    });
+
+    act(() => {
+      authMock.profile = {
+        id: 'user-1',
+        audioVolume: 20,
+        audioMuted: false,
+        motionMode: 'full',
+      };
+    });
+    rerender();
+    expect(result.current.audioVolume).toBe(70);
+  });
+
+  it('applies a later account snapshot when this session was never a guest', () => {
+    const { result, rerender } = renderHook(() => usePlayerPrefs(), { wrapper });
+
+    act(() => {
+      authMock.profile = {
+        id: 'user-1',
+        audioVolume: 35,
+        audioMuted: true,
+        motionMode: 'full',
+      };
+    });
+    rerender();
+
+    expect(result.current.audioVolume).toBe(35);
+    expect(result.current.audioMuted).toBe(true);
+    expect(result.current.motionMode).toBe('full');
   });
 
   it('hydrates from localStorage before any account snapshot', () => {

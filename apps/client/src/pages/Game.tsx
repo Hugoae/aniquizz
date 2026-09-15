@@ -38,6 +38,7 @@ import { MissingGameRoom } from '@/features/game/components/MissingGameRoom';
 import { MatchLoadingOverlay } from '@/features/game/components/MatchLoadingOverlay';
 import { GameLeaveDialogs } from '@/features/game/components/GameLeaveDialogs';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { suppressFloatingSettings } from '@/features/settings/lib/openSettings';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import { sourceChipValue } from '@/features/hub/components/roomSettings';
@@ -64,6 +65,8 @@ export default function Game() {
     initialState.mode === 'solo' || settings.maxPlayers === 1 ? 'solo' : 'multiplayer';
 
   const currentUserId = profile?.id ?? '';
+
+  useEffect(() => suppressFloatingSettings(), []);
 
   const { state, myWatchedIds, actions } = useGameSocket({
     roomId,

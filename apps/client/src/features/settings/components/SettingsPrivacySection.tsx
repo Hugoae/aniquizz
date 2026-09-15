@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import type { AccountPrivacy, LobbyInviteAudience, PrivacyAudience } from '@aniquizz/shared';
 import { ACCOUNT_PRIVACY_DEFAULTS } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { SettingsChoiceRow, SettingsToggleRow } from '@/features/settings/components/SettingsField';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
-import { lazy, Suspense } from 'react';
 
-const SettingsFriendRequestsRow = lazy(() => import('./SettingsFriendRequestsRow'));
+const PRIVACY_ACK_MS = 8_000;
+const PRIVACY_SYNC_ERROR = 'Impossible de mettre à jour la confidentialité.';
+const RATE_LIMIT_ERROR = 'Trop de requêtes, veuillez patienter un instant.';
 
 const STATUS_OPTIONS = [
   { value: 'everyone' as const, label: SETTINGS_COPY.audienceEveryone },
@@ -46,11 +48,24 @@ export function SettingsPrivacySection() {
   const patch = (next: Partial<AccountPrivacy>) => {
     setPrivacy((prev) => ({ ...prev, ...next }));
     socket.emit('profile:update_privacy', next);
-    const onOk = () => {
+    let settled = false;
+    const finish = (ok: boolean) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
       socket.off('profile:privacy', onOk);
+      socket.off('error', onErr);
+      if (!ok) toast.error(SETTINGS_COPY.privacySyncError);
       void refreshProfile();
     };
+    const onOk = () => finish(true);
+    const onErr = (payload: { message?: string }) => {
+      if (payload?.message !== PRIVACY_SYNC_ERROR && payload?.message !== RATE_LIMIT_ERROR) return;
+      finish(false);
+    };
+    const timer = window.setTimeout(() => finish(false), PRIVACY_ACK_MS);
     socket.once('profile:privacy', onOk);
+    socket.on('error', onErr);
   };
 
   return (
@@ -88,9 +103,12 @@ export function SettingsPrivacySection() {
           checked={privacy.showFavoriteSongs}
           onCheckedChange={(showFavoriteSongs) => patch({ showFavoriteSongs })}
         />
-        <Suspense fallback={null}>
-          <SettingsFriendRequestsRow />
-        </Suspense>
+        <SettingsToggleRow
+          id="settings-friend-requests"
+          label={SETTINGS_COPY.allowFriendRequests}
+          checked={privacy.allowFriendRequests}
+          onCheckedChange={(allowFriendRequests) => patch({ allowFriendRequests })}
+        />
       </div>
     </section>
   );

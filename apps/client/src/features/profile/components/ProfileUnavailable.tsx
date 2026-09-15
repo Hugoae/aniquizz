@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SeoHead } from '@/components/seo/SeoHead';
-import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 import { ProfilePageShell } from '@/features/profile/components/ProfilePageShell';
 
@@ -29,7 +28,6 @@ export function ProfilePublicUnavailable({
           <p className="mt-2 text-sm text-muted-foreground">{PROFILE_COPY.unavailableBody}</p>
         </div>
       </ProfilePageShell>
-      <FloatingSettingsButton />
     </>
   );
 }
@@ -47,7 +45,6 @@ export function ProfileOwnLoadFailed({ onRetry }: { onRetry: () => void }) {
           </Button>
         </div>
       </ProfilePageShell>
-      <FloatingSettingsButton />
     </>
   );
 }

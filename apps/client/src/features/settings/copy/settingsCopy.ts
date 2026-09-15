@@ -1,9 +1,20 @@
 export const SETTINGS_COPY = {
+  panelTitle: 'Paramètres',
+  panelAria: 'Panneau des paramètres',
+  closeAria: 'Fermer les paramètres',
+  openAria: 'Paramètres',
+  signInCta: 'Se connecter',
+  cancel: 'Annuler',
+  prefsSyncError: 'Impossible d’enregistrer les préférences. Réessaie.',
+  privacySyncError: 'Impossible d’enregistrer la confidentialité. Réessaie.',
   tabs: {
     general: 'Général',
     social: 'Social',
     account: 'Compte',
   },
+  legalPrivacy: 'Confidentialité',
+  legalTerms: "Conditions d'utilisation",
+  legalNotice: 'Mentions légales',
   legalHeading: 'Informations légales',
   cookiesHeading: 'Cookies',
   cookiesBody:
@@ -88,6 +99,7 @@ export const SETTINGS_COPY = {
     refresh: (provider: string) => `${provider} a été synchronisé.`,
     unlink: (provider: string) => `${provider} a été délié.`,
   },
+  listAnimeCount: (n: number) => `${n} animes`,
   listLastSync: (when: string) => `Dernière sync : ${when}`,
   listNeverSynced: 'Jamais synchronisé',
   listState: {

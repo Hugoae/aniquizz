@@ -9,16 +9,21 @@ import type {
   FriendRemoveInput,
   FriendUserIdInput,
   FriendInviteInput,
-  FriendPrivacyInput,
+} from '@aniquizz/shared';
+import {
+  canSendLobbyInvite,
+  friendPrivacyInputSchema,
+  normalizeAccountPrivacy,
+  normalizeLobbyInviteAudience,
 } from '@aniquizz/shared';
 import type { GameManager } from '../game/gameManager';
 import { requireAuth, guard, RATE_LIMITS } from '../../core/guards';
+import { parseSocketPayload } from '../../core/parseSocketPayload';
 import { logger } from '../../utils/logger';
 import { friendsService, FriendServiceError } from './friendsService';
 import { isUserOnline, userRoom, presenceResolver } from './friendsPresence';
 import { getPublicProfile } from '../profile/profileService';
 import { unavailablePublicProfile } from '../profile/privacyRedaction';
-import { canSendLobbyInvite, normalizeLobbyInviteAudience } from '@aniquizz/shared';
 import { prisma } from '@aniquizz/database';
 
 const INVITE_COOLDOWN_MS = 10_000;
@@ -126,11 +131,25 @@ export const registerFriendsHandlers = (
     }
   };
 
-  const handleSetPrivacy = async (payload: FriendPrivacyInput) => {
+  /** Alias of `profile:update_privacy.allowFriendRequests`. UI emits the privacy event. */
+  const handleSetPrivacy = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendPrivacyInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      await friendsService.setPrivacy(userId, payload?.allow !== false);
+      await friendsService.setPrivacy(userId, parsed.allow);
       await pushState(userId);
+      const current = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: {
+          onlineStatusAudience: true,
+          matchHistoryAudience: true,
+          lobbyInviteAudience: true,
+          showFavoriteSongs: true,
+          allowFriendRequests: true,
+        },
+      });
+      if (current) socket.emit('profile:privacy', normalizeAccountPrivacy(current));
     } catch (e) {
       fail(e, 'set_privacy');
     }

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import {
   DAILY_PRECISION,
   getPrecisionChipLabel,
@@ -17,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { StandardGameLayout } from '@/features/game/components/modes/standard/StandardGameLayout';
 import { GlobalSettingsModal } from '@/features/settings/components/GlobalSettingsModal';
+import { suppressFloatingSettings } from '@/features/settings/lib/openSettings';
 import { PAGE_TITLES } from '@/lib/site';
 import { DAILY_COPY } from '../copy/dailyCopy';
 import { useDailyPlayRound } from '../hooks/useDailyPlayRound';
@@ -29,6 +31,7 @@ interface DailyPlayProps {
 
 export function DailyPlay({ initial, onFinished }: DailyPlayProps) {
   const play = useDailyPlayRound({ initial, onFinished });
+  useEffect(() => suppressFloatingSettings(), []);
 
   return (
     <>

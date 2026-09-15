@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Users } from 'lucide-react';
 import type { GamePlayer } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
-import { useMotionReduced } from '@/features/settings/context/PlayerPrefsContext';
+import { useMotionReduced } from '@/features/settings/lib/useMotionReduced';
 import { PlayerCard } from '../../../shared/PlayerCard';
 import { PointsBadge } from '../../../shared/PointsBadge';
 import { computeRanks, activeMatchPlayers, hasRankingSpread } from '../../../../utils/ranking';

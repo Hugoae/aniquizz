@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { SettingsSignInHint } from '@/features/settings/components/SettingsSignInHint';
 
 export function SettingsAudioSection() {
   const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute, accountSync } =
@@ -26,7 +27,7 @@ export function SettingsAudioSection() {
             onClick={toggleMute}
             aria-pressed={audioMuted}
             aria-label={audioMuted ? SETTINGS_COPY.muteAriaOn : SETTINGS_COPY.muteAriaOff}
-            className="h-8 w-8 shrink-0 rounded-md"
+            className="h-9 w-9 shrink-0 rounded-md"
           >
             {audioMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </Button>
@@ -53,7 +54,9 @@ export function SettingsAudioSection() {
       </div>
 
       {accountSync ? null : (
-        <p className="mt-2 text-xs text-muted-foreground">{SETTINGS_COPY.signInToSync}</p>
+        <div className="mt-2">
+          <SettingsSignInHint message={SETTINGS_COPY.signInToSync} />
+        </div>
       )}
     </section>
   );

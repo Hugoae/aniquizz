@@ -4,6 +4,7 @@ import { SettingsMotionSection } from '@/features/settings/components/SettingsMo
 import { SettingsGameplaySection } from '@/features/settings/components/SettingsGameplaySection';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { SettingsSignInHint } from '@/features/settings/components/SettingsSignInHint';
 
 const SettingsPrivacySection = lazy(() =>
   import('@/features/settings/components/SettingsPrivacySection').then((m) => ({
@@ -55,7 +56,7 @@ export function SettingsSocialPanel() {
             <SettingsBlockedSection />
           </>
         ) : (
-          <p className="text-xs text-muted-foreground">{SETTINGS_COPY.signInForAccount}</p>
+          <SettingsSignInHint message={SETTINGS_COPY.signInForAccount} />
         )}
       </Suspense>
     </div>
@@ -72,7 +73,7 @@ export function SettingsAccountPanel() {
           <SettingsIntegrationsSection />
         </Suspense>
       ) : (
-        <p className="text-xs text-muted-foreground">{SETTINGS_COPY.signInForAccount}</p>
+        <SettingsSignInHint message={SETTINGS_COPY.signInForAccount} />
       )}
       <Suspense fallback={null}>
         <SettingsAccountExtras />

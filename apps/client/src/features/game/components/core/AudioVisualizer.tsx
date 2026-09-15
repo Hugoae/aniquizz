@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { useMotionReduced } from '@/features/settings/context/PlayerPrefsContext';
+import { useMotionReduced } from '@/features/settings/lib/useMotionReduced';
 
 interface AudioVisualizerProps {
   isPlaying?: boolean;

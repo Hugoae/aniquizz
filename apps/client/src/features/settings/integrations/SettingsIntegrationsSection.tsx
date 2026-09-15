@@ -76,7 +76,9 @@ function ListCard({
           {status.linked ? (
             <p className="mt-1 text-[11px] text-muted-foreground">
               {formatWhen(status.lastSync)}
-              {status.animeCount != null ? ` · ${status.animeCount} animes` : ''}
+              {status.animeCount != null
+                ? ` · ${SETTINGS_COPY.listAnimeCount(status.animeCount)}`
+                : ''}
               {fetchStateLabel(status) ? ` · ${fetchStateLabel(status)}` : ''}
             </p>
           ) : null}
@@ -212,7 +214,7 @@ export function SettingsIntegrationsSection() {
             <AlertDialogDescription>{SETTINGS_COPY.listUnlinkConfirmBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{SETTINGS_COPY.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={disabled}
               onClick={() => {

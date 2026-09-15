@@ -15,6 +15,7 @@ export function PrefVolumeVideo({
 }: PrefVolumeVideoProps) {
   const sync = usePlayerMediaVolume(mediaRef);
   return (
+    // eslint-disable-next-line jsx-a11y/media-has-caption -- preview clip has no caption track
     <video
       {...props}
       ref={sync.ref}

@@ -59,7 +59,7 @@ export function SettingsBlockedSection() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{SETTINGS_COPY.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pending) unblock(pending.id);
