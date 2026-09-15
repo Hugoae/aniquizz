@@ -27,7 +27,7 @@ These terms mean the same thing everywhere. Per-context glossaries add local det
 | **Room**            | A live lobby/match container keyed by room id. Holds settings, roster, and the active match.                             |
 | **MatchEngine**     | Server-side round-by-round game loop for one match (song → guess → reveal → score).                                      |
 | **PlaylistBuilder** | Draws the song list + QCM distractors for a match, applying Watched/precision filters.                                   |
-| **Watched**         | Music source restricted to a player's AniList list (`soundSelection === 'watched'`).                                     |
+| **Watched**         | Music source from the player's AniList/MAL list (`soundSelection === 'watched'`). Includes Dropped; excludes Planning.   |
 | **Precision**       | Answer granularity: `franchise` (whole franchise) vs `anime` (exact season). Legacy value `exact` normalizes to `anime`. |
 | **Medal**           | Solo game-over grade (Bronze → Argent → Or → Platine) from mastery ratio, adjusted by difficulty and precision.          |
 | **Player identity** | Always the JWT `userId` (`socket.data.userId`), never `socket.id`.                                                       |

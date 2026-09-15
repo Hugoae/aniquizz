@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, Link2, Shuffle, Music2, AlertTriangle } from 'lucide-react';
-import type { RoomConfig, PlaylistPoolStats, WatchedPoolStats } from '@aniquizz/shared';
+import {
+  WATCHED_LIST_STATUS_LABELS,
+  type PlaylistPoolStats,
+  type RoomConfig,
+  type WatchedPoolStats,
+} from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
@@ -8,6 +13,7 @@ import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylist
 import {
   watchedPoolModeLabel,
   showWatchedFusionMode,
+  WATCHED_LIST_STATUSES_ET,
   WATCHED_LIST_UNAVAILABLE,
   WATCHED_ANILIST_BLOCKED_MESSAGE,
   WATCHED_ANILIST_STALE_MESSAGE,
@@ -116,7 +122,7 @@ export function SourceSection({
       <SectionHeader
         icon={Eye}
         title="Source des musiques"
-        tooltip="D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (Completed, Watching, On-Hold). Playlists = packs staff figés."
+        tooltip={`D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (${WATCHED_LIST_STATUSES_ET}). Playlists = packs staff figés.`}
       />
 
       <div
@@ -173,9 +179,17 @@ export function SourceSection({
                 <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste anime
               </p>
               Pioche uniquement parmi les animes de vos listes{' '}
-              <b className="text-foreground">Completed</b>,{' '}
-              <b className="text-foreground">Watching</b> et{' '}
-              <b className="text-foreground">On-Hold</b> (AniList ou MyAnimeList).
+              {WATCHED_LIST_STATUS_LABELS.map((label, index) => (
+                <span key={label}>
+                  {index > 0
+                    ? index === WATCHED_LIST_STATUS_LABELS.length - 1
+                      ? ' et '
+                      : ', '
+                    : null}
+                  <b className="text-foreground">{label}</b>
+                </span>
+              ))}{' '}
+              (AniList ou MyAnimeList).
               {!watchedListLinked &&
                 !isRoom &&
                 ' Liez AniList ou MyAnimeList pour lancer une partie.'}

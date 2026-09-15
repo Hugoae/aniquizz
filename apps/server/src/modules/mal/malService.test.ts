@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
 import { prisma } from '@aniquizz/database';
+import { WATCHED_MAL_STATUSES, type WatchedMalStatus } from '@aniquizz/shared';
 import {
   getUserAnimeIds,
   invalidateMalUserCache,
@@ -39,12 +40,23 @@ const mockedGet = vi.mocked(axios.get);
 const mockedHead = vi.mocked(axios.head);
 const mockedFindMany = vi.mocked(prisma.anime.findMany);
 
+type MalListEntry = { node?: { id?: number }; list_status?: { status?: string } };
+
+function mockMalPagesByStatus(filled: Partial<Record<WatchedMalStatus, MalListEntry[]>> = {}) {
+  for (const status of WATCHED_MAL_STATUSES) {
+    mockedGet.mockResolvedValueOnce({
+      data: { data: filled[status] ?? [], paging: {} },
+    } as never);
+  }
+}
+
 describe('malService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.MAL_CLIENT_ID = 'test-client-id';
     invalidateMalUserCache('mal_map_user');
     invalidateMalUserCache('mal_on_hold_user');
+    invalidateMalUserCache('mal_dropped_user');
     invalidateMalUserCache('private_list_user');
     invalidateMalUserCache('unavailable_user');
     invalidateMalUserCache('peek_user');
@@ -85,19 +97,9 @@ describe('malService', () => {
   });
 
   it('getUserAnimeIds maps MAL ids to catalogue ids', async () => {
-    mockedGet
-      .mockResolvedValueOnce({
-        data: {
-          data: [{ node: { id: 41457 }, list_status: { status: 'completed' } }],
-          paging: {},
-        },
-      } as never)
-      .mockResolvedValueOnce({
-        data: { data: [], paging: {} },
-      } as never)
-      .mockResolvedValueOnce({
-        data: { data: [], paging: {} },
-      } as never);
+    mockMalPagesByStatus({
+      completed: [{ node: { id: 41457 }, list_status: { status: 'completed' } }],
+    });
     mockedFindMany.mockResolvedValueOnce([{ id: 41457 }]);
 
     await expect(getUserAnimeIds('mal_map_user')).resolves.toEqual([41457]);
@@ -108,20 +110,27 @@ describe('malService', () => {
   });
 
   it('getUserAnimeIds includes on_hold entries', async () => {
-    mockedGet
-      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never)
-      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never)
-      .mockResolvedValueOnce({
-        data: {
-          data: [{ node: { id: 32998 }, list_status: { status: 'on_hold' } }],
-          paging: {},
-        },
-      } as never);
+    mockMalPagesByStatus({
+      on_hold: [{ node: { id: 32998 }, list_status: { status: 'on_hold' } }],
+    });
     mockedFindMany.mockResolvedValueOnce([{ id: 32998 }]);
 
     await expect(getUserAnimeIds('mal_on_hold_user')).resolves.toEqual([32998]);
     expect(mockedFindMany).toHaveBeenCalledWith({
       where: { idMal: { in: [32998] } },
+      select: { id: true },
+    });
+  });
+
+  it('getUserAnimeIds includes dropped entries', async () => {
+    mockMalPagesByStatus({
+      dropped: [{ node: { id: 5114 }, list_status: { status: 'dropped' } }],
+    });
+    mockedFindMany.mockResolvedValueOnce([{ id: 5114 }]);
+
+    await expect(getUserAnimeIds('mal_dropped_user')).resolves.toEqual([5114]);
+    expect(mockedFindMany).toHaveBeenCalledWith({
+      where: { idMal: { in: [5114] } },
       select: { id: true },
     });
   });
@@ -147,19 +156,13 @@ describe('malService', () => {
       state: 'unavailable',
       fromNetwork: false,
     });
-    expect(mockedGet).toHaveBeenCalledTimes(6);
+    expect(mockedGet).toHaveBeenCalledTimes(WATCHED_MAL_STATUSES.length * 2);
   });
 
   it('exposes a settled cache peek after a successful fetch', async () => {
-    mockedGet
-      .mockResolvedValueOnce({
-        data: {
-          data: [{ node: { id: 1 }, list_status: { status: 'completed' } }],
-          paging: {},
-        },
-      } as never)
-      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never)
-      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never);
+    mockMalPagesByStatus({
+      completed: [{ node: { id: 1 }, list_status: { status: 'completed' } }],
+    });
     mockedFindMany.mockResolvedValueOnce([{ id: 1 }]);
 
     expect(peekMalListCache('peek_user')).toBeNull();

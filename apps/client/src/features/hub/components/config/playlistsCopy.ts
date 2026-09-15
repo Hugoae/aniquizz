@@ -1,4 +1,6 @@
 /** French UI copy for thematic playlists (isolated for i18n). */
+import { WATCHED_LIST_STATUSES_ET } from './watchedSource';
+
 export const PLAYLISTS_COPY = {
   tab: 'Playlists',
   pickerTitle: 'Packs thématiques',
@@ -9,7 +11,7 @@ export const PLAYLISTS_COPY = {
   retry: 'Réessayer',
   choosePack: 'Choisissez une playlist pour lancer la partie.',
   overlayLabel: 'Limiter à nos animes vus',
-  overlayHint: 'Intersection du pack et de vos listes AniList / MyAnimeList.',
+  overlayHint: `Intersection du pack et de vos listes AniList / MyAnimeList (${WATCHED_LIST_STATUSES_ET}).`,
   fallbackLabel: 'Compléter avec le pack',
   fallbackHint: 'Les manches manquantes restent dans ce pack (jamais le catalogue global).',
   packTooSmall:
@@ -23,8 +25,7 @@ export const PLAYLISTS_COPY = {
     'Activez « Compléter avec le pack » ou réduisez le nombre de sons.',
   sourceRules: (name: string) => `Source : Playlist « ${name} » — pack staff figé.`,
   sourceRulesGeneric: 'Source : Playlist thématique — pack staff figé.',
-  overlayRules:
-    'Limiter aux animes vus : seuls les titres du pack présents dans vos listes peuvent sortir.',
+  overlayRules: `Limiter aux animes vus : seuls les titres du pack présents dans vos listes (${WATCHED_LIST_STATUSES_ET}) peuvent sortir.`,
   fallbackRules:
     "Compléter avec le pack est activé : si l'intersection Watched est trop petite, le reste du pack complète (jamais l'aléatoire global).",
   decadeCard: 'Décennie',

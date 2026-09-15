@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { WATCHED_ANILIST_STATUS_SET } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { normalizeAnilistUsername } from '../lists/watchlistUsername';
 import {
@@ -33,9 +34,6 @@ query ($name: String) {
 
 export type AnilistVerifyResult = 'exists' | 'not_found' | 'unverified';
 
-/** AniList statuses that count as "watched" for the game pool. */
-export const WATCHED_ANILIST_STATUSES = new Set(['COMPLETED', 'CURRENT', 'PAUSED', 'REPEATING']);
-
 const LIST_NAME_HINTS = [
   'completed',
   'watching',
@@ -48,6 +46,10 @@ const LIST_NAME_HINTS = [
   'on hold',
   'on-hold',
   'en pause',
+  'dropped',
+  'abandonné',
+  'abandonnés',
+  'abandoned',
 ];
 
 export interface AnilistListGroup {
@@ -55,7 +57,7 @@ export interface AnilistListGroup {
   entries?: Array<{ mediaId?: number; status?: string | null }>;
 }
 
-/** Collect AniList media ids from Completed / Watching / On-Hold / Rewatching entries. */
+/** Collect AniList media ids from Completed / Watching / On-Hold / Rewatching / Dropped. */
 export const collectWatchedAnilistMediaIds = (
   lists: AnilistListGroup[] | null | undefined,
 ): number[] => {
@@ -67,7 +69,7 @@ export const collectWatchedAnilistMediaIds = (
     for (const entry of list.entries ?? []) {
       if (!entry.mediaId) continue;
       const status = String(entry.status ?? '').toUpperCase();
-      if (WATCHED_ANILIST_STATUSES.has(status) || (!status && nameLooksWatched)) {
+      if (WATCHED_ANILIST_STATUS_SET.has(status) || (!status && nameLooksWatched)) {
         ids.add(entry.mediaId);
       }
     }

@@ -19,6 +19,7 @@ export * from './watchedPool';
 export * from './playlist';
 export * from './thematicPlaylistSeeds';
 export * from './watchedList';
+export * from './watchedStatuses';
 export * from './moderation';
 export * from './roles';
 export * from './videoMode';

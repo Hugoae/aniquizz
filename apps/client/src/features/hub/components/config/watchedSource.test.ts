@@ -9,7 +9,16 @@ import {
   watchedPoolModeLabel,
   WATCHED_SERVER_OFFLINE,
   WATCHED_SOURCE_BLOCK_MESSAGE,
+  WATCHED_LIST_STATUSES_ET,
+  WATCHED_LIST_STATUSES_OU,
 } from './watchedSource';
+
+describe('watched list status copy', () => {
+  it('mentions Dropped in config and rules lists', () => {
+    expect(WATCHED_LIST_STATUSES_ET).toContain('Dropped');
+    expect(WATCHED_LIST_STATUSES_OU).toContain('Dropped');
+  });
+});
 
 describe('isWatchedSourceBlocked', () => {
   it('blocks watched source when user is not logged in', () => {

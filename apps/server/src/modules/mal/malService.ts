@@ -1,15 +1,16 @@
 import axios from 'axios';
 import { prisma } from '@aniquizz/database';
+import {
+  WATCHED_MAL_STATUSES,
+  WATCHED_MAL_STATUS_SET,
+  type WatchedMalStatus,
+} from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { normalizeMalUsername } from '../lists/watchlistUsername';
 
 const MAL_API_BASE = 'https://api.myanimelist.net/v2';
 const CACHE_DURATION_MS = 10 * 60 * 1000;
 const PAGE_LIMIT = 1000;
-
-const WATCHED_STATUSES = new Set(['watching', 'completed', 'on_hold']);
-
-type MalListStatusFilter = 'watching' | 'completed' | 'on_hold';
 
 export type MalVerifyResult = 'exists' | 'not_found' | 'unverified' | 'unconfigured';
 
@@ -131,7 +132,7 @@ export const verifyMalUser = async (username: string): Promise<MalVerifyResult> 
 
 const fetchMalIdsForStatus = async (
   username: string,
-  status: MalListStatusFilter,
+  status: WatchedMalStatus,
   headers: Record<string, string>,
 ): Promise<number[]> => {
   const malIds = new Set<number>();
@@ -151,7 +152,7 @@ const fetchMalIdsForStatus = async (
     for (const entry of entries) {
       const malId = entry.node?.id;
       const entryStatus = entry.list_status?.status;
-      if (malId && entryStatus && WATCHED_STATUSES.has(entryStatus)) {
+      if (malId && entryStatus && WATCHED_MAL_STATUS_SET.has(entryStatus)) {
         malIds.add(malId);
       }
     }
@@ -202,13 +203,10 @@ export const resolveMalList = async (username: string): Promise<MalListResult> =
     try {
       logger.info(`[MAL] Fetching animelist for ${name}`, 'MAL');
 
-      const [watchingIds, completedIds, onHoldIds] = await Promise.all([
-        fetchMalIdsForStatus(name, 'watching', headers),
-        fetchMalIdsForStatus(name, 'completed', headers),
-        fetchMalIdsForStatus(name, 'on_hold', headers),
-      ]);
-
-      const malIds = Array.from(new Set([...watchingIds, ...completedIds, ...onHoldIds]));
+      const batches = await Promise.all(
+        WATCHED_MAL_STATUSES.map((status) => fetchMalIdsForStatus(name, status, headers)),
+      );
+      const malIds = Array.from(new Set(batches.flat()));
       const catalogueIds = await mapMalIdsToCatalogueIds(malIds);
 
       logger.info(

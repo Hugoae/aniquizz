@@ -14,7 +14,10 @@ import {
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
-import { watchedModeDisplayLabel } from '@/features/hub/components/config/watchedSource';
+import {
+  watchedModeDisplayLabel,
+  WATCHED_LIST_STATUSES_OU,
+} from '@/features/hub/components/config/watchedSource';
 
 export type LobbyRulesMode = 'solo' | 'multi';
 
@@ -137,7 +140,7 @@ const songStartFlowLine = (songStartMode: GameConfig['songStartMode']): string =
 const REVEAL_FLOW_LINE =
   "Révélation de la bonne réponse avec la vidéo complète, puis manche suivante jusqu'à la fin de la playlist.";
 
-const WATCHED_LIST_STATUSES = 'Completed, Watching ou On-Hold';
+const WATCHED_LIST_STATUSES = WATCHED_LIST_STATUSES_OU;
 
 const watchedModeExplain = (mode: GameConfig['watchedMode']): string => {
   if (mode === 'intersection') {

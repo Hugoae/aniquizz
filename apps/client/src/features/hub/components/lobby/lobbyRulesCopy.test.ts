@@ -119,6 +119,7 @@ describe('buildLobbyRulesSections', () => {
     );
     const source = sections.find((s) => s.id === 'source');
     expect(source?.lines?.some((l) => l.includes('Union'))).toBe(true);
+    expect(source?.lines?.some((l) => l.includes('Dropped'))).toBe(true);
     expect(source?.lines?.some((l) => l.includes('au moins un joueur'))).toBe(true);
     expect(source?.lines?.some((l) => l.includes("Compléter avec l'aléatoire"))).toBe(true);
     expect(source?.lines?.some((l) => l.match(/\d+\s+son/))).toBe(false);

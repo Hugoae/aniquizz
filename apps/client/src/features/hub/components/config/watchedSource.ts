@@ -5,6 +5,7 @@ import {
   hasEnoughQcmNames,
   hasWatchedListLink,
   qcmPoolTooSmallReason,
+  WATCHED_LIST_STATUS_LABELS,
 } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
@@ -35,6 +36,16 @@ export const WATCHED_QCM_TOO_SMALL_MESSAGE = qcmPoolTooSmallReason('franchise');
 
 export const WATCHED_SERVER_OFFLINE =
   "Le serveur de jeu n'est pas joignable (port 3001). Lancez-le avec pnpm run dev, puis réessayez.";
+
+function joinWatchedListStatusLabels(conjunction: 'et' | 'ou'): string {
+  const labels = [...WATCHED_LIST_STATUS_LABELS];
+  const last = labels.pop();
+  return last ? `${labels.join(', ')} ${conjunction} ${last}` : '';
+}
+
+/** English AniList/MAL list names, French conjunction — used in config and rules. */
+export const WATCHED_LIST_STATUSES_ET = joinWatchedListStatusLabels('et');
+export const WATCHED_LIST_STATUSES_OU = joinWatchedListStatusLabels('ou');
 
 export interface WatchedPoolLaunchCheck {
   blocked: boolean;

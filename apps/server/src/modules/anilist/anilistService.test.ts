@@ -7,7 +7,7 @@ import {
 } from './anilistService';
 
 describe('collectWatchedAnilistMediaIds', () => {
-  it('includes Completed, Watching, On-Hold and Rewatching by entry status', () => {
+  it('includes Completed, Watching, On-Hold, Rewatching and Dropped by entry status', () => {
     expect(
       collectWatchedAnilistMediaIds([
         {
@@ -31,16 +31,17 @@ describe('collectWatchedAnilistMediaIds', () => {
           entries: [{ mediaId: 6, status: 'REPEATING' }],
         },
       ]),
-    ).toEqual([1, 4, 5, 6]);
+    ).toEqual([1, 3, 4, 5, 6]);
   });
 
-  it('falls back to list name when entry status is missing (French On-Hold)', () => {
+  it('falls back to list name when entry status is missing (French On-Hold and Dropped)', () => {
     expect(
       collectWatchedAnilistMediaIds([
         { name: 'En pause', entries: [{ mediaId: 10 }] },
         { name: 'Planning', entries: [{ mediaId: 11 }] },
+        { name: 'Abandonnés', entries: [{ mediaId: 12 }] },
       ]),
-    ).toEqual([10]);
+    ).toEqual([10, 12]);
   });
 
   it('returns empty when MediaListCollection has no lists', () => {
