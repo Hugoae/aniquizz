@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import axios from 'axios';
 import { prisma } from '@aniquizz/database';
-import { getUserAnimeIds, resolveMalList, verifyMalUser } from './malService';
+import {
+  getUserAnimeIds,
+  invalidateMalUserCache,
+  peekMalListCache,
+  resolveMalList,
+  verifyMalUser,
+} from './malService';
 
 vi.mock('axios', () => ({
   default: {
@@ -37,6 +43,11 @@ describe('malService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     process.env.MAL_CLIENT_ID = 'test-client-id';
+    invalidateMalUserCache('mal_map_user');
+    invalidateMalUserCache('mal_on_hold_user');
+    invalidateMalUserCache('private_list_user');
+    invalidateMalUserCache('unavailable_user');
+    invalidateMalUserCache('peek_user');
   });
 
   it('verifyMalUser returns exists on 200 even without a data array', async () => {
@@ -137,5 +148,29 @@ describe('malService', () => {
       fromNetwork: false,
     });
     expect(mockedGet).toHaveBeenCalledTimes(6);
+  });
+
+  it('exposes a settled cache peek after a successful fetch', async () => {
+    mockedGet
+      .mockResolvedValueOnce({
+        data: {
+          data: [{ node: { id: 1 }, list_status: { status: 'completed' } }],
+          paging: {},
+        },
+      } as never)
+      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never)
+      .mockResolvedValueOnce({ data: { data: [], paging: {} } } as never);
+    mockedFindMany.mockResolvedValueOnce([{ id: 1 }]);
+
+    expect(peekMalListCache('peek_user')).toBeNull();
+    await expect(resolveMalList('peek_user')).resolves.toMatchObject({
+      ids: [1],
+      state: 'ok',
+    });
+    expect(peekMalListCache('peek_user')).toEqual({
+      ids: [1],
+      state: 'ok',
+      fromNetwork: true,
+    });
   });
 });

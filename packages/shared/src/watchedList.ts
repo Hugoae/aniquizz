@@ -2,6 +2,13 @@
 
 export type WatchedListProvider = 'anilist' | 'mal';
 
+/** AniList / MAL handle after URL extract. Generous vs MAL's 16-char official cap. */
+export const MAX_WATCHLIST_HANDLE_LENGTH = 64;
+/** Raw paste in the link dialog (profile URL before normalize). */
+export const MAX_WATCHLIST_USERNAME_INPUT_LENGTH = 200;
+/** Client correlation id on lists:* mutators. */
+export const MAX_LIST_REQUEST_ID_LENGTH = 100;
+
 export interface WatchedListFields {
   anilistUsername?: string | null;
   malUsername?: string | null;

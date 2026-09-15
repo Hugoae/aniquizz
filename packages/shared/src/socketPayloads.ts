@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import { GAME_CONFIG } from './constants';
+import { MAX_LIST_REQUEST_ID_LENGTH, MAX_WATCHLIST_USERNAME_INPUT_LENGTH } from './watchedList';
 
 const roomIdSchema = z
   .string()
@@ -121,6 +122,24 @@ export const deleteAccountInputSchema = z
   })
   .strip();
 
+const listRequestIdSchema = z.string().trim().min(1).max(MAX_LIST_REQUEST_ID_LENGTH);
+const watchedListProviderSchema = z.enum(['anilist', 'mal']);
+
+export const listLinkInputSchema = z
+  .object({
+    requestId: listRequestIdSchema,
+    provider: watchedListProviderSchema,
+    username: z.string().trim().min(1).max(MAX_WATCHLIST_USERNAME_INPUT_LENGTH),
+  })
+  .strip();
+
+export const listProviderOpInputSchema = z
+  .object({
+    requestId: listRequestIdSchema,
+    provider: watchedListProviderSchema,
+  })
+  .strip();
+
 export type RoomIdInputParsed = z.infer<typeof roomIdInputSchema>;
 export type AnswerInputParsed = z.infer<typeof answerInputSchema>;
 export type UpdateRoomSettingsInputParsed = z.infer<typeof updateRoomSettingsInputSchema>;
@@ -133,3 +152,5 @@ export type UpdatePrefsInputParsed = z.infer<typeof updatePrefsInputSchema>;
 export type UpdatePrivacyInputParsed = z.infer<typeof updatePrivacyInputSchema>;
 export type FriendPrivacyInputParsed = z.infer<typeof friendPrivacyInputSchema>;
 export type DeleteAccountInputParsed = z.infer<typeof deleteAccountInputSchema>;
+export type ListLinkInputParsed = z.infer<typeof listLinkInputSchema>;
+export type ListProviderOpInputParsed = z.infer<typeof listProviderOpInputSchema>;

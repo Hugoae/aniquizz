@@ -55,13 +55,22 @@ const providerStatus = (
 
 export const buildListsStatus = (
   row: ListStatusRow,
-  resolved: CatalogueResolveResult | null = null,
+  resolved: CatalogueResolveResult | CatalogueResolveResult[] | null = null,
 ): ListsStatusPayload => {
+  const resolvedList = !resolved ? [] : Array.isArray(resolved) ? resolved : [resolved];
+  const pick = (provider: WatchedListProvider) =>
+    resolvedList.find((item) => item.provider === provider) ?? null;
   const active = resolveActiveListProvider(row);
   return {
     active,
-    anilist: providerStatus('anilist', row.anilistUsername, active, row.anilistLastSync, resolved),
-    mal: providerStatus('mal', row.malUsername, active, row.malLastSync, resolved),
+    anilist: providerStatus(
+      'anilist',
+      row.anilistUsername,
+      active,
+      row.anilistLastSync,
+      pick('anilist'),
+    ),
+    mal: providerStatus('mal', row.malUsername, active, row.malLastSync, pick('mal')),
   };
 };
 

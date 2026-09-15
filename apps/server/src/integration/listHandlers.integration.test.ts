@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '@aniquizz/database';
 import type { ListOperationResult, ListsStatusPayload } from '@aniquizz/shared';
+import { INVALID_SOCKET_PAYLOAD_MESSAGE } from '../core/parseSocketPayload';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
 import { connectSocket, onceEvent, type TestSocket } from '../test/socketHelpers';
@@ -97,5 +98,14 @@ describe.skipIf(!hasIntegrationEnv)('list handlers integration', () => {
       malUsername: null,
       activeListProvider: 'anilist',
     });
+  });
+
+  it('rejects an invalid lists:set_active payload without writing', async () => {
+    const before = await loadRow();
+    const errPromise = onceEvent<{ message: string }>(socket, 'error', 8_000);
+    socket.emit('lists:set_active', { requestId: 'bad' } as never);
+    const err = await errPromise;
+    expect(err.message).toBe(INVALID_SOCKET_PAYLOAD_MESSAGE);
+    expect(await loadRow()).toEqual(before);
   });
 });

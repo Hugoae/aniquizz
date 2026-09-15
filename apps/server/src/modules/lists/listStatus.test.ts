@@ -50,4 +50,21 @@ describe('buildListsStatus', () => {
     expect(status.anilist).toMatchObject({ animeCount: 2, state: 'cache' });
     expect(status.mal).toMatchObject({ animeCount: null, state: 'idle' });
   });
+
+  it('can attach cached counts for both providers on get_status', () => {
+    const status = buildListsStatus(
+      row({
+        anilistUsername: 'AniUser',
+        malUsername: 'MalUser',
+        activeListProvider: 'mal',
+      }),
+      [
+        { ids: [1, 2], provider: 'anilist', state: 'cache', fromNetwork: false },
+        { ids: [3], provider: 'mal', state: 'cache', fromNetwork: false },
+      ],
+    );
+
+    expect(status.anilist).toMatchObject({ animeCount: 2, state: 'cache', active: false });
+    expect(status.mal).toMatchObject({ animeCount: 1, state: 'cache', active: true });
+  });
 });

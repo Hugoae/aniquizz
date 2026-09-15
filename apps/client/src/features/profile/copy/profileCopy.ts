@@ -103,6 +103,7 @@ export const PROFILE_COPY = {
   watchlistMalPlaceholder: 'Votre pseudo MyAnimeList exact...',
   watchlistMalHint:
     "Utilisez le pseudo de l'URL du profil (myanimelist.net/profile/...), pas le nom affiché.",
+  watchlistUsernameLabel: 'Pseudo',
   watchlistSave: 'Sauvegarder',
   watchlistSaving: 'Liaison...',
 } as const;

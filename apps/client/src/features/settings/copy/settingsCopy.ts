@@ -90,8 +90,8 @@ export const SETTINGS_COPY = {
   listUnlinkConfirmTitle: 'Délier ce compte ?',
   listUnlinkConfirmBody: 'Le mode Watched basculera sur l’autre liste si elle est encore liée.',
   listOperationPending: 'Une opération sur les listes est déjà en cours.',
-  listServerOffline: 'Pas de connexion au serveur. Vérifie que le serveur local tourne.',
-  listServerTimeout: 'Le serveur ne répond pas. Réessaie dans un instant.',
+  listServerOffline: 'Pas de connexion au serveur. Vérifiez que le serveur local tourne.',
+  listServerTimeout: 'Le serveur ne répond pas. Réessayez dans un instant.',
   listGenericError: 'Impossible de mettre à jour la liste.',
   listOperationSuccess: {
     link: (provider: string) => `${provider} est lié et devient la source active.`,

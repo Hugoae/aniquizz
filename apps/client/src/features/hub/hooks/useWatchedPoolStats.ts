@@ -89,7 +89,7 @@ export function useWatchedPoolStats(request: WatchedPoolStatsRequest) {
     }
 
     const timeout = window.setTimeout(() => {
-      if (!socket.connected) markOffline();
+      if (!socket.connected && !socket.active) markOffline();
     }, OFFLINE_TIMEOUT_MS);
 
     return () => {

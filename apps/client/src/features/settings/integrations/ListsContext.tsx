@@ -17,6 +17,7 @@ import {
   type PendingListOperation,
 } from '@/features/settings/integrations/listsContextValue';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 
 const providerStatus = (
   provider: WatchedListProvider,
@@ -162,21 +163,27 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       finishOperation();
       toast.error(error.message || SETTINGS_COPY.listGenericError);
     };
-    const onConnect = () => refreshStatus();
 
     socket.on('lists:status', onStatus);
     socket.on('lists:result', onResult);
     socket.on('lists:error', onError);
     socket.on('error', onGlobalError);
-    socket.on('connect', onConnect);
-    refreshStatus();
+    const onDisconnect = () => {
+      if (socket.connected || socket.active) return;
+      clearStatusTimer();
+      setLoading(false);
+    };
+    socket.on('disconnect', onDisconnect);
+    const stopReady = subscribeWhenSocketReady(socket, () => refreshStatus());
+    if (!socket.connected && !socket.active) setLoading(false);
 
     return () => {
+      stopReady();
       socket.off('lists:status', onStatus);
       socket.off('lists:result', onResult);
       socket.off('lists:error', onError);
       socket.off('error', onGlobalError);
-      socket.off('connect', onConnect);
+      socket.off('disconnect', onDisconnect);
       clearStatusTimer();
       clearOperationTimer();
     };

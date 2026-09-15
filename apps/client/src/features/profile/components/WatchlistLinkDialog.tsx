@@ -1,13 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { WatchedListProvider } from '@aniquizz/shared';
+import { MAX_WATCHLIST_USERNAME_INPUT_LENGTH, type WatchedListProvider } from '@aniquizz/shared';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 
 const COPY: Record<WatchedListProvider, { title: string; placeholder: string; hint: string }> = {
@@ -44,12 +46,14 @@ export function WatchlistLinkDialog({
   saving = false,
 }: WatchlistLinkDialogProps) {
   const { title, placeholder, hint } = COPY[provider];
+  const fieldId = `watchlist-username-${provider}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{hint}</DialogDescription>
         </DialogHeader>
         <form
           onSubmit={(e) => {
@@ -58,14 +62,17 @@ export function WatchlistLinkDialog({
           }}
         >
           <div className="py-4">
+            <Label htmlFor={fieldId}>{PROFILE_COPY.watchlistUsernameLabel}</Label>
             <Input
+              id={fieldId}
+              className="mt-2"
               placeholder={placeholder}
               value={value}
               onChange={(e) => onChange(e.target.value)}
               autoComplete="username"
+              maxLength={MAX_WATCHLIST_USERNAME_INPUT_LENGTH}
               disabled={saving}
             />
-            <p className="mt-2 text-xs text-muted-foreground">{hint}</p>
           </div>
           <DialogFooter>
             <Button type="submit" disabled={saving || !value.trim()}>

@@ -5,10 +5,12 @@ const mocks = vi.hoisted(() => ({
   resolveAnilistList: vi.fn(),
   resolveMalList: vi.fn(),
   invalidateMalUserCache: vi.fn(),
+  peekMalListCache: vi.fn(() => null),
   gate: {
     isInBackoff: vi.fn(() => false),
     forgetUser: vi.fn(),
     hasFreshSuccess: vi.fn(() => false),
+    freshIds: vi.fn(),
   },
 }));
 
@@ -23,16 +25,18 @@ vi.mock('../anilist/anilistListGate', () => ({
 }));
 vi.mock('../mal/malService', () => ({
   invalidateMalUserCache: mocks.invalidateMalUserCache,
+  peekMalListCache: mocks.peekMalListCache,
   resolveMalList: mocks.resolveMalList,
 }));
 
-import { resolvePlayerCatalogueWithMeta } from './listResolver';
+import { peekCachedCatalogues, resolvePlayerCatalogueWithMeta } from './listResolver';
 
 describe('resolvePlayerCatalogueWithMeta', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.gate.isInBackoff.mockReturnValue(false);
     mocks.gate.hasFreshSuccess.mockReturnValue(false);
+    mocks.peekMalListCache.mockReturnValue(null);
   });
 
   it('resolves the selected MAL account when both providers are linked', async () => {
@@ -93,5 +97,36 @@ describe('resolvePlayerCatalogueWithMeta', () => {
       state: 'private_empty',
       fromNetwork: true,
     });
+  });
+});
+
+describe('peekCachedCatalogues', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.gate.isInBackoff.mockReturnValue(false);
+    mocks.gate.hasFreshSuccess.mockReturnValue(false);
+    mocks.peekMalListCache.mockReturnValue(null);
+  });
+
+  it('returns in-memory hits without calling the network resolvers', () => {
+    mocks.gate.hasFreshSuccess.mockReturnValue(true);
+    mocks.gate.freshIds.mockReturnValue([1, 2]);
+    mocks.peekMalListCache.mockReturnValue({
+      ids: [9],
+      state: 'ok',
+      fromNetwork: false,
+    });
+
+    expect(
+      peekCachedCatalogues({
+        anilistUsername: 'AniUser',
+        malUsername: 'MalUser',
+      }),
+    ).toEqual([
+      { ids: [1, 2], provider: 'anilist', state: 'cache', fromNetwork: false },
+      { ids: [9], provider: 'mal', state: 'cache', fromNetwork: false },
+    ]);
+    expect(mocks.resolveAnilistList).not.toHaveBeenCalled();
+    expect(mocks.resolveMalList).not.toHaveBeenCalled();
   });
 });

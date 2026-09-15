@@ -109,8 +109,7 @@ export const isAnilistUnavailableError = (error: unknown): boolean => {
 
 /**
  * Check whether an AniList username exists, used before linking it to a profile.
- * `unverified` (AniList outage, 403/429, network) is deliberately non-fatal so
- * a transient AniList outage never blocks a legitimate link.
+ * `unverified` (AniList outage, 403/429, network) must not persist a link — retry later.
  */
 export const verifyAnilistUser = async (username: string): Promise<AnilistVerifyResult> => {
   const name = normalizeAnilistUsername(username);

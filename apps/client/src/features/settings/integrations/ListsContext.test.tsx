@@ -1,7 +1,8 @@
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ListOperationResult, ListsStatusPayload } from '@aniquizz/shared';
+import { SOCKET_READY_SETTLE_MS } from '@/lib/socketReady';
 
 const socketMock = vi.hoisted(() => {
   const handlers = new Map<string, (payload: never) => void>();
@@ -9,6 +10,7 @@ const socketMock = vi.hoisted(() => {
     handlers,
     socket: {
       connected: true,
+      active: true,
       on: vi.fn((event: string, cb: (payload: never) => void) => handlers.set(event, cb)),
       off: vi.fn((event: string) => handlers.delete(event)),
       emit: vi.fn(),
@@ -68,12 +70,18 @@ const serverStatus = (active: 'anilist' | 'mal'): ListsStatusPayload => ({
 
 describe('ListsProvider', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     socketMock.handlers.clear();
     socketMock.socket.connected = true;
+    socketMock.socket.active = true;
     socketMock.socket.on.mockClear();
     socketMock.socket.off.mockClear();
     socketMock.socket.emit.mockClear();
     authMock.patchProfile.mockClear();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('seeds profile and settings from the same authenticated snapshot', () => {
@@ -83,6 +91,9 @@ describe('ListsProvider', () => {
       active: 'mal',
       anilist: { linked: true, active: false },
       mal: { linked: true, active: true },
+    });
+    act(() => {
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledWith('lists:get_status');
   });
@@ -128,5 +139,13 @@ describe('ListsProvider', () => {
       expect.objectContaining({ activeListProvider: 'anilist' }),
       'user-1',
     );
+  });
+
+  it('clears the loading spinner when the socket is down', () => {
+    socketMock.socket.connected = false;
+    socketMock.socket.active = false;
+    const { result } = renderHook(() => useLists(), { wrapper });
+    expect(result.current.loading).toBe(false);
+    expect(socketMock.socket.emit).not.toHaveBeenCalled();
   });
 });

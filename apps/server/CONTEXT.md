@@ -60,6 +60,8 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   readable R2 filename, when the media Worker is configured.
 - **Watched vs Random distractors differ.** In Watched / playlist mode QCM candidates must use the
   same restricted anime ids as the songs, or players deduce answers they never saw. Playlist fallback never leaves the snapshot.
+- **List mutators are Zod-parsed.** `lists:link` / `set_active` / `refresh` / `unlink` go through
+  `socketPayloads.ts`. Link only persists when AniList/MAL verify returns `exists` (`unverified` is a retry, not a ghost link). `lists:get_status` may attach cached anime counts; it does not fetch the remote list.
 - **Zod `.strip()` drops unknown settings keys.** `playlistId` / `decadePlaylistId` / `playlistWatched` must stay in `settings.ts`.
 - **Persist both playlist ids.** `matchPlaylistPersistence` writes `playlistId` and `decadePlaylistId` independently — do not coalesce with `??` or decade-only matches vanish from stats.
 - **Prisma migrations are manual on Supabase.** `prisma migrate dev` fails (no shadow

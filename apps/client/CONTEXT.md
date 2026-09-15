@@ -62,8 +62,8 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
   on inner routes.
 - **Socket.io does not auto-reconnect after `io server disconnect`.** Same-tab
   handshake overlap emits `session_replaced` then kills the first socket.
-  Profile/friends **and Hub** wait `subscribeWhenSocketReady` / `onceWhenSocketReady`
-  (settle after `connect`) before pool stats and lobby mutators (`lobby:create`,
+  Profile/friends, **Hub**, and **Lists** wait `subscribeWhenSocketReady` / `onceWhenSocketReady`
+  (settle after `connect`) before pool stats, list status, and lobby mutators (`lobby:create`,
   `start_game`, join). `registerSessionReplacementReconnect` reconnects ghosts.
   Do not call `socket.connect()` from feature hooks — Auth owns the handshake.
 - **Reset the clip cache on `phase === 'loading'`** so a solo replay in the same lobby

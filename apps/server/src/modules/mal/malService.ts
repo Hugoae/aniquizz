@@ -29,6 +29,7 @@ interface MalListResponse {
 interface CacheEntry {
   timestamp: number;
   promise: Promise<MalListResult>;
+  value?: MalListResult;
 }
 
 const userCache = new Map<string, CacheEntry>();
@@ -36,6 +37,16 @@ const cacheKey = (username: string): string => username.trim().toLocaleLowerCase
 
 export const invalidateMalUserCache = (username: string): void => {
   userCache.delete(cacheKey(username));
+};
+
+/** Settled in-memory MAL list, or null when cold / expired. Never starts a fetch. */
+export const peekMalListCache = (username: string, now = Date.now()): MalListResult | null => {
+  const name = normalizeMalUsername(username);
+  if (!name) return null;
+  const cached = userCache.get(cacheKey(name));
+  if (!cached?.value) return null;
+  if (now - cached.timestamp >= CACHE_DURATION_MS) return null;
+  return cached.value;
 };
 
 export interface MalListResult {
@@ -173,6 +184,7 @@ export const resolveMalList = async (username: string): Promise<MalListResult> =
   if (cached && now - cached.timestamp < CACHE_DURATION_MS) {
     logger.debug(`[MAL] Cache HIT for ${name}`, 'MAL');
     const result = await cached.promise;
+    cached.value = result;
     return {
       ...result,
       state: result.state === 'ok' ? 'cache' : result.state,
@@ -220,9 +232,14 @@ export const resolveMalList = async (username: string): Promise<MalListResult> =
     }
   })();
 
-  userCache.set(key, { timestamp: now, promise: fetchPromise });
+  const entry: CacheEntry = { timestamp: now, promise: fetchPromise };
+  userCache.set(key, entry);
   const result = await fetchPromise;
-  if (result.state === 'unavailable') userCache.delete(key);
+  if (result.state === 'unavailable') {
+    userCache.delete(key);
+    return result;
+  }
+  entry.value = result;
   return result;
 };
 

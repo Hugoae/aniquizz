@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix + in-match pause/skip/F5 smoke). **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Lists is closed** (P1 + P2; `PlayerAnimeList` drop parked). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → **Admin** ✅ → lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2). Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole. Post-26.6 SPA audit queue is empty; do not start 26.7.
 
 ### Audit — quality gates ✅
 
@@ -356,7 +356,62 @@ Follow-up to the Admin audit (P1 + P2). Do not start 26.7.
 
 **Browser (admin_dev):** Journal lists mute/role from tests; catalogue « À réparer » (2 missing video) → `?song=11215` focuses Pride of Tomorrow; users `?user=` UUID returns only admin_dev. Spectateur not clicked (0 live rooms). No mute/ban/reset/seed.
 
-**Next:** Lists audit. Do not start 26.7.
+### Audit — Game in-match smoke ✅ (2026-09-15)
+
+Logged-in `admin_dev` on local Vite `:8080` + API `:3001`. Closes the pause / skip / F5 hole left after Game P2. Canvas: `game-feature-audit` (smoke also copied on `lists-feature-audit`).
+
+| Result    | What                                                                                                                                                                                                  |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Pause** | PASS — guessing vote → « Pause en fin de round » → Reprendre overlay → next guessing.                                                                                                                 |
+| **Skip**  | PASS — reveal « Suivant » `vote_skip` 13:27:47 UTC round 10 → 11 (`Toilet-bound Hanako-kun` → `Kemono Jihen`).                                                                                        |
+| **F5**    | PASS — reload `/game?roomId=BF11UO` restored round 12/20 guessing.                                                                                                                                    |
+| **Chat**  | PARTIAL — solo has no sidebar (by design). Lobby + 1 bot (`DEDZJZ`): « smoke chat lobby » + `chat:sendMessage`. In-match Chat tab opened; send not confirmed (match ended).                           |
+| **Note**  | JWT ~1 h: SPA still showed logged-in while socket got `Rejected socket with invalid token`. Relogin + Home settle required before `lobby:create`. Socket.io does not auto-reconnect after disconnect. |
+
+Do not start 26.7.
+
+### Audit — Lists (findings only) ✅ (2026-09-15)
+
+Canvas: `lists-feature-audit`. No P0. **No patch** until asked. Identity stays JWT `userId`. Status on Profile usernames + in-memory AniList/MAL caches (`PlayerAnimeList` unused at runtime). Overlay Paramètres → Compte, not `/settings`.
+
+| Sev | Finding                                                                                                                                                                                                                                                                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| P1  | `lists:link` / `set_active` / `refresh` / `unlink` have no Zod `parseSocketPayload`. Username after normalize is uncapped (`Profile.anilistUsername` / `malUsername` are unbounded `String`). Same class as pre-Settings `friends:set_privacy`.                                     |
+| P2  | `verifyAnilistUser` / MAL `unverified` still persist a link. `listHandlers.ts` 448 lines. Tu vs vousvoiement. `ListsContext` skips `subscribeWhenSocketReady`. `get_status` drops `animeCount`. Dead `PlayerAnimeList`. Watched pool `requireAuth` without `RATE_LIMITS.poolStats`. |
+
+**Browser (admin_dev):** AniList stays unlinked after fake username `aniquizz_no_such_user_xyz`. MAL `Hugo_ae` sync 15:42:39 → 196 catalogue animes (254 MAL entries). Own `/profile` badge `Hugo_ae · Source active`. First Watched after `/play` nav: false « serveur :3001 » (`session_replaced`). Retry: **129 sons / 196 animes**, Lancer enabled. 390×844 and 700×400: `overflowX` false; list buttons 36 px. Did not unlink `Hugo_ae`. No dual-link `set_active`.
+
+**Follow-up:** P1 + P2 closed in the next two sections. Do not start 26.7.
+
+### Audit — Lists P1 ✅ (2026-09-15)
+
+Canvas: `lists-feature-audit`. No P0. Identity stays JWT `userId`. Overlay Paramètres → Compte, not `/settings`.
+
+| Item             | What changed                                                                                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Zod mutators** | `listLinkInputSchema` / `listProviderOpInputSchema` in `socketPayloads.ts`. Handlers `parseSocketPayload` on `lists:link` / `set_active` / `refresh` / `unlink`. Invalid → generic `Requête invalide.` |
+| **Username cap** | Raw input ≤ 200 (`MAX_WATCHLIST_USERNAME_INPUT_LENGTH`, MAL URL paste). Normalized handle ≤ 64 (`MAX_WATCHLIST_HANDLE_LENGTH`) before Prisma. Dialog `maxLength` 200.                                  |
+| **AGENTS**       | Mutating-event list includes `lists:link` / `set_active` / `refresh` / `unlink`.                                                                                                                       |
+| **Tests**        | Shared: URL paste, bogus provider, oversized username/`requestId`. Integration: invalid `lists:set_active` does not write.                                                                             |
+
+**Next:** Lists P2 (closed in the next section). Do not start 26.7.
+
+### Audit — Lists P2 ✅ (2026-09-15)
+
+Canvas: `lists-feature-audit`. Lists audit is **closed** (P1 + P2). Do not start 26.7. Do not drop Prisma `PlayerAnimeList` in this pass.
+
+| Item                        | What changed                                                                                                                                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Persist only `exists`**   | `listLinkRejectMessage`: `unverified` / `not_found` / `unconfigured` → `lists:error`, no Profile write. AniList JSDoc matches.                                                                                                                               |
+| **Partition**               | `listHandlers.ts` 289 lines. Extracted `listLinkVerify.ts`, `listPublish.ts` (queue, sync, publish).                                                                                                                                                         |
+| **Vousvoiement**            | Server: « Liez… », « Vérifiez… », « Un pseudo est requis. ». `SETTINGS_COPY` listServerOffline/Timeout. Hub `PLAYLISTS_COPY.loadErrorOffline`.                                                                                                               |
+| **`get_status` counts**     | `peekCachedCatalogues` (AniList gate + `peekMalListCache`) — no extra remote fetch. Both providers can show `animeCount`.                                                                                                                                    |
+| **Reconnect / a11y / pool** | `ListsContext` waits `subscribeWhenSocketReady`; spinner clears if `!connected && !active`. Watched offline only if `!connected && !active`. `guardSilent` + `RATE_LIMITS.poolStats` on watched + catalogue. Watchlist dialog `Label` + `DialogDescription`. |
+| **Parked**                  | `PlayerAnimeList` still unused at runtime — drop later, not a P1.                                                                                                                                                                                            |
+
+**Browser (admin_dev, :8080 + :3001):** Compte — AniList stays **Non lié** after `aniquizz_no_such_user_xyz`; dialog `Pseudo` + hint. MAL `Hugo_ae · Source active`. Did not unlink. Did not click Synchroniser. Hub Watched after `/play/create?intent=solo`: true socket-offline (JWT stale), vousvoiement « Lancez-le avec pnpm run dev », Lancer disabled — not the false `session_replaced` alert. Relogin for a live pool count was not done in this pass.
+
+**Next:** Post-26.6 feature-audit queue is empty. Do not start 26.7.
 
 ### Audit — logged-in smoke Auth + Home + Hub + Game (2026-09-14)
 

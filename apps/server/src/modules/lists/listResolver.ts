@@ -6,7 +6,12 @@ import {
 } from '@aniquizz/shared';
 import { resolveAnilistList } from '../anilist/anilistService';
 import { anilistListGate } from '../anilist/anilistListGate';
-import { invalidateMalUserCache, resolveMalList } from '../mal/malService';
+import {
+  invalidateMalUserCache,
+  peekMalListCache,
+  resolveMalList,
+  type MalListResult,
+} from '../mal/malService';
 
 export interface WatchedListSources {
   anilistUsername?: string | null;
@@ -110,6 +115,36 @@ export const resolvePlayerCatalogueWithMeta = async (
     return resolveMal(mal, opts.bustCache === true);
   }
   return { ids: [], provider: null, state: 'unlinked', fromNetwork: false };
+};
+
+const malPeekState = (state: MalListResult['state']): ListFetchState =>
+  state === 'ok' ? 'cache' : state;
+
+/** Last known catalogue ids from in-memory caches — never hits AniList/MAL. */
+export const peekCachedCatalogues = (sources: WatchedListSources): CatalogueResolveResult[] => {
+  const results: CatalogueResolveResult[] = [];
+  const anilist = trimOrNull(sources.anilistUsername);
+  const mal = trimOrNull(sources.malUsername);
+  if (anilist && anilistListGate.hasFreshSuccess(anilist)) {
+    results.push({
+      ids: anilistListGate.freshIds(anilist) ?? [],
+      provider: 'anilist',
+      state: 'cache',
+      fromNetwork: false,
+    });
+  }
+  if (mal) {
+    const peeked = peekMalListCache(mal);
+    if (peeked) {
+      results.push({
+        ids: peeked.ids,
+        provider: 'mal',
+        state: malPeekState(peeked.state),
+        fromNetwork: false,
+      });
+    }
+  }
+  return results;
 };
 
 /**

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { GAME_CONFIG } from './constants';
+import { MAX_LIST_REQUEST_ID_LENGTH, MAX_WATCHLIST_USERNAME_INPUT_LENGTH } from './watchedList';
 import {
   answerInputSchema,
   createLobbyInputSchema,
@@ -9,6 +10,8 @@ import {
   chatSendMessageInputSchema,
   deleteAccountInputSchema,
   friendPrivacyInputSchema,
+  listLinkInputSchema,
+  listProviderOpInputSchema,
   updatePrefsInputSchema,
   updatePrivacyInputSchema,
   updateProfileDataInputSchema,
@@ -334,5 +337,56 @@ describe('deleteAccountInputSchema', () => {
     expect(deleteAccountInputSchema.safeParse({}).success).toBe(false);
     expect(deleteAccountInputSchema.safeParse({ confirmUsername: '   ' }).success).toBe(false);
     expect(deleteAccountInputSchema.safeParse(undefined).success).toBe(false);
+  });
+});
+
+describe('listLinkInputSchema', () => {
+  it('accepts a MAL URL paste and strips unknown keys', () => {
+    expect(
+      listLinkInputSchema.parse({
+        requestId: 'link-mal',
+        provider: 'mal',
+        username: '  https://myanimelist.net/profile/Hugo_ae  ',
+        extra: true,
+      }),
+    ).toEqual({
+      requestId: 'link-mal',
+      provider: 'mal',
+      username: 'https://myanimelist.net/profile/Hugo_ae',
+    });
+  });
+
+  it('rejects missing fields, a bogus provider, and an oversized paste', () => {
+    expect(listLinkInputSchema.safeParse(undefined).success).toBe(false);
+    expect(
+      listLinkInputSchema.safeParse({ requestId: 'x', provider: 'kitsu', username: 'A' }).success,
+    ).toBe(false);
+    expect(
+      listLinkInputSchema.safeParse({
+        requestId: 'x',
+        provider: 'anilist',
+        username: 'a'.repeat(MAX_WATCHLIST_USERNAME_INPUT_LENGTH + 1),
+      }).success,
+    ).toBe(false);
+    expect(
+      listLinkInputSchema.safeParse({
+        requestId: 'x'.repeat(MAX_LIST_REQUEST_ID_LENGTH + 1),
+        provider: 'anilist',
+        username: 'A',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('listProviderOpInputSchema', () => {
+  it('requires requestId and a known provider', () => {
+    expect(listProviderOpInputSchema.parse({ requestId: 'op-1', provider: 'anilist' })).toEqual({
+      requestId: 'op-1',
+      provider: 'anilist',
+    });
+    expect(listProviderOpInputSchema.safeParse({ provider: 'mal' }).success).toBe(false);
+    expect(
+      listProviderOpInputSchema.safeParse({ requestId: 'op-1', provider: 'kitsu' }).success,
+    ).toBe(false);
   });
 });

@@ -5,7 +5,7 @@ export const PLAYLISTS_COPY = {
   empty: 'Aucune playlist publiée pour le moment.',
   loadError: 'Impossible de charger les playlists.',
   loadErrorOffline:
-    "Le serveur de jeu n'est pas joignable. Vérifie qu'il tourne (port 3001 en local), puis réessaie.",
+    "Le serveur de jeu n'est pas joignable. Vérifiez qu'il tourne (port 3001 en local), puis réessayez.",
   retry: 'Réessayer',
   choosePack: 'Choisissez une playlist pour lancer la partie.',
   overlayLabel: 'Limiter à nos animes vus',

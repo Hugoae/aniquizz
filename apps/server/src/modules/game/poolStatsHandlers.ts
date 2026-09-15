@@ -22,7 +22,7 @@ import {
 import { resolvePlayerCatalogueWithMeta } from '../lists/listResolver';
 import { prisma } from '@aniquizz/database';
 import { logger } from '../../utils/logger';
-import { guardSilent, requireAuth, RATE_LIMITS } from '../../core/guards';
+import { guardSilent, RATE_LIMITS } from '../../core/guards';
 
 /** Lobby pool-preview sockets (Watched / playlist / catalogue). Neighbour of match handlers. */
 export const registerPoolStatsHandlers = (socket: TypedSocket, gameManager: GameManager) => {
@@ -227,10 +227,16 @@ export const registerPoolStatsHandlers = (socket: TypedSocket, gameManager: Game
     }
   };
 
-  socket.on('watched:get_pool_stats', requireAuth(socket, getWatchedPoolStats));
+  socket.on(
+    'watched:get_pool_stats',
+    guardSilent(socket, 'watched:get_pool_stats', RATE_LIMITS.poolStats, getWatchedPoolStats),
+  );
   socket.on(
     'playlist:get_pool_stats',
     guardSilent(socket, 'playlist:get_pool_stats', RATE_LIMITS.poolStats, getPlaylistPoolStats),
   );
-  socket.on('catalogue:get_pool_stats', requireAuth(socket, getCataloguePoolStats));
+  socket.on(
+    'catalogue:get_pool_stats',
+    guardSilent(socket, 'catalogue:get_pool_stats', RATE_LIMITS.poolStats, getCataloguePoolStats),
+  );
 };

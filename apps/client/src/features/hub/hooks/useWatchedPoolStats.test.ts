@@ -27,6 +27,8 @@ describe('useWatchedPoolStats', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     socketMock.handlers.clear();
+    socketMock.socket.connected = true;
+    socketMock.socket.active = true;
     socketMock.socket.emit.mockClear();
     socketMock.socket.on.mockClear();
     socketMock.socket.off.mockClear();
@@ -99,5 +101,17 @@ describe('useWatchedPoolStats', () => {
       vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not mark offline while Socket.io is still reconnecting', () => {
+    socketMock.socket.connected = false;
+    socketMock.socket.active = true;
+    const { result } = renderHook(() =>
+      useWatchedPoolStats({ roomId: 'ROOM1', soundCount: 10, enabled: true }),
+    );
+    act(() => {
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(result.current.offline).toBe(false);
   });
 });
