@@ -52,8 +52,9 @@ export function SeoHead({
       canonical,
       description: metaDescription,
       title: fullTitle,
+      stripJsonLd: noindex,
     });
-  }, [canonical, metaDescription, fullTitle]);
+  }, [canonical, metaDescription, fullTitle, noindex]);
 
   return (
     <Helmet>

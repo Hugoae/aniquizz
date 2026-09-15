@@ -11,10 +11,15 @@ Reference for moderators and developers. Server enforcement is authoritative; th
 | Ban / unban                    |    ✅     |  ✅   |
 | Disconnect (kick, no sanction) |    ✅     |  ✅   |
 | End / close / kick from room   |    ✅     |  ✅   |
+| Staff audit journal            |    ✅     |  ✅   |
 | Change user role               |    ❌     |  ✅   |
 | Reset user stats               |    ❌     |  ✅   |
-| Catalogue create/delete        |    ❌     |  ✅   |
+| Catalogue writes               |    ❌     |  ✅   |
 | Dev tools                      |    ❌     |  ✅   |
+
+Owner-protected accounts (`kirikou` and emails in `PROTECTED_ACCOUNT_EMAILS`) cannot be muted, banned, kicked, disconnected, **or have their role changed**. The server returns 403; the UI still asks for confirmation before any role PATCH. Self-role changes and self mute/ban/disconnect are rejected with 400. Stats/daily resets may still target the caller (`allowSelf`).
+
+Mute, unmute, ban, unban, role change, and disconnect each insert a `StaffAuditLog` row (actor, target, action, duration). The Journal tab lists them newest-first. Catalogue PATCH/bulk/create/delete and playlist/daily tools are ADMIN-only; the moderator UI hides those writes.
 
 ## Sanctions
 
@@ -44,15 +49,17 @@ Presets in the admin UI map to minutes (`1h`, `12h`, `24h`, `1 week`, `1 month`,
 ## Integration tests
 
 - `apps/server/src/integration/ban.integration.test.ts` — ban at socket handshake.
-- `apps/server/src/integration/mute.integration.test.ts` — chat block + admin API apply/lift without reconnect.
+- `apps/server/src/integration/mute.integration.test.ts` — chat block + admin API apply/lift on a second player (self-mute is 400).
+- `apps/server/src/integration/adminRole.integration.test.ts` — self-role 400, owner-protected 403, ordinary target 200.
 
 ## Related code
 
-| Layer           | Path                                                                           |
-| --------------- | ------------------------------------------------------------------------------ |
-| Shared event    | `packages/shared/src/events.ts` → `profile:sanction_updated`                   |
-| Admin routes    | `apps/server/src/modules/admin/adminRoutes.ts`                                 |
-| Chat guard      | `apps/server/src/modules/chat/chatHandlers.ts`                                 |
-| Handshake guard | `apps/server/src/core/authMiddleware.ts`                                       |
-| Admin UI        | `apps/client/src/features/admin/components/UsersPanel.tsx`, `AdminUserRow.tsx` |
-| Player badge    | `apps/client/src/features/auth/components/SuspensionBadge.tsx`                 |
+| Layer           | Path                                                                               |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Shared event    | `packages/shared/src/events.ts` → `profile:sanction_updated`                       |
+| Admin routes    | `apps/server/src/modules/admin/adminRoutes.ts` (+ user/room/catalogue/dev modules) |
+| Owner lock      | `apps/server/src/config/protectedAccounts.ts` (`PROTECTED_ACCOUNT_EMAILS` env)     |
+| Chat guard      | `apps/server/src/modules/chat/chatHandlers.ts`                                     |
+| Handshake guard | `apps/server/src/core/authMiddleware.ts`                                           |
+| Admin UI        | `apps/client/src/features/admin/components/UsersPanel.tsx`, `AdminUserRow.tsx`     |
+| Player badge    | `apps/client/src/features/auth/components/SuspensionBadge.tsx`                     |

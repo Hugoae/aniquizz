@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { serverApiBase } from './env';
 import type { Precision, SuggestionAdminUpdateInput, SuggestionItem } from '@aniquizz/shared';
+import { ADMIN_HTTP_ERROR } from '@/features/admin/copy/adminCopy';
 
 /**
  * Thin client for the server-side admin REST API. Every call attaches the
@@ -31,10 +32,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   };
   const res = await fetch(`${API_BASE}/admin${path}`, { ...init, headers });
   if (!res.ok) {
-    let message = `Erreur ${res.status}`;
+    let message = ADMIN_HTTP_ERROR[res.status] ?? `Erreur ${res.status}`;
     try {
       const body = await res.json();
-      if (body?.error) message = body.error;
+      if (typeof body?.error === 'string' && body.error.trim()) message = body.error;
     } catch {
       /* ignore */
     }
@@ -138,6 +139,11 @@ export interface AdminRoomProgress {
   phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
+  artist: string | null;
+  typeLabel: string | null;
+  videoKey: string | null;
+  videoStartTime: number | null;
+  cover: string | null;
   endsAt: number | null;
 }
 
@@ -429,10 +435,50 @@ export interface DailyAdminList {
   challenges: DailyAdminChallenge[];
 }
 
+export type StaffAuditAction = 'MUTE' | 'UNMUTE' | 'BAN' | 'UNBAN' | 'ROLE_CHANGE' | 'DISCONNECT';
+
+export interface StaffAuditEntry {
+  id: string;
+  actorId: string | null;
+  actorUsername: string;
+  targetId: string | null;
+  targetUsername: string;
+  action: StaffAuditAction;
+  durationMinutes: number | null;
+  fromRole: Role | null;
+  toRole: Role | null;
+  createdAt: string;
+}
+
+export interface StaffAuditList {
+  entries: StaffAuditEntry[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export type CatalogueRepairReason = 'error' | 'missing_video' | 'forgotten_lock';
+
+export interface CatalogueRepairSong {
+  id: number;
+  title: string;
+  artist: string;
+  songType: string;
+  sequence: number;
+  downloadStatus: SongStatus;
+  isLocked: boolean;
+  errorLog: string | null;
+  videoKey: string;
+  updatedAt: string;
+  reasons: CatalogueRepairReason[];
+  anime: { id: number; name: string; isLocked: boolean };
+  franchise: { id: number; name: string; isLocked: boolean } | null;
+}
+
 // --- ENDPOINTS --------------------------------------------------------------
 
 export const adminApi = {
-  me: () => request<{ userId: string; username: string; role: Role }>('/me'),
   claimAdmin: () => request<{ role: Role }>('/dev/claim-admin', { method: 'POST' }),
 
   // Users
@@ -466,9 +512,17 @@ export const adminApi = {
   disconnectUser: (id: string) =>
     request<{ disconnected: number }>(`/users/${id}/disconnect`, { method: 'POST' }),
   getUserProfile: (id: string) => request<AdminUserProfile>(`/users/${id}/profile`),
+  listAudit: (opts: { page?: number; action?: StaffAuditAction } = {}) => {
+    const params = new URLSearchParams();
+    if (opts.page) params.set('page', String(opts.page));
+    if (opts.action) params.set('action', opts.action);
+    const qs = params.toString();
+    return request<StaffAuditList>(`/audit${qs ? `?${qs}` : ''}`);
+  },
 
   // Live rooms
   listRooms: () => request<{ rooms: AdminRoom[] }>('/rooms'),
+  getRoom: (id: string) => request<{ room: AdminRoom }>(`/rooms/${id}`),
   endMatch: (id: string) => request(`/rooms/${id}/end`, { method: 'POST' }),
   closeRoom: (id: string) => request(`/rooms/${id}/close`, { method: 'POST' }),
   kick: (roomId: string, userId: string) =>
@@ -490,6 +544,7 @@ export const adminApi = {
       locked?: boolean;
       page?: number;
       pageSize?: number;
+      songId?: number;
       signal?: AbortSignal;
     } = {},
   ) => {
@@ -500,11 +555,14 @@ export const adminApi = {
     if (opts.locked !== undefined) params.set('locked', String(opts.locked));
     if (opts.page) params.set('page', String(opts.page));
     if (opts.pageSize) params.set('pageSize', String(opts.pageSize));
+    if (opts.songId) params.set('songId', String(opts.songId));
     const qs = params.toString();
     return request<CatalogueTree>(`/catalogue/tree${qs ? `?${qs}` : ''}`, {
       signal: opts.signal,
     });
   },
+  catalogueRepair: () =>
+    request<{ songs: CatalogueRepairSong[]; truncated: boolean }>('/catalogue/repair'),
   updateSong: (id: number, data: SongWrite) =>
     request<CatalogueSong>(`/catalogue/songs/${id}`, {
       method: 'PATCH',

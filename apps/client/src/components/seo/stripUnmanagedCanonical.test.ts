@@ -66,4 +66,23 @@ describe('stripUnmanagedSeoMeta', () => {
       'Librairie | AniQuizz',
     );
   });
+
+  it('removes unmanaged JSON-LD on noindex routes', () => {
+    const root = document.implementation.createHTMLDocument('');
+    const ld = root.createElement('script');
+    ld.setAttribute('type', 'application/ld+json');
+    ld.textContent = '{"@type":"WebSite"}';
+    root.head.append(ld);
+    const kept = root.createElement('script');
+    kept.setAttribute('type', 'application/ld+json');
+    kept.setAttribute('data-rh', 'true');
+    kept.textContent = '{"@type":"Managed"}';
+    root.head.append(kept);
+
+    stripUnmanagedSeoMeta({ stripJsonLd: true }, root);
+
+    const left = [...root.querySelectorAll('script[type="application/ld+json"]')];
+    expect(left).toHaveLength(1);
+    expect(left[0]?.getAttribute('data-rh')).toBe('true');
+  });
 });

@@ -33,6 +33,18 @@ const envSchema = z
       z.string().min(1).optional(),
     ),
 
+    // Comma-separated owner emails for the admin lock (username `kirikou` stays in code).
+    PROTECTED_ACCOUNT_EMAILS: z.preprocess(
+      (v) => (v === '' ? undefined : v),
+      z.string().optional(),
+    ),
+    // Explicit opt-in for POST /admin/dev/claim-admin (never honored in production).
+    ALLOW_DEV_CLAIM_ADMIN: z.preprocess((v) => {
+      if (v === undefined || v === '') return false;
+      if (typeof v === 'boolean') return v;
+      return v === 'true' || v === '1';
+    }, z.boolean()),
+
     // Opaque MP4 Worker. Both or neither; required together in production.
     MEDIA_PLAYBACK_URL: z.preprocess(
       (v) => (v === '' ? undefined : v),

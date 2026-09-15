@@ -33,8 +33,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { RoomSpectatorDialog } from '@/features/admin/components/RoomSpectatorDialog';
 import { cn } from '@/lib/utils';
 import { adminApi, AdminApiError, type AdminRoom, type AdminUserProfile } from '@/lib/adminApi';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
@@ -249,6 +251,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [pending, setPending] = useState<PendingConfirm | null>(null);
   const [detail, setDetail] = useState<{ userId: string; connected: boolean } | null>(null);
+  const [spectateId, setSpectateId] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const [, forceTick] = useState(0);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -266,8 +269,19 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
 
   useEffect(() => {
     void load();
-    const id = setInterval(() => void load(), REFRESH_MS);
-    return () => clearInterval(id);
+    const tick = () => {
+      if (document.hidden) return;
+      void load();
+    };
+    const id = setInterval(tick, REFRESH_MS);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [load]);
 
   // 1 s ticker to keep "open since" and the round countdown live.
@@ -565,6 +579,14 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                   size="sm"
                   variant="outline"
                   disabled={!isPlaying(room)}
+                  onClick={() => setSpectateId(room.id)}
+                >
+                  {ADMIN_COPY.spectator.open}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!isPlaying(room)}
                   onClick={() =>
                     setPending({
                       title: `Terminer la partie de "${room.name}" ?`,
@@ -642,6 +664,8 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
               {sortedPlayers.map((p) => (
                 <div
                   key={p.userId}
+                  role={p.isBot ? undefined : 'button'}
+                  tabIndex={p.isBot ? undefined : 0}
                   className={cn(
                     'flex items-center gap-2 rounded-lg bg-secondary/50 px-2 py-1 text-xs transition-colors',
                     !p.isBot && 'cursor-pointer hover:bg-secondary',
@@ -650,6 +674,16 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                     p.isBot
                       ? undefined
                       : () => setDetail({ userId: p.userId, connected: p.isConnected })
+                  }
+                  onKeyDown={
+                    p.isBot
+                      ? undefined
+                      : (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setDetail({ userId: p.userId, connected: p.isConnected });
+                          }
+                        }
                   }
                   title={p.isBot ? undefined : 'Voir le profil'}
                 >
@@ -697,6 +731,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
       })}
 
       <PlayerProfileDialog player={detail} onClose={() => setDetail(null)} />
+      <RoomSpectatorDialog roomId={spectateId} onClose={() => setSpectateId(null)} />
 
       <AlertDialog open={!!pending} onOpenChange={(open) => !open && setPending(null)}>
         <AlertDialogContent>

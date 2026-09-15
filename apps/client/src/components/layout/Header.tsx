@@ -68,17 +68,21 @@ export function Header() {
         </Button>
         {slot === 'profile' && isStaff && (
           <Button
+            asChild
             variant="ghost"
-            onClick={() => navigate('/admin')}
-            onPointerEnter={() => prefetchRoute('admin')}
-            onFocus={() => prefetchRoute('admin')}
-            onPointerDown={() => prefetchRoute('admin')}
-            className="h-auto gap-2 rounded-lg px-3 py-1"
+            className="h-9 min-h-9 gap-2 rounded-lg px-3"
             aria-label="Administration"
             title="Administration"
           >
-            <Shield className="h-4 w-4 text-primary" aria-hidden />
-            <span className="hidden md:inline text-sm font-semibold">Admin</span>
+            <Link
+              to="/admin"
+              onPointerEnter={() => prefetchRoute('admin')}
+              onFocus={() => prefetchRoute('admin')}
+              onPointerDown={() => prefetchRoute('admin')}
+            >
+              <Shield className="h-4 w-4 text-primary" aria-hidden />
+              <span className="hidden text-sm font-semibold md:inline">Admin</span>
+            </Link>
           </Button>
         )}
         {slot === 'profile' && <div className="h-6 w-px bg-border/70" aria-hidden="true" />}

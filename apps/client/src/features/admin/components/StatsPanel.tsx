@@ -28,7 +28,6 @@ import {
   Users,
   Wifi,
 } from 'lucide-react';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis } from 'recharts';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -43,6 +42,7 @@ import {
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { adminApi, AdminApiError, type StatsOverview, type StatsPeriod } from '@/lib/adminApi';
+import { StatsMatchesChart } from '@/features/admin/components/StatsMatchesChart';
 
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
@@ -212,50 +212,6 @@ function TopList({
   );
 }
 
-const CHART_COLORS = ['#a855f7', '#8b5cf6', '#6366f1'];
-
-function MatchesChart({ data }: { data: { date: string; count: number }[] }) {
-  const chartData = data.map((d) => ({
-    ...d,
-    label: d.date.slice(8, 10) + '/' + d.date.slice(5, 7),
-  }));
-  return (
-    <div className="glass-card p-4 space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <BarChart3 className="h-4 w-4 text-primary" />
-        Parties par jour
-      </div>
-      <ResponsiveContainer width="100%" height={160}>
-        <BarChart data={chartData} margin={{ top: 8, right: 4, left: 4, bottom: 0 }}>
-          <XAxis
-            dataKey="label"
-            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-            axisLine={false}
-            tickLine={false}
-            interval="preserveStartEnd"
-          />
-          <Tooltip
-            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-            contentStyle={{
-              background: 'hsl(var(--background))',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 8,
-              fontSize: 12,
-            }}
-            labelStyle={{ color: 'hsl(var(--muted-foreground))' }}
-            formatter={(value: number) => [`${value} partie(s)`, '']}
-          />
-          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-            {chartData.map((_, i) => (
-              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
 // --- MAIN -------------------------------------------------------------------
 
 export function StatsPanel() {
@@ -287,8 +243,19 @@ export function StatsPanel() {
 
   useEffect(() => {
     if (!autoRefresh) return;
-    const id = setInterval(() => void load(), REFRESH_MS);
-    return () => clearInterval(id);
+    const tick = () => {
+      if (document.hidden) return;
+      void load();
+    };
+    const id = setInterval(tick, REFRESH_MS);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [autoRefresh, load]);
 
   // Ticker for the "refreshed Xs ago" label.
@@ -654,7 +621,7 @@ export function StatsPanel() {
         />
       </div>
 
-      <MatchesChart data={activity.perDay} />
+      <StatsMatchesChart data={activity.perDay} />
 
       <AlertDialog open={confirmReset} onOpenChange={(open) => !open && setConfirmReset(false)}>
         <AlertDialogContent>

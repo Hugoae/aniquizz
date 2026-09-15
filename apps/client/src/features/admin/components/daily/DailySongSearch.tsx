@@ -149,6 +149,7 @@ export function DailySongSearch({ excludeIds, disabled, onPick }: DailySongSearc
                     key={song.id}
                     type="button"
                     role="option"
+                    aria-selected={false}
                     className={cn(
                       'flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-secondary/60',
                       FOCUS_RING,

@@ -35,3 +35,31 @@ export const getAdminPanelState = (state: unknown): AdminPanelState | null => {
   if (!s.tab && !s.users && !s.highlightRoomId) return null;
   return s;
 };
+
+export const ADMIN_TAB_VALUES = [
+  'users',
+  'rooms',
+  'catalogue',
+  'playlists',
+  'daily',
+  'suggestions',
+  'stats',
+  'audit',
+  'dev',
+] as const;
+
+export type AdminTab = (typeof ADMIN_TAB_VALUES)[number];
+
+const isAdminTab = (value: string): value is AdminTab =>
+  (ADMIN_TAB_VALUES as readonly string[]).includes(value);
+
+/** Allowlisted `?tab=` — staff-only tabs collapse to users when the role cannot open them. */
+export function parseAdminTab(
+  raw: string | null,
+  opts: { canManage: boolean; isDev: boolean },
+): AdminTab {
+  if (!raw || !isAdminTab(raw)) return 'users';
+  if ((raw === 'playlists' || raw === 'daily') && !opts.canManage) return 'users';
+  if (raw === 'dev' && !(opts.canManage && opts.isDev)) return 'users';
+  return raw;
+}

@@ -13,6 +13,8 @@ export const HTTP_RATE_LIMITS = {
   /** Answer + next + a few retries across five rounds without starving the loop. */
   dailyPlay: { max: 80, windowMs: 60_000 },
   suggestionCreate: { max: 5, windowMs: 24 * 60 * 60 * 1000 },
+  /** Staff REST under /admin (per JWT userId). claim-admin is not in this bucket. */
+  adminStaff: { max: 90, windowMs: 60_000 },
 } as const;
 
 export { clientIp } from './httpClientIp';

@@ -21,7 +21,8 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 | **VideoStage**                       | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants.                 | `features/game/`                                  |
 | **useVideoPlayback**                 | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`.                                           | `features/game/`                                  |
 | **SoloMasteryBar / SoloScoreCard**   | Game-over medal UI; take `precision` so labels match server thresholds.                                     | `features/game/.../gameover/solo/`                |
-| **adminApi**                         | Typed fetch client for `/admin/*` REST (Bearer JWT).                                                        | `lib/adminApi.ts`                                 |
+| **adminCopy**                        | Isolated French strings for the staff console (tabs, presence, catalogue labels, HTTP fallbacks).           | `features/admin/copy/adminCopy.ts`                |
+| **adminApi**                         | Typed fetch client for `/admin/*` REST (Bearer JWT), including audit + catalogue repair.                    | `lib/adminApi.ts`                                 |
 | **dailyApi**                         | Typed fetch client for `/daily/*` (Quiz du jour).                                                           | `lib/dailyApi.ts`                                 |
 | **socket.ts**                        | Singleton Socket.io client wired to Supabase auth.                                                          | `lib/socket.ts`                                   |
 
@@ -35,7 +36,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 - **`jsx-a11y` is warn**, not error. Fix findings in a dedicated pass; don't
   disable the plugin to ship.
 - **User-facing copy is French; code/comments English.** Keep strings isolated
-  (e.g. `gameCopy.ts`, `hubCopy.ts`, `lobbyRulesCopy.ts`) for future i18n — don't inline French in logic.
+  (e.g. `gameCopy.ts`, `hubCopy.ts`, `lobbyRulesCopy.ts`, `adminCopy.ts`) for future i18n — don't inline French in logic.
 - **Design tokens only** — style via Tailwind semantic classes (`bg-primary`,
   `text-muted-foreground`) or `hsl(var(--token))`; reuse `.glass-card`,
   `.gradient-text`, `FOCUS_RING`, and `components/ui/` primitives. No hardcoded hex.

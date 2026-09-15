@@ -1,8 +1,9 @@
 import type { Response, Router } from 'express';
 import { z } from 'zod';
-import { requireRole, type AuthedRequest } from '../../core/httpAuth';
+import { type AuthedRequest } from '../../core/httpAuth';
 import { logger } from '../../utils/logger';
 import { handlePrismaError } from './prismaHttpError';
+import { ADMIN_ERRORS, staff } from './adminHttp';
 import { DailyHttpError } from '../daily/dailyErrors';
 import {
   listDailyAdmin,
@@ -27,7 +28,7 @@ const wrap =
       }
       if (handlePrismaError(error, res)) return;
       logger.error('Daily admin route failed', 'Admin', error);
-      if (!res.headersSent) res.status(500).json({ error: 'Internal error.' });
+      if (!res.headersSent) res.status(500).json({ error: ADMIN_ERRORS.internal });
     });
   };
 
@@ -39,7 +40,7 @@ const dateSchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
 export function registerAdminDailyRoutes(router: Router): void {
   router.get(
     '/daily',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (_req, res) => {
       res.json(await listDailyAdmin());
     }),
@@ -47,7 +48,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.get(
     '/daily/songs',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       const query = typeof req.query.query === 'string' ? req.query.query : '';
       const excludeRaw = typeof req.query.exclude === 'string' ? req.query.exclude : '';
@@ -61,7 +62,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/regenerate',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       const parsed = dateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -74,7 +75,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/status',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       const parsed = statusSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -89,7 +90,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/reorder',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       const parsed = reorderSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -102,7 +103,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/rounds/:roundId/replace',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       const parsed = replaceSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -121,7 +122,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/rounds/:roundId/regenerate',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       res.json(await regenerateDailyRound(String(req.params.id), String(req.params.roundId)));
     }),
@@ -129,7 +130,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/rounds/:roundId/clip',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       res.json(await reshuffleDailyRoundClip(String(req.params.id), String(req.params.roundId)));
     }),
@@ -137,7 +138,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/rounds/:roundId/void',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       res.json(await voidDailyRound(String(req.params.id), String(req.params.roundId)));
     }),
@@ -145,7 +146,7 @@ export function registerAdminDailyRoutes(router: Router): void {
 
   router.post(
     '/daily/:id/rounds/:roundId/restore',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       res.json(await restoreDailyRound(String(req.params.id), String(req.params.roundId)));
     }),

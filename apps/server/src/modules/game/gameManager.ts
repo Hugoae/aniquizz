@@ -21,6 +21,11 @@ export interface AdminRoomProgress {
   phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
+  artist: string | null;
+  typeLabel: string | null;
+  videoKey: string | null;
+  videoStartTime: number | null;
+  cover: string | null;
   endsAt: number | null;
 }
 
@@ -382,7 +387,17 @@ export class GameManager {
 
   /** Detailed live-room snapshot for the admin panel. */
   getRoomDetails(): AdminRoomDetail[] {
-    return [...this.rooms.values()].map((room) => ({
+    return [...this.rooms.values()].map((room) => this.toAdminRoomDetail(room));
+  }
+
+  /** One live room for the staff spectator dialog. */
+  getRoomDetail(roomId: string): AdminRoomDetail | null {
+    const room = this.rooms.get(roomId);
+    return room ? this.toAdminRoomDetail(room) : null;
+  }
+
+  private toAdminRoomDetail(room: Room): AdminRoomDetail {
+    return {
       id: room.id,
       name: room.settings.name,
       hostId: room.hostId,
@@ -413,7 +428,7 @@ export class GameManager {
         isConnected: p.isConnected,
         score: p.score,
       })),
-    }));
+    };
   }
 
   /** Force-end a running match, returning the room to its lobby. */

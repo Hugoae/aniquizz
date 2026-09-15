@@ -5,7 +5,7 @@
 
 ## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Settings is closed** (P1 + P2 + friend-request privacy unify + toaster/FAB + logged-in smoke). **Admin is closed** (P1 + P2). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → **Admin** → lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → **Admin** ✅ → lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -308,6 +308,55 @@ Canvas: `settings-feature-audit`. Overlay, not `/settings`. Identity stays JWT `
 **Not in this pass:** jsx-a11y backlog · HIBP · 26.7 · physical iPhone (emulation only).
 
 **Next:** Admin audit. Do not start 26.7.
+
+### Audit — Admin P1 ✅ (2026-09-15)
+
+Canvas: `admin-feature-audit`. HTTP `/admin/*`, not a socket channel. Identity stays JWT `userId`. No P0. P2 (god files, copy, rate limit, a11y) not started.
+
+| Item                     | What changed                                                                                                                                                                     |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Owner lock on role**   | `PATCH /admin/users/:id/role` now calls `guardProtectedTarget` (same as mute/ban/kick). Self-role stays 400.                                                                     |
+| **Confirm before PATCH** | Role `<select>` opens the existing AlertDialog (`Changer le rôle de … ?`). Controlled value snaps back until confirm.                                                            |
+| **Tests**                | Unit `isProtectedProfile` (kirikou). Integration: self 400, kirikou 403, disposable USER→MODERATOR 200 then delete. Client: select does not call `setRole` until pending action. |
+| **Docs**                 | `docs/admin/moderation.md` — role change is an owner-protected action.                                                                                                           |
+
+**Browser (admin_dev):** artus USER→MODERATOR → dialog → Annuler, still USER. Kirikou ADMIN→USER → Confirmer, still ADMIN (403).
+
+**Next:** Admin P2 if asked. Do not start 26.7.
+
+### Audit — Admin P2 ✅ (2026-09-15)
+
+Canvas: `admin-feature-audit`. Admin audit is **closed** (P1 + P2). Do not start 26.7.
+
+| Item                         | What changed                                                                                                                                                                                                         |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Self mute/ban/disconnect** | Server 400 `Vous ne pouvez pas appliquer cette action à votre propre compte.` UI already disabled mute/ban; disconnect is now disabled for `isSelf`. Mute integration tests mute a disposable player, not admin_dev. |
+| **Rate limit + bulk cap**    | `/admin` staff routes consume `HTTP_RATE_LIMITS.adminStaff` (90/min per JWT). `POST /catalogue/songs/bulk` `ids.max(200)`. `claim-admin` is not in that bucket.                                                      |
+| **Owner emails / claim**     | `PROTECTED_ACCOUNT_EMAILS` CSV in env (username `kirikou` stays in code). `ALLOW_DEV_CLAIM_ADMIN=true` required with `NODE_ENV !== production` for first-admin bootstrap.                                            |
+| **Partition**                | `adminRoutes` split (user/room/catalogue/stats/playlist/dev/daily + `adminHttp`). `adminService` split (user/stats/catalogue). Client: `UsersPagination`, `StatsMatchesChart`, `adminCopy`.                          |
+| **Copy / tokens / a11y**     | `adminCopy.ts` (Mute→Muet, In game→En partie, Dev Tools→Outils dev, PENDING/EASY labels). Chart fills `hsl(var(--primary))`. `DailySongSearch` `aria-selected`; room chips keyboard; Dev Tools switch labelled.      |
+| **Nav / SEO / polls**        | Header Admin is a real `Link` (min 36px). Tabs `?tab=` allowlist. Users list starts `loading`. Users/Stats/Rooms polls pause when `document.hidden`. Banned/muted counts folded into `listUsers`.                    |
+| **Errors / SEO**             | Removed unused `GET /me` + `adminApi.me`. French generic admin errors. Staff `SeoHead` description; unmanaged JSON-LD stripped on `noindex`.                                                                         |
+
+**Browser (admin_dev):** `/admin?tab=users` — Header Admin is a `Link`; Retour accueil is a `Link`; self mute/ban/disconnect disabled; labels Muet / Bannir / Outils dev. Tabs write `?tab=rooms|stats|dev`. Meta description is staff copy; JSON-LD count 0. Switch « Boucle (soak) » labelled. No mute/ban/reset/seed.
+
+**Next:** Staff operator console (audit journal, repair queue, spectator). Do not start 26.7.
+
+### Admin — staff operator console ✅ (2026-09-15)
+
+Follow-up to the Admin audit (P1 + P2). Do not start 26.7.
+
+| Item                 | What changed                                                                                                                                                       |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Journal d’audit**  | `StaffAuditLog` (mute / unmute / ban / unban / rôle / déconnexion). `GET /admin/audit`. Tab Journal. Usernames snapshotted; RLS server-only.                       |
+| **File catalogue**   | `GET /admin/catalogue/repair` — ERROR, vidéo manquante (PENDING/PROCESSING/SKIPPED), lock oublié (son non locké sous parent locké). Clic → `?tab=catalogue&song=`. |
+| **Spectateur salon** | `GET /admin/rooms/:id` + clip (videoKey, offset) + scores. Dialog lecture seule, sans join socket.                                                                 |
+| **MODERATOR borné**  | Catalogue PATCH/bulk/anime/franchise writes → ADMIN. UI: pas d’édition catalogue, pas de Reset (déjà ADMIN). Playlists / daily / dev déjà masqués.                 |
+| **Recherche UUID**   | `listUsers` exact id (filtre ignoré). Placeholder « pseudo, email ou identifiant ». Journal → clic cible ouvre `?tab=users&user=`.                                 |
+
+**Browser (admin_dev):** Journal lists mute/role from tests; catalogue « À réparer » (2 missing video) → `?song=11215` focuses Pride of Tomorrow; users `?user=` UUID returns only admin_dev. Spectateur not clicked (0 live rooms). No mute/ban/reset/seed.
+
+**Next:** Lists audit. Do not start 26.7.
 
 ### Audit — logged-in smoke Auth + Home + Hub + Game (2026-09-14)
 

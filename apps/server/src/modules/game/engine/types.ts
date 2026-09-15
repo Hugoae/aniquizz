@@ -91,6 +91,11 @@ export interface AdminMatchProgress {
   phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null;
   anime: string | null;
   title: string | null;
+  artist: string | null;
+  typeLabel: string | null;
+  videoKey: string | null;
+  videoStartTime: number | null;
+  cover: string | null;
   /** Server timestamp (ms) at which the current phase ends, or null. */
   endsAt: number | null;
 }

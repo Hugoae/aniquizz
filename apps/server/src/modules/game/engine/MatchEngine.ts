@@ -853,6 +853,11 @@ export class MatchEngine {
       phase: this.phase,
       anime: item?.anime ?? null,
       title: item?.title ?? null,
+      artist: item?.artist ?? null,
+      typeLabel: item?.typeLabel ?? null,
+      videoKey: item?.videoKey ?? null,
+      videoStartTime: item?.videoStartTime ?? null,
+      cover: item?.cover ?? null,
       endsAt: this.clock.endsAt || null,
     };
   }

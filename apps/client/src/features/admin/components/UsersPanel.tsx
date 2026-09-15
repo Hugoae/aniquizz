@@ -6,12 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-} from '@/components/ui/pagination';
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -25,7 +19,6 @@ import {
   adminApi,
   AdminApiError,
   type AdminUser,
-  type Role,
   type UserListFilter,
   type UserListSort,
 } from '@/lib/adminApi';
@@ -33,78 +26,7 @@ import type { AdminUsersListState } from '@/features/admin/adminNavigation';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { AdminUserRow, type AdminUserRowPending } from '@/features/admin/components/AdminUserRow';
-
-/** Build a compact page-number list with ellipses (e.g. 1 … 4 5 6 … 12). */
-const buildPageNumbers = (current: number, total: number): (number | '…')[] => {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  const nums = new Set(
-    [1, total, current, current - 1, current + 1].filter((p) => p >= 1 && p <= total),
-  );
-  const sorted = [...nums].sort((a, b) => a - b);
-  const result: (number | '…')[] = [];
-  for (let i = 0; i < sorted.length; i += 1) {
-    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push('…');
-    result.push(sorted[i]);
-  }
-  return result;
-};
-
-function UsersPagination({
-  page,
-  totalPages,
-  onPageChange,
-}: {
-  page: number;
-  totalPages: number;
-  onPageChange: (p: number) => void;
-}) {
-  if (totalPages <= 1) return null;
-  const pages = buildPageNumbers(page, totalPages);
-  return (
-    <Pagination className="pt-2">
-      <PaginationContent>
-        <PaginationItem>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => onPageChange(page - 1)}
-          >
-            Précédent
-          </Button>
-        </PaginationItem>
-        {pages.map((p, i) =>
-          p === '…' ? (
-            <PaginationItem key={`ellipsis-${i}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={p}>
-              <Button
-                variant={page === p ? 'outline' : 'ghost'}
-                size="icon"
-                className="h-9 w-9"
-                onClick={() => onPageChange(p)}
-              >
-                {p}
-              </Button>
-            </PaginationItem>
-          ),
-        )}
-        <PaginationItem>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= totalPages}
-            onClick={() => onPageChange(page + 1)}
-          >
-            Suivant
-          </Button>
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
-  );
-}
+import { UsersPagination } from '@/features/admin/components/UsersPagination';
 
 /** UI-facing errors are French; underlying API messages stay as the server sent. */
 const errorMessage = (e: unknown): string =>
@@ -147,15 +69,17 @@ export function UsersPanel({
   canManage,
   onGoToRoom,
   initialListState,
+  lookupUserId,
 }: {
   canManage: boolean;
   onGoToRoom?: (roomId: string) => void;
   initialListState?: AdminUsersListState;
+  lookupUserId?: string | null;
 }) {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [query, setQuery] = useState(initialListState?.query ?? '');
+  const [query, setQuery] = useState(lookupUserId ?? initialListState?.query ?? '');
   const [filter, setFilter] = useState<FilterKey>(initialListState?.filter ?? 'all');
   const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? 'username');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialListState?.sortDir ?? 'asc');
@@ -163,9 +87,18 @@ export function UsersPanel({
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [counts, setCounts] = useState({ online: 0, inGame: 0, banned: 0, muted: 0 });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [pending, setPending] = useState<PendingConfirm | null>(null);
-  const [debouncedQuery, setDebouncedQuery] = useState(initialListState?.query ?? '');
+  const [debouncedQuery, setDebouncedQuery] = useState(
+    lookupUserId ?? initialListState?.query ?? '',
+  );
+
+  useEffect(() => {
+    if (!lookupUserId) return;
+    setQuery(lookupUserId);
+    setDebouncedQuery(lookupUserId);
+    setPage(1);
+  }, [lookupUserId]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -217,20 +150,27 @@ export function UsersPanel({
     });
   }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
-  // Poll the current view every 10 s (presence stays fresh).
+  // Poll the current view every 10 s (presence stays fresh). Pause when the tab is hidden.
   useEffect(() => {
-    const id = setInterval(
-      () =>
-        void load({
-          search: debouncedQuery || undefined,
-          page,
-          filter,
-          sort: sortKey,
-          sortDir,
-        }),
-      10_000,
-    );
-    return () => clearInterval(id);
+    const tick = () => {
+      if (document.hidden) return;
+      void load({
+        search: debouncedQuery || undefined,
+        page,
+        filter,
+        sort: sortKey,
+        sortDir,
+      });
+    };
+    const id = setInterval(tick, 10_000);
+    const onVis = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVis);
+    };
   }, [debouncedQuery, page, filter, sortKey, sortDir, load]);
 
   const run = useCallback(
@@ -267,12 +207,6 @@ export function UsersPanel({
       });
     },
     [navigate, page, filter, sortKey, sortDir, debouncedQuery, profile?.id],
-  );
-  const handleRoleChange = useCallback(
-    (userId: string, role: Role) => {
-      void run(() => adminApi.setRole(userId, role), 'Rôle mis à jour.');
-    },
-    [run],
   );
 
   const confirmPending = async () => {
@@ -311,7 +245,7 @@ export function UsersPanel({
       </div>
 
       <Input
-        placeholder="Rechercher par pseudo ou email…"
+        placeholder="Rechercher par pseudo, email ou identifiant…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -398,7 +332,6 @@ export function UsersPanel({
                 onOpenDetail={handleOpenDetail}
                 onGoToRoom={onGoToRoom}
                 onSetPending={handleSetPending}
-                onRoleChange={handleRoleChange}
               />
             ))}
             {!users.length && !loading && (

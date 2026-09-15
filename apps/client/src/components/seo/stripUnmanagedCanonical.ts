@@ -31,7 +31,12 @@ const syncMetaContent = (root: ParentNode, selector: string, preferredContent: s
 
 /** Drop leftover Home description / OG tags from static index.html on inner routes. */
 export function stripUnmanagedSeoMeta(
-  preferred: { canonical?: string; description?: string; title?: string },
+  preferred: {
+    canonical?: string;
+    description?: string;
+    title?: string;
+    stripJsonLd?: boolean;
+  },
   root: ParentNode = document,
 ): void {
   stripUnmanagedCanonicalLinks(preferred.canonical, root);
@@ -46,5 +51,10 @@ export function stripUnmanagedSeoMeta(
   }
   if (preferred.canonical) {
     syncMetaContent(root, 'meta[property="og:url"]', preferred.canonical);
+  }
+  if (preferred.stripJsonLd) {
+    for (const el of root.querySelectorAll('script[type="application/ld+json"]')) {
+      if (!el.hasAttribute('data-rh')) el.remove();
+    }
   }
 }

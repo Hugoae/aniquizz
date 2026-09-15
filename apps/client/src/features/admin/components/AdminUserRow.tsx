@@ -15,6 +15,7 @@ import type { AdminUser, Presence, Role } from '@/lib/adminApi';
 import { adminApi } from '@/lib/adminApi';
 import { invalidateDailyToday } from '@/lib/dailyApi';
 import { cn } from '@/lib/utils';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import {
   DURATION_OPTIONS,
   formatRelativeFromNow,
@@ -32,9 +33,13 @@ const roleBadgeClass: Record<Role, string> = {
 };
 
 const PRESENCE_META: Record<Presence, { label: string; dot: string; text: string }> = {
-  online: { label: 'En ligne', dot: 'bg-success', text: 'text-success' },
-  in_game: { label: 'In game', dot: 'bg-primary', text: 'text-primary' },
-  offline: { label: 'Hors ligne', dot: 'bg-muted-foreground/30', text: 'text-muted-foreground' },
+  online: { label: ADMIN_COPY.presence.online, dot: 'bg-success', text: 'text-success' },
+  in_game: { label: ADMIN_COPY.presence.inGame, dot: 'bg-primary', text: 'text-primary' },
+  offline: {
+    label: ADMIN_COPY.presence.offline,
+    dot: 'bg-muted-foreground/30',
+    text: 'text-muted-foreground',
+  },
 };
 
 const formatDate = (iso: string): string =>
@@ -57,7 +62,6 @@ type AdminUserRowProps = {
   onOpenDetail: (user: AdminUser) => void;
   onGoToRoom?: (roomId: string) => void;
   onSetPending: (pending: AdminUserRowPending) => void;
-  onRoleChange: (userId: string, role: Role) => void;
 };
 
 function SanctionMenu({
@@ -91,7 +95,7 @@ function SanctionMenu({
           }
         >
           <Icon className="h-3.5 w-3.5 mr-1" />
-          {isMute ? 'Mute' : 'Ban'}
+          {isMute ? ADMIN_COPY.mute : ADMIN_COPY.ban}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -136,8 +140,7 @@ function adminUserRowEqual(prev: AdminUserRowProps, next: AdminUserRowProps): bo
     a.currentRoom?.name === b.currentRoom?.name &&
     prev.onOpenDetail === next.onOpenDetail &&
     prev.onGoToRoom === next.onGoToRoom &&
-    prev.onSetPending === next.onSetPending &&
-    prev.onRoleChange === next.onRoleChange
+    prev.onSetPending === next.onSetPending
   );
 }
 
@@ -148,7 +151,6 @@ export const AdminUserRow = memo(function AdminUserRow({
   onOpenDetail,
   onGoToRoom,
   onSetPending,
-  onRoleChange,
 }: AdminUserRowProps) {
   const banned = isSanctionActive(u.bannedUntil);
   const muted = isSanctionActive(u.mutedUntil);
@@ -198,7 +200,19 @@ export const AdminUserRow = memo(function AdminUserRow({
           <select
             className="bg-background border border-border rounded px-2 py-1"
             value={u.role}
-            onChange={(e) => onRoleChange(u.id, e.target.value as Role)}
+            aria-label={`Rôle de ${u.username}`}
+            onChange={(e) => {
+              const nextRole = e.target.value as Role;
+              if (nextRole === u.role) return;
+              onSetPending({
+                title: `Changer le rôle de ${u.username} ?`,
+                description: `${u.username} passera de ${u.role} à ${nextRole}.`,
+                confirmLabel: 'Confirmer',
+                action: () => adminApi.setRole(u.id, nextRole),
+                successMsg: 'Rôle mis à jour.',
+                targetUserId: u.id,
+              });
+            }}
           >
             {ROLE_OPTIONS.map((r) => (
               <option key={r} value={r}>
@@ -272,7 +286,7 @@ export const AdminUserRow = memo(function AdminUserRow({
               onSetPending({
                 title: `Réduire ${u.username} au silence ?`,
                 description: `Le joueur ne pourra plus écrire dans le chat pendant : ${label}.`,
-                confirmLabel: 'Mute',
+                confirmLabel: ADMIN_COPY.mute,
                 action: () => adminApi.mute(u.id, minutes),
                 successMsg: `Joueur réduit au silence (${label}).`,
                 targetUserId: u.id,
@@ -320,7 +334,7 @@ export const AdminUserRow = memo(function AdminUserRow({
               <Button
                 size="sm"
                 variant="outline"
-                disabled={u.presence === 'offline'}
+                disabled={isSelf || u.presence === 'offline'}
                 title="Déconnecter le compte (sans bannir)"
                 onClick={() =>
                   onSetPending({

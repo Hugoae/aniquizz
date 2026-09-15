@@ -503,8 +503,11 @@ export function DevToolsPanel({ onGoToRoom }: { onGoToRoom?: (roomId: string) =>
           >
             <Rocket className="h-4 w-4" /> Lancer headless (auto)
           </Button>
-          <label className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Switch checked={loop} onCheckedChange={setLoop} />
+          <label
+            htmlFor="admin-dev-loop"
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+          >
+            <Switch id="admin-dev-loop" checked={loop} onCheckedChange={setLoop} />
             Boucle (soak)
           </label>
         </div>

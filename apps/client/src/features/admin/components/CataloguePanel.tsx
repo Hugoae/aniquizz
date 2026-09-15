@@ -34,6 +34,7 @@ import {
   type SongDifficulty,
   type SongStatus,
 } from '@/lib/adminApi';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import {
   AnimeEditDialog,
   FranchiseEditDialog,
@@ -41,6 +42,7 @@ import {
   VideoPreviewDialog,
 } from './catalogue/EditDialogs';
 import { CatalogueSongRow } from './catalogue/CatalogueSongRow';
+import { CatalogueRepairQueue } from './catalogue/CatalogueRepairQueue';
 import { VirtualScroll } from '@/components/ui/VirtualScroll';
 
 const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : 'Erreur.');
@@ -56,7 +58,17 @@ type Confirm =
   | { kind: 'franchise'; id: number; label: string }
   | null;
 
-export function CataloguePanel({ canManage }: { canManage: boolean }) {
+export function CataloguePanel({
+  canManage,
+  focusSongId,
+  onOpenSong,
+  onClearFocus,
+}: {
+  canManage: boolean;
+  focusSongId?: number | null;
+  onOpenSong: (songId: number) => void;
+  onClearFocus?: () => void;
+}) {
   const [tree, setTree] = useState<CatalogueTree | null>(null);
   const [loading, setLoading] = useState(false);
   const loadAbortRef = useRef<AbortController | null>(null);
@@ -111,11 +123,12 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
     setLoading(true);
     try {
       const data = await adminApi.catalogueTree({
-        query: query || undefined,
-        status: status || undefined,
-        difficulty: difficulty || undefined,
-        locked: locked === '' ? undefined : locked === 'true',
-        page,
+        query: focusSongId ? undefined : query || undefined,
+        status: focusSongId ? undefined : status || undefined,
+        difficulty: focusSongId ? undefined : difficulty || undefined,
+        locked: focusSongId ? undefined : locked === '' ? undefined : locked === 'true',
+        page: focusSongId ? 1 : page,
+        songId: focusSongId || undefined,
         signal: ac.signal,
       });
       if (ac.signal.aborted) return;
@@ -132,7 +145,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
-  }, [query, status, difficulty, locked, page]);
+  }, [query, status, difficulty, locked, page, focusSongId]);
 
   loadRef.current = load;
 
@@ -143,7 +156,16 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
     };
   }, [load]);
 
-  const searching = query.length > 0;
+  useEffect(() => {
+    if (!focusSongId || !tree) return;
+    const id = `admin-song-${focusSongId}`;
+    const t = window.setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [focusSongId, tree]);
+
+  const searching = query.length > 0 || Boolean(focusSongId);
 
   const groupKey = (g: CatalogueFranchiseGroup) => (g.id === null ? 'orphan' : String(g.id));
   const isFOpen = (g: CatalogueFranchiseGroup) => searching || expandedF.has(groupKey(g));
@@ -258,12 +280,17 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
 
   return (
     <div className="space-y-4">
+      <CatalogueRepairQueue onOpenSong={onOpenSong} />
+
       {/* Header / filters */}
       <div className="flex flex-wrap items-center gap-2">
         <Input
           placeholder="Rechercher franchise, anime, son ou artiste…"
           value={rawQuery}
-          onChange={(e) => setRawQuery(e.target.value)}
+          onChange={(e) => {
+            if (focusSongId) onClearFocus?.();
+            setRawQuery(e.target.value);
+          }}
           className="max-w-sm"
         />
         <select
@@ -277,7 +304,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <option value="">Tous statuts</option>
           {STATUSES.map((s) => (
             <option key={s} value={s}>
-              {s}
+              {ADMIN_COPY.downloadStatus[s]}
             </option>
           ))}
         </select>
@@ -292,7 +319,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
           <option value="">Toutes difficultés</option>
           {DIFFICULTIES.map((d) => (
             <option key={d} value={d}>
-              {d}
+              {ADMIN_COPY.difficulty[d]}
             </option>
           ))}
         </select>
@@ -328,7 +355,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
       )}
 
       {/* Bulk bar */}
-      {selected.size > 0 && (
+      {canManage && selected.size > 0 && (
         <div className="sticky top-16 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm backdrop-blur">
           <span className="font-medium">{selected.size} son(s) sélectionné(s)</span>
           <select
@@ -341,7 +368,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
             <option value="">Difficulté…</option>
             {DIFFICULTIES.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {ADMIN_COPY.difficulty[d]}
               </option>
             ))}
           </select>
@@ -355,7 +382,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
             <option value="">Statut…</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {ADMIN_COPY.downloadStatus[s]}
               </option>
             ))}
           </select>
@@ -521,7 +548,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                       {isAOpen(a.id) && a.songs.length > 0 && (
                         <div className="overflow-x-auto pl-12">
                           <div className="flex items-center border-t border-border/50 px-2 py-1 text-xs font-medium text-muted-foreground">
-                            <div className="w-10 shrink-0" />
+                            {canManage && <div className="w-10 shrink-0" />}
                             <div className="min-w-0 flex-1">Son</div>
                             <div className="w-28 shrink-0">Diff.</div>
                             <div className="w-36 shrink-0">Statut</div>
@@ -540,6 +567,7 @@ export function CataloguePanel({ canManage }: { canManage: boolean }) {
                                 animeId={a.id}
                                 canManage={canManage}
                                 selected={selected.has(s.id)}
+                                highlighted={focusSongId === s.id}
                                 onToggleSelect={handleToggleSelect}
                                 onQuickPatch={quickPatch}
                                 onPreview={handlePreview}

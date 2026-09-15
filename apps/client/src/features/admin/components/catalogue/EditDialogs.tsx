@@ -22,6 +22,7 @@ import {
   type SongStatus,
   type SongType,
 } from '@/lib/adminApi';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import { getVideoUrl } from '@/lib/video';
 import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 
@@ -189,7 +190,9 @@ export function SongEditDialog({
               onChange={(e) => set('difficulty', e.target.value as SongDifficulty)}
             >
               {DIFFICULTIES.map((d) => (
-                <option key={d}>{d}</option>
+                <option key={d} value={d}>
+                  {ADMIN_COPY.difficulty[d]}
+                </option>
               ))}
             </select>
           </Row>
@@ -200,7 +203,9 @@ export function SongEditDialog({
               onChange={(e) => set('downloadStatus', e.target.value as SongStatus)}
             >
               {STATUSES.map((s) => (
-                <option key={s}>{s}</option>
+                <option key={s} value={s}>
+                  {ADMIN_COPY.downloadStatus[s]}
+                </option>
               ))}
             </select>
           </Row>

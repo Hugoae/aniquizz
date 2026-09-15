@@ -14,6 +14,16 @@ enum UserRole {
   MODERATOR
 }
 
+/// Staff console actions persisted for the admin audit journal.
+enum StaffAuditAction {
+  MUTE
+  UNMUTE
+  BAN
+  UNBAN
+  ROLE_CHANGE
+  DISCONNECT
+}
+
 enum DownloadStatus {
   PENDING
   PROCESSING
@@ -182,6 +192,8 @@ model Profile {
   dailyAttempts    DailyAttempt[]
   dailyStats       DailyPlayerStats?
   reviewedDailyChallenges DailyChallenge[] @relation("DailyReviewer")
+  staffAuditAsActor  StaffAuditLog[] @relation("StaffAuditActor")
+  staffAuditAsTarget StaffAuditLog[] @relation("StaffAuditTarget")
 
   @@index([xp(sort: Desc), level(sort: Desc)])
   @@index([gamesWon(sort: Desc)])
@@ -457,6 +469,28 @@ model SuggestionVote {
 
   @@unique([suggestionId, profileId])
   @@index([profileId, createdAt(sort: Desc)])
+}
+
+/// Server-only staff moderation journal (mute / ban / role / disconnect).
+model StaffAuditLog {
+  id              String           @id @default(uuid())
+  actorId         String?
+  actorUsername   String
+  targetId        String?
+  targetUsername  String
+  action          StaffAuditAction
+  durationMinutes Int?
+  fromRole        UserRole?
+  toRole          UserRole?
+  createdAt       DateTime         @default(now())
+
+  actor  Profile? @relation("StaffAuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  target Profile? @relation("StaffAuditTarget", fields: [targetId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([targetId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
 }
 
 /// Server-only sliding window used by HTTP rate limits (survives restarts).
