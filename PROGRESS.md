@@ -3,11 +3,11 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.6.1** · Match UX + Home life (planned) (2026-09-15)
+## Current phase: **26.7** · Pokédex + Admin rework (next) (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. Post-26.6 SPA audit is **closed** (Auth → Lists + leftover pass `ceec1bf` on `main`). Next ship is **26.6.1**: answer-type icon on the reveal bubble, reveal duration = min(guess, 15s) including `pickStartTime` / lobby estimate, Home/menu life. **Parked:** HIBP (Supabase Pro+); **26.7** pokédex + Admin panel rework. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **26.6.1** shipped on `main` as `52ce827` (reveal answer-type icons, reveal = min(guess, 15s)). Home / menu life was tried and dropped. No news article and no `SITE_VERSION` bump — git tag `26.6.1` later is GitHub-only. **Next:** **26.7** pokédex + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
-**26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
+**26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped
 
 ### Audit — method
 
@@ -17,10 +17,10 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Prompt**              | [`docs/agents/feature-audit.md`](./docs/agents/feature-audit.md) — French deliverable; 10 lenses (code, split, project rules, security, perf, logic, design/a11y, tests, **phone/responsive**, **SEO/alt/links**). Code/commits stay English.                        |
 | **Earlier global pass** | 26.5 product-audit hardening (canvas `full-product-audit`, 10–11 Sept.): Mix scoring, `skip_round`, SongHistory RLS, votes, peek, join rate-limit, etc. Still recorded under 26.5 below. Daily / leaderboard / suggestions were audited in their own 26.4–26.6 work. |
-| **This phase**          | Closed: quality gates (waves 1–2.6) · feature-audit prompt · Auth → Lists · leftover pass (`ceec1bf`). Current ship is **26.6.1**.                                                                                                                                   |
-| **Parked**              | HIBP leaked-password · 26.7 (pokédex + Admin rework)                                                                                                                                                                                                                 |
+| **This phase**          | Closed: quality gates (waves 1–2.6) · feature-audit prompt · Auth → Lists · leftover pass (`ceec1bf`). **26.6.1** shipped (`52ce827`). Current ship is **26.7**.                                                                                                     |
+| **Parked**              | HIBP leaked-password                                                                                                                                                                                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2) → leftover pass ✅. Post-26.6 SPA audit queue is empty. Current ship: **26.6.1**. Do not start **26.7**.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → Settings ✅ → Admin ✅ → **lists** ✅ (P1 + P2) → leftover pass ✅ → **26.6.1** ✅. Post-26.6 SPA audit queue is empty. Current ship: **26.7**.
 
 ### Audit — quality gates ✅
 
@@ -410,19 +410,19 @@ Follow-up after Lists P1/P2. Do not start 26.7. Identity stays JWT `userId`.
 
 **Browser (`admin_dev`, :8080):** Compte still shows AniList **Non lié** / MAL `Hugo_ae · Source active`. AniList link `Hugo_ae` did not persist (handle is not an AniList user). Hub Watched with the existing session hit `Rejected socket with invalid token` then the vousvoiement offline card. Logout succeeded (fresh-JWT path); password fill in the login modal was not automated. Relogin is needed locally. Dual-link + unlink + pool notify are covered by integration tests with a fresh token. Watched MAL `Hugo_ae`: 254 entries → 196 catalogue animes.
 
-**Next:** Relogin on :8080 if you were logged out. `pnpm db:generate` if the Prisma engine was locked by `pnpm dev`. Start **26.6.1** when asked; do not start **26.7**.
+**Next:** Relogin on :8080 if you were logged out. `pnpm db:generate` if the Prisma engine was locked by `pnpm dev`. **26.6.1** shipped; next is **26.7**.
 
-### 26.6.1 — planned (not implemented) (2026-09-15)
+### 26.6.1 — shipped (2026-09-15)
 
-Logged in `PLAN.md` after leftover `ceec1bf`. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md).
+`52ce827` on `main`. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). No news / no `SITE_VERSION` bump.
 
-| Item | Intent |
-| ---- | ------ |
-| **Answer-type icon** | Lucide on the Standard reveal bubble (green/red), from `GamePlayer.answerType` at reveal only. Guessing Check badge stays type-free. |
-| **Reveal duration** | `min(guess, 15s)` shared helper. `PlaylistBuilder.pickStartTime` and `estimateMatchMinutes` must use it (not a leftover 10s `GUESS_REVEAL`). Daily quiz clock stays separate. |
-| **Home / menus** | Small life, tokens, reduced-motion. No `SITE_VERSION` bump until the 26.6.1 release pass. |
+| Item                 | Status                                                                                                                                                                                                                                                                                             |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Answer-type icon** | ✅ Lucide on the Standard reveal bubble (green/red), from `GamePlayer.answerType` at reveal only. Guessing Check badge stays type-free. Sprint reuses `PlayerCard` → same bubble.                                                                                                                  |
+| **Reveal duration**  | ✅ `revealDurationSeconds` / `revealDurationMs` in shared (`min(guess, 15s)`, floor 1s). Wired in `matchEngineRound`, `matchEngineSync`, `PlaylistBuilder.pickStartTime`, `estimateMatchMinutes`. Removed leftover `GAME_CONFIG.TIMERS.GUESS_REVEAL` (fixed 10s). Daily quiz clock stays separate. |
+| **Home / menus**     | Dropped. Tried and reverted; not shipped.                                                                                                                                                                                                                                                          |
 
-**26.7** (later): pokédex found bar + heard/found/liked sources + **Admin panel rework**.
+**Next ship:** **26.7** — pokédex found bar + heard/found/liked sources + **Admin panel rework**.
 
 ### Audit — Lists P2 ✅ (2026-09-15)
 
@@ -1160,17 +1160,17 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 
 ## Roadmap (see `PLAN.md`)
 
-| Version   | Scope                                                                                                                                                                      |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **26.1**  | Delete account · AniList pool + opt-in · lobby rules · video modes · song start · admin lobby bots — ✅ all shipped                                                        |
-| **26.2**  | Librairie ✅ · MAL Watched ✅ · polish UX/perf ✅ · solo guess + Révéler ✅ · shipped 2026-07-12                                                                           |
-| **26.3**  | Engine tests + doc ✅ · GameForm ✅ · Sprint ✅ · polish ✅ · snapshots data ✅ · release content ✅ · lobby reconnect fix ✅ · admin catalogue search fix ✅ · tag `26.3` |
-| **26.4**  | Song likes full ✅ · library views ✅ · **boîte à idées** ✅ · **classement global** ✅ (5 metrics) · release content aligned ✅ · tag `26.4`                              |
-| **26.5**  | Endings catalogue ✅ · OP/ED filter ✅ · artist credits + locks imported ✅ · staff playlists ✅ · hardening ✅ · tag `26.5`                                               |
-| **26.6**    | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
-| **26.6.1**  | Reveal answer-type icon · reveal = min(guess, 15s) · Home/menu life — planned                                                                                            |
-| **26.7**    | Pokédex found bar · heard / found / liked playlists · Admin panel rework — parked until 26.6.1 ships                                                                     |
-| **26.x+**   | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
+| Version    | Scope                                                                                                                                                                      |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **26.1**   | Delete account · AniList pool + opt-in · lobby rules · video modes · song start · admin lobby bots — ✅ all shipped                                                        |
+| **26.2**   | Librairie ✅ · MAL Watched ✅ · polish UX/perf ✅ · solo guess + Révéler ✅ · shipped 2026-07-12                                                                           |
+| **26.3**   | Engine tests + doc ✅ · GameForm ✅ · Sprint ✅ · polish ✅ · snapshots data ✅ · release content ✅ · lobby reconnect fix ✅ · admin catalogue search fix ✅ · tag `26.3` |
+| **26.4**   | Song likes full ✅ · library views ✅ · **boîte à idées** ✅ · **classement global** ✅ (5 metrics) · release content aligned ✅ · tag `26.4`                              |
+| **26.5**   | Endings catalogue ✅ · OP/ED filter ✅ · artist credits + locks imported ✅ · staff playlists ✅ · hardening ✅ · tag `26.5`                                               |
+| **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
+| **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
+| **26.7**   | Pokédex found bar · heard / found / liked playlists · Admin panel rework — next                                                                                            |
+| **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions
 
