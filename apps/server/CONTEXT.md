@@ -72,6 +72,7 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   message is intentional. Profile stats use SQL aggregates for career daily /
   match counts — do not `findMany` every finished match into Node.
 - **`/admin` is REST + JWT `requireRole`.** Mute/ban/disconnect cannot target the caller (400). Owner lock: username `kirikou` plus `PROTECTED_ACCOUNT_EMAILS`. `POST /admin/dev/claim-admin` needs `ALLOW_DEV_CLAIM_ADMIN=true` and is ignored in production. Staff routes are rate-limited (`adminStaff`, 90/min); claim-admin is not. Mute/ban/role/disconnect persist to `StaffAuditLog`. Catalogue writes, playlists, and daily admin are ADMIN-only.
+- **Public boards omit bots, active bans, and `LEADERBOARD_HIDDEN_USERNAMES` (`admin_dev`).** Filter in `leaderboardQuery` / daily ranking so ranks compact. Do not hide Kirikou. In-match scoreboards stay unfiltered.
 - Bind to `0.0.0.0:$PORT` — Render requirement; filesystem is ephemeral.
 - **Guessing payloads must not contain the R2 filename.** `toPlaybackUrl` is identity
   without `MEDIA_PLAYBACK_URL` (local public R2). Production requires the Worker

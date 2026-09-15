@@ -4,9 +4,11 @@ import {
   clampLeaderboardPageSize,
   coveragePercent,
   isAccuracyEligible,
+  isLeaderboardHiddenUsername,
   isLeaderboardMetric,
   LEADERBOARD_ACCURACY_MIN_ROUNDS,
   LEADERBOARD_DEFAULT_PAGE_SIZE,
+  LEADERBOARD_HIDDEN_USERNAMES,
   LEADERBOARD_MAX_PAGE_SIZE,
   pageForRow,
   winRatePercent,
@@ -51,5 +53,12 @@ describe('leaderboard helpers', () => {
     expect(pageForRow(1, 25)).toBe(1);
     expect(pageForRow(25, 25)).toBe(1);
     expect(pageForRow(26, 25)).toBe(2);
+  });
+
+  it('hides the admin_dev fixture without matching other staff names', () => {
+    expect(LEADERBOARD_HIDDEN_USERNAMES).toContain('admin_dev');
+    expect(isLeaderboardHiddenUsername('admin_dev')).toBe(true);
+    expect(isLeaderboardHiddenUsername(' Admin_Dev ')).toBe(true);
+    expect(isLeaderboardHiddenUsername('Kirikou')).toBe(false);
   });
 });

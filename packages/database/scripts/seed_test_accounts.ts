@@ -24,7 +24,7 @@ interface TestAccount {
 const TEST_ACCOUNTS: TestAccount[] = [
   {
     id: '00000000-0000-4000-8000-000000000001',
-    username: 'admin_dev',
+    username: 'admin_dev', // excluded from public leaderboards (LEADERBOARD_HIDDEN_USERNAMES)
     email: 'admin@aniquizz.test',
     role: UserRole.ADMIN,
   },

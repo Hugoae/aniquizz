@@ -4,7 +4,7 @@ import { prisma } from '@aniquizz/database';
 import { DAILY_LEAK_KEYS, dailyCalendarDate, dailyXp, isDailyVictory } from '@aniquizz/shared';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
-import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
+import { getTestAccessToken, TEST_USER_IDS, TEST_USERNAMES } from '../test/testJwt';
 import { clearModeration, setModeration } from '../test/dbHelpers';
 import { dateFromIsoDay } from '../modules/daily/dailySnapshot';
 
@@ -237,7 +237,13 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
 
     const open = await fetch(`${bundle.url}/daily/leaderboard`, { headers: authHeaders() });
     const board = await open.json();
-    expect(board.entries.some((entry: { rank: number }) => entry.rank >= 1)).toBe(true);
+    expect(
+      board.entries.some(
+        (entry: { profileId: string; username: string }) =>
+          entry.profileId === TEST_USER_IDS.admin ||
+          entry.username.toLowerCase() === TEST_USERNAMES[TEST_USER_IDS.admin],
+      ),
+    ).toBe(false);
 
     const after = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },

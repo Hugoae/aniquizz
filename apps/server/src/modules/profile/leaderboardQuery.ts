@@ -1,11 +1,20 @@
 import { Prisma } from '@aniquizz/database';
-import { LEADERBOARD_ACCURACY_MIN_ROUNDS, type LeaderboardMetric } from '@aniquizz/shared';
+import {
+  LEADERBOARD_ACCURACY_MIN_ROUNDS,
+  LEADERBOARD_HIDDEN_USERNAMES,
+  type LeaderboardMetric,
+} from '@aniquizz/shared';
 
 export const BOT_ID_PATTERN = 'bot-%';
+
+const hiddenUsernameSql = Prisma.join(
+  LEADERBOARD_HIDDEN_USERNAMES.map((username) => Prisma.sql`${username}`),
+);
 
 const eligibleBase = Prisma.sql`
   p.id NOT LIKE ${BOT_ID_PATTERN}
   AND (p."bannedUntil" IS NULL OR p."bannedUntil" <= NOW())
+  AND LOWER(p.username) NOT IN (${hiddenUsernameSql})
 `;
 
 interface MetricSpec {

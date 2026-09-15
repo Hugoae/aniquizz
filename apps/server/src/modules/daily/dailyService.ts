@@ -6,6 +6,7 @@ import {
   assignDailyRanks,
   dailyCalendarDate,
   isDailyQcmCorrect,
+  isLeaderboardHiddenUsername,
   offeredDailyChoice,
   clampDailyResponseMs,
   type DailyAttemptState,
@@ -372,8 +373,9 @@ export async function getDailyLeaderboard(
     where: { challengeId: challenge.id, state: { in: ['COMPLETED', 'FORFEITED', 'EXPIRED'] } },
     include: { profile: { select: { id: true, username: true, avatar: true } } },
   });
-  const participantCount = rows.length;
-  const ranked = rows.map((row) => ({
+  const publicRows = rows.filter((row) => !isLeaderboardHiddenUsername(row.profile.username));
+  const participantCount = publicRows.length;
+  const ranked = publicRows.map((row) => ({
     id: row.profileId,
     correctCount: row.correctCount,
     totalResponseMs: row.totalResponseMs,

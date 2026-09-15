@@ -233,6 +233,36 @@ describe.skipIf(!hasIntegrationEnv)('leaderboard integration', () => {
     expect(names).not.toContain(banned.username);
   });
 
+  it('hides admin_dev from public ranks and the signed-in viewer strip', async () => {
+    const fixture = await prisma.profile.findFirst({
+      where: { username: { equals: 'admin_dev', mode: 'insensitive' } },
+    });
+    expect(fixture).toBeTruthy();
+    const priorXp = fixture!.xp;
+    await prisma.profile.update({ where: { id: fixture!.id }, data: { xp: TIE_XP } });
+    try {
+      const publicBoard = await browse('?metric=xp&pageSize=50');
+      expect(publicBoard.status).toBe(200);
+      const publicBody = (await publicBoard.json()) as LeaderboardResponse;
+      const hidden = (entry: { username: string; id: string }) =>
+        entry.id === fixture!.id || entry.username.toLowerCase() === 'admin_dev';
+      expect(publicBody.entries.some(hidden)).toBe(false);
+      expect(publicBody.podium.flatMap((group) => group.entries).some(hidden)).toBe(false);
+
+      if (!env.SUPABASE_JWT_SECRET) return;
+      const authed = await browse(
+        '?metric=xp&pageSize=50',
+        authHeaders(fixture!.id, fixture!.username),
+      );
+      expect(authed.status).toBe(200);
+      const body = (await authed.json()) as LeaderboardResponse;
+      expect(body.entries.some(hidden)).toBe(false);
+      expect(body.viewer?.status).toBe('unranked');
+    } finally {
+      await prisma.profile.update({ where: { id: fixture!.id }, data: { xp: priorXp } });
+    }
+  });
+
   it('counts unique discoveries and ignores replays', async () => {
     const songs = await prisma.song.findMany({
       where: { downloadStatus: 'COMPLETED' },

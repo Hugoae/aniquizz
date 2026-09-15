@@ -7,6 +7,14 @@ export const LEADERBOARD_DEFAULT_PAGE_SIZE = 25;
 export const LEADERBOARD_MAX_PAGE_SIZE = 50;
 export const LEADERBOARD_PODIUM_SAMPLE = 8;
 
+/** Dev/staff fixtures that must never appear on public community or daily boards. */
+export const LEADERBOARD_HIDDEN_USERNAMES = ['admin_dev'] as const;
+
+const hiddenUsernameSet = new Set<string>(LEADERBOARD_HIDDEN_USERNAMES);
+
+export const isLeaderboardHiddenUsername = (username: string): boolean =>
+  hiddenUsernameSet.has(username.trim().toLowerCase());
+
 export interface LeaderboardPagination {
   page: number;
   pageSize: number;
