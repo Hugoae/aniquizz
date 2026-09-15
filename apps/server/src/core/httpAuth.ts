@@ -70,6 +70,15 @@ export const optionalAuth = async (
 
 export { extractBearer };
 
+export const HTTP_AUTH_ERROR = {
+  missingBearer: "Jeton d'authentification manquant.",
+  invalidToken: 'Session invalide.',
+  noProfile: 'Profil introuvable.',
+  banned: 'Compte suspendu.',
+  privileges: 'Droits insuffisants.',
+  lookupFailed: "Impossible de vérifier l'authentification.",
+} as const;
+
 /**
  * Express middleware factory: authenticates the request via the Supabase access
  * token and enforces a minimum role — read from the database, never from the
@@ -79,13 +88,13 @@ export const requireRole = (minimum: UserRole) => {
   return async (req: AuthedRequest, res: Response, next: NextFunction): Promise<void> => {
     const token = extractBearer(req);
     if (!token) {
-      res.status(401).json({ error: 'Missing bearer token.' });
+      res.status(401).json({ error: HTTP_AUTH_ERROR.missingBearer });
       return;
     }
 
     const identity = await resolveIdentityFromToken(token);
     if (!identity) {
-      res.status(401).json({ error: 'Invalid token.' });
+      res.status(401).json({ error: HTTP_AUTH_ERROR.invalidToken });
       return;
     }
 
@@ -98,22 +107,22 @@ export const requireRole = (minimum: UserRole) => {
       if (row) profile = { role: row.role as UserRole, bannedUntil: row.bannedUntil };
     } catch (e) {
       logger.error('Admin auth: failed to load profile', 'Admin', e);
-      res.status(500).json({ error: 'Auth lookup failed.' });
+      res.status(500).json({ error: HTTP_AUTH_ERROR.lookupFailed });
       return;
     }
 
     if (!profile) {
-      res.status(403).json({ error: 'No profile.' });
+      res.status(403).json({ error: HTTP_AUTH_ERROR.noProfile });
       return;
     }
 
     if (profile.bannedUntil && profile.bannedUntil.getTime() > Date.now()) {
-      res.status(403).json({ error: 'Account banned.' });
+      res.status(403).json({ error: HTTP_AUTH_ERROR.banned });
       return;
     }
 
     if (!hasRole(profile.role, minimum)) {
-      res.status(403).json({ error: 'Insufficient privileges.' });
+      res.status(403).json({ error: HTTP_AUTH_ERROR.privileges });
       return;
     }
 

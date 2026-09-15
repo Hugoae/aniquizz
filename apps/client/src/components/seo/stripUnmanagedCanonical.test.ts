@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stripUnmanagedCanonicalLinks } from './stripUnmanagedCanonical';
+import { stripUnmanagedCanonicalLinks, stripUnmanagedSeoMeta } from './stripUnmanagedCanonical';
 
 describe('stripUnmanagedCanonicalLinks', () => {
   it('keeps one canonical and rewrites it to the preferred href', () => {
@@ -35,5 +35,35 @@ describe('stripUnmanagedCanonicalLinks', () => {
     const left = [...root.querySelectorAll('link[rel="canonical"]')];
     expect(left).toHaveLength(1);
     expect(left[0]?.getAttribute('href')).toBe('https://aniquizz.com/profile');
+  });
+});
+
+describe('stripUnmanagedSeoMeta', () => {
+  it('rewrites leftover Home description and og:title on an inner route', () => {
+    const root = document.implementation.createHTMLDocument('');
+    const desc = root.createElement('meta');
+    desc.setAttribute('name', 'description');
+    desc.setAttribute('content', 'Home leftover');
+    root.head.append(desc);
+    const og = root.createElement('meta');
+    og.setAttribute('property', 'og:title');
+    og.setAttribute('content', "AniQuizz - Le Blindtest d'Anime");
+    root.head.append(og);
+
+    stripUnmanagedSeoMeta(
+      {
+        canonical: 'https://aniquizz.com/library',
+        description: 'Librairie description',
+        title: 'Librairie | AniQuizz',
+      },
+      root,
+    );
+
+    expect(root.querySelector('meta[name="description"]')?.getAttribute('content')).toBe(
+      'Librairie description',
+    );
+    expect(root.querySelector('meta[property="og:title"]')?.getAttribute('content')).toBe(
+      'Librairie | AniQuizz',
+    );
   });
 });

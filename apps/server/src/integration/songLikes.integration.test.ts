@@ -4,6 +4,7 @@ import { createServerBundle, type ServerBundle } from '../test/createServerBundl
 import { hasIntegrationEnv } from '../test/env';
 import { clearLibraryMetaCache } from '../modules/catalogue/libraryMeta';
 import { clearLibrarySearchCache } from '../modules/catalogue/librarySearch';
+import { HTTP_RATE_LIMITS, hashRateLimitKey } from '../core/httpRateLimit';
 import { getTestAccessToken, TEST_USER_IDS } from '../test/testJwt';
 
 describe.skipIf(!hasIntegrationEnv)('song likes integration', () => {
@@ -23,6 +24,11 @@ describe.skipIf(!hasIntegrationEnv)('song likes integration', () => {
     });
   };
 
+  const clearLikeMutationLimit = () =>
+    prisma.httpRateLimitBucket.deleteMany({
+      where: { key: hashRateLimitKey('library:like', TEST_USER_IDS.admin) },
+    });
+
   beforeAll(async () => {
     clearLibraryMetaCache();
     clearLibrarySearchCache();
@@ -36,11 +42,19 @@ describe.skipIf(!hasIntegrationEnv)('song likes integration', () => {
     songId = tree.groups[0]?.animes[0]?.songs[0]?.id;
     expect(songId).toBeTruthy();
 
+    await clearLikeMutationLimit();
     await unlikeSong();
   });
 
   afterAll(async () => {
-    await unlikeSong();
+    if (songId) {
+      await prisma.songLike.deleteMany({
+        where: { profileId: TEST_USER_IDS.admin, songId },
+      });
+    }
+    await prisma.httpRateLimitBucket.deleteMany({
+      where: { key: hashRateLimitKey('library:like', TEST_USER_IDS.admin) },
+    });
     await bundle.close();
   });
 
@@ -243,5 +257,89 @@ describe.skipIf(!hasIntegrationEnv)('song likes integration', () => {
       data: { showFavoriteSongs: true },
     });
     await unlikeSong();
+  });
+
+  it('GET /library/songs?liked=liked with JWT only returns liked playable songs', async () => {
+    await fetch(`${bundle.url}/library/songs/${songId}/like`, {
+      method: 'PUT',
+      headers: authHeaders(),
+    });
+
+    const res = await fetch(`${bundle.url}/library/songs?liked=liked&pageSize=48`, {
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      songs: Array<{ id: number; liked?: boolean }>;
+      pagination: { totalItems: number };
+    };
+    expect(body.pagination.totalItems).toBeGreaterThanOrEqual(1);
+    expect(body.songs.some((s) => s.id === songId)).toBe(true);
+    for (const song of body.songs) {
+      expect(song.liked).toBe(true);
+    }
+
+    await unlikeSong();
+  });
+
+  it('PUT /library/songs/:id/like without a token is 401', async () => {
+    const res = await fetch(`${bundle.url}/library/songs/${songId}/like`, { method: 'PUT' });
+    expect(res.status).toBe(401);
+  });
+
+  it('PUT /library/songs/:id/like for an unknown song is 404', async () => {
+    const res = await fetch(`${bundle.url}/library/songs/999999999/like`, {
+      method: 'PUT',
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('PUT /library/likes/pinned with a song that is not liked is 400', async () => {
+    await unlikeSong();
+    const res = await fetch(`${bundle.url}/library/likes/pinned`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ songIds: [songId] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('DELETE unlike of a non-COMPLETED song is 404', async () => {
+    const unplayable = await prisma.song.findFirst({
+      where: { downloadStatus: { not: 'COMPLETED' } },
+      select: { id: true },
+    });
+    if (!unplayable) return;
+    const res = await fetch(`${bundle.url}/library/songs/${unplayable.id}/like`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it('PUT /library/songs/:id/like returns 429 after the mutation budget', async () => {
+    const primed = await fetch(`${bundle.url}/library/songs/${songId}/like`, {
+      method: 'PUT',
+      headers: authHeaders(),
+    });
+    expect(primed.status).toBe(200);
+    await clearLikeMutationLimit();
+    const responses = await Promise.all(
+      Array.from({ length: HTTP_RATE_LIMITS.userMutation.max + 1 }, () =>
+        fetch(`${bundle.url}/library/songs/${songId}/like`, {
+          method: 'PUT',
+          headers: authHeaders(),
+        }),
+      ),
+    );
+    const statuses = responses.map((response) => response.status);
+    expect(statuses.filter((status) => status === 200)).toHaveLength(
+      HTTP_RATE_LIMITS.userMutation.max,
+    );
+    expect(statuses.filter((status) => status === 429)).toHaveLength(1);
+    const blocked = responses.find((response) => response.status === 429);
+    const body = (await blocked!.json()) as { error: string };
+    expect(body.error).toMatch(/Trop de requêtes/);
   });
 });

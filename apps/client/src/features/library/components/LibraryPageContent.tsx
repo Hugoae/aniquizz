@@ -18,6 +18,7 @@ import {
   LibraryPaginationBar,
 } from '@/features/library/components/LibraryPagination';
 import { useLibraryBrowse } from '@/features/library/hooks/useLibraryBrowse';
+import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
 import type { LibrarySongSelectOptions } from '@/features/library/hooks/useInlineLibraryPreview';
 
 export function LibraryPageContent() {
@@ -72,14 +73,18 @@ export function LibraryPageContent() {
     <div className="min-h-screen bg-background">
       <Header />
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 pb-16 pt-24 md:px-6">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="mx-auto max-w-5xl space-y-4 px-4 pb-16 pt-24 md:space-y-6 md:px-6 outline-none"
+      >
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
           className="-ml-2 gap-2 pl-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          Retour à l&apos;accueil
+          {LIBRARY_COPY.backHome}
         </Button>
 
         <LibraryHero meta={browse.meta} />
@@ -111,7 +116,7 @@ export function LibraryPageContent() {
               {browse.error}
             </div>
             <Button variant="outline" size="sm" onClick={browse.reload}>
-              Réessayer
+              {LIBRARY_COPY.retry}
             </Button>
           </div>
         )}
@@ -119,7 +124,10 @@ export function LibraryPageContent() {
         {showInitialSkeleton ? (
           <LibraryListSkeleton />
         ) : showEmpty ? (
-          <LibraryEmptyState />
+          <LibraryEmptyState
+            title={browse.liked === 'liked' ? LIBRARY_COPY.emptyLikedTitle : undefined}
+            hint={browse.liked === 'liked' ? LIBRARY_COPY.emptyLikedHint : undefined}
+          />
         ) : (
           <div className="relative space-y-4">
             {browse.refreshing && (
@@ -149,6 +157,7 @@ export function LibraryPageContent() {
               page={browse.page}
               totalPages={browse.totalPages}
               onPageChange={browse.setPage}
+              hrefForPage={browse.pageHref}
             />
           </div>
         )}

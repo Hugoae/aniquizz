@@ -1,18 +1,65 @@
 import { prisma, type Prisma } from '@aniquizz/database';
 import {
+  LIBRARY_ANIME_SONGS_PAGE_SIZE,
+  libraryBrowseNeedsActor,
+  MAX_NESTED_SONGS_PER_ANIME,
   parseCatalogueSearchQuery,
   resolveCatalogueSongTypes,
+  type LibraryAnimesResponse,
   type LibraryBrowseParams,
   type LibraryDifficulty,
   type LibraryFranchiseGroup,
   type LibrarySong,
   type LibrarySongType,
+  type LibrarySongsResponse,
   type LibrarySort,
+  type LibraryTreeResponse,
 } from '@aniquizz/shared';
 import { resolveMatchingAnimeIdsForQuery } from './librarySearch';
 import { resolveLikedIds } from './songLikeService';
 
-export const MAX_PAGE_SIZE = 48;
+export const MAX_PAGE_SIZE = LIBRARY_ANIME_SONGS_PAGE_SIZE;
+
+export const emptyLibraryPagination = (page: number, pageSize: number) => ({
+  page,
+  pageSize,
+  totalItems: 0,
+  totalPages: 1,
+});
+
+export const emptyLibrarySongsResponse = (
+  page: number,
+  pageSize: number,
+): LibrarySongsResponse => ({
+  songs: [],
+  pagination: emptyLibraryPagination(page, pageSize),
+});
+
+export const emptyLibraryAnimesResponse = (
+  page: number,
+  pageSize: number,
+): LibraryAnimesResponse => ({
+  animes: [],
+  pagination: emptyLibraryPagination(page, pageSize),
+  totalSongs: 0,
+});
+
+export const emptyLibraryTreeResponse = (
+  page: number,
+  pageSize: number,
+  view: LibraryTreeResponse['view'] = 'tree',
+): LibraryTreeResponse => ({
+  groups: [],
+  pagination: emptyLibraryPagination(page, pageSize),
+  totalSongs: 0,
+  view,
+});
+
+/** Personal filters without a JWT must not fall through to the public catalogue. */
+export const shouldReturnEmptyPersonalBrowse = (
+  opts: LibraryBrowseParams,
+  userId?: string | null,
+): boolean => libraryBrowseNeedsActor(opts) && !userId;
 
 /** Playable = same rule as gameService and profile stats: COMPLETED videos only. */
 export const buildLibrarySongWhere = (
@@ -146,6 +193,40 @@ export const songSelect = {
 } satisfies Prisma.SongSelect;
 
 export type RawSong = Prisma.SongGetPayload<{ select: typeof songSelect }>;
+
+const nestedPlayableSongs = (songFilter: Prisma.SongWhereInput) => ({
+  where: songFilter,
+  orderBy: [{ songType: 'asc' as const }, { sequence: 'asc' as const }],
+  take: MAX_NESTED_SONGS_PER_ANIME,
+  select: songSelect,
+});
+
+export const animeBrowseSelect = (songFilter: Prisma.SongWhereInput) =>
+  ({
+    id: true,
+    name: true,
+    coverImage: true,
+    coverColor: true,
+    seasonYear: true,
+    format: true,
+    siteUrl: true,
+    popularity: true,
+    franchiseId: true,
+    songs: nestedPlayableSongs(songFilter),
+  }) satisfies Prisma.AnimeSelect;
+
+export const countSongsByAnimeId = async (
+  animeIds: number[],
+  songFilter: Prisma.SongWhereInput,
+): Promise<Map<number, number>> => {
+  if (!animeIds.length) return new Map();
+  const rows = await prisma.song.groupBy({
+    by: ['animeId'],
+    where: { animeId: { in: animeIds }, AND: [songFilter] },
+    _count: { _all: true },
+  });
+  return new Map(rows.map((row) => [row.animeId, row._count._all]));
+};
 
 export const mapLibrarySong = (row: RawSong, discovered = false, liked = false): LibrarySong => ({
   id: row.id,

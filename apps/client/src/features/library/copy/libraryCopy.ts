@@ -4,7 +4,7 @@ export const LIBRARY_COPY = {
   heroEyebrow: 'Catalogue complet',
   heroTitle: 'Librairie musicale',
   heroSubtitle:
-    'Explorez openings et endings. Écoutez les extraits et retrouvez vos découvertes en partie.',
+    'Explorez openings, endings et inserts. Écoutez les extraits et retrouvez vos découvertes en partie.',
   searchPlaceholder: 'Rechercher un anime, un titre ou un artiste…',
   filterSectionSearch: 'Recherche',
   filterToggle: 'Filtres',
@@ -45,19 +45,27 @@ export const LIBRARY_COPY = {
   metaLikesAria: (n: number) =>
     n === 0 ? 'Aucun like' : n === 1 ? '1 like' : `${n.toLocaleString('fr-FR')} likes`,
   animeSongCount: (n: number) => (n === 1 ? '1 son' : `${n.toLocaleString('fr-FR')} sons`),
+  nestedSeeAll: (hidden: number) =>
+    hidden === 1
+      ? '1 son de plus — vue Sons'
+      : `${hidden.toLocaleString('fr-FR')} sons de plus — vue Sons`,
   statLiked: (n: number) =>
     n === 0 ? 'aucun favori' : n === 1 ? '1 favori' : `${n.toLocaleString('fr-FR')} favoris`,
   searchModeHint: 'Résultats par son — pagination sur les extraits correspondants',
   songsViewHint: 'Vue Sons — pagination par extrait',
   typeOp: 'Openings',
   typeEd: 'Endings',
+  typeInsert: 'Inserts',
   typeOpShort: 'OP',
   typeEdShort: 'ED',
+  typeInsertShort: 'IN',
   diffEasy: 'Facile',
   diffMedium: 'Moyen',
   diffHard: 'Difficile',
   discoveredBadge: 'Déjà entendu',
   playPreview: "Écouter l'extrait",
+  previewPause: 'Pause',
+  previewClose: "Fermer l'aperçu",
   openAnilist: 'Voir sur AniList',
   playCta: 'Lancer une partie',
   playCtaHint: 'Entendez ce son en blindtest depuis le mode Standard.',
@@ -69,7 +77,18 @@ export const LIBRARY_COPY = {
         : `${n.toLocaleString('fr-FR')} sons trouvés`,
   emptyTitle: 'Aucun son ne correspond',
   emptyHint: 'Essayez un autre mot-clé ou élargissez les filtres.',
+  emptyLikedTitle: 'Aucun titre favori',
+  emptyLikedHint: 'Likez un extrait pour le retrouver ici et sur votre profil.',
+  emptyPersonalHint: 'Connectez-vous pour filtrer vos favoris et vos découvertes.',
   loadError: 'Impossible de charger la librairie.',
+  networkError: 'Erreur réseau.',
+  retry: 'Réessayer',
+  backHome: "Retour à l'accueil",
+  filtersAria: 'Filtres de la librairie',
+  pagePrev: 'Page précédente',
+  pageNext: 'Page suivante',
+  expandAnime: (name: string) => `Développer ${name}`,
+  collapseAnime: (name: string) => `Réduire ${name}`,
   videoUnavailable: 'Lecture indisponible (CDN non configuré).',
   statSongs: 'sons jouables',
   statAnimes: 'animes',
@@ -81,6 +100,7 @@ export const LIBRARY_COPY = {
 export const LIBRARY_SONG_TYPE_OPTIONS = [
   { value: 'OP', label: LIBRARY_COPY.typeOp },
   { value: 'ED', label: LIBRARY_COPY.typeEd },
+  { value: 'INSERT', label: LIBRARY_COPY.typeInsert },
 ] as const;
 
 export const LIBRARY_VIEW_OPTIONS = [

@@ -3,9 +3,9 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **Audit** · **v26.7 parked** (2026-09-14)
+## Current phase: **Audit** · **v26.7 parked** (2026-09-15)
 
-> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
+> **State:** 26.6 tagged `26.6` at `ed82c96`. This phase is the post-release audit: CI quality gates, a French feature-audit prompt, then one domain at a time. **Auth + Home is closed** (P1 + P2 + follow-ups). **Hub is closed** (P1 + P2 + follow-ups + logged-in create/launch settle). **Game is closed** (P1 + P2 + avatar Zod + VideoStage landscape hotfix); in-match pause/skip/F5/chat smoke still pending. **Profile is closed** (P1 + P2 + logged-in smoke + carousel `aria-current`). **Library is closed** (P1 + P2 + logged-in likes/favorites smoke). **Parked:** remaining `jsx-a11y` warnings (FriendsPanel and leftover warns) → dedicated cleanup then `error`; HIBP (Supabase Pro+); 26.7 pokédex. Feature-audit prompt now **requires** an end-to-end logged-in smoke (lens 10).
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped
 
@@ -20,7 +20,7 @@ Not a version bump. Walk the product after 26.6, encode the rules that already b
 | **This phase**          | Quality gates in CI (waves 1–2.6) · rewrite the feature prompt · Auth + Home · then Hub, Game, and the rest of the SPA.                                                                                                                                              |
 | **Parked**              | Remaining `jsx-a11y` warns (FriendsPanel, …) · HIBP leaked-password · 26.7 · MatchEngine/`Game.tsx` over the soft cap (do not split getSyncState/finish unless that code is touched)                                                                                 |
 
-**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → **Library** → Admin → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
+**Feature queue:** Auth + Home ✅ → Hub ✅ → Game ✅ → Profile ✅ → Library ✅ → **Admin** → Settings / lists. Skip domains already closed in 26.4–26.6 unless a neighbour audit surfaces a hole.
 
 ### Audit — quality gates ✅
 
@@ -178,7 +178,7 @@ Hub Zod on `lobby:create` / `lobby:join` capped `avatar` at 64 chars. Custom ava
 
 P2 added `landscape:max-h-[min(28vh,11rem)]` on `VideoStage`. Tailwind `landscape:` is `(orientation: landscape)` — every desktop monitor matches, so the clip became a ~176px strip. Cap is now `max-h-[42vh]`, with a tighter `36vh` only when landscape **and** `max-height: 500px` (phone on its side). Safe-area + column scroll stay.
 
-**Next:** Library audit. Do not start 26.7.
+**Next:** Admin audit. Do not start 26.7.
 
 ### Audit — Profile P1 ✅ (2026-09-14)
 
@@ -192,7 +192,7 @@ Canvas: `profile-feature-audit`. No P0. Server still owns username / avatar URL 
 | **Public profile errors**     | `profile:get_public` failures emit `profile:error`. The public page no longer navigates home on `friends:error`.                                                                                           |
 | **Privacy `everyone` invite** | Invalid `lobbyInviteAudience: 'everyone'` is rejected at Zod (no silent coerce).                                                                                                                           |
 
-**Left for P2:** god files, copy isolation, guest returnTo, unbounded stats queries. **Not started:** 26.7.
+**Left for P2:** god files, copy isolation, guest returnTo, unbounded stats queries. **Not started:** 26.7. Library P1/P2 closed 2026-09-15.
 
 ### Audit — Profile P2 ✅ (2026-09-14)
 
@@ -222,7 +222,54 @@ Socket.io does not auto-reconnect after `io server disconnect`. A same-tab overl
 | **Canonical leftover** | Static `index.html` canonical is `/`. `SeoHead` + `stripUnmanagedCanonicalLinks` leave a single `https://aniquizz.com/profile` (Helmet `data-rh`).                                                        |
 | **Browser**            | Own `/profile`: pokédex denominator 3002, friends list (not infinite spinner). Unknown UUID: « Profil indisponible » without home redirect. `/play` → solo config still works signed-in.                  |
 
-**Next:** Library audit. Optional later: Hub/Game logged-in smoke with the same test account. Do not start 26.7.
+**Next:** Admin audit. Optional later: Hub/Game logged-in smoke with the same test account. Do not start 26.7.
+
+### Audit — Library P1 ✅ (2026-09-15)
+
+Canvas: `library-feature-audit`. No P0. Identity stays JWT `userId`. Browse stays HTTP (`optionalAuth` / `requireRole`). Server still owns likes / pins / playable `COMPLETED`.
+
+| Item                     | What changed                                                                                                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Deep-link page**       | `nextDebouncedLibraryQuery` only `setPage(1)` when the trimmed `q` actually changes. Initial query is set from the URL (no 300 ms wipe). Smoke: `/library?view=songs&page=3` stays page 3, `aria-current` 3.                          |
+| **Likes race**           | `mergeLikedIdsFromServer` keeps in-flight optimistic ids. GET `/likes/ids` errors no longer empty the set. `resolveSongLikedState` does not fall back to `initialLiked` while a toggle is pending. Undo re-likes via `likeSong`.     |
+| **Personal filters**     | Shared `libraryBrowseNeedsActor`. Client waits `authReady` before fetching liked/discovered. Without an actor the server returns an empty page (not the 3002-song catalogue). Guest `?liked=liked` drops the filter after authReady. |
+| **Skip link**            | Library `<main id="main-content" tabIndex={-1}>`. Skip « Aller au contenu principal » focuses the catalogue.                                                                                                                          |
+
+**Left for leftover P2:** (closed 2026-09-15 follow-up) nested cap, unlike COMPLETED, 429 likes, prerender copy, phone viewport. **Not started:** 26.7.
+
+### Audit — Library P2 ✅ (2026-09-15)
+
+Canvas: `library-feature-audit`. Library audit is **closed** (P1 + P2 + logged-in smoke). Do not start 26.7.
+
+| Item                    | What changed                                                                                                                                                                                                                                   |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Copy / i18n**         | Remaining FR strings in `LIBRARY_COPY` (`retry`, `backHome`, pagination, preview Pause/Fermer, `filtersAria`, `animeSongCount`, `typeInsert`, `emptyPersonalHint`). `HTTP_AUTH_ERROR.missingBearer` in French. Dialog close: `Fermer`.          |
+| **Partition**           | URL parse / debounce / `pageHref` in `libraryBrowseParams.ts`. Hook ~407 lines (was 421). `libraryTree` popularity no longer loads every franchise in JS (~409). `routes/library.ts` ~351. TreeView / Filters stay under the soft cap.         |
+| **Popularity SQL**      | Tree `sort=popularity` uses `Franchise.maxPopularity` `orderBy` + skip/take. Nested songs capped at `MAX_NESTED_SONGS_PER_ANIME` (24) with honest `songCount` + « N sons de plus » link. |
+| **Likes read / ids**    | `library:read` rate limit on GET likes/ids and pinned. `getLikedSongIds` filters `COMPLETED` and caps at `MAX_LIKED_IDS` (5000). Pin of a song that is not liked → `NOT_FOUND` → HTTP 400.                                                     |
+| **A11y / UX**           | Like `sm` target 36px (`h-9`). Pagination page numbers are real `/library?...` hrefs. Drawer chrome uses `bg-background`. INSERT chip in type filters.                                                                                         |
+| **SEO**                 | `stripUnmanagedSeoMeta` drops leftover Home description / og:title. `collectionPageJsonLd` on `/library`. Description = `LIBRARY_COPY.heroSubtitle`.                                                                                           |
+| **Tests**               | Shared `libraryBrowseNeedsActor` + `capNestedSongs`. Client debounce/page href + likes merge + SEO strip + prerender copy ≡ heroSubtitle. Server empty personal browse. Integration: guest liked empty, 401 FR, JWT liked-only, unknown like 404, pin-not-liked 400, nested cap, unlike non-COMPLETED 404, PUT like 429. |
+
+**Browser (admin_dev, localhost:8083):** page=3 holds; skip focuses `#main-content`; like stays « Retirer des favoris » after ~2.6 s; `/library?liked=liked` shows 4 songs (not 3002). Guest like still opens AuthModal. Follow-up: One Piece nested list caps at 24 + « 28 sons de plus »; PUT like burst → 429 `Trop de requêtes.` ; 390×844 overflowX false, like 36px, first anime row ~666px (was below the fold); landscape 700×400 overflowX false. Compact hero + hide stats under `md`.
+
+**Not in this pass:** jsx-a11y backlog · HIBP · 26.7 · physical iPhone (emulation only). Prod prerender `/library` still has the pre-inserts sentence until the next client deploy.
+
+### Audit — Library follow-up (animeId, row hit, prerender, like, virt) ✅ (2026-09-15)
+
+Canvas: `library-feature-audit`. Nested cap 24 stays. Do not start 26.7.
+
+| Item | What changed |
+| ---- | ------------ |
+| **See-all `animeId`** | `libraryAnimeSongsHref(id)` → `/library?view=songs&animeId=N`. URL builder prefers `animeId` over `q`. Typing a new search clears the id. Songs page size 96 for one anime (`LIBRARY_ANIME_SONGS_PAGE_SIZE`). |
+| **Anime row hit target** | Vue Anime: whole header is the expand button (`min-h-11`, ~768×65). Tree already had a full-width row; added `aria-label` + `min-h-11`. |
+| **Prerender from copy** | `scripts/library-copy.mjs` reads `heroTitle` / `heroSubtitle` from `LIBRARY_COPY`. `prerender-routes.mjs` no longer duplicates the sentence. |
+| **Concurrent like** | `createMany({ skipDuplicates: true })` then increment `likeCount` only if inserted. No P2002 on overlapping PUT. |
+| **Virtual songs view** | `LibrarySongsGrid` uses `VirtualScroll` (threshold 12, `min(70dvh, 48rem)`). Tree still caps nested songs at 24. |
+
+**Browser:** One Piece row click expands. See-all href `/library?view=songs&animeId=21`. Songs view: 52 found, no `q`, ~11 DOM rows (virtualized). Integration: `GET /library/songs?animeId=` only that anime; likes 429 suite still green.
+
+**Next:** Admin audit. Do not start 26.7.
 
 ### Audit — logged-in smoke Auth + Home + Hub + Game (2026-09-14)
 
@@ -239,7 +286,7 @@ Canvas: `auth-hub-game-smoke`. Account `admin_dev` on local Vite + server. Featu
 
 Same ghost-socket class as profile stats. Hub pool hooks and lobby mutators now wait `subscribeWhenSocketReady` / `onceWhenSocketReady` (80 ms settle, no `connect()` from Hub). Skip link is `fixed z-[200]` (not `sr-only` under the header). Pool card hides the unit while the count is `…`. Carousel dots use `aria-current="page"` only on the active page.
 
-Do not start 26.7. Next: Library audit (or Game logged-in pause/skip/F5/chat after a match actually starts).
+Do not start 26.7. Next: Admin audit (or Game logged-in pause/skip/F5/chat after a match actually starts).
 
 ### Audit — Auth + Home ✅ (2026-09-14)
 

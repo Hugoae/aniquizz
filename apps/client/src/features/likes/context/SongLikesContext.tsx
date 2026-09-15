@@ -13,12 +13,14 @@ import { libraryApi, LibraryApiError } from '@/lib/libraryApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { LIKES_COPY } from '@/features/likes/copy/likesCopy';
+import { mergeLikedIdsFromServer } from '@/features/likes/lib/likedIdsSync';
 
 interface SongLikesContextValue {
   ready: boolean;
   likedIds: ReadonlySet<number>;
   likedCount: number;
   isLiked: (songId: number) => boolean;
+  hasPendingLike: (songId: number) => boolean;
   toggleLike: (songId: number) => Promise<boolean>;
   /** Marks liked ids as needed; the fetch only runs once a consumer surface mounts. */
   requestLikedIds: () => void;
@@ -31,16 +33,21 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
   const { setShowAuthModal } = useAuthModal();
   const [likedIds, setLikedIds] = useState<Set<number>>(new Set());
   const [ready, setReady] = useState(false);
-  // Lazy gate: the provider wraps the whole app, but /library/likes/ids is only
-  // fetched when a like-aware surface (library, reveal card, profile) mounts.
   const [wanted, setWanted] = useState(false);
-  // Bumped on every optimistic toggle so an in-flight ids fetch never clobbers it.
-  const toggleVersionRef = useRef(0);
+  const pendingRef = useRef(new Map<number, boolean>());
+  const inFlightRef = useRef(0);
+  const refetchWhenIdleRef = useRef(false);
 
   const requestLikedIds = useCallback(() => setWanted(true), []);
 
+  const applyServerIds = useCallback((songIds: number[]) => {
+    setLikedIds(mergeLikedIdsFromServer(songIds, pendingRef.current));
+  }, []);
+
   useEffect(() => {
     if (!user) {
+      pendingRef.current.clear();
+      inFlightRef.current = 0;
       setLikedIds(new Set());
       setReady(true);
       return;
@@ -51,20 +58,21 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    setReady(false);
 
     const load = async () => {
       try {
-        let version = toggleVersionRef.current;
-        let payload = await libraryApi.likedIds();
-        // A toggle raced the fetch: the list is stale, fetch again before applying.
-        while (!cancelled && version !== toggleVersionRef.current) {
-          version = toggleVersionRef.current;
-          payload = await libraryApi.likedIds();
+        const payload = await libraryApi.likedIds();
+        if (cancelled) return;
+        if (inFlightRef.current > 0) {
+          refetchWhenIdleRef.current = true;
+          applyServerIds(payload.songIds);
+          return;
         }
-        if (!cancelled) setLikedIds(new Set(payload.songIds));
+        applyServerIds(payload.songIds);
       } catch {
-        if (!cancelled) setLikedIds(new Set());
+        if (!cancelled) {
+          // Keep the optimistic set — a 401/network blip must not wipe hearts.
+        }
       } finally {
         if (!cancelled) setReady(true);
       }
@@ -74,7 +82,7 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [user, wanted]);
+  }, [user, wanted, applyServerIds]);
 
   const toggleLike = useCallback(
     async (songId: number): Promise<boolean> => {
@@ -84,14 +92,30 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
       }
 
       setWanted(true);
-      toggleVersionRef.current += 1;
       const wasLiked = likedIds.has(songId);
+      const nextLiked = !wasLiked;
+      pendingRef.current.set(songId, nextLiked);
+      inFlightRef.current += 1;
       setLikedIds((prev) => {
         const next = new Set(prev);
-        if (wasLiked) next.delete(songId);
-        else next.add(songId);
+        if (nextLiked) next.add(songId);
+        else next.delete(songId);
         return next;
       });
+
+      const settleInFlight = () => {
+        inFlightRef.current = Math.max(0, inFlightRef.current - 1);
+        pendingRef.current.delete(songId);
+        if (inFlightRef.current === 0 && refetchWhenIdleRef.current) {
+          refetchWhenIdleRef.current = false;
+          void libraryApi
+            .likedIds()
+            .then((payload) => applyServerIds(payload.songIds))
+            .catch(() => {
+              /* keep optimistic set */
+            });
+        }
+      };
 
       try {
         const result = wasLiked
@@ -103,6 +127,7 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
           else next.delete(songId);
           return next;
         });
+        settleInFlight();
 
         if (result.liked) {
           toast.success(LIKES_COPY.likeAddedToast);
@@ -113,7 +138,8 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
               label: LIKES_COPY.likeRemovedUndo,
               onClick: () => {
                 void (async () => {
-                  toggleVersionRef.current += 1;
+                  pendingRef.current.set(songId, true);
+                  inFlightRef.current += 1;
                   setLikedIds((prev) => new Set(prev).add(songId));
                   try {
                     const restored = await libraryApi.likeSong(songId);
@@ -124,15 +150,18 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
                       return next;
                     });
                     if (restored.liked) toast.success(LIKES_COPY.likeAddedToast);
-                  } catch (e) {
+                  } catch (err) {
                     setLikedIds((prev) => {
                       const next = new Set(prev);
                       next.delete(songId);
                       return next;
                     });
                     const message =
-                      e instanceof LibraryApiError ? e.message : LIKES_COPY.likeErrorToast;
+                      err instanceof LibraryApiError ? err.message : LIKES_COPY.likeErrorToast;
                     toast.error(message);
+                  } finally {
+                    inFlightRef.current = Math.max(0, inFlightRef.current - 1);
+                    pendingRef.current.delete(songId);
                   }
                 })();
               },
@@ -148,12 +177,13 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
           else next.delete(songId);
           return next;
         });
+        settleInFlight();
         const message = e instanceof LibraryApiError ? e.message : LIKES_COPY.likeErrorToast;
         toast.error(message);
         return wasLiked;
       }
     },
-    [likedIds, setShowAuthModal, user],
+    [applyServerIds, likedIds, setShowAuthModal, user],
   );
 
   const value = useMemo<SongLikesContextValue>(
@@ -162,6 +192,7 @@ export function SongLikesProvider({ children }: { children: ReactNode }) {
       likedIds,
       likedCount: likedIds.size,
       isLiked: (songId: number) => likedIds.has(songId),
+      hasPendingLike: (songId: number) => pendingRef.current.has(songId),
       toggleLike,
       requestLikedIds,
     }),

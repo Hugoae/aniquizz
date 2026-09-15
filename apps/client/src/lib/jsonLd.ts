@@ -76,6 +76,18 @@ export function videoGameJsonLd() {
   };
 }
 
+export function collectionPageJsonLd(opts: { name: string; description: string; path: string }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: opts.name,
+    description: opts.description,
+    url: absoluteUrl(opts.path),
+    isPartOf: { '@id': WEBSITE_ID },
+    inLanguage: 'fr-FR',
+  };
+}
+
 /** Single @graph block for the home page (Google site-name best practice). */
 export function homeJsonLd() {
   return {

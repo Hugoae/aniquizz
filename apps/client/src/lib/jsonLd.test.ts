@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { homeJsonLd, SITE_ALTERNATE_NAMES, websiteJsonLd } from './jsonLd';
+import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { homeJsonLd, SITE_ALTERNATE_NAMES, websiteJsonLd, collectionPageJsonLd } from './jsonLd';
 
 describe('home JSON-LD', () => {
   it('lists genuine aliases, not a stuffed keyword list', () => {
@@ -21,5 +22,28 @@ describe('home JSON-LD', () => {
     const match = html.match(/<script type="application\/ld\+json">\s*([\s\S]*?)\s*<\/script>/);
     expect(match?.[1]).toBeTruthy();
     expect(JSON.parse(match![1])).toEqual(homeJsonLd());
+  });
+
+  it('describes /library as a CollectionPage', () => {
+    const block = collectionPageJsonLd({
+      name: 'Librairie | AniQuizz',
+      description: 'Catalogue',
+      path: '/library',
+    });
+    expect(block['@type']).toBe('CollectionPage');
+    expect(block.url).toContain('/library');
+  });
+});
+
+describe('prerender /library', () => {
+  it('reads hero copy from libraryCopy.ts instead of duplicating the sentence', () => {
+    const prerender = readFileSync(
+      path.join(process.cwd(), 'scripts/prerender-routes.mjs'),
+      'utf8',
+    );
+    expect(prerender).toContain('readLibraryHeroCopy');
+    expect(prerender).toContain('libraryCopy.ts');
+    expect(prerender).not.toContain(LIBRARY_COPY.heroSubtitle);
+    expect(LIBRARY_COPY.heroSubtitle).toMatch(/inserts/i);
   });
 });

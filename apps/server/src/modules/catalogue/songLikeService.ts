@@ -6,6 +6,8 @@ import type {
 } from '@aniquizz/shared';
 
 export const MAX_PROFILE_PINNED_SONGS = 5;
+/** Hard cap on GET /library/likes/ids — hearts only need playable catalogue ids. */
+export const MAX_LIKED_IDS = 5000;
 
 export class SongLikeError extends Error {
   constructor(
@@ -41,13 +43,13 @@ export const likeSong = async (userId: string, songId: number): Promise<SongLike
   await assertPlayableSong(songId);
 
   await prisma.$transaction(async (tx) => {
-    const existing = await tx.songLike.findUnique({
-      where: { profileId_songId: { profileId: userId, songId } },
-      select: { id: true },
+    // INSERT ON CONFLICT DO NOTHING — concurrent PUT cannot P2002 the unique like.
+    const created = await tx.songLike.createMany({
+      data: [{ profileId: userId, songId }],
+      skipDuplicates: true,
     });
-    if (existing) return;
+    if (created.count === 0) return;
 
-    await tx.songLike.create({ data: { profileId: userId, songId } });
     await tx.song.update({
       where: { id: songId },
       data: { likeCount: { increment: 1 } },
@@ -62,9 +64,7 @@ export const unlikeSong = async (
   songId: number,
 ): Promise<SongLikeToggleResponse> => {
   assertHumanUser(userId);
-  if (!Number.isInteger(songId) || songId <= 0) {
-    throw new SongLikeError('Identifiant de son invalide.', 'INVALID_SONG');
-  }
+  await assertPlayableSong(songId);
 
   await prisma.$transaction(async (tx) => {
     const deleted = await tx.songLike.deleteMany({
@@ -83,13 +83,21 @@ export const unlikeSong = async (
 
 export const getLikedSongIds = async (userId: string): Promise<SongLikesIdsResponse> => {
   assertHumanUser(userId);
-  const rows = await prisma.songLike.findMany({
-    where: { profileId: userId },
-    select: { songId: true },
-    orderBy: { likedAt: 'desc' },
-  });
+  const where = {
+    profileId: userId,
+    song: { downloadStatus: 'COMPLETED' as const },
+  };
+  const [total, rows] = await Promise.all([
+    prisma.songLike.count({ where }),
+    prisma.songLike.findMany({
+      where,
+      select: { songId: true },
+      orderBy: { likedAt: 'desc' },
+      take: MAX_LIKED_IDS,
+    }),
+  ]);
   const songIds = rows.map((r) => r.songId);
-  return { songIds, total: songIds.length };
+  return { songIds, total };
 };
 
 export const countLikedSongs = async (userId: string): Promise<number> => {
@@ -156,7 +164,7 @@ export const setPinnedSongs = async (
     select: { songId: true },
   });
   if (likes.length !== unique.length) {
-    throw new SongLikeError('Certains titres ne sont pas dans vos favoris.', 'INVALID_SONG');
+    throw new SongLikeError('Certains titres ne sont pas dans vos favoris.', 'NOT_FOUND');
   }
 
   await prisma.$transaction(async (tx) => {

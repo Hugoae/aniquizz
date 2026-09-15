@@ -1,7 +1,8 @@
 import type { Application, Response } from 'express';
 import { z } from 'zod';
+import { LIBRARY_ANIME_SONGS_PAGE_SIZE } from '@aniquizz/shared';
 import type { AuthedRequest } from '../core/httpAuth';
-import { optionalAuth, requireRole } from '../core/httpAuth';
+import { HTTP_AUTH_ERROR, optionalAuth, requireRole } from '../core/httpAuth';
 import { clientIp, enforceHttpRateLimit, HTTP_RATE_LIMITS } from '../core/httpRateLimit';
 import { logger } from '../utils/logger';
 import {
@@ -77,7 +78,7 @@ const browseQuerySchema = z.object({
   animeId: z.coerce.number().int().positive().optional(),
   sort: z.enum(SORTS).optional(),
   page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(48).optional(),
+  pageSize: z.coerce.number().int().min(1).max(LIBRARY_ANIME_SONGS_PAGE_SIZE).optional(),
 });
 
 const rateLimitPublic = (req: AuthedRequest, res: Response): Promise<boolean> =>
@@ -98,6 +99,19 @@ const rateLimitLikeMutation = (
     ...HTTP_RATE_LIMITS.userMutation,
   });
 
+const rateLimitLikeRead = (req: AuthedRequest, res: Response, userId: string): Promise<boolean> =>
+  enforceHttpRateLimit(req, res, {
+    scope: 'library:read',
+    identity: userId,
+    ...HTTP_RATE_LIMITS.publicRead,
+  });
+
+const rejectIfNoActor = (req: AuthedRequest, res: Response): boolean => {
+  if (req.actor) return false;
+  res.status(401).json({ error: HTTP_AUTH_ERROR.missingBearer });
+  return true;
+};
+
 const wrap =
   (fn: (req: AuthedRequest, res: Response) => Promise<void>) =>
   (req: AuthedRequest, res: Response): void => {
@@ -116,8 +130,7 @@ const parseSongIdParam = (raw: string | string[]): number | null => {
 
 const handleSongLikeError = (res: Response, e: unknown): boolean => {
   if (!(e instanceof SongLikeError)) return false;
-  const status =
-    e.code === 'INVALID_SONG' || e.code === 'NOT_FOUND' ? 404 : e.code === 'BOT' ? 403 : 400;
+  const status = e.code === 'INVALID_SONG' ? 404 : e.code === 'BOT' ? 403 : 400;
   res.status(status).json({ error: e.message });
   return true;
 };
@@ -149,10 +162,8 @@ export function registerLibraryRoutes(app: Application): void {
     '/library/likes/ids',
     requireRole('USER'),
     wrap(async (req, res) => {
-      if (!req.actor) {
-        res.status(401).json({ error: 'Missing bearer token.' });
-        return;
-      }
+      if (rejectIfNoActor(req, res) || !req.actor) return;
+      if (!(await rateLimitLikeRead(req, res, req.actor.userId))) return;
       res.json(await getLikedSongIds(req.actor.userId));
     }),
   );
@@ -161,10 +172,8 @@ export function registerLibraryRoutes(app: Application): void {
     '/library/likes/pinned',
     requireRole('USER'),
     wrap(async (req, res) => {
-      if (!req.actor) {
-        res.status(401).json({ error: 'Missing bearer token.' });
-        return;
-      }
+      if (rejectIfNoActor(req, res) || !req.actor) return;
+      if (!(await rateLimitLikeRead(req, res, req.actor.userId))) return;
       const pinned = await getPinnedSongIds(req.actor.userId);
       const songs = await getLibrarySongsByIds(pinned.songIds, req.actor.userId);
       res.json({ ...pinned, songs });
@@ -175,10 +184,7 @@ export function registerLibraryRoutes(app: Application): void {
     '/library/likes/pinned',
     requireRole('USER'),
     wrap(async (req, res) => {
-      if (!req.actor) {
-        res.status(401).json({ error: 'Missing bearer token.' });
-        return;
-      }
+      if (rejectIfNoActor(req, res) || !req.actor) return;
       if (!(await rateLimitLikeMutation(req, res, req.actor.userId))) return;
 
       const parsed = pinnedSongsBodySchema.safeParse(req.body);
@@ -200,10 +206,7 @@ export function registerLibraryRoutes(app: Application): void {
     '/library/songs/:id/like',
     requireRole('USER'),
     wrap(async (req, res) => {
-      if (!req.actor) {
-        res.status(401).json({ error: 'Missing bearer token.' });
-        return;
-      }
+      if (rejectIfNoActor(req, res) || !req.actor) return;
       if (!(await rateLimitLikeMutation(req, res, req.actor.userId))) return;
 
       const songId = parseSongIdParam(req.params.id);
@@ -225,10 +228,7 @@ export function registerLibraryRoutes(app: Application): void {
     '/library/songs/:id/like',
     requireRole('USER'),
     wrap(async (req, res) => {
-      if (!req.actor) {
-        res.status(401).json({ error: 'Missing bearer token.' });
-        return;
-      }
+      if (rejectIfNoActor(req, res) || !req.actor) return;
       if (!(await rateLimitLikeMutation(req, res, req.actor.userId))) return;
 
       const songId = parseSongIdParam(req.params.id);

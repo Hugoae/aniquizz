@@ -72,7 +72,7 @@ export function LibrarySongDrawer({
   return (
     <Dialog open={!!song} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto custom-scrollbar bg-card p-0 gap-0">
-        <div className="border-b border-border/60 bg-black">
+        <div className="border-b border-border/60 bg-background">
           {videoUrl ? (
             <PrefVolumeVideo
               key={`${song.id}-${resumeAt?.toFixed(1) ?? '0'}-${autoPlay ? '1' : '0'}`}
@@ -82,7 +82,7 @@ export function LibrarySongDrawer({
               autoPlay={autoPlay}
               playsInline
               preload="auto"
-              className="aspect-video w-full bg-black"
+              className="aspect-video w-full bg-background"
               aria-label={`${LIBRARY_COPY.playPreview} — ${song.title}`}
             />
           ) : (

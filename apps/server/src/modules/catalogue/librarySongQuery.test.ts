@@ -4,7 +4,7 @@ vi.mock('@aniquizz/database', () => ({ prisma: {} }));
 vi.mock('./librarySearch', () => ({ resolveMatchingAnimeIdsForQuery: vi.fn() }));
 vi.mock('./songLikeService', () => ({ resolveLikedIds: vi.fn() }));
 
-import { buildLibrarySongWhere } from './librarySongQuery';
+import { buildLibrarySongWhere, shouldReturnEmptyPersonalBrowse } from './librarySongQuery';
 
 describe('buildLibrarySongWhere', () => {
   it('parses bleach ED5 into anime text, ending, and sequence', () => {
@@ -30,6 +30,14 @@ describe('buildLibrarySongWhere', () => {
     const where = buildLibrarySongWhere({ q: 'bleach ED5', songType: ['OP'] });
     expect(where.AND).toEqual(expect.arrayContaining([{ id: { in: [-1] } }]));
     expect(where.songType).toBeUndefined();
+  });
+
+  it('does not apply liked/discovered without a userId (caller must empty instead)', () => {
+    const where = buildLibrarySongWhere({ liked: 'liked' });
+    expect(where.AND).toBeUndefined();
+    expect(shouldReturnEmptyPersonalBrowse({ liked: 'liked' }, null)).toBe(true);
+    expect(shouldReturnEmptyPersonalBrowse({ liked: 'liked' }, 'user-1')).toBe(false);
+    expect(shouldReturnEmptyPersonalBrowse({ q: 'bleach' }, null)).toBe(false);
   });
 
   it('keeps a plain anime query unchanged', () => {

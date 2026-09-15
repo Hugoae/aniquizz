@@ -1,14 +1,17 @@
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '@/lib/utils';
 
 type VirtualScrollProps<T> = {
   items: T[];
   estimateSize: number;
-  maxHeight: number;
+  maxHeight: number | string;
   /** Minimum item count before virtualization kicks in. */
   threshold?: number;
   className?: string;
+  /** Re-run row measurement when this changes (expanding preview, etc.). */
+  remeasureKey?: unknown;
+  listLabel?: string;
   getKey: (item: T, index: number) => string | number;
   renderItem: (item: T, index: number) => ReactNode;
 };
@@ -22,6 +25,8 @@ export function VirtualScroll<T>({
   maxHeight,
   threshold = 24,
   className,
+  remeasureKey,
+  listLabel,
   getKey,
   renderItem,
 }: VirtualScrollProps<T>) {
@@ -32,13 +37,22 @@ export function VirtualScroll<T>({
     getScrollElement: () => parentRef.current,
     estimateSize: () => estimateSize,
     overscan: 6,
+    measureElement: (element) => element.getBoundingClientRect().height,
   });
+
+  useEffect(() => {
+    virtualizer.measure();
+  }, [remeasureKey, virtualizer]);
+
+  const listAria = listLabel ? { role: 'list' as const, 'aria-label': listLabel } : undefined;
 
   if (items.length <= threshold) {
     return (
-      <div className={className}>
+      <div className={className} {...listAria}>
         {items.map((item, index) => (
-          <div key={getKey(item, index)}>{renderItem(item, index)}</div>
+          <div key={getKey(item, index)} role={listLabel ? 'listitem' : undefined}>
+            {renderItem(item, index)}
+          </div>
         ))}
       </div>
     );
@@ -51,6 +65,7 @@ export function VirtualScroll<T>({
       ref={parentRef}
       className={cn('overflow-y-auto custom-scrollbar', className)}
       style={{ maxHeight }}
+      {...listAria}
     >
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualItems.map((virtualRow) => {
@@ -63,7 +78,13 @@ export function VirtualScroll<T>({
             transform: `translateY(${virtualRow.start}px)`,
           };
           return (
-            <div key={getKey(item, virtualRow.index)} style={style}>
+            <div
+              key={getKey(item, virtualRow.index)}
+              ref={virtualizer.measureElement}
+              data-index={virtualRow.index}
+              role={listLabel ? 'listitem' : undefined}
+              style={style}
+            >
               {renderItem(item, virtualRow.index)}
             </div>
           );

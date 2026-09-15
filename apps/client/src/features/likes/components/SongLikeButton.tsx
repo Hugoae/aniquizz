@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { useSongLikes } from '@/features/likes/context/SongLikesContext';
 import { LIKES_COPY } from '@/features/likes/copy/likesCopy';
+import { resolveSongLikedState } from '@/features/likes/lib/likedIdsSync';
 
 interface SongLikeButtonProps {
   songId: number;
@@ -22,12 +23,17 @@ export function SongLikeButton({
   className,
   stopPropagation = false,
 }: SongLikeButtonProps) {
-  const { isLiked, toggleLike, ready } = useSongLikes();
+  const { isLiked, toggleLike, ready, hasPendingLike } = useSongLikes();
   if (!Number.isInteger(songId) || songId <= 0) return null;
-  const liked = ready ? isLiked(songId) : initialLiked;
+  const liked = resolveSongLikedState({
+    ready,
+    inSet: isLiked(songId),
+    initialLiked,
+    hasPending: hasPendingLike(songId),
+  });
 
   const iconSize = size === 'sm' ? 'h-4 w-4' : size === 'lg' ? 'h-6 w-6' : 'h-5 w-5';
-  const buttonSize = size === 'sm' ? 'h-7 w-7' : size === 'lg' ? 'h-10 w-10' : 'h-9 w-9';
+  const buttonSize = size === 'sm' ? 'h-9 w-9' : size === 'lg' ? 'h-10 w-10' : 'h-9 w-9';
 
   return (
     <Button

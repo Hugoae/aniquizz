@@ -118,6 +118,21 @@ export interface LibraryBrowseParams {
   pageSize?: number;
 }
 
+/** Nested tree/anime lists cap payload per title (One Piece OPs+EDs, etc.). */
+export const MAX_NESTED_SONGS_PER_ANIME = 24;
+
+/** Songs view page size when filtering a single anime (virtualized; not the tree cap). */
+export const LIBRARY_ANIME_SONGS_PAGE_SIZE = 96;
+
+/** Keep the first `cap` songs and remember the untruncated total. */
+export const capNestedSongs = <T>(
+  songs: readonly T[],
+  cap = MAX_NESTED_SONGS_PER_ANIME,
+): { songs: T[]; songCount: number } => ({
+  songs: songs.slice(0, cap),
+  songCount: songs.length,
+});
+
 /** Anime node inside a franchise group (GET /library/tree) or anime browse. */
 export interface LibraryAnimeGroup {
   id: number;
@@ -129,6 +144,8 @@ export interface LibraryAnimeGroup {
   siteUrl: string | null;
   popularity: number;
   songs: LibrarySong[];
+  /** Matching playable songs; may exceed `songs.length` when the nested list is capped. */
+  songCount: number;
 }
 
 /** Franchise row in the hierarchical library browse view. */
@@ -174,3 +191,10 @@ export const defaultSortForView = (view: LibraryBrowseView): LibrarySort => {
       return 'franchise';
   }
 };
+
+/** Liked / heard / liked_recent filters are per-user — never silently fall back to the full catalogue. */
+export function libraryBrowseNeedsActor(
+  opts: Pick<LibraryBrowseParams, 'liked' | 'discovered' | 'sort'>,
+): boolean {
+  return Boolean(opts.liked || opts.discovered || opts.sort === 'liked_recent');
+}

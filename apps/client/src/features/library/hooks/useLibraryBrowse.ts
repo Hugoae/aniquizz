@@ -14,69 +14,32 @@ import type {
   LibrarySongsResponse,
   LibraryTreeResponse,
 } from '@aniquizz/shared';
-import { defaultSortForView, LIBRARY_SORTS_BY_VIEW } from '@aniquizz/shared';
+import {
+  defaultSortForView,
+  LIBRARY_ANIME_SONGS_PAGE_SIZE,
+  libraryBrowseNeedsActor,
+} from '@aniquizz/shared';
 import { libraryApi, LibraryApiError } from '@/lib/libraryApi';
 import { useAuth } from '@/features/auth/context/AuthContext';
+import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import {
+  buildLibrarySearchParams,
+  isSortAllowed,
+  libraryPageHref,
+  nextDebouncedLibraryQuery,
+  parseAnimeId,
+  parseDifficulties,
+  parseDiscovered,
+  parseLiked,
+  parsePage,
+  parseSongId,
+  parseSongTypes,
+  parseSort,
+  parseView,
+  viewFromSearchParams,
+} from '@/features/library/lib/libraryBrowseParams';
 
 const DEBOUNCE_MS = 300;
-const SONG_TYPES: LibrarySongType[] = ['OP', 'ED'];
-const DIFFICULTIES: LibraryDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
-
-const parseSort = (raw: string | null): LibrarySort | undefined => {
-  if (
-    raw === 'franchise' ||
-    raw === 'franchise_desc' ||
-    raw === 'popularity' ||
-    raw === 'anime' ||
-    raw === 'title' ||
-    raw === 'likes' ||
-    raw === 'liked_recent'
-  ) {
-    return raw;
-  }
-  return undefined;
-};
-
-const parseView = (raw: string | null): LibraryBrowseView | undefined => {
-  if (raw === 'franchise' || raw === 'anime' || raw === 'songs') return raw;
-  return undefined;
-};
-
-const parseSongTypes = (raw: string | null): LibrarySongType[] => {
-  if (!raw?.trim()) return [];
-  return raw
-    .split(',')
-    .map((p) => p.trim().toUpperCase())
-    .filter((p): p is LibrarySongType => SONG_TYPES.includes(p as LibrarySongType));
-};
-
-const parseDifficulties = (raw: string | null): LibraryDifficulty[] => {
-  if (!raw?.trim()) return [];
-  return raw
-    .split(',')
-    .map((p) => p.trim().toUpperCase())
-    .filter((p): p is LibraryDifficulty => DIFFICULTIES.includes(p as LibraryDifficulty));
-};
-
-const parseDiscovered = (raw: string | null): LibraryDiscoveredFilter | '' => {
-  if (raw === 'heard' || raw === 'unheard') return raw;
-  return '';
-};
-
-const parseLiked = (raw: string | null): LibraryLikedFilter | '' => {
-  if (raw === 'liked' || raw === 'unliked') return raw;
-  return '';
-};
-
-const isSortAllowed = (
-  sort: LibrarySort,
-  view: LibraryBrowseView,
-  isAuthenticated: boolean,
-): boolean => {
-  if (!LIBRARY_SORTS_BY_VIEW[view].includes(sort)) return false;
-  if (sort === 'liked_recent' && !isAuthenticated) return false;
-  return true;
-};
 
 export interface LibraryBrowseState {
   rawQuery: string;
@@ -109,11 +72,12 @@ export interface LibraryBrowseState {
   resultCount: number | null;
   totalPages: number;
   searchMode: boolean;
+  pageHref: (page: number) => string;
 }
 
 export function useLibraryBrowse(): LibraryBrowseState {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const isAuthenticated = !!user;
 
   const [rawQuery, setRawQuery] = useState(() => searchParams.get('q') ?? '');
@@ -130,27 +94,22 @@ export function useLibraryBrowse(): LibraryBrowseState {
   const [liked, setLiked] = useState<LibraryLikedFilter | ''>(() =>
     parseLiked(searchParams.get('liked')),
   );
-  const [view, setViewState] = useState<LibraryBrowseView>(() => {
-    if (parseLiked(searchParams.get('liked')) === 'liked') return 'songs';
-    return parseView(searchParams.get('view')) ?? 'franchise';
-  });
+  const [view, setViewState] = useState<LibraryBrowseView>(() =>
+    viewFromSearchParams(searchParams),
+  );
   const [sort, setSortState] = useState<LibrarySort>(() => {
     const fromUrl = parseSort(searchParams.get('sort'));
-    const initialView =
-      parseLiked(searchParams.get('liked')) === 'liked'
-        ? 'songs'
-        : (parseView(searchParams.get('view')) ?? 'franchise');
+    const initialView = viewFromSearchParams(searchParams);
     if (fromUrl && isSortAllowed(fromUrl, initialView, !!user)) return fromUrl;
     return defaultSortForView(initialView);
   });
-  const [page, setPage] = useState(() => {
-    const p = Number(searchParams.get('page'));
-    return Number.isFinite(p) && p >= 1 ? p : 1;
-  });
-  const [songId, setSongIdState] = useState<number | null>(() => {
-    const id = Number(searchParams.get('songId'));
-    return Number.isInteger(id) && id > 0 ? id : null;
-  });
+  const [page, setPage] = useState(() => parsePage(searchParams.get('page')));
+  const [songId, setSongIdState] = useState<number | null>(() =>
+    parseSongId(searchParams.get('songId')),
+  );
+  const [animeId, setAnimeId] = useState<number | null>(() =>
+    parseAnimeId(searchParams.get('animeId')),
+  );
 
   const [meta, setMeta] = useState<LibraryMetaResponse | null>(null);
   const [tree, setTree] = useState<LibraryTreeResponse | null>(null);
@@ -165,15 +124,20 @@ export function useLibraryBrowse(): LibraryBrowseState {
 
   useEffect(() => {
     const t = setTimeout(() => {
-      setQuery(rawQuery.trim());
-      setPage(1);
+      const next = nextDebouncedLibraryQuery(rawQuery, query);
+      if (next.query !== query) setQuery(next.query);
+      if (next.resetPage) {
+        setPage(1);
+        setAnimeId(null);
+      }
     }, DEBOUNCE_MS);
     return () => clearTimeout(t);
-  }, [rawQuery]);
+  }, [rawQuery, query]);
 
   const browseParams: LibraryBrowseParams = useMemo(
     () => ({
-      q: query || undefined,
+      q: animeId ? undefined : query || undefined,
+      animeId: animeId ?? undefined,
       songType: songTypes.length ? songTypes : undefined,
       difficulty: difficulties.length ? difficulties : undefined,
       discovered: discovered || undefined,
@@ -181,10 +145,13 @@ export function useLibraryBrowse(): LibraryBrowseState {
       sort,
       view,
       page,
-      pageSize: view === 'songs' || query ? 24 : 20,
+      pageSize: animeId ? LIBRARY_ANIME_SONGS_PAGE_SIZE : view === 'songs' || query ? 24 : 20,
     }),
-    [query, songTypes, difficulties, discovered, liked, sort, view, page],
+    [query, animeId, songTypes, difficulties, discovered, liked, sort, view, page],
   );
+
+  const needsActor = libraryBrowseNeedsActor(browseParams);
+  const waitForAuth = needsActor && !authReady;
 
   const setSongId = useCallback((id: number | null) => {
     setSongIdState(id);
@@ -193,6 +160,7 @@ export function useLibraryBrowse(): LibraryBrowseState {
   const setView = useCallback(
     (next: LibraryBrowseView) => {
       setViewState(next);
+      if (next !== 'songs') setAnimeId(null);
       setSortState((prev) => {
         if (next === 'songs') return defaultSortForView('songs');
         return isSortAllowed(prev, next, isAuthenticated) ? prev : defaultSortForView(next);
@@ -208,17 +176,21 @@ export function useLibraryBrowse(): LibraryBrowseState {
   }, []);
 
   useEffect(() => {
-    const next = new URLSearchParams();
-    if (query) next.set('q', query);
-    if (songTypes.length) next.set('songType', songTypes.join(','));
-    if (difficulties.length) next.set('difficulty', difficulties.join(','));
-    if (discovered) next.set('discovered', discovered);
-    if (liked) next.set('liked', liked);
-    if (view !== 'franchise') next.set('view', view);
-    if (sort !== defaultSortForView(view)) next.set('sort', sort);
-    if (page > 1) next.set('page', String(page));
-    if (songId) next.set('songId', String(songId));
-    setSearchParams(next, { replace: true });
+    setSearchParams(
+      buildLibrarySearchParams({
+        query,
+        songTypes,
+        difficulties,
+        discovered,
+        liked,
+        view,
+        sort,
+        page,
+        songId,
+        animeId,
+      }),
+      { replace: true },
+    );
   }, [
     query,
     songTypes,
@@ -229,24 +201,28 @@ export function useLibraryBrowse(): LibraryBrowseState {
     sort,
     page,
     songId,
+    animeId,
     setSearchParams,
   ]);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!discovered || user) return;
     setDiscovered('');
-  }, [discovered, user]);
+  }, [discovered, user, authReady]);
 
   useEffect(() => {
+    if (!authReady) return;
     if (!liked || user) return;
     setLiked('');
-  }, [liked, user]);
+  }, [liked, user, authReady]);
 
   useEffect(() => {
+    if (!authReady) return;
     if (sort === 'liked_recent' && !user) {
       setSortState(defaultSortForView(view));
     }
-  }, [sort, user, view]);
+  }, [sort, user, view, authReady]);
 
   const reload = useCallback(() => setFetchKey((k) => k + 1), []);
 
@@ -266,6 +242,9 @@ export function useLibraryBrowse(): LibraryBrowseState {
   }, [user?.id]);
 
   useEffect(() => {
+    if (waitForAuth) return;
+    if (needsActor && !user?.id) return;
+
     let cancelled = false;
     if (hasLoadedOnce.current) setRefreshing(true);
     else setLoading(true);
@@ -297,7 +276,7 @@ export function useLibraryBrowse(): LibraryBrowseState {
     run()
       .catch((e: unknown) => {
         if (cancelled) return;
-        setError(e instanceof LibraryApiError ? e.message : 'Erreur réseau.');
+        setError(e instanceof LibraryApiError ? e.message : LIBRARY_COPY.networkError);
         if (!hasLoadedOnce.current) {
           setTree(null);
           setSongs(null);
@@ -314,7 +293,7 @@ export function useLibraryBrowse(): LibraryBrowseState {
     return () => {
       cancelled = true;
     };
-  }, [browseParams, fetchKey, user?.id, view]);
+  }, [browseParams, fetchKey, user?.id, view, waitForAuth, needsActor]);
 
   useEffect(() => {
     if (!songId) {
@@ -356,7 +335,6 @@ export function useLibraryBrowse(): LibraryBrowseState {
       setPage(1);
       if (d === 'liked') {
         setViewState('songs');
-        // Favoris → Sons defaults to title A–Z (profile "voir tout" and filter toggle).
         setSortState(defaultSortForView('songs'));
       } else if (d === '') {
         setViewState('franchise');
@@ -383,6 +361,26 @@ export function useLibraryBrowse(): LibraryBrowseState {
         : (tree?.pagination.totalPages ?? 1);
 
   const searchMode = view === 'franchise' && tree?.view === 'search';
+
+  const pageHref = useCallback(
+    (nextPage: number) =>
+      libraryPageHref(
+        {
+          query,
+          songTypes,
+          difficulties,
+          discovered,
+          liked,
+          view,
+          sort,
+          page: nextPage,
+          songId,
+          animeId,
+        },
+        nextPage,
+      ),
+    [query, songTypes, difficulties, discovered, liked, view, sort, songId, animeId],
+  );
 
   return {
     rawQuery,
@@ -415,7 +413,8 @@ export function useLibraryBrowse(): LibraryBrowseState {
     resultCount,
     totalPages,
     searchMode,
+    pageHref,
   };
 }
 
-export { parseSort, parseView, isSortAllowed };
+export { isSortAllowed, parseSort, parseView };

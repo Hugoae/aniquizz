@@ -7,18 +7,23 @@ import type {
   LibrarySort,
   LibraryTreeResponse,
 } from '@aniquizz/shared';
+import { capNestedSongs } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { browseSongsByLikedRecent } from './libraryBrowse';
 import {
   MAX_PAGE_SIZE,
+  animeBrowseSelect,
   animeOrderBy,
   applyDiscoveredToGroups,
   applyLikedToGroups,
   buildSongFilter,
+  countSongsByAnimeId,
+  emptyLibraryTreeResponse,
   mapLibrarySong,
   mapRowsWithUserFlags,
   orderByForSort,
   resolveUserSongFlags,
+  shouldReturnEmptyPersonalBrowse,
   songSelect,
 } from './librarySongQuery';
 
@@ -29,7 +34,7 @@ const ORPHAN_FRANCHISE_LABEL = 'Sans franchise';
 type FranchiseRow = { id: number; name: string; genres: string[] };
 
 const countSongsInGroup = (group: LibraryFranchiseGroup): number =>
-  group.animes.reduce((sum, a) => sum + a.songs.length, 0);
+  group.animes.reduce((sum, a) => sum + a.songCount, 0);
 
 const groupSongsIntoTree = (songs: LibrarySong[]): LibraryFranchiseGroup[] => {
   const franchiseMap = new Map<string, LibraryFranchiseGroup>();
@@ -60,6 +65,7 @@ const groupSongsIntoTree = (songs: LibrarySong[]): LibraryFranchiseGroup[] => {
         siteUrl: song.anime.siteUrl,
         popularity: song.anime.popularity,
         songs: [],
+        songCount: 0,
       };
       group.animes.push(animeGroup);
     }
@@ -67,6 +73,10 @@ const groupSongsIntoTree = (songs: LibrarySong[]): LibraryFranchiseGroup[] => {
   }
 
   return [...franchiseMap.values()].map((group) => {
+    group.animes = group.animes.map((anime) => {
+      const capped = capNestedSongs(anime.songs);
+      return { ...anime, songs: capped.songs, songCount: capped.songCount };
+    });
     group.songCount = countSongsInGroup(group);
     return group;
   });
@@ -85,12 +95,7 @@ const browseLibrarySearchTree = async (
 
   if (sort === 'liked_recent') {
     if (!userId) {
-      return {
-        groups: [],
-        pagination: { page, pageSize, totalItems: 0, totalPages: 1 },
-        totalSongs: 0,
-        view: 'search',
-      };
+      return emptyLibraryTreeResponse(page, pageSize, 'search');
     }
     const flat = await browseSongsByLikedRecent(opts, userId, page, pageSize);
     return {
@@ -149,56 +154,28 @@ const franchiseOrderBy = (sort: LibrarySort): Prisma.FranchiseOrderByWithRelatio
   return { name: 'asc' };
 };
 
-/** Popularity rank via SQL subquery (works before/after maxPopularity backfill). */
-const countFranchisesAbovePopularity = async (
+/** Popularity rank via denormalized Franchise.maxPopularity (SQL, not a full JS load). */
+const countFranchisesAbovePopularity = (
   franchiseWhere: Prisma.FranchiseWhereInput,
-  songFilter: Prisma.SongWhereInput,
   minExclusive: number,
-): Promise<number> => {
-  const franchises = await prisma.franchise.findMany({
-    where: franchiseWhere,
-    select: {
-      animes: {
-        where: { songs: { some: songFilter } },
-        select: { popularity: true },
-      },
-    },
+): Promise<number> =>
+  prisma.franchise.count({
+    where: { ...franchiseWhere, maxPopularity: { gt: minExclusive } },
   });
-  return franchises.filter((f) => {
-    const maxPop = f.animes.reduce((max, a) => Math.max(max, a.popularity), 0);
-    return maxPop > minExclusive;
-  }).length;
-};
 
 const fetchFranchiseSliceByPopularity = async (
   franchiseWhere: Prisma.FranchiseWhereInput,
-  songFilter: Prisma.SongWhereInput,
   skip: number,
   take: number,
 ): Promise<FranchiseRow[]> => {
   if (take <= 0) return [];
-
-  const franchises = await prisma.franchise.findMany({
+  return prisma.franchise.findMany({
     where: franchiseWhere,
-    select: {
-      id: true,
-      name: true,
-      genres: true,
-      animes: {
-        where: { songs: { some: songFilter } },
-        select: { popularity: true },
-      },
-    },
+    orderBy: [{ maxPopularity: 'desc' }, { name: 'asc' }],
+    skip,
+    take,
+    select: { id: true, name: true, genres: true },
   });
-
-  const ranked = franchises.filter((f) => f.animes.length > 0);
-  ranked.sort((a, b) => {
-    const maxA = Math.max(...a.animes.map((x) => x.popularity), 0);
-    const maxB = Math.max(...b.animes.map((x) => x.popularity), 0);
-    return maxB - maxA || a.name.localeCompare(b.name, 'fr');
-  });
-
-  return ranked.slice(skip, skip + take).map(({ id, name, genres }) => ({ id, name, genres }));
 };
 
 const computeOrphanRank = async (
@@ -213,7 +190,7 @@ const computeOrphanRank = async (
   const orphanMaxPop = orphanAgg._max.popularity ?? 0;
 
   if (sort === 'popularity') {
-    return countFranchisesAbovePopularity(franchiseWhere, songFilter, orphanMaxPop);
+    return countFranchisesAbovePopularity(franchiseWhere, orphanMaxPop);
   }
   if (sort === 'franchise_desc') {
     return prisma.franchise.count({
@@ -233,7 +210,7 @@ const fetchFranchiseSlice = async (
   take: number,
 ): Promise<FranchiseRow[]> => {
   if (sort === 'popularity') {
-    return fetchFranchiseSliceByPopularity(franchiseWhere, songFilter, skip, take);
+    return fetchFranchiseSliceByPopularity(franchiseWhere, skip, take);
   }
   if (take <= 0) return [];
   return prisma.franchise.findMany({
@@ -261,37 +238,18 @@ const buildFranchiseGroupsBatch = async (
   const animes = await prisma.anime.findMany({
     where: { OR: animeOr, songs: { some: songFilter } },
     orderBy: animeOrderBy(sort),
-    select: {
-      id: true,
-      name: true,
-      coverImage: true,
-      coverColor: true,
-      seasonYear: true,
-      format: true,
-      siteUrl: true,
-      popularity: true,
-      franchiseId: true,
-    },
+    select: animeBrowseSelect(songFilter),
   });
   if (!animes.length) return [];
 
-  const songs = await prisma.song.findMany({
-    where: { animeId: { in: animes.map((a) => a.id) }, ...songFilter },
-    orderBy: [{ songType: 'asc' }, { sequence: 'asc' }],
-    select: songSelect,
-  });
-
-  const songsByAnime = new Map<number, LibrarySong[]>();
-  for (const row of songs) {
-    const mapped = mapLibrarySong(row, discovered.has(row.id));
-    const list = songsByAnime.get(row.anime.id) ?? [];
-    list.push(mapped);
-    songsByAnime.set(row.anime.id, list);
-  }
+  const songCountByAnime = await countSongsByAnimeId(
+    animes.map((anime) => anime.id),
+    songFilter,
+  );
 
   const animesByFranchise = new Map<number | 'orphan', LibraryAnimeGroup[]>();
   for (const anime of animes) {
-    const animeSongs = songsByAnime.get(anime.id) ?? [];
+    const animeSongs = anime.songs.map((row) => mapLibrarySong(row, discovered.has(row.id)));
     if (!animeSongs.length) continue;
     const key: number | 'orphan' = anime.franchiseId ?? 'orphan';
     const group: LibraryAnimeGroup = {
@@ -304,6 +262,7 @@ const buildFranchiseGroupsBatch = async (
       siteUrl: anime.siteUrl,
       popularity: anime.popularity,
       songs: animeSongs,
+      songCount: songCountByAnime.get(anime.id) ?? animeSongs.length,
     };
     const list = animesByFranchise.get(key) ?? [];
     list.push(group);
@@ -349,14 +308,18 @@ export const browseLibraryTree = async (
   opts: LibraryBrowseParams,
   userId?: string | null,
 ): Promise<LibraryTreeResponse> => {
-  const q = opts.q?.trim();
-  if (q) return browseLibrarySearchTree(opts, userId);
-
   const page = Math.max(1, Math.floor(opts.page ?? 1));
   const pageSize = Math.min(
     Math.max(1, Math.floor(opts.pageSize ?? TREE_PAGE_SIZE)),
     MAX_PAGE_SIZE,
   );
+
+  if (shouldReturnEmptyPersonalBrowse(opts, userId)) {
+    return emptyLibraryTreeResponse(page, pageSize, opts.q?.trim() ? 'search' : 'tree');
+  }
+
+  const q = opts.q?.trim();
+  if (q) return browseLibrarySearchTree(opts, userId);
   const sort = opts.sort ?? 'franchise';
   const songFilter = await buildSongFilter(opts, userId);
 

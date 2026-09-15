@@ -17,3 +17,34 @@ export function stripUnmanagedCanonicalLinks(
   }
   if (preferredHref && kept) kept.setAttribute('href', preferredHref);
 }
+
+const syncMetaContent = (root: ParentNode, selector: string, preferredContent: string): void => {
+  const all = [...root.querySelectorAll(selector)];
+  if (!all.length) return;
+  const matching = all.find((el) => el.getAttribute('content') === preferredContent);
+  const kept = matching ?? all.find((el) => el.hasAttribute('data-rh')) ?? all[all.length - 1];
+  for (const el of all) {
+    if (el !== kept) el.remove();
+  }
+  kept?.setAttribute('content', preferredContent);
+};
+
+/** Drop leftover Home description / OG tags from static index.html on inner routes. */
+export function stripUnmanagedSeoMeta(
+  preferred: { canonical?: string; description?: string; title?: string },
+  root: ParentNode = document,
+): void {
+  stripUnmanagedCanonicalLinks(preferred.canonical, root);
+  if (preferred.description) {
+    syncMetaContent(root, 'meta[name="description"]', preferred.description);
+    syncMetaContent(root, 'meta[property="og:description"]', preferred.description);
+    syncMetaContent(root, 'meta[name="twitter:description"]', preferred.description);
+  }
+  if (preferred.title) {
+    syncMetaContent(root, 'meta[property="og:title"]', preferred.title);
+    syncMetaContent(root, 'meta[name="twitter:title"]', preferred.title);
+  }
+  if (preferred.canonical) {
+    syncMetaContent(root, 'meta[property="og:url"]', preferred.canonical);
+  }
+}

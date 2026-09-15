@@ -9,12 +9,17 @@ import type {
 import { logger } from '../../utils/logger';
 import {
   MAX_PAGE_SIZE,
+  animeBrowseSelect,
   animeOrderBy,
   buildSongFilter,
+  countSongsByAnimeId,
+  emptyLibraryAnimesResponse,
+  emptyLibrarySongsResponse,
   mapLibrarySong,
   mapRowsWithUserFlags,
   orderByForSort,
   resolveUserSongFlags,
+  shouldReturnEmptyPersonalBrowse,
   songSelect,
   type RawSong,
 } from './librarySongQuery';
@@ -120,12 +125,13 @@ export const browseLibrarySongs = async (
   );
   const sort = opts.sort ?? 'franchise';
 
+  if (shouldReturnEmptyPersonalBrowse(opts, userId)) {
+    return emptyLibrarySongsResponse(page, pageSize);
+  }
+
   if (sort === 'liked_recent') {
     if (!userId) {
-      return {
-        songs: [],
-        pagination: { page, pageSize, totalItems: 0, totalPages: 1 },
-      };
+      return emptyLibrarySongsResponse(page, pageSize);
     }
     return browseSongsByLikedRecent(opts, userId, page, pageSize);
   }
@@ -178,6 +184,11 @@ export const browseLibraryAnimes = async (
     Math.max(1, Math.floor(opts.pageSize ?? ANIME_PAGE_SIZE)),
     MAX_PAGE_SIZE,
   );
+
+  if (shouldReturnEmptyPersonalBrowse(opts, userId)) {
+    return emptyLibraryAnimesResponse(page, pageSize);
+  }
+
   const sort = opts.sort === 'popularity' ? 'popularity' : 'anime';
   const songFilter = await buildSongFilter(opts, userId);
   const animeWhere: Prisma.AnimeWhereInput = { songs: { some: songFilter } };
@@ -190,16 +201,7 @@ export const browseLibraryAnimes = async (
       orderBy: animeOrderBy(sort),
       skip: (page - 1) * pageSize,
       take: pageSize,
-      select: {
-        id: true,
-        name: true,
-        coverImage: true,
-        coverColor: true,
-        seasonYear: true,
-        format: true,
-        siteUrl: true,
-        popularity: true,
-      },
+      select: animeBrowseSelect(songFilter),
     }),
   ]);
 
@@ -216,33 +218,25 @@ export const browseLibraryAnimes = async (
     };
   }
 
-  const songs = await prisma.song.findMany({
-    where: { animeId: { in: animes.map((a) => a.id) }, ...songFilter },
-    orderBy: [{ songType: 'asc' }, { sequence: 'asc' }],
-    select: songSelect,
-  });
+  const songCountByAnime = await countSongsByAnimeId(
+    animes.map((anime) => anime.id),
+    songFilter,
+  );
 
+  const nestedRows = animes.flatMap((anime) => anime.songs);
   let discovered = new Set<number>();
   let liked = new Set<number>();
-  if (userId && songs.length) {
+  if (userId && nestedRows.length) {
     try {
       const flags = await resolveUserSongFlags(
         userId,
-        songs.map((s) => s.id),
+        nestedRows.map((s) => s.id),
       );
       discovered = flags.discovered;
       liked = flags.liked;
     } catch (e) {
       logger.warn('[Library] Failed to resolve user song flags', 'Library', e);
     }
-  }
-
-  const songsByAnime = new Map<number, LibrarySong[]>();
-  for (const row of songs) {
-    const mapped = mapLibrarySong(row, discovered.has(row.id), liked.has(row.id));
-    const list = songsByAnime.get(row.anime.id) ?? [];
-    list.push(mapped);
-    songsByAnime.set(row.anime.id, list);
   }
 
   const groups: LibraryAnimeGroup[] = animes
@@ -255,7 +249,8 @@ export const browseLibraryAnimes = async (
       format: anime.format,
       siteUrl: anime.siteUrl,
       popularity: anime.popularity,
-      songs: songsByAnime.get(anime.id) ?? [],
+      songs: mapRowsWithUserFlags(anime.songs, discovered, liked),
+      songCount: songCountByAnime.get(anime.id) ?? anime.songs.length,
     }))
     .filter((a) => a.songs.length > 0);
 

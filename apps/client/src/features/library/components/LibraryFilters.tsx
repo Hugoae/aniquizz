@@ -105,7 +105,7 @@ export function LibraryFilters({
     sort !== 'franchise';
 
   return (
-    <section className="glass-card space-y-4 p-4 md:p-5" aria-label="Filtres de la librairie">
+    <section className="glass-card space-y-4 p-4 md:p-5" aria-label={LIBRARY_COPY.filtersAria}>
       <div className="space-y-2">
         <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
           {LIBRARY_COPY.filterSectionSearch}

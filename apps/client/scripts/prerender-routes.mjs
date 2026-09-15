@@ -7,6 +7,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { escapeHtml, extractNewsItems, NEWS_DATA_PATH } from './news-teasers.mjs';
+import { readLibraryHeroCopy } from './library-copy.mjs';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(ROOT, '../dist');
@@ -41,6 +42,9 @@ function legalBody(intro) {
   return `<p>${escapeHtml(intro)}</p>`;
 }
 
+const LIBRARY_COPY_PATH = path.join(ROOT, '../src/features/library/copy/libraryCopy.ts');
+const libraryHero = readLibraryHeroCopy(LIBRARY_COPY_PATH);
+
 const ROUTES = {
   '/': { title: HOME_TITLE, body: homeBody() },
   '/news': { title: `Actus | ${SITE}`, body: newsBody() },
@@ -49,8 +53,8 @@ const ROUTES = {
     body: '<p>Classement AniQuizz : XP, victoires, parties jouées, Pokédex musical et précision.</p>',
   },
   '/library': {
-    title: `Librairie | ${SITE}`,
-    body: '<p>Parcourez le catalogue AniQuizz : openings et endings. Écoutez les extraits et retrouvez vos découvertes en partie.</p>',
+    title: libraryHero.title,
+    body: `<p>${escapeHtml(libraryHero.subtitle)}</p>`,
   },
   '/suggestions': {
     title: `Boîte à idées | ${SITE}`,

@@ -17,6 +17,7 @@ import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
 import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
+import { LibraryNestedMoreLink } from '@/features/library/components/LibraryNestedMoreLink';
 
 import {
   libraryDifficultyClass,
@@ -150,8 +151,14 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
 
                         aria-expanded={aOpen}
 
+                        aria-label={
+                          aOpen
+                            ? LIBRARY_COPY.collapseAnime(anime.name)
+                            : LIBRARY_COPY.expandAnime(anime.name)
+                        }
+
                         className={cn(
-                          'flex w-full items-center gap-3 bg-secondary/15 px-4 py-2.5 pl-10 text-left transition-colors',
+                          'flex min-h-11 w-full items-center gap-3 bg-secondary/15 px-4 py-2.5 pl-10 text-left transition-colors',
 
                           'hover:bg-secondary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
                         )}
@@ -187,7 +194,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                         </span>
 
                         <span className="text-xs text-muted-foreground shrink-0 tabular-nums">
-                          {anime.songs.length} son{anime.songs.length > 1 ? 's' : ''}
+                          {LIBRARY_COPY.animeSongCount(anime.songCount)}
                         </span>
                       </button>
 
@@ -214,7 +221,9 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                                     onClick={() => toggle(song.id)}
 
                                     aria-label={
-                                      isInlinePlaying ? 'Pause' : LIBRARY_COPY.playPreview
+                                      isInlinePlaying
+                                        ? LIBRARY_COPY.previewPause
+                                        : LIBRARY_COPY.playPreview
                                     }
 
                                     className={cn(
@@ -298,7 +307,7 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                                       variant="ghost"
                                       size="icon"
                                       className="absolute right-3 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                                      aria-label="Fermer l'aperçu"
+                                      aria-label={LIBRARY_COPY.previewClose}
                                       onClick={stop}
                                     >
                                       <X className="h-4 w-4" aria-hidden="true" />
@@ -327,6 +336,12 @@ export function LibraryTreeView({ groups, onSelectSong, focusSongId }: LibraryTr
                               </li>
                             );
                           })}
+                          <LibraryNestedMoreLink
+                            animeId={anime.id}
+                            shown={anime.songs.length}
+                            total={anime.songCount}
+                            className="pl-16"
+                          />
                         </ul>
                       )}
                     </div>

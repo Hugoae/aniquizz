@@ -12,12 +12,14 @@ interface LibraryPaginationBarProps {
   page: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  hrefForPage: (page: number) => string;
 }
 
 export function LibraryPaginationBar({
   page,
   totalPages,
   onPageChange,
+  hrefForPage,
 }: LibraryPaginationBarProps) {
   if (totalPages <= 1) return null;
 
@@ -32,7 +34,7 @@ export function LibraryPaginationBar({
             size="sm"
             disabled={page <= 1}
             onClick={() => onPageChange(page - 1)}
-            aria-label="Page précédente"
+            aria-label={LIBRARY_COPY.pagePrev}
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -46,8 +48,12 @@ export function LibraryPaginationBar({
           ) : (
             <PaginationItem key={p}>
               <PaginationLink
+                href={hrefForPage(p)}
                 isActive={p === page}
-                onClick={() => onPageChange(p)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  onPageChange(p);
+                }}
                 className="cursor-pointer"
               >
                 {p}
@@ -62,7 +68,7 @@ export function LibraryPaginationBar({
             size="sm"
             disabled={page >= totalPages}
             onClick={() => onPageChange(page + 1)}
-            aria-label="Page suivante"
+            aria-label={LIBRARY_COPY.pageNext}
           >
             <ChevronRight className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -98,12 +104,12 @@ export function LibraryListSkeleton() {
   );
 }
 
-export function LibraryEmptyState() {
+export function LibraryEmptyState({ title, hint }: { title?: string; hint?: string }) {
   return (
     <div className="glass-card flex flex-col items-center justify-center gap-3 rounded-2xl border-dashed px-6 py-16 text-center">
       <Music2 className="h-10 w-10 text-muted-foreground/50" aria-hidden="true" />
-      <p className="font-semibold text-foreground">{LIBRARY_COPY.emptyTitle}</p>
-      <p className="max-w-sm text-sm text-muted-foreground">{LIBRARY_COPY.emptyHint}</p>
+      <p className="font-semibold text-foreground">{title ?? LIBRARY_COPY.emptyTitle}</p>
+      <p className="max-w-sm text-sm text-muted-foreground">{hint ?? LIBRARY_COPY.emptyHint}</p>
     </div>
   );
 }

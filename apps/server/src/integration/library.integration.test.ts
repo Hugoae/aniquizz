@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { MAX_NESTED_SONGS_PER_ANIME } from '@aniquizz/shared';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
 import { clearLibraryMetaCache } from '../modules/catalogue/libraryMeta';
@@ -154,5 +155,58 @@ describe.skipIf(!hasIntegrationEnv)('library integration', () => {
     expect(typeof body.animes[0]?.popularity).toBe('number');
     expect(body.animes[0]?.songs.length).toBeGreaterThan(0);
     expect(body.totalSongs).toBeGreaterThan(0);
+  });
+
+  it('GET /library/songs?liked=liked without auth returns empty, not the catalogue', async () => {
+    const res = await fetch(`${bundle.url}/library/songs?liked=liked&pageSize=24`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      songs: unknown[];
+      pagination: { totalItems: number };
+    };
+    expect(body.songs).toEqual([]);
+    expect(body.pagination.totalItems).toBe(0);
+  });
+
+  it('GET /library/likes/ids without a token is 401 in French', async () => {
+    const res = await fetch(`${bundle.url}/library/likes/ids`);
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: string };
+    expect(body.error).toMatch(/Jeton/);
+  });
+
+  it('GET /library/tree caps nested songs per anime', async () => {
+    const res = await fetch(`${bundle.url}/library/tree?pageSize=20`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      groups: Array<{
+        animes: Array<{ songs: unknown[]; songCount: number }>;
+      }>;
+    };
+    expect(body.groups.length).toBeGreaterThan(0);
+    for (const group of body.groups) {
+      for (const anime of group.animes) {
+        expect(anime.songs.length).toBeLessThanOrEqual(MAX_NESTED_SONGS_PER_ANIME);
+        expect(anime.songCount).toBeGreaterThanOrEqual(anime.songs.length);
+      }
+    }
+  });
+
+  it('GET /library/songs?animeId= returns only that anime', async () => {
+    const treeRes = await fetch(`${bundle.url}/library/animes?pageSize=5`);
+    expect(treeRes.status).toBe(200);
+    const tree = (await treeRes.json()) as {
+      animes: Array<{ id: number }>;
+    };
+    const animeId = tree.animes[0]?.id;
+    expect(animeId).toBeGreaterThan(0);
+    const res = await fetch(`${bundle.url}/library/songs?animeId=${animeId}&pageSize=96`);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      songs: Array<{ anime: { id: number } }>;
+      pagination: { totalItems: number };
+    };
+    expect(body.songs.length).toBeGreaterThan(0);
+    expect(body.songs.every((song) => song.anime.id === animeId)).toBe(true);
   });
 });

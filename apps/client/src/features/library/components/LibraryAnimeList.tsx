@@ -8,6 +8,7 @@ import { getVideoUrl } from '@/lib/video';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
 import { PrefVolumeVideo } from '@/features/settings/components/PrefVolumeVideo';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
+import { LibraryNestedMoreLink } from '@/features/library/components/LibraryNestedMoreLink';
 import {
   libraryDifficultyClass,
   libraryDifficultyLabel,
@@ -49,20 +50,18 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
         const pop = formatCompactCount(anime.popularity);
         return (
           <li key={anime.id} className="glass-card overflow-hidden">
-            <div className="flex items-center gap-3 px-3 py-2.5">
-              <button
-                type="button"
-                onClick={() => toggleAnime(anime.id)}
-                aria-expanded={open}
-                aria-label={`${open ? 'Réduire' : 'Développer'} ${anime.name}`}
-                className="text-muted-foreground"
-              >
-                {open ? (
-                  <ChevronDown className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" aria-hidden="true" />
-                )}
-              </button>
+            <button
+              type="button"
+              onClick={() => toggleAnime(anime.id)}
+              aria-expanded={open}
+              aria-label={
+                open ? LIBRARY_COPY.collapseAnime(anime.name) : LIBRARY_COPY.expandAnime(anime.name)
+              }
+              className="flex min-h-11 w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+            >
+              <span className="shrink-0 text-muted-foreground" aria-hidden="true">
+                {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+              </span>
               {anime.coverImage ? (
                 <img
                   src={anime.coverImage}
@@ -84,11 +83,11 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                   {anime.seasonYear ? <span>{anime.seasonYear}</span> : null}
                   <span>{LIBRARY_COPY.metaPopularity(pop)}</span>
                   <Badge className="bg-secondary text-[10px]">
-                    {LIBRARY_COPY.animeSongCount(anime.songs.length)}
+                    {LIBRARY_COPY.animeSongCount(anime.songCount)}
                   </Badge>
                 </div>
               </div>
-            </div>
+            </button>
 
             {open ? (
               <ul className="border-t border-border/50 divide-y divide-border/40">
@@ -107,7 +106,9 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                         <button
                           type="button"
                           onClick={() => toggle(song.id)}
-                          aria-label={isInlinePlaying ? 'Pause' : LIBRARY_COPY.playPreview}
+                          aria-label={
+                            isInlinePlaying ? LIBRARY_COPY.previewPause : LIBRARY_COPY.playPreview
+                          }
                           className={cn(
                             'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors',
                             isInlinePlaying
@@ -167,7 +168,7 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                             variant="ghost"
                             size="icon"
                             className="absolute right-3 top-2 h-8 w-8 text-muted-foreground hover:text-foreground"
-                            aria-label="Fermer l'aperçu"
+                            aria-label={LIBRARY_COPY.previewClose}
                             onClick={stop}
                           >
                             <X className="h-4 w-4" aria-hidden="true" />
@@ -196,6 +197,12 @@ export function LibraryAnimeList({ animes, onSelectSong, focusSongId }: LibraryA
                     </li>
                   );
                 })}
+                <LibraryNestedMoreLink
+                  animeId={anime.id}
+                  shown={anime.songs.length}
+                  total={anime.songCount}
+                  className="pl-12"
+                />
               </ul>
             ) : null}
           </li>
