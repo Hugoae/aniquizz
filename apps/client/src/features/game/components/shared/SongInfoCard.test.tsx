@@ -9,6 +9,7 @@ vi.mock('@/features/likes/context/SongLikesContext', () => ({
     likedIds: new Set<number>(),
     likedCount: 0,
     isLiked: () => false,
+    hasPendingLike: () => false,
     toggleLike: vi.fn(),
     requestLikedIds: vi.fn(),
   }),

@@ -246,6 +246,7 @@ export function MultiplayerLobby({
       <MultiplayerLobbyHeader
         roomName={roomName}
         gameType={gameSettings?.gameType}
+        speedBonusEnabled={Boolean(gameSettings?.speedBonusEnabled)}
         roomCode={roomCode}
         showCode={showCode}
         onToggleCode={() => setShowCode((v) => !v)}

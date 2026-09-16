@@ -1,6 +1,7 @@
 import {
   computeVictory,
   computeCompetitionRanks,
+  isSpeedBonusEnabled,
   levelFromXp,
   xpForMatch,
   normalizePrecision,
@@ -182,7 +183,7 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
 
   void host.deps.repo
     .persistMatch({
-      gameType: host.room.settings.gameType === 'sprint' ? 'sprint' : 'standard',
+      speedBonusEnabled: isSpeedBonusEnabled(host.room.settings),
       totalRounds: host.playlist.length,
       startedAt: host.startedAt,
       endedAt: new Date(),

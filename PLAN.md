@@ -2,19 +2,19 @@
 
 Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned updates.
 
-| Version    | Status     | Summary                                                                                                               |
-| ---------- | ---------- | --------------------------------------------------------------------------------------------------------------------- |
-| **26.0**   | 🚀 Launch  | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                     |
-| **26.1**   | ✅ Shipped | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10). |
-| **26.2**   | ✅ Shipped | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                    |
-| **26.3**   | ✅ Shipped | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                              |
-| **26.4**   | ✅ Shipped | Song likes, suggestions, library views, community leaderboard                                                         |
-| **26.5**   | ✅ Shipped | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
-| **26.6**   | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
-| **26.6.1** | ✅ Shipped | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
-| **26.6.2** | ✅ Shipped | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
-| **26.7**   | 🔮 Next    | Profile pokédex (found bar, heard / found / liked) · **Admin panel rework**                                           |
-| **26.x+**  | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
+| Version    | Status         | Summary                                                                                                               |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| **26.0**   | 🚀 Launch      | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                     |
+| **26.1**   | ✅ Shipped     | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10). |
+| **26.2**   | ✅ Shipped     | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                    |
+| **26.3**   | ✅ Shipped     | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                              |
+| **26.4**   | ✅ Shipped     | Song likes, suggestions, library views, community leaderboard                                                         |
+| **26.5**   | ✅ Shipped     | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
+| **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
+| **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
+| **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
+| **26.7**   | 🔄 In progress | **Vitesse** (Standard typing modifier) · pokédex + Admin rework remaining                                             |
+| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
 
@@ -414,37 +414,51 @@ GitHub-only. The Home footer stays `v26.6`.
 
 ---
 
-## Update 26.7 — Pokédex depth & Admin rework (planned)
+## Update 26.7 — Vitesse, then pokédex & Admin rework
 
-Goal: make collection progress readable, let players replay what they already know, and
+Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, then
+make collection progress readable, let players replay what they already know, and
 rebuild the staff console so the tools shipped in the post-26.6 audit (journal, repair
 queue, spectator, bounded MODERATOR) sit in a coherent panel.
 
-**26.6.2** is closed. This is the next ship. Do not start HIBP.
+**26.6.2** is closed. **Vitesse** is the first 26.7 slice (this ship). Pokédex + Admin
+remain in 26.7 — do not start them in the same pass. Do not start HIBP or Chrono.
 
-### 1. Profile pokédex — found bar
+### 1. Vitesse — Standard multi typing modifier ✅
+
+Sprint is no longer a `GameType`. Live `gameType` is `'standard'` only until Chrono.
+
+- Flag `speedBonusEnabled` (not `speedBonus`, which is podium **points** on the player).
+- Switch in Général after response type; multi create/edit only; disabled unless typing;
+  QCM/Mix clear it. Server `isSpeedBonusEnabled()` is the authority.
+- Badge: STD + trophy, accent lightning overlay when on. Prisma `GameMode.SPRINT` stays
+  the persisted value for speed-bonus matches (`docs/game/speed-bonus.md`).
+- Socket event `speed:leaderboard`. One-release lift of legacy `gameType: 'sprint'`.
+- No `SITE_VERSION` bump (footer stays `v26.6`). Short news article (id 9).
+
+### 2. Profile pokédex — found bar
 
 - Keep the existing discovery bar (unique songs heard / playable catalogue).
 - Add a second bar: unique songs **found correctly** at least once (`SongHistory.correctCount > 0`) vs the same catalogue denominator.
 - French copy isolated; medals stay on the discovery % unless product revisits thresholds.
 
-### 2. Heard playlist
+### 3. Heard playlist
 
 - New music source in game config: **Déjà entendus** — draw only from the player's `SongHistory` rows (clip started in a match or daily).
 - Same pool gates as Watched: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
 
-### 3. Found playlist
+### 4. Found playlist
 
 - Sibling source: **Déjà trouvés** — `correctCount ≥ 1` only.
 - Same solo/multi rules as Heard (host list in multi unless a later pass adds union/intersection).
 
-### 4. Liked playlist
+### 5. Liked playlist
 
 - Sibling source: **Titres likés** — draw only from the player's `SongLike` rows (hearts from reveal / library), not from the 5 pinned profile showcase.
 - Same pool gates as Heard/Found: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
 - Solo/multi: host likes in multi unless a later pass adds union/intersection. Distinct from staff thematic packs (26.5) and from player-created playlists (26.x+ backlog).
 
-### 5. Rework Admin panel
+### 6. Rework Admin panel
 
 UX / IA pass on `/admin` (`Admin.tsx` + `features/admin/`), not a dump of new operator
 features. The audit already added Journal, catalogue « À réparer », salon spectateur,
@@ -464,6 +478,7 @@ console**.
 
 ### 26.7 checklist (at boundary)
 
+- [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`, news id 9 (no `SITE_VERSION` bump).
 - [ ] Profile found bar + tests.
 - [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
 - [ ] Admin panel rework (shell + existing tools, role bounds unchanged).
@@ -488,7 +503,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | Item                                        | Notes                                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat; seasons reuse leaderboard infra. Mix honor-system already clamped in 26.5.               |
-| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint.                                                                                           |
+| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                        |
 | **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** (time-budget typing) is a candidate after **26.7** — spec first, do not start.  |
 | **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy. |
 | **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                      |
@@ -524,7 +539,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). Next ship is **26.7**.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** started with Vitesse; pokédex + Admin remain.
 
 ---
 

@@ -59,6 +59,7 @@ export const defaultConfig: GameConfig = {
   watchedMode: 'union',
   videoMode: 'hidden',
   songStartMode: 'random',
+  speedBonusEnabled: false,
 };
 
 export const defaultRoomConfig: RoomConfig = {

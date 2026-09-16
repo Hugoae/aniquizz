@@ -10,6 +10,7 @@ import {
   normalizeVideoMode,
   SONG_START_MODE_LABELS,
   normalizeSongStartMode,
+  isSpeedBonusEnabled,
 } from '@aniquizz/shared';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
@@ -51,13 +52,10 @@ export interface LobbyRulesSection {
 const STANDARD_MODE_INTRO =
   "Blindtest anime : écoute un extrait et devine l'anime avant la fin du chrono.";
 
-const SPRINT_INTRO =
-  "Sprint : typing uniquement en multijoueur — bonus vitesse selon l'ordre d'arrivée des bonnes réponses.";
-
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
 
-const sprintScoringLines = (): string[] => {
+const speedScoringLines = (): string[] => {
   const { SCORING } = GAME_CONFIG;
   return [
     `Typing correct : ${SCORING.TYPING} pts de base.`,
@@ -67,8 +65,8 @@ const sprintScoringLines = (): string[] => {
 };
 
 const scoringLinesForConfig = (config: GameConfig): string[] =>
-  config.gameType === 'sprint'
-    ? sprintScoringLines()
+  isSpeedBonusEnabled(config)
+    ? speedScoringLines()
     : scoringLines(config.responseType, config.precision);
 
 const scoringLines = (
@@ -315,7 +313,7 @@ export function buildLobbyRulesSections(
     {
       id: 'summary',
       title: 'Résumé de la partie',
-      intro: config.gameType === 'sprint' ? SPRINT_INTRO : STANDARD_MODE_INTRO,
+      intro: STANDARD_MODE_INTRO,
       chips: buildLobbyRulesSummaryChips(config, context.playlistName),
     },
     {

@@ -3,11 +3,25 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7** · Pokédex + Admin rework (next) (2026-09-16)
+## Current phase: **26.7** · Vitesse (this slice) · pokédex + Admin remaining (2026-09-16)
 
-> **State:** **26.6.2** shipped (volume persist + header XP ring). No news article and no `SITE_VERSION` bump — git tag `26.6.2` is GitHub-only. The Home footer stays `v26.6`. **Next:** **26.7** pokédex + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **Vitesse** is the first **26.7** slice: Sprint is no longer a `gameType`; it is a Standard multi typing checkbox (`speedBonusEnabled`). No `SITE_VERSION` bump — the Home footer stays `v26.6`. Short news article (id 9). **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Do not start Chrono. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
+
+### 26.7 — Vitesse (Standard typing modifier) (2026-09-16)
+
+First slice of **26.7**. Not a 26.6.3 patch. Sprint lives on as Prisma `GameMode.SPRINT` history only.
+
+| Item            | What changed                                                                                                                                                     |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contract**    | `GameType = 'standard'`. `speedBonusEnabled` on `GameConfig`. Shared module `speedBonus.ts` (`isSpeedBonusEnabled`, podium +3/+2/+1). Event `speed:leaderboard`. |
+| **Server**      | Settings normalize QCM/Mix/solo off. One-release lift of `gameType: 'sprint'` → standard + typing + flag. Persist `Match.mode = SPRINT` iff the modifier was on. |
+| **Hub**         | Vitesse switch in Général (multi, typing only). `GameTypeSelector` hidden (single type). Badge STD + trophy + accent lightning.                                  |
+| **In-game**     | `SpeedLeaderboard`, round history breakdown, game-over + profile history use the same badge.                                                                     |
+| **Copy / news** | Lobby rules podium lines when the flag is on. Roadmap card **Vitesse**. News id 9 (« Sprint devient Vitesse »). Spec: `docs/game/speed-bonus.md`.                |
+
+**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono.
 
 ### 26.6.2 — volume persist + header XP (2026-09-16)
 
@@ -18,7 +32,7 @@ Patch after **26.6.1**. Comfort prefs and the site-header chip were lying after 
 | **Volume / prefs** | Logged-in reload used the Auth `Profile` SELECT (`audioVolume` default **20**) and wrote that over `aniquizz-player-prefs-v2`. Account sync often never landed (`socket.connected` ≠ ready). A device snapshot now wins and is pushed with `subscribeWhenSocketReady`; `profile:prefs` ACK patches Auth. Guests with no stored prefs still hydrate from the account. |
 | **Header XP ring** | The chip is `levelProgress(profile.xp)`. `level_up` used to `fetchProfile` while `persistMatch` was still in flight (stale row). XP without a level-up never refreshed. `game_over` now adds `xpEarned`; `level_up` applies the payload total. No Profile SELECT on those events.                                                                                    |
 
-**Next:** **26.7** (found bar, heard/found/liked sources, Admin rework).
+**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework (rest of **26.7**).
 
 ### Audit — method
 
@@ -1181,7 +1195,7 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
 | **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
 | **26.6.2** | Volume persist across reload ✅ · header XP ring after matches ✅ · no `SITE_VERSION` bump                                                                                 |
-| **26.7**   | Pokédex found bar · heard / found / liked playlists · Admin panel rework — next                                                                                            |
+| **26.7**   | **Vitesse** ✅ · pokédex found bar · heard / found / liked playlists · Admin panel rework — remaining                                                                      |
 | **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions

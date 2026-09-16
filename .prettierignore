@@ -12,3 +12,4 @@ playwright-report
 blob-report
 skills-lock.json
 workers/media-playback/worker-configuration.d.ts
+**/.wrangler

@@ -51,6 +51,22 @@ describe('RoomList', () => {
   it('keeps waiting rooms joinable', () => {
     render(<RoomList rooms={[room()]} onJoin={() => {}} onRefresh={() => {}} />);
     expect(screen.getByRole('button', { name: 'REJOINDRE' })).toBeEnabled();
+    expect(screen.getByLabelText('Mode Standard')).toBeInTheDocument();
+  });
+
+  it('marks Vitesse rooms on the Standard badge', () => {
+    render(
+      <RoomList
+        rooms={[
+          room({
+            settings: { ...settings, speedBonusEnabled: true, responseType: 'typing' },
+          }),
+        ]}
+        onJoin={() => {}}
+        onRefresh={() => {}}
+      />,
+    );
+    expect(screen.getByLabelText('Standard, bonus Vitesse')).toBeInTheDocument();
   });
 
   it('disables join when the waiting room is already full', () => {

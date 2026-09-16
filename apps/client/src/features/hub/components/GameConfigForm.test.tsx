@@ -153,4 +153,85 @@ describe('GameConfigForm', () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/uniquement les cases cochées/i)).toBeInTheDocument();
   });
+
+  it('hides the Vitesse switch in solo config', () => {
+    render(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.queryByRole('switch', { name: /vitesse/i })).toBeNull();
+    expect(screen.queryByText(/devinez le plus de sons/i)).toBeNull();
+  });
+
+  it('shows a disabled Vitesse switch in multi QCM', () => {
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, mode: 'multiplayer', responseType: 'qcm', maxPlayers: 8 }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    const speedSwitch = screen.getByRole('switch', { name: /vitesse/i });
+    expect(speedSwitch).toBeDisabled();
+    expect(speedSwitch).not.toBeChecked();
+    expect(screen.getByText('Disponible uniquement en typing.')).toBeInTheDocument();
+  });
+
+  it('clears Vitesse when switching away from typing', async () => {
+    const user = userEvent.setup();
+    const setConfig = vi.fn();
+
+    render(
+      <GameConfigForm
+        config={{
+          ...baseConfig,
+          mode: 'multiplayer',
+          responseType: 'typing',
+          speedBonusEnabled: true,
+          maxPlayers: 8,
+        }}
+        setConfig={setConfig}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('switch', { name: /vitesse/i })).toBeChecked();
+    await user.click(screen.getByRole('button', { name: /^qcm/i }));
+
+    const updater = setConfig.mock.calls[0]?.[0] as (prev: RoomConfig) => RoomConfig;
+    expect(updater).toEqual(expect.any(Function));
+    expect(
+      updater({
+        ...baseConfig,
+        mode: 'multiplayer',
+        responseType: 'typing',
+        speedBonusEnabled: true,
+        maxPlayers: 8,
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        responseType: 'qcm',
+        speedBonusEnabled: false,
+      }),
+    );
+  });
 });

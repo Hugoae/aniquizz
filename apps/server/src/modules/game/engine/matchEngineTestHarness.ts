@@ -37,6 +37,7 @@ export function makeSettings(overrides: Partial<RoomSettings> = {}): RoomSetting
     guessDuration: 10,
     soundSelection: 'random',
     precision: 'franchise',
+    speedBonusEnabled: false,
     isPrivate: false,
     password: '',
     maxPlayers: 4,

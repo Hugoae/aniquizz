@@ -37,6 +37,8 @@ Modal title: **Règles de la partie** + subtitle _(selon la config actuelle)_.
 
 Values from `GAME_CONFIG.SCORING`.
 
+When the **Vitesse** modifier is on (`isSpeedBonusEnabled`), the scoring section switches to podium copy (typing base + +3/+2/+1) instead of the generic typing/QCM lines. See [`docs/game/speed-bonus.md`](./speed-bonus.md).
+
 ## Source musicale — Watched
 
 - Mode labels match settings UI: **Union** / **Commun** (internal `watchedMode: 'intersection'`).

@@ -1,4 +1,4 @@
-import { Trophy, Zap, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
+import { Trophy, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import {
   withPlaylistPoolSoundCount,
@@ -119,7 +119,7 @@ export function SoloReady({
     !poolCheck.blocked &&
     !playlistPoolCheck.blocked;
   const modeBadge = gameSettings ? soloLobbyModeBadge(gameSettings) : 'Standard · Solo';
-  const ModeIcon = gameSettings?.gameType === 'sprint' ? Zap : Trophy;
+  const ModeIcon = Trophy;
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col bg-background">

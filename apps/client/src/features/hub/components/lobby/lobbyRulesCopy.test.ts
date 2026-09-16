@@ -294,4 +294,31 @@ describe('buildLobbyRulesSections', () => {
     const summary = sections.find((s) => s.id === 'summary');
     expect(summary?.chips?.find((c) => c.key === 'source')?.value).toBe('Shonen ∩ Années 2010');
   });
+
+  it('uses speed podium scoring when Vitesse is on', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        responseType: 'typing',
+        speedBonusEnabled: true,
+      },
+      { lobbyMode: 'multi', playerCount: 4 },
+    );
+    const scoring = sections.find((s) => s.id === 'scoring');
+    expect(scoring?.lines?.some((l) => l.includes('Bonus vitesse'))).toBe(true);
+    expect(scoring?.lines?.some((l) => l.includes('+3 / +2 / +1'))).toBe(true);
+    const summary = sections.find((s) => s.id === 'summary');
+    expect(summary?.intro).toContain('Blindtest anime');
+    expect(summary?.intro?.toLowerCase().includes('sprint')).toBe(false);
+  });
+
+  it('keeps standard typing scoring when Vitesse is off', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, responseType: 'typing' },
+      { lobbyMode: 'multi' },
+    );
+    const scoring = sections.find((s) => s.id === 'scoring');
+    expect(scoring?.lines?.some((l) => l.startsWith('Typing :'))).toBe(true);
+    expect(scoring?.lines?.some((l) => l.includes('Bonus vitesse'))).toBe(false);
+  });
 });

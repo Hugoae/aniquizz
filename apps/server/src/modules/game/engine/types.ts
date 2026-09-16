@@ -50,7 +50,7 @@ export interface RoomPlayer {
   answerType: AnswerType | null;
   answerTimeMs: number | null;
 
-  /** Quick Draw reveal-only fields (reset each round). */
+  /** Speed-bonus reveal-only fields (reset each round). */
   speedRank: number | null;
   speedBonus: number;
 }

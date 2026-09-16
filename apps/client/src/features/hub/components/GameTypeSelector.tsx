@@ -1,4 +1,4 @@
-import { Trophy, Zap } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 import type { GameType } from '@aniquizz/shared';
 import { GAME_TYPE_LABELS } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
@@ -10,33 +10,21 @@ const GAME_TYPES: { id: GameType; icon: typeof Trophy; description: string }[] =
     icon: Trophy,
     description: 'Devinez le plus de sons et remportez des points',
   },
-  {
-    id: 'sprint',
-    icon: Zap,
-    description:
-      'Comme Standard mais gagnez plus de points en répondant plus vite que vos adversaires',
-  },
 ];
 
 interface GameTypeSelectorProps {
   value: GameType;
   onChange: (gameType: GameType) => void;
-  /** Solo only exposes Standard for now. */
-  soloOnly?: boolean;
   className?: string;
 }
 
-export function GameTypeSelector({
-  value,
-  onChange,
-  soloOnly = false,
-  className,
-}: GameTypeSelectorProps) {
-  const options = soloOnly ? GAME_TYPES.filter((t) => t.id === 'standard') : GAME_TYPES;
+/** Shown only when more than one GameType exists (Chrono will add a second card). */
+export function GameTypeSelector({ value, onChange, className }: GameTypeSelectorProps) {
+  if (GAME_TYPES.length < 2) return null;
 
   return (
     <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-stretch', className)}>
-      {options.map(({ id, icon: Icon, description }) => {
+      {GAME_TYPES.map(({ id, icon: Icon, description }) => {
         const active = value === id;
         return (
           <button

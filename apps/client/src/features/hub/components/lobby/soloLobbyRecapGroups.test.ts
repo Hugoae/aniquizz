@@ -58,10 +58,9 @@ describe('buildSoloLobbyRecapGroups', () => {
     expect(groups[3]?.chips[0]?.value).toBe('Vidéo floutée');
   });
 
-  it('forces Typing in reponse group for Sprint', () => {
+  it('shows Typing in the response group for typing matches', () => {
     const groups = buildSoloLobbyRecapGroups({
       ...baseConfig,
-      gameType: 'sprint',
       responseType: 'typing',
     });
     expect(groups[1]?.chips.find((c) => c.key === 'response-type')?.value).toBe('Typing');
@@ -79,6 +78,5 @@ describe('buildSoloLobbyRecapGroups', () => {
 describe('soloLobbyModeBadge', () => {
   it('uses GAME_TYPE_LABELS with Solo suffix', () => {
     expect(soloLobbyModeBadge({ gameType: 'standard' })).toBe('Standard · Solo');
-    expect(soloLobbyModeBadge({ gameType: 'sprint' })).toBe('Sprint · Solo');
   });
 });

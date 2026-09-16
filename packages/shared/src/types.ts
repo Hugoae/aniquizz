@@ -11,8 +11,14 @@ import type { WatchedListProvider } from './watchedList';
 export type GameMode = 'solo' | 'multiplayer' | 'competitive';
 export type SoundSelection = 'random' | 'mix' | 'watched' | 'playlist';
 
-/** Match rules variant. Quick Draw = typing-only multi speed mode (26.3). */
-export type GameType = 'standard' | 'sprint';
+/** Match rules variant. Speed podium is `speedBonusEnabled` on Standard, not a GameType. */
+export type GameType = 'standard';
+
+export const GAME_TYPE_LABELS: Record<GameType, string> = {
+  standard: 'Standard',
+};
+
+export type GameTypeId = GameType;
 
 export interface GameConfig {
   mode: GameMode;
@@ -36,6 +42,11 @@ export interface GameConfig {
    * Fallback (if opted in) fills from the rest of the pack, never the global catalogue.
    */
   playlistWatched?: boolean;
+  /**
+   * Multiplayer typing modifier: podium bonus for the fastest correct answers.
+   * Ignored unless response type is typing and the room has at least two seats.
+   */
+  speedBonusEnabled?: boolean;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */
@@ -87,9 +98,9 @@ export interface GamePlayer extends BasePlayer {
   /** How the current-round answer was submitted. */
   answerType?: 'typing' | 'qcm' | 'duo' | null;
 
-  /** Quick Draw: 1-based rank among correct answerers (reveal only). */
+  /** Speed bonus: 1-based rank among correct answerers (reveal only). */
   speedRank?: number | null;
-  /** Quick Draw: speed podium bonus for this round (reveal only). */
+  /** Speed bonus: podium points for this round (reveal only). */
   speedBonus?: number;
 
   matchCorrectCount?: number;

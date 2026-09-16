@@ -38,7 +38,7 @@ export interface XpState {
 }
 
 export interface PersistMatchInput {
-  gameType: 'standard' | 'sprint';
+  speedBonusEnabled: boolean;
   totalRounds: number;
   startedAt: Date;
   endedAt: Date;
@@ -52,8 +52,8 @@ export interface PersistMatchInput {
   decadePlaylistId?: string | null;
 }
 
-const toPrismaGameMode = (gameType: 'standard' | 'sprint') =>
-  gameType === 'sprint' ? 'SPRINT' : 'STANDARD';
+const toPrismaGameMode = (speedBonusEnabled: boolean) =>
+  speedBonusEnabled ? 'SPRINT' : 'STANDARD';
 
 const toStoredResponseType = (responseType: 'typing' | 'qcm' | 'mix'): StoredResponseType => {
   switch (responseType) {
@@ -196,7 +196,7 @@ export class MatchRepository {
         prisma.match.create({
           data: {
             id: matchId,
-            mode: toPrismaGameMode(input.gameType),
+            mode: toPrismaGameMode(input.speedBonusEnabled),
             status: 'FINISHED',
             totalRounds: input.totalRounds,
             startedAt: input.startedAt,

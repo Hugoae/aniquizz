@@ -13,7 +13,7 @@ import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
 import { MatchRepository } from './MatchRepository';
 import { PlaylistBuilder } from './PlaylistBuilder';
-import { scoringForGameType } from './ScoringStrategy';
+import { scoringForSettings } from './ScoringStrategy';
 import { toPublicPlayer, type AdminMatchProgress, type BotConfig, type RoomPlayer } from './types';
 
 /**
@@ -496,7 +496,7 @@ export class Room {
     const engine = new MatchEngine(this, {
       builder: new PlaylistBuilder(),
       repo: new MatchRepository(),
-      scoring: scoringForGameType(this.settings.gameType),
+      scoring: scoringForSettings(this.settings),
     });
     this.engine = engine;
     const started = await engine.start();

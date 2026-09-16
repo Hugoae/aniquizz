@@ -22,7 +22,7 @@ import type { EngineDeps, MatchEngineHost } from './matchEngineHost';
 import { startMatch } from './matchEngineStart';
 import {
   buildRoundStartPayload,
-  emitSprintLeaderboard,
+  emitSpeedLeaderboard,
   endRound,
   startRound,
 } from './matchEngineRound';
@@ -286,7 +286,7 @@ export class MatchEngine {
     return this.room.io.to(this.room.id);
   }
 
-  private emitSprintLeaderboard(): void {
-    emitSprintLeaderboard(this.asHost());
+  private emitSpeedLeaderboard(): void {
+    emitSpeedLeaderboard(this.asHost());
   }
 }

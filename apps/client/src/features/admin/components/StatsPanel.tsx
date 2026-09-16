@@ -79,6 +79,7 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 
 const MODE_LABELS: Record<string, string> = {
   STANDARD: 'Standard',
+  SPRINT: 'Vitesse',
 };
 
 const formatUptime = (seconds: number): string => {

@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { ListMusic } from 'lucide-react';
-import type { RoomSettings, RoundHistoryEntry, VictoryData } from '@aniquizz/shared';
+import {
+  isSpeedBonusEnabled,
+  type RoomSettings,
+  type RoundHistoryEntry,
+  type VictoryData,
+} from '@aniquizz/shared';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { computeRanks } from '@/features/game/utils/ranking';
 import { ConfettiLayer } from './ConfettiLayer';
@@ -78,7 +83,7 @@ export function MultiResult({
             )}
           </DialogHeader>
           <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto py-4">
-            <RoundHistoryList history={history} isSprint={settings.gameType === 'sprint'} />
+            <RoundHistoryList history={history} speedBonusEnabled={isSpeedBonusEnabled(settings)} />
           </div>
         </DialogContent>
       </Dialog>

@@ -13,10 +13,10 @@ import { GameTopBar } from './parts/GameTopBar';
 import { VideoStage } from './parts/VideoStage';
 import { AnswerInput } from './parts/AnswerInput';
 import { PlayersFloor } from './parts/PlayersFloor';
-import { SprintLeaderboard } from './parts/SprintLeaderboard';
+import { SpeedLeaderboard } from './parts/SpeedLeaderboard';
 import { ConfigBadges, type ConfigBadgesData } from './parts/ConfigBadges';
 import type { GamePhase, InputMode, MyProfile } from './parts/types';
-import type { SprintLeaderboardPayload } from '@aniquizz/shared';
+import type { SpeedLeaderboardPayload } from '@aniquizz/shared';
 
 interface StandardGameLayoutProps {
   phase: GamePhase;
@@ -65,8 +65,8 @@ interface StandardGameLayoutProps {
   /** Room response mode — carré/duo switches only allowed when `mix`. */
   responseType?: 'typing' | 'qcm' | 'mix';
   configBadges?: ConfigBadgesData;
-  isSprint?: boolean;
-  sprintLeaderboard?: SprintLeaderboardPayload | null;
+  speedBonusEnabled?: boolean;
+  speedLeaderboard?: SpeedLeaderboardPayload | null;
   pointsBadge?: string | null;
   autofocusAnswer?: boolean;
   submitOnEnter?: boolean;
@@ -133,8 +133,8 @@ function StandardGameLayoutInner({
   configBadges,
   videoMode,
   precision = 'franchise',
-  isSprint = false,
-  sprintLeaderboard = null,
+  speedBonusEnabled = false,
+  speedLeaderboard = null,
   pointsBadge,
   autofocusAnswer = true,
   submitOnEnter = true,
@@ -189,7 +189,7 @@ function StandardGameLayoutInner({
       }
     : null;
 
-  const showSprintBoard = isSprint && phase === 'revealed' && sprintLeaderboard != null;
+  const showSpeedBoard = speedBonusEnabled && phase === 'revealed' && speedLeaderboard != null;
 
   return (
     <div className="fixed inset-0 flex h-[100dvh] w-screen flex-col overflow-hidden overscroll-none bg-background pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pt-[env(safe-area-inset-top)]">
@@ -279,9 +279,9 @@ function StandardGameLayoutInner({
                   ) : songInfoProps ? (
                     <div className="flex w-full flex-col gap-3 lg:hidden">
                       <SongInfoCard variant="band" isRevealed {...songInfoProps} />
-                      {showSprintBoard && sprintLeaderboard && (
-                        <SprintLeaderboard
-                          data={sprintLeaderboard}
+                      {showSpeedBoard && speedLeaderboard && (
+                        <SpeedLeaderboard
+                          data={speedLeaderboard}
                           currentUserId={currentUserId}
                           myAvatar={myProfile.avatar}
                           compact
@@ -307,7 +307,7 @@ function StandardGameLayoutInner({
                 />
               </div>
 
-              {/* Right column: song info card + Sprint speed board (aligned with player cards). */}
+              {/* Right column: song info card + speed board (aligned with player cards). */}
               <div className="hidden shrink-0 flex-col self-start lg:flex lg:w-[440px] xl:w-[520px]">
                 <div className="h-[34vh] shrink-0">
                   <SongInfoCard
@@ -322,10 +322,10 @@ function StandardGameLayoutInner({
                     })}
                   />
                 </div>
-                {showSprintBoard && sprintLeaderboard && (
+                {showSpeedBoard && speedLeaderboard && (
                   <div className="mt-[calc(8vh+4.25rem)]">
-                    <SprintLeaderboard
-                      data={sprintLeaderboard}
+                    <SpeedLeaderboard
+                      data={speedLeaderboard}
                       currentUserId={currentUserId}
                       myAvatar={myProfile.avatar}
                     />

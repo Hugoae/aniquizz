@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { GAME_CONFIG, revealDurationMs } from '@aniquizz/shared';
-import { sprintScoring } from './ScoringStrategy';
+import { speedBonusScoring } from './ScoringStrategy';
 import {
   advanceToGuessing,
   createEngineHarness,
@@ -484,11 +484,11 @@ describe('MatchEngine', () => {
     });
   });
 
-  describe('Quick Draw — speed podium bonus', () => {
+  describe('Speed bonus — podium', () => {
     it('awards typing base + relative podium bonus to fastest correct players', async () => {
       const { room, engine } = createEngineHarness({
-        settings: { gameType: 'sprint', responseType: 'typing' },
-        scoring: sprintScoring,
+        settings: { speedBonusEnabled: true, responseType: 'typing', maxPlayers: 4 },
+        scoring: speedBonusScoring,
       });
       await advanceToGuessing(engine);
 
@@ -505,8 +505,8 @@ describe('MatchEngine', () => {
 
     it('awards +0 speed bonus when only one player answered correctly', async () => {
       const { room, engine } = createEngineHarness({
-        settings: { gameType: 'sprint', responseType: 'typing' },
-        scoring: sprintScoring,
+        settings: { speedBonusEnabled: true, responseType: 'typing', maxPlayers: 4 },
+        scoring: speedBonusScoring,
       });
       await advanceToGuessing(engine);
 
@@ -521,8 +521,8 @@ describe('MatchEngine', () => {
 
     it('exposes speed rank and bonus on round_reveal players', async () => {
       const { engine, emitted } = createEngineHarness({
-        settings: { gameType: 'sprint', responseType: 'typing' },
-        scoring: sprintScoring,
+        settings: { speedBonusEnabled: true, responseType: 'typing', maxPlayers: 4 },
+        scoring: speedBonusScoring,
       });
       await advanceToGuessing(engine);
 

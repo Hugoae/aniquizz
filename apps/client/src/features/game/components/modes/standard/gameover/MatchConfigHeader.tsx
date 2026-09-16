@@ -1,21 +1,17 @@
-import { Trophy, Zap } from 'lucide-react';
-import type { GameConfig, GameType } from '@aniquizz/shared';
-import { GAME_TYPE_LABELS, playlistSourceDisplayName } from '@aniquizz/shared';
+import type { GameConfig } from '@aniquizz/shared';
+import { playlistSourceDisplayName } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
+import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
-
-const COMPACT_MODE_LABELS: Record<GameType, string> = {
-  standard: 'STD',
-  sprint: 'SPR',
-};
 
 interface MatchConfigHeaderProps {
   settings: Partial<
     Pick<
       GameConfig,
       | 'gameType'
+      | 'speedBonusEnabled'
       | 'soundCount'
       | 'guessDuration'
       | 'difficulty'
@@ -32,8 +28,6 @@ interface MatchConfigHeaderProps {
 /** Game-over settings strip — same chips as the room list / lobby (solo + multi). */
 export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProps) {
   const gameType = settings.gameType ?? 'standard';
-  const isSprint = gameType === 'sprint';
-  const ModeIcon = isSprint ? Zap : Trophy;
   const isPlaylist = settings.soundSelection === 'playlist';
   const { playlists } = usePublishedPlaylists(isPlaylist);
   const playlistName = isPlaylist ? playlistSourceDisplayName(playlists, settings) : undefined;
@@ -55,14 +49,13 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
         className,
       )}
     >
-      <div
-        className="flex shrink-0 flex-col items-center justify-center gap-0.5 self-stretch bg-primary px-3 text-primary-foreground shadow-sm"
-        aria-label={`Mode ${GAME_TYPE_LABELS[gameType]}`}
-      >
-        <ModeIcon className={cn('h-4 w-4', !isSprint && 'fill-current')} aria-hidden />
-        <span className="text-[10px] font-black uppercase tracking-wider">
-          {COMPACT_MODE_LABELS[gameType]}
-        </span>
+      <div className="flex shrink-0 items-center self-stretch bg-primary px-3 text-primary-foreground shadow-sm">
+        <GameModeBadge
+          gameType={gameType}
+          speedBonusEnabled={Boolean(settings.speedBonusEnabled)}
+          compact
+          className="bg-transparent px-0 py-0 shadow-none"
+        />
       </div>
       <SettingChipList className="flex-1 px-4 py-3">
         {chips.map((spec) => (

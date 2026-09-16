@@ -11,7 +11,7 @@ import type {
   RoundHistoryEntry,
   RoundRevealPayload,
   RoundStartPayload,
-  SprintLeaderboardPayload,
+  SpeedLeaderboardPayload,
   VictoryData,
   MatchSettingsSnapshot,
   VoteUpdatePayload,
@@ -56,8 +56,8 @@ export interface GameState {
   matchSettings: MatchSettingsSnapshot | null;
   /** Active guessing-phase video presentation (from round_start / game_started). */
   videoMode: VideoMode;
-  /** Sprint only — live speed board for the current guessing round. */
-  sprintLeaderboard: SprintLeaderboardPayload | null;
+  /** Speed bonus — reveal speed board for the current round. */
+  speedLeaderboard: SpeedLeaderboardPayload | null;
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
@@ -66,7 +66,7 @@ export type GameAction =
   | { type: 'PRELOAD'; videoKey: string; videoStartTime: number }
   | { type: 'ROUND_START'; payload: RoundStartPayload; clientVideoMode?: VideoMode }
   | { type: 'ANSWERED'; userId: string }
-  | { type: 'SPRINT_LEADERBOARD'; payload: SprintLeaderboardPayload }
+  | { type: 'SPEED_LEADERBOARD'; payload: SpeedLeaderboardPayload }
   | { type: 'ROUND_REVEAL'; payload: RoundRevealPayload; myUserId?: string }
   | { type: 'PLAYERS_UPDATE'; payload: PlayersUpdatePayload }
   | {
@@ -127,7 +127,7 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     roundHistory: [],
     matchSettings: null,
     videoMode: 'hidden',
-    sprintLeaderboard: null,
+    speedLeaderboard: null,
   };
 }
 /** Convert an authoritative PhaseTiming envelope to a local end timestamp. */
@@ -200,7 +200,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         pauseVotes: 0,
         skipVotes: 0,
         videoMode,
-        sprintLeaderboard: null,
+        speedLeaderboard: null,
         players: state.players.map((pl) => ({
           ...pl,
           hasAnswered: false,
@@ -221,8 +221,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ),
       };
     }
-    case 'SPRINT_LEADERBOARD': {
-      return { ...state, sprintLeaderboard: action.payload };
+    case 'SPEED_LEADERBOARD': {
+      return { ...state, speedLeaderboard: action.payload };
     }
     case 'ROUND_REVEAL': {
       const p = action.payload;

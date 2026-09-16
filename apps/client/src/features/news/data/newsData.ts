@@ -5,6 +5,26 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
+    id: 9,
+    title: 'Sprint devient Vitesse',
+    description:
+      'Sprint n’est plus un mode à part : c’est l’option Vitesse du Standard multijoueur, en typing.',
+    content:
+      'Le mode **Sprint** devient une case dans le Standard.\n\n' +
+      '**Option Vitesse (multijoueur)**\n' +
+      '• Dans **Général**, après le mode de réponse, une case **Vitesse** (désactivée par défaut).\n' +
+      '• Disponible **uniquement en typing**. En QCM ou Mix, la case est grisée et se décoche.\n' +
+      '• Solo : pas de case — le bonus podium n’a de sens qu’à plusieurs.\n' +
+      '• Bonus inchangé : parmi les bonnes réponses, +3 / +2 / +1 pour les trois plus rapides (selon le nombre de trouvés).\n' +
+      '• Le classement vitesse s’affiche toujours à la révélation.\n\n' +
+      '**Pastille**\n' +
+      '• Partout (liste des salons, lobby, fin de partie, historique) : **STD** et la coupe, plus un petit éclair si Vitesse est active.\n' +
+      '• Plus de pastille jaune « Sprint ».\n\n' +
+      'Les anciennes parties Sprint restent dans votre historique, avec la nouvelle pastille.',
+    date: '2026-09-16T18:00:00Z',
+    type: 'update',
+  },
+  {
     id: 8,
     title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:

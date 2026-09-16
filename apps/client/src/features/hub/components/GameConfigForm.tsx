@@ -244,6 +244,7 @@ export function GameConfigForm<T extends GameConfig>({
               update={update}
               toggleSoundType={toggleSoundType}
               toggleDifficulty={toggleDifficulty}
+              showSpeedBonus={isRoom}
             />
           )}
           {safeActiveSection === 'source' && (

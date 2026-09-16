@@ -13,9 +13,9 @@ pas.
 
 ```
 Audite FEATURE de bout en bout. N’implémente rien tant que je ne demande pas
-explicitement de corriger un finding. Ne démarre pas 26.7 (pokédex / rework
-Admin) ni le travail en parking (HIBP). La phase courante est **26.6.1**
-(voir PLAN.md).
+explicitement de corriger un finding. Ne démarre pas le pokédex / rework
+Admin ni le travail en parking (HIBP). La phase courante est **26.7**
+(premier slice : Vitesse — voir PLAN.md). Ne démarre pas le Contre-la-montre.
 
 Repo : pnpm + Turborepo. Graphify d’abord (`.cursor/rules/graphify.mdc`).
 Lis CONTEXT-MAP.md et les CONTEXT.md des packages concernés avant de scanner.

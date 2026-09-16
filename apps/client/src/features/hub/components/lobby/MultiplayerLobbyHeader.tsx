@@ -12,6 +12,7 @@ import type { SettingChipSpec } from '@/features/hub/components/roomSettings';
 interface MultiplayerLobbyHeaderProps {
   roomName: string;
   gameType: RoomConfig['gameType'] | undefined;
+  speedBonusEnabled?: boolean;
   roomCode: string;
   showCode: boolean;
   onToggleCode: () => void;
@@ -29,6 +30,7 @@ interface MultiplayerLobbyHeaderProps {
 export function MultiplayerLobbyHeader({
   roomName,
   gameType,
+  speedBonusEnabled,
   roomCode,
   showCode,
   onToggleCode,
@@ -57,7 +59,7 @@ export function MultiplayerLobbyHeader({
           </Button>
           <div>
             <div className="mb-1 flex items-center gap-3">
-              <GameModeBadge gameType={gameType} />
+              <GameModeBadge gameType={gameType} speedBonusEnabled={speedBonusEnabled} />
             </div>
 
             <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black uppercase tracking-tight">

@@ -39,7 +39,7 @@ import type {
   RoomUpdatedPayload,
   RoundRevealPayload,
   RoundStartPayload,
-  SprintLeaderboardPayload,
+  SpeedLeaderboardPayload,
   GameReadyPayload,
   GameOverPayload,
   RoundHistoryEntry,
@@ -159,8 +159,8 @@ export interface ServerToClientEvents {
   'game:ready': (payload: GameReadyPayload) => void;
   round_start: (payload: RoundStartPayload) => void;
   'game:answered': (payload: AnsweredPayload) => void;
-  /** Sprint only — final top-3 correct times + personalized "you" row (reveal). */
-  'sprint:leaderboard': (payload: SprintLeaderboardPayload) => void;
+  /** Speed bonus — final top-3 correct times + personalized "you" row (reveal). */
+  'speed:leaderboard': (payload: SpeedLeaderboardPayload) => void;
   round_reveal: (payload: RoundRevealPayload) => void;
   /** Warm a clip's buffer ahead of playback (round 1 in intro, next during reveal). */
   'game:preload': (payload: PreloadVideoPayload) => void;

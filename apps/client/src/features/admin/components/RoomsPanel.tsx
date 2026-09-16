@@ -14,6 +14,7 @@ import {
   Music2,
   Users,
   X,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -538,6 +539,11 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
                 {/* Config badges */}
                 <div className="flex flex-wrap gap-1.5 pt-0.5">
                   <ConfigBadge>{MODE_LABELS[room.settings.mode] ?? room.settings.mode}</ConfigBadge>
+                  {room.settings.speedBonusEnabled && (
+                    <ConfigBadge>
+                      <Zap className="h-3 w-3" /> Vitesse
+                    </ConfigBadge>
+                  )}
                   <ConfigBadge>
                     <Music2 className="h-3 w-3" /> {room.settings.soundCount} sons
                   </ConfigBadge>

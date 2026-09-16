@@ -150,6 +150,7 @@ export interface AdminRoomProgress {
 export interface AdminRoomSettings {
   mode: string;
   gameType: string;
+  speedBonusEnabled: boolean;
   responseType: string;
   soundCount: number;
   soundTypes: string[];

@@ -1,17 +1,17 @@
 import { Timer, X } from 'lucide-react';
-import type { SprintLeaderboardPayload } from '@aniquizz/shared';
-import { formatSprintTimeSeconds } from '@aniquizz/shared';
+import type { SpeedLeaderboardPayload } from '@aniquizz/shared';
+import { formatSpeedTimeSeconds } from '@aniquizz/shared';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cn } from '@/lib/utils';
 
-interface SprintLeaderboardProps {
-  data: SprintLeaderboardPayload;
+interface SpeedLeaderboardProps {
+  data: SpeedLeaderboardPayload;
   currentUserId: string;
   myAvatar: string;
   compact?: boolean;
 }
 
-function SprintRow({
+function SpeedRow({
   rank,
   username,
   avatar,
@@ -43,7 +43,7 @@ function SprintRow({
       {timeMs != null && (
         <span className="flex shrink-0 items-center gap-1 font-mono text-xs font-bold tabular-nums text-accent">
           <Timer className="h-3 w-3" aria-hidden="true" />
-          {formatSprintTimeSeconds(timeMs)} s
+          {formatSpeedTimeSeconds(timeMs)} s
         </span>
       )}
       {wrong && (
@@ -55,13 +55,13 @@ function SprintRow({
   );
 }
 
-/** Reveal-only Sprint speed board — top 3 correct answerers plus a "Vous" row. */
-export function SprintLeaderboard({
+/** Reveal-only speed board — top 3 correct answerers plus a "Vous" row. */
+export function SpeedLeaderboard({
   data,
   currentUserId,
   myAvatar,
   compact,
-}: SprintLeaderboardProps) {
+}: SpeedLeaderboardProps) {
   const { top, you } = data;
   const yourTimeMs = you.isCorrect === true ? you.timeMs : null;
 
@@ -83,7 +83,7 @@ export function SprintLeaderboard({
           </p>
         ) : (
           top.map((entry, index) => (
-            <SprintRow
+            <SpeedRow
               key={entry.userId}
               rank={index + 1}
               username={entry.username}
@@ -97,7 +97,7 @@ export function SprintLeaderboard({
 
       <div className="my-2 border-t border-border/50" aria-hidden="true" />
 
-      <SprintRow
+      <SpeedRow
         username="Vous"
         avatar={myAvatar}
         timeMs={yourTimeMs}

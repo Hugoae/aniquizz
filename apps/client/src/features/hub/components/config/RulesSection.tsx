@@ -1,8 +1,8 @@
-import { Keyboard, Target, Timer } from 'lucide-react';
+import { Keyboard, Target, Timer, Zap } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { cn } from '@/lib/utils';
+import { Switch } from '@/components/ui/switch';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 import {
   RESPONSE_MODES,
@@ -17,6 +17,8 @@ interface RulesSectionProps {
   update: (patch: Partial<RoomConfig>) => void;
   toggleSoundType: (type: string) => void;
   toggleDifficulty: (id: string) => void;
+  /** Multi create/edit — Vitesse is a Standard modifier, not shown in solo. */
+  showSpeedBonus?: boolean;
 }
 
 export function RulesSection({
@@ -24,12 +26,11 @@ export function RulesSection({
   update,
   toggleSoundType,
   toggleDifficulty,
+  showSpeedBonus = false,
 }: RulesSectionProps) {
   const estimatedMinutes = estimateMatchMinutes(config);
-  const isSprint = config.gameType === 'sprint';
-  const responseModes = isSprint
-    ? RESPONSE_MODES.filter((mode) => mode.id === 'typing')
-    : RESPONSE_MODES;
+  const typingOk = config.responseType === 'typing';
+  const speedBonusOn = Boolean(showSpeedBonus && typingOk && config.speedBonusEnabled);
 
   return (
     <div className="space-y-3">
@@ -77,16 +78,18 @@ export function RulesSection({
           title="Mode de réponse"
           tooltip="Comment les joueurs saisissent leur réponse."
         />
-        <div className={cn('grid gap-2', isSprint ? 'grid-cols-1 max-w-[11rem]' : 'grid-cols-3')}>
-          {responseModes.map(({ id, label, description, icon: Icon }) => (
+        <div className="grid grid-cols-3 gap-2">
+          {RESPONSE_MODES.map(({ id, label, description, icon: Icon }) => (
             <OptionButton
               key={id}
-              active={isSprint ? true : config.responseType === id}
-              onClick={isSprint ? undefined : () => update({ responseType: id })}
-              className={cn(
-                'flex flex-col items-center gap-1 p-2 text-center',
-                isSprint && 'cursor-default',
-              )}
+              active={config.responseType === id}
+              onClick={() =>
+                update({
+                  responseType: id,
+                  speedBonusEnabled: id === 'typing' ? config.speedBonusEnabled : false,
+                })
+              }
+              className="flex flex-col items-center gap-1 p-2 text-center"
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
               <span className="text-[11px] font-bold uppercase">{label}</span>
@@ -94,6 +97,30 @@ export function RulesSection({
             </OptionButton>
           ))}
         </div>
+        {showSpeedBonus ? (
+          <div className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-3 py-2.5">
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                <Label htmlFor="speed-bonus" className="text-xs font-bold uppercase tracking-wide">
+                  Vitesse
+                </Label>
+              </div>
+              <p id="speed-bonus-help" className="text-[11px] leading-snug text-muted-foreground">
+                {typingOk
+                  ? 'Bonus de points si vous répondez plus vite que les autres (parmi les bonnes réponses).'
+                  : 'Disponible uniquement en typing.'}
+              </p>
+            </div>
+            <Switch
+              id="speed-bonus"
+              checked={speedBonusOn}
+              disabled={!typingOk}
+              onCheckedChange={(checked) => update({ speedBonusEnabled: checked })}
+              aria-describedby="speed-bonus-help"
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className="space-y-2">

@@ -24,7 +24,7 @@ quelque chose n'est pas clair :
    pièges). Un seul petit fichier ciblé suffit.
 3. Lis PLAN.md — version/phase courante et roadmap. Identifie la phase COURANTE.
    N'anticipe pas. N'implémente pas une version parked (HIBP ; pokédex /
-   rework Admin en 26.7 tant que 26.6.1 n'est pas close).
+   rework Admin ; Chrono après la fin de 26.7).
 4. Lis PROGRESS.md — dernier livrable, décisions, état, prochaine étape.
 5. Ne survole ARCHITECTURE.md que pour la section utile à la tâche.
 6. Pour un audit de feature, utilise docs/agents/feature-audit.md (10 lentilles,

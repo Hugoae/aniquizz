@@ -65,7 +65,7 @@ export function buildSoloLobbyRecapGroups(
   const videoMode = normalizeVideoMode(config.videoMode);
 
   const responseLabel =
-    config.gameType === 'sprint' ? 'Typing' : RESPONSE_LABELS[config.responseType];
+    config.responseType === 'typing' ? 'Typing' : RESPONSE_LABELS[config.responseType];
   const precisionLabel = getPrecisionChipLabel(config.precision);
 
   return [

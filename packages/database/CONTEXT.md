@@ -32,6 +32,9 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
   Author `prisma/migrations/<ts>_<name>/migration.sql` by hand (additive/idempotent),
   `npx prisma db execute --file …`, then `migrate resolve --applied <ts>_<name>` and
   `prisma generate`. Confirm with `migrate status`.
+- **`GameMode.SPRINT` is historical.** It stores Standard **Vitesse** matches
+  (`speedBonusEnabled`). Do not rename the Prisma enum or its already-applied
+  migration folder (`20260713160000_match_game_mode_sprint`).
 - **Pipeline steps are idempotent and lock-aware.** They upsert by AniList id / videoKey
   and never overwrite `isLocked` rows. Export locks (`export_db_to_json.ts`) **before**
   scaling `ANILIST_LIMIT` up (e.g. 30 → 500).

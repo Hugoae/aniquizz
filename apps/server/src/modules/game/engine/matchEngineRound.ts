@@ -1,10 +1,11 @@
 import {
   generatePeekWindow,
+  isSpeedBonusEnabled,
   normalizeVideoMode,
   revealDurationSeconds,
   scoreForAnswer,
   type RoundRevealPayload,
-  type SprintLeaderboardPayload,
+  type SpeedLeaderboardPayload,
 } from '@aniquizz/shared';
 import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import { logger } from '../../../utils/logger';
@@ -150,7 +151,7 @@ export function endRound(host: MatchEngineHost): void {
     'GameLoop',
   );
 
-  host.emitSprintLeaderboard();
+  host.emitSpeedLeaderboard();
 
   const next = host.playlist[host.currentRoundIndex + 1];
   const payload: RoundRevealPayload = {
@@ -166,9 +167,9 @@ export function endRound(host: MatchEngineHost): void {
   host.channel.emit('round_reveal', payload);
 }
 
-/** Sprint: final top-3 correct times + personalized "you" row (reveal only). */
-export function emitSprintLeaderboard(host: MatchEngineHost): void {
-  if (host.room.settings.gameType !== 'sprint') return;
+/** Speed bonus: final top-3 correct times + personalized "you" row (reveal only). */
+export function emitSpeedLeaderboard(host: MatchEngineHost): void {
+  if (!isSpeedBonusEnabled(host.room.settings)) return;
 
   const rankedCorrect = [...host.room.players.values()]
     .filter((p) => p.isCorrect === true && p.hasAnswered && p.answerTimeMs != null)
@@ -198,7 +199,7 @@ export function emitSprintLeaderboard(host: MatchEngineHost): void {
           ? 0
           : null;
 
-    const payload: SprintLeaderboardPayload = {
+    const payload: SpeedLeaderboardPayload = {
       top,
       you: {
         timeMs: viewer.isCorrect === true ? viewer.answerTimeMs : null,
@@ -206,7 +207,7 @@ export function emitSprintLeaderboard(host: MatchEngineHost): void {
         projectedPoints: finalPoints,
       },
     };
-    host.room.io.to(viewer.socketId).emit('sprint:leaderboard', payload);
+    host.room.io.to(viewer.socketId).emit('speed:leaderboard', payload);
   }
 }
 

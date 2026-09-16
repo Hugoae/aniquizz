@@ -30,6 +30,7 @@ These terms mean the same thing everywhere. Per-context glossaries add local det
 | **Watched**         | Music source from the player's AniList/MAL list (`soundSelection === 'watched'`). Includes Dropped; excludes Planning.   |
 | **Precision**       | Answer granularity: `franchise` (whole franchise) vs `anime` (exact season). Legacy value `exact` normalizes to `anime`. |
 | **Medal**           | Solo game-over grade (Bronze → Argent → Or → Platine) from mastery ratio, adjusted by difficulty and precision.          |
+| **Vitesse**         | Standard multi typing modifier: podium bonus for the fastest correct answers (`speedBonusEnabled`). Not a GameType.      |
 | **Player identity** | Always the JWT `userId` (`socket.data.userId`), never `socket.id`.                                                       |
 
 ## Decisions

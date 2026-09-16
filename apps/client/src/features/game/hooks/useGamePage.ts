@@ -8,11 +8,12 @@ import {
   type GamePlayer,
   type RoomSettings,
   isBanSanctionReason,
+  isSpeedBonusEnabled,
   getPrecisionChipLabel,
   normalizePrecision,
   normalizeVideoMode,
   hasWatchedListLink,
-  maxSprintPointsPerRound,
+  maxSpeedBonusPointsPerRound,
   playlistSourceDisplayName,
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
@@ -77,7 +78,7 @@ export function useGamePage() {
   }, [roomId, location.search, location.state, navigate]);
 
   const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
-  const isSprint = activeSettings.gameType === 'sprint';
+  const speedBonusOn = isSpeedBonusEnabled(activeSettings);
   const { phase, players, currentSong } = state;
 
   const {
@@ -108,11 +109,7 @@ export function useGamePage() {
   );
 
   const [inputMode, setInputMode] = useState<InputMode>(() =>
-    settings.gameType === 'sprint'
-      ? 'typing'
-      : settings.responseType === 'qcm'
-        ? 'carre'
-        : 'typing',
+    settings.responseType === 'qcm' ? 'carre' : 'typing',
   );
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
   const [showLeaveChoice, setShowLeaveChoice] = useState(false);
@@ -138,8 +135,8 @@ export function useGamePage() {
   useEffect(() => {
     if (phase !== 'guessing') return;
     setSubmittedAnswer(null);
-    setInputMode(isSprint ? 'typing' : activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
-  }, [state.currentRound, phase, isSprint, activeSettings.responseType]);
+    setInputMode(activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
+  }, [state.currentRound, phase, activeSettings.responseType]);
 
   const pointsShownForRoundRef = useRef<number>(0);
   useEffect(() => {
@@ -163,9 +160,9 @@ export function useGamePage() {
   }, [phase, players, currentUserId, state.currentRound]);
 
   const pointsBadge = useMemo(() => {
-    if (!isSprint || phase !== 'guessing') return undefined;
-    return `Jusqu'à +${maxSprintPointsPerRound()} pts`;
-  }, [isSprint, phase]);
+    if (!speedBonusOn || phase !== 'guessing') return undefined;
+    return `Jusqu'à +${maxSpeedBonusPointsPerRound()} pts`;
+  }, [speedBonusOn, phase]);
 
   useEffect(() => {
     if (phase === 'guessing') setShowPointsAnimation(false);
@@ -222,12 +219,12 @@ export function useGamePage() {
   );
 
   const handleSwitchCarre = useCallback(() => {
-    if (!isSprint && activeSettings.responseType === 'mix') setInputMode('carre');
-  }, [isSprint, activeSettings.responseType]);
+    if (activeSettings.responseType === 'mix') setInputMode('carre');
+  }, [activeSettings.responseType]);
 
   const handleSwitchDuo = useCallback(() => {
-    if (!isSprint && activeSettings.responseType === 'mix') setInputMode('duo');
-  }, [isSprint, activeSettings.responseType]);
+    if (activeSettings.responseType === 'mix') setInputMode('duo');
+  }, [activeSettings.responseType]);
 
   const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, settings);
@@ -296,11 +293,11 @@ export function useGamePage() {
     choices,
     onSwitchCarre: handleSwitchCarre,
     onSwitchDuo: handleSwitchDuo,
-    responseType: isSprint ? ('typing' as const) : activeSettings.responseType,
+    responseType: activeSettings.responseType,
     showPointsAnimation,
     pointsEarned,
-    isSprint,
-    sprintLeaderboard: state.sprintLeaderboard,
+    speedBonusEnabled: speedBonusOn,
+    speedLeaderboard: state.speedLeaderboard,
     pointsBadge,
     autofocusAnswer,
     submitOnEnter,

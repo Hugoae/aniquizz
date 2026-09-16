@@ -1,21 +1,42 @@
-// Sprint — speed podium bonus (multiplayer typing-only mode).
+// Standard speed podium bonus (multiplayer typing modifier).
 // Pure logic lives here so server scoring and client copy stay aligned.
 
 import type { GameType } from './types';
 import { scoreForAnswer } from './scoring';
 
-export type SprintGameType = 'sprint';
-
-export const GAME_TYPE_LABELS = {
-  standard: 'Standard',
-  sprint: 'Sprint',
-} as const;
-
-export type GameTypeId = keyof typeof GAME_TYPE_LABELS;
-
 export interface RankedCorrectAnswer {
   userId: string;
   timeMs: number;
+}
+
+export interface SpeedBonusSettings {
+  speedBonusEnabled?: boolean | null;
+  responseType?: string | null;
+  maxPlayers?: number | null;
+  mode?: string | null;
+}
+
+/**
+ * True when the Standard speed-podium modifier is active.
+ * Typing-only, multiplayer (at least two seats). Solo / QCM / Mix stay off.
+ */
+export function isSpeedBonusEnabled(settings: SpeedBonusSettings | null | undefined): boolean {
+  if (!settings?.speedBonusEnabled) return false;
+  if (settings.responseType !== 'typing') return false;
+  if ((settings.maxPlayers ?? 2) < 2) return false;
+  if (settings.mode === 'solo') return false;
+  return true;
+}
+
+/** Persisted `Match.mode` SPRINT rows are historical speed-bonus matches. */
+export function speedBonusFromStoredMode(mode: string | null | undefined): boolean {
+  return mode?.toUpperCase() === 'SPRINT';
+}
+
+/** Map a persisted Match.mode enum string to the shared GameType id. */
+export function gameTypeFromStoredMode(mode: string | null | undefined): GameType {
+  void mode;
+  return 'standard';
 }
 
 /** Podium bonus table indexed by arrival rank (0 = fastest). Empty beyond top 3. */
@@ -37,9 +58,7 @@ function bonusTable(correctCount: number): number[] {
  * (ascending `timeMs`). Only the top three correct answerers receive a bonus when
  * three or more players answered correctly.
  */
-export function computeSprintPodiumBonus(
-  rankedCorrect: RankedCorrectAnswer[],
-): Map<string, number> {
+export function computeSpeedPodiumBonus(rankedCorrect: RankedCorrectAnswer[]): Map<string, number> {
   const table = bonusTable(rankedCorrect.length);
   const bonuses = new Map<string, number>();
   rankedCorrect.forEach((entry, index) => {
@@ -49,7 +68,7 @@ export function computeSprintPodiumBonus(
 }
 
 /** 1-based rank among correct answerers (for reveal UI). */
-export function sprintSpeedRank(
+export function speedPodiumRank(
   rankedCorrect: RankedCorrectAnswer[],
   userId: string,
 ): number | null {
@@ -57,31 +76,26 @@ export function sprintSpeedRank(
   return index >= 0 ? index + 1 : null;
 }
 
-/** Format a server-side answer timestamp for Sprint UI (seconds, 2 decimals). */
-export function formatSprintTimeSeconds(timeMs: number): string {
+/** Format a server-side answer timestamp for speed-bonus UI (seconds, 2 decimals). */
+export function formatSpeedTimeSeconds(timeMs: number): string {
   return (timeMs / 1000).toFixed(2);
 }
 
 /**
- * Projected round total for a correct Sprint answer (base typing + podium bonus).
+ * Projected round total for a correct speed-bonus answer (base typing + podium).
  * `rankedCorrect` must be sorted fastest-first.
  */
-export function computeSprintProjectedPoints(
+export function computeSpeedProjectedPoints(
   rankedCorrect: RankedCorrectAnswer[],
   userId: string,
   basePoints: number,
 ): number {
   if (!rankedCorrect.some((entry) => entry.userId === userId)) return 0;
-  const bonus = computeSprintPodiumBonus(rankedCorrect).get(userId) ?? 0;
+  const bonus = computeSpeedPodiumBonus(rankedCorrect).get(userId) ?? 0;
   return basePoints + bonus;
 }
 
-/** Map a persisted Match.mode enum string to the shared GameType id. */
-export function gameTypeFromStoredMode(mode: string | null | undefined): GameType {
-  return mode?.toUpperCase() === 'SPRINT' ? 'sprint' : 'standard';
-}
-
-/** Best-case round total in Sprint (typing base + max podium bonus). */
-export function maxSprintPointsPerRound(): number {
+/** Best-case round total with speed bonus (typing base + max podium bonus). */
+export function maxSpeedBonusPointsPerRound(): number {
   return scoreForAnswer('typing') + 3;
 }

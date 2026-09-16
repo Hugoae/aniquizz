@@ -18,6 +18,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 | **gameCopy**                         | Isolated French match strings (loading, leave dialogs, toasts).                                             | `features/game/copy/gameCopy.ts`                  |
 | **hubCopy**                          | Isolated French hub strings (mode select, join list, password dialog, reset).                               | `features/hub/copy/hubCopy.ts`                    |
 | **lobbyRulesCopy**                   | Pure builder turning live `RoomConfig` into French rules text (unit-tested).                                | `features/hub/components/lobby/lobbyRulesCopy.ts` |
+| **GameModeBadge**                    | STD + trophy; accent lightning overlay when Vitesse (`speedBonusEnabled`) is on.                            | `features/hub/components/GameModeBadge.tsx`       |
 | **VideoStage**                       | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants.                 | `features/game/`                                  |
 | **useVideoPlayback**                 | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`.                                           | `features/game/`                                  |
 | **SoloMasteryBar / SoloScoreCard**   | Game-over medal UI; take `precision` so labels match server thresholds.                                     | `features/game/.../gameover/solo/`                |

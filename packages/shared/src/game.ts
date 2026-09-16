@@ -127,18 +127,18 @@ export interface AnsweredPayload {
   userId: string;
 }
 
-/** One row in the live Sprint speed board (correct answerers only). */
-export interface SprintLeaderboardEntry {
+/** One row in the live speed-bonus board (correct answerers only). */
+export interface SpeedLeaderboardEntry {
   userId: string;
   username: string;
   avatar: string;
   timeMs: number;
 }
 
-/** Final Sprint speed board pushed at round reveal (one socket per human player). */
-export interface SprintLeaderboardPayload {
+/** Final speed-bonus board pushed at round reveal (one socket per human player). */
+export interface SpeedLeaderboardPayload {
   /** Top three fastest correct answerers so far this round. */
-  top: SprintLeaderboardEntry[];
+  top: SpeedLeaderboardEntry[];
   /** Local player's latest attempt (time + projected total when correct). */
   you: {
     timeMs: number | null;
@@ -211,11 +211,11 @@ export interface RoundHistoryEntry {
   myAnswer: string | null;
   /** How the answer was submitted (null when the player did not answer). */
   answerType: AnswerType | null;
-  /** Sprint — final answer time in ms (null if unanswered or wrong). */
+  /** Speed bonus — final answer time in ms (null if unanswered or wrong). */
   answerTimeMs?: number | null;
-  /** Sprint — 1-based rank among correct answerers this round. */
+  /** Speed bonus — 1-based rank among correct answerers this round. */
   speedRank?: number | null;
-  /** Sprint — podium bonus points for this round. */
+  /** Speed bonus — podium points for this round. */
   speedBonus?: number;
 }
 
@@ -223,6 +223,7 @@ export interface RoundHistoryEntry {
 export type MatchSettingsSnapshot = Pick<
   RoomSettings,
   | 'gameType'
+  | 'speedBonusEnabled'
   | 'soundCount'
   | 'guessDuration'
   | 'difficulty'
@@ -238,6 +239,7 @@ export type MatchSettingsSnapshot = Pick<
 export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
   return {
     gameType: settings.gameType,
+    speedBonusEnabled: settings.speedBonusEnabled ?? false,
     soundCount: settings.soundCount,
     guessDuration: settings.guessDuration,
     difficulty: settings.difficulty,
@@ -291,6 +293,7 @@ export interface LobbyJoinedPayload {
 
 export interface RoomListSettingsSummary {
   gameType?: GameType;
+  speedBonusEnabled?: boolean;
   soundCount: number;
   difficulty: string[];
   guessDuration: number;

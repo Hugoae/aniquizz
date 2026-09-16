@@ -82,6 +82,31 @@ describe('mergeRoomSettings', () => {
   });
 });
 
+describe('speedBonusEnabled', () => {
+  it('clears speedBonusEnabled when response type is not typing', () => {
+    const settings = normalizeRoomSettings(
+      { speedBonusEnabled: true, responseType: 'qcm', maxPlayers: 8 },
+      meta,
+    );
+    expect(settings.speedBonusEnabled).toBe(false);
+  });
+
+  it('keeps speedBonusEnabled for typing multiplayer', () => {
+    const settings = normalizeRoomSettings(
+      { speedBonusEnabled: true, responseType: 'typing', maxPlayers: 8 },
+      meta,
+    );
+    expect(settings.speedBonusEnabled).toBe(true);
+  });
+
+  it('lifts legacy gameType sprint into speedBonusEnabled', () => {
+    const settings = normalizeRoomSettings({ gameType: 'sprint', maxPlayers: 8 }, meta);
+    expect(settings.gameType).toBe('standard');
+    expect(settings.responseType).toBe('typing');
+    expect(settings.speedBonusEnabled).toBe(true);
+  });
+});
+
 describe('settings field caps', () => {
   it('rejects an oversized room name or password', () => {
     expect(() =>

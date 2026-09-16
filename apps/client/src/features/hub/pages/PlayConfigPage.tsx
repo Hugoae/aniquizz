@@ -7,10 +7,9 @@ import { SeoHead } from '@/components/seo/SeoHead';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { PAGE_TITLES } from '@/lib/site';
-import type { GameType, RoomConfig } from '@aniquizz/shared';
+import type { RoomConfig } from '@aniquizz/shared';
 
 import { GameConfigForm } from '@/features/hub/components/GameConfigForm';
-import { GameTypeSelector } from '@/features/hub/components/GameTypeSelector';
 import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
 import { defaultConfig, defaultRoomConfig } from '@/features/hub/hooks/useLobbyController';
 import { useLobbyControllerContext } from '@/features/hub/context/LobbyControllerContext';
@@ -101,7 +100,6 @@ export function PlayConfigPage() {
   const formMaxPlayers = 'maxPlayers' in formConfig ? formConfig.maxPlayers : 1;
   const titleParts = intentTitle(intent, isEdit && formMaxPlayers === 1);
   const hideRoomSettings = isEdit && formMaxPlayers === 1;
-  const soloOnlyModes = isSolo || hideRoomSettings;
 
   const watchedKey = useMemo(
     () =>
@@ -123,14 +121,6 @@ export function PlayConfigPage() {
     if (isSolo) startSolo();
     else if (isEdit) createOrUpdateRoom(editDraft ?? roomConfig);
     else createOrUpdateRoom();
-  };
-
-  const handleGameTypeChange = (gameType: GameType) => {
-    formSetter((prev) => ({
-      ...prev,
-      gameType,
-      responseType: gameType === 'sprint' ? 'typing' : prev.responseType,
-    }));
   };
 
   return (
@@ -169,12 +159,6 @@ export function PlayConfigPage() {
                     {titleParts.lead} <span className="gradient-text">{titleParts.accent}</span>
                   </h1>
                 </div>
-
-                <GameTypeSelector
-                  value={formConfig.gameType ?? 'standard'}
-                  onChange={handleGameTypeChange}
-                  soloOnly={soloOnlyModes}
-                />
               </header>
 
               <GameConfigForm

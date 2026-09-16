@@ -1,5 +1,11 @@
 import { z } from 'zod';
-import { GAME_CONFIG, normalizePrecision, type RoomSettings } from '@aniquizz/shared';
+import {
+  GAME_CONFIG,
+  isSpeedBonusEnabled,
+  normalizePrecision,
+  type RoomSettings,
+} from '@aniquizz/shared';
+
 /**
  * Server-side validation/normalization of client-provided room settings.
  * Unknown extra keys are stripped; every field gets a safe default so the
@@ -8,7 +14,7 @@ import { GAME_CONFIG, normalizePrecision, type RoomSettings } from '@aniquizz/sh
 const settingsSchema = z
   .object({
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
-    gameType: z.enum(['standard', 'sprint']).default('standard'),
+    gameType: z.enum(['standard']).default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
     soundCount: z.coerce.number().int().min(5).max(100).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
@@ -24,6 +30,7 @@ const settingsSchema = z
     playlistId: z.string().uuid().nullable().optional(),
     decadePlaylistId: z.string().uuid().nullable().optional(),
     playlistWatched: z.boolean().default(false),
+    speedBonusEnabled: z.boolean().default(false),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -38,13 +45,6 @@ const settingsSchema = z
   })
   .strip()
   .superRefine((data, ctx) => {
-    if (data.gameType === 'sprint' && data.maxPlayers < 2) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Sprint requires at least 2 players.',
-        path: ['gameType'],
-      });
-    }
     if (data.soundSelection === 'playlist' && !data.playlistId && !data.decadePlaylistId) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -54,11 +54,32 @@ const settingsSchema = z
     }
   });
 
-function applySprintRules<T extends { gameType: string; responseType: string; maxPlayers: number }>(
-  settings: T,
-): T {
-  if (settings.gameType !== 'sprint') return settings;
-  return { ...settings, responseType: 'typing' };
+/** One-release compat: old clients still send `gameType: 'sprint'`. */
+function liftLegacySprint(input: unknown): unknown {
+  if (!input || typeof input !== 'object') return input;
+  const data = { ...(input as Record<string, unknown>) };
+  if (data.gameType === 'sprint') {
+    data.gameType = 'standard';
+    data.speedBonusEnabled = true;
+    data.responseType = 'typing';
+  }
+  return data;
+}
+
+function applySpeedBonusRules<
+  T extends {
+    speedBonusEnabled: boolean;
+    responseType: string;
+    maxPlayers: number;
+    mode: string;
+    gameType: 'standard';
+  },
+>(settings: T): T {
+  return {
+    ...settings,
+    gameType: 'standard',
+    speedBonusEnabled: isSpeedBonusEnabled(settings),
+  };
 }
 
 export interface SettingsMeta {
@@ -68,14 +89,14 @@ export interface SettingsMeta {
 }
 
 export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomSettings => {
-  const parsed = settingsSchema.parse(input ?? {});
-  const withSprint = applySprintRules(parsed);
-  const name = (meta.roomName || withSprint.roomName || `Salon de ${meta.hostName}`).trim();
+  const parsed = settingsSchema.parse(liftLegacySprint(input ?? {}));
+  const withSpeedBonus = applySpeedBonusRules(parsed);
+  const name = (meta.roomName || withSpeedBonus.roomName || `Salon de ${meta.hostName}`).trim();
 
   return {
-    ...withSprint,
-    playlistId: withSprint.playlistId ?? undefined,
-    decadePlaylistId: withSprint.decadePlaylistId ?? undefined,
+    ...withSpeedBonus,
+    playlistId: withSpeedBonus.playlistId ?? undefined,
+    decadePlaylistId: withSpeedBonus.decadePlaylistId ?? undefined,
     roomName: name,
     name,
     hostName: meta.hostName,

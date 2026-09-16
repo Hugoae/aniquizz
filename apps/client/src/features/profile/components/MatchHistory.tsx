@@ -1,11 +1,11 @@
 import { History, Trophy, Medal, Target, Zap, Users, Clock, X, Calendar } from 'lucide-react';
-import type { MatchHistoryEntry } from '@aniquizz/shared';
-import { GAME_TYPE_LABELS, gameTypeFromStoredMode } from '@aniquizz/shared';
+import { speedBonusFromStoredMode, type MatchHistoryEntry } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { formatDailyClock } from '@/features/daily/lib/dailyRecap';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
 import { matchRankMedalToken } from '@/features/profile/lib/matchHistoryAccent';
+import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -25,8 +25,6 @@ function formatDuration(ms: number | null): string | null {
   const min = Math.round(ms / 60_000);
   return min < 1 ? '<1 min' : `${min} min`;
 }
-
-const modeLabel = (mode: string) => GAME_TYPE_LABELS[gameTypeFromStoredMode(mode)];
 
 function DailyHistoryRow({ entry }: { entry: MatchHistoryEntry }) {
   const color = entry.isWinner ? 'hsl(var(--accent))' : 'hsl(var(--destructive))';
@@ -90,7 +88,6 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
   if (entry.kind === 'daily') return <DailyHistoryRow entry={entry} />;
 
   const solo = entry.rank == null || entry.playerCount <= 1;
-  const gameType = gameTypeFromStoredMode(entry.mode);
   const topMedal = !solo && entry.rank && entry.rank <= 3 ? matchRankMedalToken(entry.rank) : null;
   const defeat = solo && !entry.isWinner;
 
@@ -126,14 +123,11 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className={cn(
-              'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
-              gameType === 'sprint' ? 'bg-warning/10 text-warning' : 'bg-primary/10 text-primary',
-            )}
-          >
-            {modeLabel(entry.mode)}
-          </span>
+          <GameModeBadge
+            compact
+            speedBonusEnabled={speedBonusFromStoredMode(entry.mode)}
+            className="shadow-none"
+          />
           {entry.answerMode && (
             <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
               {entry.answerMode}

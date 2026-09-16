@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from 'react';
 import { ChevronDown, ListMusic } from 'lucide-react';
-import type { RoomSettings, RoundHistoryEntry, VictoryData } from '@aniquizz/shared';
+import {
+  isSpeedBonusEnabled,
+  type RoomSettings,
+  type RoundHistoryEntry,
+  type VictoryData,
+} from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { ConfettiLayer } from './ConfettiLayer';
 import { GLOW, SOLO_DEFEAT_CONFETTI, SOLO_VICTORY_CONFETTI } from './confettiPresets';
@@ -123,7 +128,10 @@ export function SoloResult({
               </span>
             </div>
             <div className="custom-scrollbar min-h-0 flex-1 overflow-y-auto p-4">
-              <RoundHistoryList history={history} isSprint={settings.gameType === 'sprint'} />
+              <RoundHistoryList
+                history={history}
+                speedBonusEnabled={isSpeedBonusEnabled(settings)}
+              />
             </div>
           </div>
         </div>

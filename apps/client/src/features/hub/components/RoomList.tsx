@@ -114,7 +114,11 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                 <div className="flex-1 min-w-0 flex flex-col gap-3">
                   <div className="flex items-center justify-between md:justify-start gap-4">
                     <div className="flex items-center gap-2">
-                      <GameModeBadge gameType={s.gameType} compact />
+                      <GameModeBadge
+                        gameType={s.gameType}
+                        speedBonusEnabled={Boolean(s.speedBonusEnabled)}
+                        compact
+                      />
                       <h3 className="font-black text-xl truncate text-foreground group-hover:text-primary transition-colors tracking-tight">
                         {room.name}
                       </h3>

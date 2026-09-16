@@ -60,7 +60,7 @@ export interface MatchEngineHost {
     answerType: AnswerType,
     options?: { revealAfterAnswer?: boolean },
   ): void;
-  emitSprintLeaderboard(): void;
+  emitSpeedLeaderboard(): void;
   buildRoundStartPayload(item: PlaylistItem): RoundStartPayload;
   heardSongIds(): number[];
   readonly channel: ReturnType<Room['io']['to']>;

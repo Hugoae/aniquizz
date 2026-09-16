@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Check, Music2, Timer, User, X, Zap } from 'lucide-react';
 import {
   ANSWER_TYPE_LABELS,
-  formatSprintTimeSeconds,
+  formatSpeedTimeSeconds,
   type RoundHistoryEntry,
 } from '@aniquizz/shared';
 import { formatSpeedRankLabel } from '@/features/game/copy/speedRankCopy';
@@ -12,13 +12,13 @@ interface RoundHistoryListProps {
   history: RoundHistoryEntry[];
   /** Show the song type chip (used in the richer solo list). */
   showType?: boolean;
-  /** Sprint match — show speed rank, time, and point breakdown per round. */
-  isSprint?: boolean;
+  /** Speed-bonus match — show rank, time, and point breakdown per round. */
+  speedBonusEnabled?: boolean;
   /** Hide the +N / 0 column (daily has no points). */
   showPoints?: boolean;
 }
 
-function SprintPointsBreakdown({ round }: { round: RoundHistoryEntry }) {
+function SpeedPointsBreakdown({ round }: { round: RoundHistoryEntry }) {
   const bonus = round.speedBonus ?? 0;
   const base = bonus > 0 ? round.points - bonus : round.points;
 
@@ -44,11 +44,11 @@ function SprintPointsBreakdown({ round }: { round: RoundHistoryEntry }) {
 export function RoundHistoryList({
   history,
   showType = true,
-  isSprint = false,
+  speedBonusEnabled = false,
   showPoints = true,
 }: RoundHistoryListProps) {
-  const sprintSummary = useMemo(() => {
-    if (!isSprint || history.length === 0) return null;
+  const speedSummary = useMemo(() => {
+    if (!speedBonusEnabled || history.length === 0) return null;
 
     const timed = history.filter((r) => r.isCorrect && r.answerTimeMs != null);
     const podiums = history.filter(
@@ -61,7 +61,7 @@ export function RoundHistoryList({
     );
 
     return { podiums: podiums.length, fastestMs };
-  }, [history, isSprint]);
+  }, [history, speedBonusEnabled]);
 
   if (!history || history.length === 0) {
     return (
@@ -73,16 +73,16 @@ export function RoundHistoryList({
 
   return (
     <div className="space-y-3">
-      {isSprint && sprintSummary && (
-        <div className="flex flex-wrap gap-3 rounded-lg border border-warning/20 bg-warning/5 px-3 py-2 text-xs font-semibold text-warning">
+      {speedBonusEnabled && speedSummary && (
+        <div className="flex flex-wrap gap-3 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent">
           <span className="inline-flex items-center gap-1">
             <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-            {sprintSummary.podiums} podium{sprintSummary.podiums > 1 ? 's' : ''} vitesse
+            {speedSummary.podiums} podium{speedSummary.podiums > 1 ? 's' : ''} vitesse
           </span>
-          {sprintSummary.fastestMs != null && (
+          {speedSummary.fastestMs != null && (
             <span className="inline-flex items-center gap-1 font-mono tabular-nums">
               <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-              Meilleur : {formatSprintTimeSeconds(sprintSummary.fastestMs)} s
+              Meilleur : {formatSpeedTimeSeconds(speedSummary.fastestMs)} s
             </span>
           )}
         </div>
@@ -134,14 +134,14 @@ export function RoundHistoryList({
               <span className="truncate">{round.song.title}</span>
             </div>
 
-            {isSprint && round.isCorrect && round.answerTimeMs != null && (
+            {speedBonusEnabled && round.isCorrect && round.answerTimeMs != null && (
               <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] font-semibold">
                 <span className="inline-flex items-center gap-1 font-mono tabular-nums text-accent">
                   <Timer className="h-3 w-3" aria-hidden="true" />
-                  {formatSprintTimeSeconds(round.answerTimeMs)} s
+                  {formatSpeedTimeSeconds(round.answerTimeMs)} s
                 </span>
                 {round.speedRank != null && round.speedRank > 0 && (
-                  <span className="rounded-md border border-warning/30 bg-warning/10 px-1.5 py-0.5 text-warning">
+                  <span className="rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent">
                     {formatSpeedRankLabel(round.speedRank)} correct
                   </span>
                 )}
@@ -162,8 +162,8 @@ export function RoundHistoryList({
 
           {showPoints && (
             <div className="min-w-[60px] text-right">
-              {isSprint ? (
-                <SprintPointsBreakdown round={round} />
+              {speedBonusEnabled ? (
+                <SpeedPointsBreakdown round={round} />
               ) : (
                 <div
                   className={cn(

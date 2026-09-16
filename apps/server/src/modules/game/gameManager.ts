@@ -32,6 +32,7 @@ export interface AdminRoomProgress {
 export interface AdminRoomSettings {
   mode: string;
   gameType: string;
+  speedBonusEnabled: boolean;
   responseType: string;
   soundCount: number;
   soundTypes: string[];
@@ -72,6 +73,7 @@ const ROOM_LIST_BROADCAST_MS = 150;
 
 const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => ({
   gameType: settings.gameType,
+  speedBonusEnabled: settings.speedBonusEnabled ?? false,
   soundCount: settings.soundCount,
   difficulty: settings.difficulty,
   guessDuration: settings.guessDuration,
@@ -411,6 +413,7 @@ export class GameManager {
       settings: {
         mode: room.settings.mode,
         gameType: room.settings.gameType,
+        speedBonusEnabled: room.settings.speedBonusEnabled ?? false,
         responseType: room.settings.responseType,
         soundCount: room.settings.soundCount,
         soundTypes: room.settings.soundTypes,
