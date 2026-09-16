@@ -136,8 +136,10 @@ export function resolvePlayerPrefs(input: {
   local: unknown;
   account: unknown;
   preferLocal: boolean;
+  /** True when this device already persisted prefs (refresh must not clobber with defaults). */
+  hasLocalSnapshot?: boolean;
 }): PlayerPrefs {
-  if (input.preferLocal) return normalizePlayerPrefs(input.local);
+  if (input.preferLocal || input.hasLocalSnapshot) return normalizePlayerPrefs(input.local);
   if (input.account != null) return normalizePlayerPrefs(input.account);
   return normalizePlayerPrefs(input.local);
 }

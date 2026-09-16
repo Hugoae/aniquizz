@@ -3,11 +3,22 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7** · Pokédex + Admin rework (next) (2026-09-15)
+## Current phase: **26.7** · Pokédex + Admin rework (next) (2026-09-16)
 
-> **State:** **26.6.1** shipped on `main` as `52ce827` (reveal answer-type icons, reveal = min(guess, 15s)). Home / menu life was tried and dropped. No news article and no `SITE_VERSION` bump — git tag `26.6.1` later is GitHub-only. **Next:** **26.7** pokédex + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **26.6.2** shipped (volume persist + header XP ring). No news article and no `SITE_VERSION` bump — git tag `26.6.2` is GitHub-only. The Home footer stays `v26.6`. **Next:** **26.7** pokédex + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
-**26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped
+**26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
+
+### 26.6.2 — volume persist + header XP (2026-09-16)
+
+Patch after **26.6.1**. Comfort prefs and the site-header chip were lying after a session. No `SITE_VERSION` bump.
+
+| Item               | What changed                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Volume / prefs** | Logged-in reload used the Auth `Profile` SELECT (`audioVolume` default **20**) and wrote that over `aniquizz-player-prefs-v2`. Account sync often never landed (`socket.connected` ≠ ready). A device snapshot now wins and is pushed with `subscribeWhenSocketReady`; `profile:prefs` ACK patches Auth. Guests with no stored prefs still hydrate from the account. |
+| **Header XP ring** | The chip is `levelProgress(profile.xp)`. `level_up` used to `fetchProfile` while `persistMatch` was still in flight (stale row). XP without a level-up never refreshed. `game_over` now adds `xpEarned`; `level_up` applies the payload total. No Profile SELECT on those events.                                                                                    |
+
+**Next:** **26.7** (found bar, heard/found/liked sources, Admin rework).
 
 ### Audit — method
 
@@ -1169,6 +1180,7 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.5**   | Endings catalogue ✅ · OP/ED filter ✅ · artist credits + locks imported ✅ · staff playlists ✅ · hardening ✅ · tag `26.5`                                               |
 | **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
 | **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
+| **26.6.2** | Volume persist across reload ✅ · header XP ring after matches ✅ · no `SITE_VERSION` bump                                                                                 |
 | **26.7**   | Pokédex found bar · heard / found / liked playlists · Admin panel rework — next                                                                                            |
 | **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 

@@ -1,8 +1,9 @@
 import { toast } from 'sonner';
 import type { Session } from '@supabase/supabase-js';
-import type { SanctionUpdatePayload } from '@aniquizz/shared';
+import type { GameOverPayload, LevelUpPayload, SanctionUpdatePayload } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { shouldReconnectAfterSessionReplaced } from '@/lib/socketReady';
+import { xpEarnedForUser } from '@/features/auth/lib/matchXpProfile';
 
 let connectedUserId: string | null | undefined = undefined;
 
@@ -20,20 +21,39 @@ export function syncSocketSession(session: Session | null, username: string): vo
   }
 }
 
-export function registerLevelUpHandler(
-  session: Session | null,
-  onProfileRefresh: () => void,
-): () => void {
-  const onLevelUp = (payload: { oldLevel: number; newLevel: number; xp: number }) => {
+export function registerLevelUpHandler(onXp: (payload: LevelUpPayload) => void): () => void {
+  const onLevelUp = (payload: LevelUpPayload) => {
     toast.success(`Niveau ${payload.newLevel} atteint !`, {
       description: 'Continue comme ça pour grimper les niveaux.',
     });
-    if (session?.user) onProfileRefresh();
+    onXp(payload);
   };
 
   socket.on('level_up', onLevelUp);
   return () => {
     socket.off('level_up', onLevelUp);
+  };
+}
+
+/**
+ * Apply match XP to the Auth profile from `game_over`. Do not SELECT Profile
+ * here: persistMatch is still in flight, so a fetch would overwrite with stale XP.
+ */
+export function registerGameOverXpHandler(
+  getUserId: () => string | null | undefined,
+  onXpEarned: (earned: number) => void,
+): () => void {
+  const onGameOver = (payload: GameOverPayload) => {
+    const userId = getUserId();
+    if (!userId) return;
+    const earned = xpEarnedForUser(payload.victoryData.rankings, userId);
+    if (earned == null || earned === 0) return;
+    onXpEarned(earned);
+  };
+
+  socket.on('game_over', onGameOver);
+  return () => {
+    socket.off('game_over', onGameOver);
   };
 }
 

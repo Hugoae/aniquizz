@@ -169,6 +169,20 @@ describe('resolvePlayerPrefs', () => {
     });
   });
 
+  it('keeps a device snapshot over the account default when hasLocalSnapshot is set', () => {
+    expect(
+      resolvePlayerPrefs({
+        local: { audioVolume: 50, audioMuted: false },
+        account: { audioVolume: 20, audioMuted: false },
+        preferLocal: false,
+        hasLocalSnapshot: true,
+      }),
+    ).toEqual({
+      ...PLAYER_PREFS_DEFAULTS,
+      audioVolume: 50,
+    });
+  });
+
   it('falls back to local when the account is absent', () => {
     expect(
       resolvePlayerPrefs({

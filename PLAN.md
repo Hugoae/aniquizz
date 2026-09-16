@@ -12,6 +12,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.5**   | ✅ Shipped | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
 | **26.6**   | ✅ Shipped | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
 | **26.6.1** | ✅ Shipped | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
+| **26.6.2** | ✅ Shipped | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
 | **26.7**   | 🔮 Next    | Profile pokédex (found bar, heard / found / liked) · **Admin panel rework**                                           |
 | **26.x+**  | 🔮 Backlog | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
@@ -383,13 +384,43 @@ is unchanged.
 
 ---
 
+## Update 26.6.2 — Prefs persist & header XP (shipped)
+
+Goal: keep the last player volume after a refresh, and make the header chip move when a
+match awards XP. This is the patch after **26.6.1**. Do not rewrite shipped **26.6** /
+**26.6.1** history. No `SITE_VERSION` bump and no news article — git tag `26.6.2` is
+GitHub-only. The Home footer stays `v26.6`.
+
+### 1. Volume / comfort prefs persist ✅
+
+- Device `localStorage` (`aniquizz-player-prefs-v2`) must win on a logged-in reload so
+  the Prisma default **20 %** cannot clobber a session that ended at 50 %.
+- Push that snapshot with `subscribeWhenSocketReady` (connected ≠ handshake ready).
+- `profile:prefs` ACK patches Auth. Guests with no stored prefs still hydrate from the
+  account (do not push the 20 % default over a real account row).
+
+### 2. Header XP ring after a match ✅
+
+- The chip is `levelProgress(profile.xp)`. Do not `fetchProfile` on `level_up` while
+  `persistMatch` is still in flight (stale SELECT).
+- `game_over` adds `xpEarned`; `level_up` applies the payload total. XP without a
+  level-up still refreshes the ring.
+
+### 26.6.2 checklist (at boundary)
+
+- [x] Device prefs snapshot wins on refresh; socket-ready account sync; Auth patch on ACK.
+- [x] Header / in-game chip XP from `game_over` + `level_up` payloads, no stale SELECT.
+- [x] Focused prefs + XP helper tests green.
+
+---
+
 ## Update 26.7 — Pokédex depth & Admin rework (planned)
 
 Goal: make collection progress readable, let players replay what they already know, and
 rebuild the staff console so the tools shipped in the post-26.6 audit (journal, repair
 queue, spectator, bounded MODERATOR) sit in a coherent panel.
 
-**26.6.1** is closed. This is the next ship. Do not start HIBP.
+**26.6.2** is closed. This is the next ship. Do not start HIBP.
 
 ### 1. Profile pokédex — found bar
 
@@ -458,7 +489,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat; seasons reuse leaderboard infra. Mix honor-system already clamped in 26.5.               |
 | **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint.                                                                                           |
-| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4 refactor — **only if** product revives them.                                                          |
+| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** (time-budget typing) is a candidate after **26.7** — spec first, do not start.  |
 | **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy. |
 | **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                      |
 
@@ -493,7 +524,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). Next ship is **26.7**.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). Next ship is **26.7**.
 
 ---
 

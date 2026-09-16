@@ -1,23 +1,38 @@
 import { act, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { PLAYER_PREFS_DEFAULTS, type PlayerPrefs } from '@aniquizz/shared';
+import { PLAYER_PREFS_DEFAULTS, PLAYER_PREFS_KEYS, type PlayerPrefs } from '@aniquizz/shared';
 import {
   PLAYER_PREFS_LEGACY_STORAGE_KEY,
   PLAYER_PREFS_STORAGE_KEY,
 } from '@/features/settings/lib/playerPrefsStorage';
+import { SOCKET_READY_SETTLE_MS } from '@/lib/socketReady';
 
 const socketMock = vi.hoisted(() => {
-  const handlers = new Map<string, (...args: unknown[]) => void>();
+  const handlers = new Map<string, Set<(...args: unknown[]) => void>>();
   return {
     handlers,
+    emitAll(event: string, ...args: unknown[]) {
+      handlers.get(event)?.forEach((cb) => {
+        cb(...args);
+      });
+    },
     socket: {
       connected: true,
       on: vi.fn((event: string, cb: (...args: unknown[]) => void) => {
-        handlers.set(event, cb);
+        let set = handlers.get(event);
+        if (!set) {
+          set = new Set();
+          handlers.set(event, set);
+        }
+        set.add(cb);
       }),
-      off: vi.fn((event: string) => {
-        handlers.delete(event);
+      off: vi.fn((event: string, cb?: (...args: unknown[]) => void) => {
+        if (!cb) {
+          handlers.delete(event);
+          return;
+        }
+        handlers.get(event)?.delete(cb);
       }),
       emit: vi.fn(),
     },
@@ -32,6 +47,7 @@ const authMock = vi.hoisted(() => ({
     audioVolume: 20,
     audioMuted: false,
   } as { id: string; audioVolume?: number; audioMuted?: boolean; motionMode?: string } | null,
+  patchProfile: vi.fn(),
 }));
 
 vi.mock('@/lib/socket', () => ({ socket: socketMock.socket }));
@@ -40,6 +56,7 @@ vi.mock('@/features/auth/context/AuthContext', () => ({
     user: authMock.user,
     profile: authMock.profile,
     authReady: authMock.authReady,
+    patchProfile: authMock.patchProfile,
   }),
 }));
 
@@ -48,6 +65,10 @@ import { PLAYER_PREFS_SYNC_MS, PlayerPrefsProvider, usePlayerPrefs } from './Pla
 const wrapper = ({ children }: { children: ReactNode }) => (
   <PlayerPrefsProvider>{children}</PlayerPrefsProvider>
 );
+
+function flushPrefsSync() {
+  vi.advanceTimersByTime(PLAYER_PREFS_SYNC_MS + SOCKET_READY_SETTLE_MS);
+}
 
 describe('PlayerPrefsProvider', () => {
   beforeEach(() => {
@@ -62,6 +83,7 @@ describe('PlayerPrefsProvider', () => {
     authMock.user = { id: 'user-1' };
     authMock.authReady = true;
     authMock.profile = { id: 'user-1', audioVolume: 20, audioMuted: false };
+    authMock.patchProfile.mockClear();
   });
 
   afterEach(() => {
@@ -91,7 +113,7 @@ describe('PlayerPrefsProvider', () => {
     expect(result.current.motionMode).toBe('reduced');
 
     act(() => {
-      vi.advanceTimersByTime(PLAYER_PREFS_SYNC_MS);
+      flushPrefsSync();
     });
     expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {
       ...PLAYER_PREFS_DEFAULTS,
@@ -112,7 +134,58 @@ describe('PlayerPrefsProvider', () => {
     expect(result.current.audioVolume).toBe(70);
   });
 
-  it('applies a later account snapshot when this session was never a guest', () => {
+  it('does not let a later account default overwrite a device snapshot on refresh', () => {
+    localStorage.setItem(
+      PLAYER_PREFS_STORAGE_KEY,
+      JSON.stringify({ audioVolume: 50, audioMuted: false, motionMode: 'auto' }),
+    );
+    const { result, rerender } = renderHook(() => usePlayerPrefs(), { wrapper });
+    expect(result.current.audioVolume).toBe(50);
+
+    act(() => {
+      authMock.profile = {
+        id: 'user-1',
+        audioVolume: 20,
+        audioMuted: false,
+        motionMode: 'full',
+      };
+    });
+    rerender();
+
+    expect(result.current.audioVolume).toBe(50);
+    act(() => {
+      flushPrefsSync();
+    });
+    expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {
+      ...PLAYER_PREFS_DEFAULTS,
+      audioVolume: 50,
+    });
+  });
+
+  it('hydrates account prefs after a guest with no device snapshot signs in', () => {
+    authMock.user = null;
+    authMock.profile = null;
+    const { result, rerender } = renderHook(() => usePlayerPrefs(), { wrapper });
+    expect(result.current.audioVolume).toBe(20);
+
+    act(() => {
+      authMock.user = { id: 'user-1' };
+      authMock.profile = {
+        id: 'user-1',
+        audioVolume: 35,
+        audioMuted: true,
+        motionMode: 'full',
+      };
+    });
+    rerender();
+
+    expect(result.current.audioVolume).toBe(35);
+    expect(result.current.audioMuted).toBe(true);
+    expect(socketMock.socket.emit).not.toHaveBeenCalled();
+  });
+
+  it('applies a later account snapshot when this device has no stored prefs', () => {
+    authMock.profile = { id: 'user-1' };
     const { result, rerender } = renderHook(() => usePlayerPrefs(), { wrapper });
 
     act(() => {
@@ -171,7 +244,7 @@ describe('PlayerPrefsProvider', () => {
     expect(socketMock.socket.emit).not.toHaveBeenCalled();
 
     act(() => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(1 + SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledTimes(1);
     expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {
@@ -196,7 +269,8 @@ describe('PlayerPrefsProvider', () => {
 
     act(() => {
       socketMock.socket.connected = true;
-      socketMock.handlers.get('connect')?.();
+      socketMock.emitAll('connect');
+      vi.advanceTimersByTime(SOCKET_READY_SETTLE_MS);
     });
     expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {
       ...PLAYER_PREFS_DEFAULTS,
@@ -212,12 +286,36 @@ describe('PlayerPrefsProvider', () => {
     });
 
     act(() => {
-      const onPrefs = socketMock.handlers.get('profile:prefs') as
-        ((payload: PlayerPrefs) => void) | undefined;
-      onPrefs?.({ ...PLAYER_PREFS_DEFAULTS, audioVolume: 20, audioMuted: false });
+      socketMock.emitAll('profile:prefs', {
+        ...PLAYER_PREFS_DEFAULTS,
+        audioVolume: 20,
+        audioMuted: false,
+      } satisfies PlayerPrefs);
     });
 
     expect(result.current.audioVolume).toBe(80);
+  });
+
+  it('patches the auth profile from a matching prefs ACK', () => {
+    const { result } = renderHook(() => usePlayerPrefs(), { wrapper });
+
+    act(() => {
+      result.current.setAudioVolume(55);
+      flushPrefsSync();
+    });
+
+    const stored = {
+      ...PLAYER_PREFS_DEFAULTS,
+      audioVolume: 55,
+    };
+    act(() => {
+      socketMock.emitAll('profile:prefs', stored);
+    });
+
+    expect(authMock.patchProfile).toHaveBeenCalledWith(
+      Object.fromEntries(PLAYER_PREFS_KEYS.map((key) => [key, stored[key]])),
+      'user-1',
+    );
   });
 
   it('syncs motion mode with the rest of the prefs payload', () => {
@@ -225,7 +323,7 @@ describe('PlayerPrefsProvider', () => {
 
     act(() => {
       result.current.setMotionMode('full');
-      vi.advanceTimersByTime(PLAYER_PREFS_SYNC_MS);
+      flushPrefsSync();
     });
 
     expect(socketMock.socket.emit).toHaveBeenCalledWith('profile:update_prefs', {

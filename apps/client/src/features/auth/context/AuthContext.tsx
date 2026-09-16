@@ -10,6 +10,7 @@ import {
 import type { Session, User, SupabaseClient } from '@supabase/supabase-js';
 import { captureClientError } from '@/lib/errorReporter';
 import { createProfileFetchGate } from '@/features/auth/lib/profileFetchGate';
+import { profileXpFields } from '@/features/auth/lib/matchXpProfile';
 
 const loadSupabase = () => import('@/lib/supabase').then((m) => m.supabase);
 
@@ -199,6 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // --- SOCKET LIFECYCLE (lazy chunk — only when a session exists) ---
   useEffect(() => {
     let cleanupLevelUp: (() => void) | undefined;
+    let cleanupGameOverXp: (() => void) | undefined;
     let cleanupSanction: (() => void) | undefined;
     let cleanupSessionReplace: (() => void) | undefined;
     let disposed = false;
@@ -207,16 +209,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       ({
         syncSocketSession,
         registerLevelUpHandler,
+        registerGameOverXpHandler,
         registerSanctionHandler,
         registerSessionReplacementReconnect,
       }) => {
         if (disposed) return;
         syncSocketSession(session, profile?.username || 'Anonyme');
         if (!session?.user) return;
-        cleanupLevelUp = registerLevelUpHandler(session, () => {
-          if (session.user && supabaseRef.current)
-            void fetchProfile(session.user.id, supabaseRef.current);
+        const userId = session.user.id;
+        cleanupLevelUp = registerLevelUpHandler((payload) => {
+          setProfile((prev) => {
+            if (!prev || prev.id !== userId) return prev;
+            const next = profileXpFields(payload.xp);
+            if (next.xp === prev.xp && next.level === prev.level) return prev;
+            return { ...prev, ...next };
+          });
         });
+        cleanupGameOverXp = registerGameOverXpHandler(
+          () => userId,
+          (earned) => {
+            setProfile((prev) => {
+              if (!prev || prev.id !== userId) return prev;
+              const next = profileXpFields(prev.xp + earned);
+              if (next.xp === prev.xp && next.level === prev.level) return prev;
+              return { ...prev, ...next };
+            });
+          },
+        );
         cleanupSanction = registerSanctionHandler((payload) => {
           setProfile((prev) =>
             prev
@@ -235,10 +254,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       disposed = true;
       cleanupLevelUp?.();
+      cleanupGameOverXp?.();
       cleanupSanction?.();
       cleanupSessionReplace?.();
     };
-  }, [session, session?.user?.id, session?.access_token, profile?.username, fetchProfile]);
+  }, [session, session?.user?.id, session?.access_token, profile?.username]);
 
   // --- ACTIONS ---
 

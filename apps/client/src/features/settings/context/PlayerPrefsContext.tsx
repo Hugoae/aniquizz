@@ -22,6 +22,7 @@ import {
   type PlayerPrefsInput,
 } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { subscribeWhenSocketReady } from '@/lib/socketReady';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { readPlayerPrefs, writePlayerPrefs } from '@/features/settings/lib/playerPrefsStorage';
 import {
@@ -55,8 +56,10 @@ interface PlayerPrefsContextValue extends PlayerPrefs {
 const PlayerPrefsContext = createContext<PlayerPrefsContextValue | null>(null);
 
 export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
-  const { user, profile, authReady } = useAuth();
-  const [prefs, setPrefs] = useState<PlayerPrefs>(() => normalizePlayerPrefs(readPlayerPrefs()));
+  const { user, profile, authReady, patchProfile } = useAuth();
+  const storedAtBoot = useRef(readPlayerPrefs());
+  const hadLocalSnapshotRef = useRef(storedAtBoot.current != null);
+  const [prefs, setPrefs] = useState<PlayerPrefs>(() => normalizePlayerPrefs(storedAtBoot.current));
   const prefsRef = useRef(prefs);
   prefsRef.current = prefs;
   const lastAckedRef = useRef(prefs);
@@ -64,42 +67,59 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
   const wasGuestRef = useRef(false);
   const keepLocalOnAccountRef = useRef(false);
   const skipAccountHydrateRef = useRef(false);
+  const accountHydratedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopReadyRef = useRef<(() => void) | null>(null);
   const [osReduced, setOsReduced] = useState(readOsPrefersReduced);
+  const userId = user?.id ?? null;
+  const userIdRef = useRef(userId);
+  userIdRef.current = userId;
+  const patchProfileRef = useRef(patchProfile);
+  patchProfileRef.current = patchProfile;
 
   const apply = useCallback((next: PlayerPrefs) => {
     prefsRef.current = next;
     setPrefs(next);
     writePlayerPrefs(next);
+    hadLocalSnapshotRef.current = true;
   }, []);
 
-  const emitIfConnected = useCallback(() => {
-    if (!user) {
+  const emitNow = useCallback(() => {
+    if (!userIdRef.current) {
       pendingRef.current = false;
       return;
     }
     if (!socket.connected) return;
     socket.emit('profile:update_prefs', prefsRef.current);
-    // Keep pending until profile:prefs matches so a stale account snapshot cannot win.
-  }, [user]);
+  }, []);
+
+  const armReadyEmit = useCallback(() => {
+    stopReadyRef.current?.();
+    stopReadyRef.current = subscribeWhenSocketReady(socket, () => {
+      if (!pendingRef.current) return;
+      emitNow();
+    });
+  }, [emitNow]);
 
   const flush = useCallback(() => {
     if (timerRef.current) {
       clearTimeout(timerRef.current);
       timerRef.current = null;
     }
-    if (pendingRef.current) emitIfConnected();
-  }, [emitIfConnected]);
+    stopReadyRef.current?.();
+    stopReadyRef.current = null;
+    if (pendingRef.current) emitNow();
+  }, [emitNow]);
 
   const scheduleSync = useCallback(() => {
-    if (!user) return;
+    if (!userIdRef.current) return;
     pendingRef.current = true;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
-      emitIfConnected();
+      armReadyEmit();
     }, PLAYER_PREFS_SYNC_MS);
-  }, [user, emitIfConnected]);
+  }, [armReadyEmit]);
 
   const commit = useCallback(
     (next: PlayerPrefs) => {
@@ -112,25 +132,40 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!authReady) return;
-    if (!user) {
+    if (!userId) {
       wasGuestRef.current = true;
       keepLocalOnAccountRef.current = false;
       skipAccountHydrateRef.current = false;
+      accountHydratedRef.current = false;
       return;
     }
-    // Guest → signed-in: keep this device's local comfort prefs and push them.
+    // Guest → signed-in, or a returning session with device prefs: push local, never pull.
+    // A guest who never stored prefs must still hydrate from the account (do not push 20%).
     if (wasGuestRef.current) {
       wasGuestRef.current = false;
-      keepLocalOnAccountRef.current = true;
+      if (hadLocalSnapshotRef.current) {
+        keepLocalOnAccountRef.current = true;
+        skipAccountHydrateRef.current = true;
+        pendingRef.current = true;
+        scheduleSync();
+        return;
+      }
+    } else if (hadLocalSnapshotRef.current) {
       skipAccountHydrateRef.current = true;
       pendingRef.current = true;
       scheduleSync();
     }
-  }, [authReady, user, scheduleSync]);
+  }, [authReady, userId, scheduleSync]);
 
   useEffect(() => {
-    if (!user || !hasAccountPlayerPrefs(profile)) return;
-    if (keepLocalOnAccountRef.current || skipAccountHydrateRef.current) {
+    if (!userId || !hasAccountPlayerPrefs(profile)) return;
+    if (
+      keepLocalOnAccountRef.current ||
+      skipAccountHydrateRef.current ||
+      pendingRef.current ||
+      hadLocalSnapshotRef.current ||
+      accountHydratedRef.current
+    ) {
       if (keepLocalOnAccountRef.current) {
         pendingRef.current = true;
         scheduleSync();
@@ -140,12 +175,14 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
     const resolved = resolvePlayerPrefs({
       local: prefsRef.current,
       account: profile,
-      preferLocal: pendingRef.current,
+      preferLocal: false,
+      hasLocalSnapshot: hadLocalSnapshotRef.current,
     });
+    accountHydratedRef.current = true;
     if (playerPrefsEqual(resolved, prefsRef.current)) return;
     lastAckedRef.current = resolved;
     apply(resolved);
-  }, [apply, profile, scheduleSync, user]);
+  }, [apply, profile, scheduleSync, userId]);
 
   useEffect(() => {
     applyMotionAttribute(prefs.motionMode, osReduced);
@@ -167,15 +204,16 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
   }, [flush]);
 
   useEffect(() => {
-    const onConnect = () => {
-      if (pendingRef.current) emitIfConnected();
-    };
     const onPrefs = (stored: PlayerPrefs) => {
       const next = normalizePlayerPrefs(stored);
       if (pendingRef.current && !playerPrefsEqual(next, prefsRef.current)) return;
       pendingRef.current = false;
       keepLocalOnAccountRef.current = false;
+      stopReadyRef.current?.();
+      stopReadyRef.current = null;
       lastAckedRef.current = next;
+      const id = userIdRef.current;
+      if (id) patchProfileRef.current({ ...next }, id);
       if (playerPrefsEqual(next, prefsRef.current)) return;
       apply(next);
     };
@@ -183,20 +221,18 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
       if (!pendingRef.current || !isPrefsSyncError(payload?.message)) return;
       pendingRef.current = false;
       toast.error(SETTINGS_COPY.prefsSyncError);
-      if (keepLocalOnAccountRef.current) return;
+      if (keepLocalOnAccountRef.current || hadLocalSnapshotRef.current) return;
       if (!playerPrefsEqual(lastAckedRef.current, prefsRef.current)) {
         apply(lastAckedRef.current);
       }
     };
-    socket.on('connect', onConnect);
     socket.on('profile:prefs', onPrefs);
     socket.on('error', onError);
     return () => {
-      socket.off('connect', onConnect);
       socket.off('profile:prefs', onPrefs);
       socket.off('error', onError);
     };
-  }, [apply, emitIfConnected]);
+  }, [apply]);
 
   const setAudioVolume = useCallback(
     (volume: number) => {
