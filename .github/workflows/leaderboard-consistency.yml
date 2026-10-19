@@ -32,5 +32,9 @@ jobs:
       - name: Generate Prisma client
         run: pnpm db:generate
 
+      # ts-node resolves @aniquizz/database and @aniquizz/shared from dist/.
+      - name: Build workspace packages the report imports
+        run: pnpm exec turbo run build --filter=@aniquizz/shared --filter=@aniquizz/database
+
       - name: Report Profile vs MatchPlayer drift
         run: pnpm --filter aniquizz-server exec ts-node scripts/report-leaderboard-consistency.ts --fail-on-drift
