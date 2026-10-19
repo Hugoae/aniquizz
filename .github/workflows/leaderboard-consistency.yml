@@ -36,5 +36,54 @@ jobs:
       - name: Build workspace packages the report imports
         run: pnpm exec turbo run build --filter=@aniquizz/shared --filter=@aniquizz/database
 
+      # GitHub-hosted runners have no IPv6. db.<ref>.supabase.co is IPv6-only for this
+      # project, so Prisma fails before the query. The session pooler is IPv4.
+      - name: Point Prisma at the IPv4 session pooler
+        run: |
+          python3 - << 'PY'
+          import os
+          from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
+
+          raw = os.environ.get("DATABASE_URL", "")
+          parsed = urlparse(raw)
+          host = parsed.hostname or ""
+          pooler = "aws-1-eu-west-1.pooler.supabase.com"
+          project_ref = "qjnfdhmvvledhtwwfrzb"
+
+          if host == pooler:
+              print("DATABASE_URL already uses the session pooler")
+              raise SystemExit(0)
+
+          expected = f"db.{project_ref}.supabase.co"
+          if host != expected:
+              print(f"Refusing to rewrite unexpected database host: {host or '(missing)'}")
+              raise SystemExit(1)
+
+          user = parsed.username or "postgres"
+          if user == "postgres":
+              user = f"postgres.{project_ref}"
+          query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+          query.setdefault("sslmode", "require")
+          netloc = (
+              f"{quote(user, safe='')}:{quote(parsed.password or '', safe='')}"
+              f"@{pooler}:5432"
+          )
+          rewritten = urlunparse(
+              (
+                  parsed.scheme or "postgresql",
+                  netloc,
+                  parsed.path or "/postgres",
+                  "",
+                  urlencode(query),
+                  "",
+              )
+          )
+          with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env_file:
+              env_file.write("DATABASE_URL<<AQ_DATABASE_URL\n")
+              env_file.write(rewritten)
+              env_file.write("\nAQ_DATABASE_URL\n")
+          print(f"Rewrote {expected} to {pooler}:5432")
+          PY
+
       - name: Report Profile vs MatchPlayer drift
         run: pnpm --filter aniquizz-server exec ts-node scripts/report-leaderboard-consistency.ts --fail-on-drift
