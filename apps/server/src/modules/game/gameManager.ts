@@ -3,6 +3,7 @@ import type {
   RoomListItem,
   RoomListSettingsSummary,
   RoomSettings,
+  UserRole,
   WatchedListProvider,
 } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
@@ -13,6 +14,7 @@ import { Room } from './engine/Room';
 import type { BotConfig } from './engine/types';
 import { normalizeRoomSettings } from './settings';
 import { assertPublishedPlaylistSource } from './playlistRecipeService';
+import { SWEEP_INTERVAL_MS, evaluateRoomIdle } from './roomIdlePolicy';
 
 /** Detailed live-room projection for the admin panel. */
 export interface AdminRoomProgress {
@@ -85,16 +87,6 @@ const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => 
   decadePlaylistId: settings.decadePlaylistId ?? undefined,
 });
 
-// --- IDLE / STALE ROOM POLICY ---------------------------------------------
-/** How often the idle-room sweep runs. */
-const SWEEP_INTERVAL_MS = 60_000;
-/** A `waiting` lobby with no activity for this long is closed. */
-const LOBBY_IDLE_MS = 30 * 60_000;
-/** A match paused longer than this is auto-cancelled back to the lobby. */
-const PAUSE_MAX_MS = 15 * 60_000;
-/** A `playing` match with no round progress for this long is force-cancelled (frozen-match watchdog). */
-const MATCH_STALE_MS = 5 * 60_000;
-
 export class GameManager {
   private readonly rooms = new Map<string, Room>();
   private readonly cleanupTimers = new Map<string, NodeJS.Timeout>();
@@ -114,38 +106,21 @@ export class GameManager {
   }
 
   /**
-   * Reclaim resources from rooms that are idle or stuck:
-   *  - a `waiting` lobby untouched for LOBBY_IDLE_MS is closed;
-   *  - a match paused longer than PAUSE_MAX_MS is cancelled back to the lobby;
-   *  - a `playing` match with no progress for MATCH_STALE_MS is force-cancelled.
+   * Reclaim resources from rooms that are idle or stuck. The per-status rules
+   * live in `roomIdlePolicy.ts`; this only applies the verdict.
    */
-  private sweepIdleRooms(): void {
-    const now = Date.now();
+  sweepIdleRooms(now: number = Date.now()): void {
     for (const room of [...this.rooms.values()]) {
-      if (room.status === 'paused') {
-        const pausedMs = room.pausedForMs;
-        if (pausedMs !== null && pausedMs > PAUSE_MAX_MS) {
-          logger.info(
-            `[GameManager] Room ${room.id} cancelled: paused ${Math.round(pausedMs / 60_000)}min.`,
-            'GameManager',
-          );
-          room.forceCancel('Partie annulée : en pause depuis trop longtemps.');
-        }
-        continue;
-      }
-
-      if (room.status === 'playing' && now - room.lastActivityAt > MATCH_STALE_MS) {
-        logger.warn(
-          `[GameManager] Room ${room.id} force-cancelled: match stalled (no progress).`,
-          'GameManager',
-        );
-        room.forceCancel('Partie interrompue : aucune activité détectée.');
-        continue;
-      }
-
-      if (room.status === 'waiting' && now - room.lastActivityAt > LOBBY_IDLE_MS) {
-        logger.info(`[GameManager] Room ${room.id} closed: idle lobby.`, 'GameManager');
-        this.io.to(room.id).emit('room_closed', { reason: "Salon fermé pour cause d'inactivité." });
+      const verdict = evaluateRoomIdle(room, now);
+      if (verdict.action === 'keep') continue;
+      logger.info(
+        `[GameManager] Room ${room.id} ${verdict.action}: ${verdict.reason}.`,
+        'GameManager',
+      );
+      if (verdict.action === 'cancel') {
+        room.forceCancel(verdict.clientMessage);
+      } else {
+        this.io.to(room.id).emit('room_closed', { reason: verdict.clientMessage });
         this.removeRoom(room.id);
       }
     }
@@ -374,12 +349,37 @@ export class GameManager {
     return { status: 'online' };
   }
 
+  /**
+   * One live room per user. Create/join call this before seating the player so a
+   * second lobby cannot keep accepting answers. Removal is the leave path:
+   * mid-match departure, host promotion, and empty-room teardown.
+   */
+  leaveOtherRooms(userId: string, exceptRoomId: string | null): void {
+    for (const [roomId, room] of [...this.rooms.entries()]) {
+      if (roomId === exceptRoomId || !room.players.has(userId)) continue;
+      const socketId = room.players.get(userId)?.socketId;
+      if (socketId) this.io.in(socketId).socketsLeave(roomId);
+      if (room.removePlayer(userId)) this.removeRoom(roomId);
+    }
+  }
+
+  /** Push a role change onto every live roster so the lobby badge is not stale. */
+  refreshUserRole(userId: string, role: UserRole): void {
+    for (const room of this.rooms.values()) {
+      const player = room.players.get(userId);
+      if (!player) continue;
+      player.role = role;
+      room.emitLobbyUpdate();
+    }
+  }
+
   /** Map of userId → the room they currently belong to (lobby or match). */
   getUserRoomMap(): Map<string, { id: string; name: string }> {
     const map = new Map<string, { id: string; name: string }>();
     for (const room of this.rooms.values()) {
       for (const p of room.players.values()) {
-        if (!p.isBot) map.set(p.userId, { id: room.id, name: room.settings.name });
+        if (p.isBot || map.has(p.userId)) continue;
+        map.set(p.userId, { id: room.id, name: room.settings.name });
       }
     }
     return map;
@@ -388,24 +388,25 @@ export class GameManager {
   // --- ADMIN / LIVE OPS -----------------------------------------------------
 
   /** Detailed live-room snapshot for the admin panel. */
-  getRoomDetails(): AdminRoomDetail[] {
-    return [...this.rooms.values()].map((room) => this.toAdminRoomDetail(room));
+  getRoomDetails(revealPassword = false): AdminRoomDetail[] {
+    return [...this.rooms.values()].map((room) => this.toAdminRoomDetail(room, revealPassword));
   }
 
   /** One live room for the staff spectator dialog. */
-  getRoomDetail(roomId: string): AdminRoomDetail | null {
+  getRoomDetail(roomId: string, revealPassword = false): AdminRoomDetail | null {
     const room = this.rooms.get(roomId);
-    return room ? this.toAdminRoomDetail(room) : null;
+    return room ? this.toAdminRoomDetail(room, revealPassword) : null;
   }
 
-  private toAdminRoomDetail(room: Room): AdminRoomDetail {
+  /** Room passwords are ADMIN-only; moderators see the lock, not the secret. */
+  private toAdminRoomDetail(room: Room, revealPassword: boolean): AdminRoomDetail {
     return {
       id: room.id,
       name: room.settings.name,
       hostId: room.hostId,
       status: room.status,
       isPrivate: room.settings.isPrivate,
-      password: room.settings.isPrivate ? (room.settings.password ?? '') : '',
+      password: room.settings.isPrivate && revealPassword ? (room.settings.password ?? '') : '',
       maxPlayers: room.settings.maxPlayers,
       playerCount: room.players.size,
       humanCount: room.humanCount,

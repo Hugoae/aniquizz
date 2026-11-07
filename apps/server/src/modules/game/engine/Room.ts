@@ -118,11 +118,14 @@ export class Room {
       isCorrect: null,
       roundPoints: 0,
       answerType: null,
+      duoCommitted: false,
       answerTimeMs: null,
       speedRank: null,
       speedBonus: 0,
     };
     this.players.set(userId, player);
+    // A genuinely new member counts as activity; reconnects of existing ones do not.
+    this.touch();
     this.emitLobbyUpdate();
     return player;
   }
@@ -180,6 +183,7 @@ export class Room {
       isCorrect: null,
       roundPoints: 0,
       answerType: null,
+      duoCommitted: false,
       answerTimeMs: null,
       speedRank: null,
       speedBonus: 0,
@@ -221,6 +225,7 @@ export class Room {
     }
 
     if (userId === this.hostId) this.promoteNextHost();
+    this.touch();
     this.settleLifecycle();
     this.emitLobbyUpdate();
     return false;
@@ -321,6 +326,7 @@ export class Room {
     if (fromUserId !== this.hostId) return false;
     const target = this.players.get(targetUserId);
     if (!target) return false;
+    this.touch();
     this.hostId = targetUserId;
     this.settings.hostName = target.username;
     this.settings.hostAvatar = target.avatar;
@@ -335,6 +341,7 @@ export class Room {
     const player = this.players.get(userId);
     if (!player) return;
     player.isReady = !player.isReady;
+    this.touch();
     this.emitLobbyUpdate();
   }
 
@@ -344,6 +351,7 @@ export class Room {
     // cannot swap the pool after `validateMusicSourceStart` / PlaylistBuilder.
     if (this.status === 'starting') return false;
     this.settings = next;
+    this.touch();
     this.io.to(this.id).emit('room_updated', {
       roomSettings: toClientRoomSettings(this.settings),
       roomName: this.settings.name,
@@ -365,8 +373,11 @@ export class Room {
     );
   }
 
+  /**
+   * Broadcast the roster. Deliberately does NOT `touch()`: reconnect loops and
+   * role/list refreshes also land here and must not keep an abandoned room alive.
+   */
   emitLobbyUpdate(): void {
-    this.touch();
     this.io.to(this.id).emit('update_players', {
       players: this.toPublicPlayers(),
       hostId: this.hostId,
@@ -374,7 +385,7 @@ export class Room {
     });
   }
 
-  /** Mark the room as active right now (resets the idle-cleanup countdown). */
+  /** Mark the room as active right now (resets the idle-cleanup countdown). Human-driven events only. */
   touch(): void {
     this.lastActivityAt = Date.now();
   }
@@ -442,7 +453,7 @@ export class Room {
     if (userId !== this.hostId) {
       return { ok: false, reason: "Seul l'hôte peut lancer la partie." };
     }
-    if (this.status === 'starting') {
+    if (this.status === 'starting' || this.engine?.finishing) {
       return { ok: false, reason: 'Préparation de la partie en cours.' };
     }
     if (this.status === 'playing' || this.status === 'paused') {
@@ -472,7 +483,7 @@ export class Room {
     // Re-entrancy guard: `startMatch` is async (the playlist build awaits), so
     // flip to `starting` synchronously and broadcast before any await so double
     // clicks and late joiners see the room as busy.
-    if (this.status === 'starting') return;
+    if (this.status === 'starting' || this.engine?.finishing) return;
 
     if (
       (this.status === 'playing' || this.status === 'paused') &&
@@ -489,6 +500,8 @@ export class Room {
     }
 
     this.status = 'starting';
+    // Starts the stuck-start watchdog clock (see roomIdlePolicy).
+    this.touch();
     this.returnedPlayers.clear();
     this.emitLobbyUpdate();
     onRoomsChanged?.();
@@ -517,6 +530,14 @@ export class Room {
     options?: { revealAfterAnswer?: boolean },
   ): void {
     this.engine?.handleAnswer(userId, answer, answerType ?? 'typing', options);
+  }
+
+  useDuo(userId: string): void {
+    this.engine?.useDuo(userId);
+  }
+
+  replayDuo(userId: string): void {
+    this.engine?.replayDuo(userId);
   }
 
   votePause(userId: string): void {
@@ -549,6 +570,7 @@ export class Room {
 
   playerReturnToLobby(userId: string): void {
     if (!this.players.has(userId)) return;
+    this.touch();
     this.returnedPlayers.add(userId);
     const player = this.players.get(userId);
     if (player) player.isReady = userId === this.hostId;
