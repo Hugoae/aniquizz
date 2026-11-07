@@ -114,12 +114,19 @@ export interface RoundStartPayload extends PhaseTiming {
   startBuffer: number;
   /** QCM choices (present when responseType is `qcm` or `mix`). */
   choices?: string[];
-  /** Duo choices (present when responseType is `mix`). */
-  duo?: string[];
   /** Present when `videoMode === 'peek'` — server-generated at round start. */
   peekWindow?: PeekWindow;
   /** Room setting echoed for client rendering (reconnect-safe). */
   videoMode?: VideoMode;
+  /** Solo time-attack: remaining guess budget (ms). */
+  remainingMs?: number;
+  /** Solo time-attack: titles found so far. */
+  foundCount?: number;
+}
+
+/** Two labels for the player who spent the Mix Duo lifeline. Never broadcast. */
+export interface DuoChoicesPayload {
+  choices: string[];
 }
 
 /** Anti-cheat: only signals THAT a player answered, never the content. */
@@ -156,6 +163,14 @@ export interface RoundRevealPayload extends PhaseTiming {
   /** Start offset (s) of the next clip, so the client can warm it at the right
    *  byte range during the reveal. Null when there is no next round. */
   nextVideoStartTime: number | null;
+  remainingMs?: number;
+  foundCount?: number;
+}
+
+/** Solo time-attack budget after a tax or phase change (server-authoritative). */
+export interface TimeAttackBudgetPayload {
+  remainingMs: number;
+  foundCount: number;
 }
 
 /** Ask the client to warm a clip's buffer ahead of time (round 1 during the
@@ -224,6 +239,7 @@ export type MatchSettingsSnapshot = Pick<
   RoomSettings,
   | 'gameType'
   | 'speedBonusEnabled'
+  | 'timeBudgetSeconds'
   | 'soundCount'
   | 'guessDuration'
   | 'difficulty'
@@ -240,6 +256,7 @@ export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot
   return {
     gameType: settings.gameType,
     speedBonusEnabled: settings.speedBonusEnabled ?? false,
+    timeBudgetSeconds: settings.timeBudgetSeconds,
     soundCount: settings.soundCount,
     guessDuration: settings.guessDuration,
     difficulty: settings.difficulty,
@@ -279,6 +296,10 @@ export interface GameSyncState {
   roundHistoryByUserId?: Record<string, RoundHistoryEntry[]>;
   /** Populated when `status === 'finished'`. */
   matchSettings?: MatchSettingsSnapshot;
+  /** Solo time-attack: remaining guess budget (ms). Absent on Standard. */
+  remainingMs?: number;
+  /** Solo time-attack: titles found so far. Absent on Standard. */
+  foundCount?: number;
 }
 
 // --- LOBBY PAYLOADS ---
@@ -294,6 +315,7 @@ export interface LobbyJoinedPayload {
 export interface RoomListSettingsSummary {
   gameType?: GameType;
   speedBonusEnabled?: boolean;
+  timeBudgetSeconds?: number;
   soundCount: number;
   difficulty: string[];
   guessDuration: number;

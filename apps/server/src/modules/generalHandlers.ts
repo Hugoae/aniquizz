@@ -49,14 +49,23 @@ const getGlobalStats = async () => {
   }
 };
 
-/** Count distinct authenticated users currently connected (live, never cached). */
+/** Short TTL: every home visit asks, and the scan is O(connected sockets). */
+const ONLINE_CACHE_DURATION = 5_000;
+let cachedOnline = 0;
+let lastOnlineUpdate = 0;
+
+/** Count distinct authenticated users currently connected. */
 const countOnlineUsers = (io: TypedServer): number => {
+  const now = Date.now();
+  if (now - lastOnlineUpdate < ONLINE_CACHE_DURATION) return cachedOnline;
   const users = new Set<string>();
   for (const [, s] of io.of('/').sockets) {
     const uid = s.data?.userId;
     if (uid) users.add(uid);
   }
-  return users.size;
+  cachedOnline = users.size;
+  lastOnlineUpdate = now;
+  return cachedOnline;
 };
 
 export const registerGeneralHandlers = (

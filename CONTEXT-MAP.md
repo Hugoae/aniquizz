@@ -22,16 +22,17 @@ and [`AGENTS.md`](./AGENTS.md) for the full engineering playbook.
 
 These terms mean the same thing everywhere. Per-context glossaries add local detail.
 
-| Term                | Meaning                                                                                                                  |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Room**            | A live lobby/match container keyed by room id. Holds settings, roster, and the active match.                             |
-| **MatchEngine**     | Server-side round-by-round game loop for one match (song → guess → reveal → score).                                      |
-| **PlaylistBuilder** | Draws the song list + QCM distractors for a match, applying Watched/precision filters.                                   |
-| **Watched**         | Music source from the player's AniList/MAL list (`soundSelection === 'watched'`). Includes Dropped; excludes Planning.   |
-| **Precision**       | Answer granularity: `franchise` (whole franchise) vs `anime` (exact season). Legacy value `exact` normalizes to `anime`. |
-| **Medal**           | Solo game-over grade (Bronze → Argent → Or → Platine) from mastery ratio, adjusted by difficulty and precision.          |
-| **Vitesse**         | Standard multi typing modifier: podium bonus for the fastest correct answers (`speedBonusEnabled`). Not a GameType.      |
-| **Player identity** | Always the JWT `userId` (`socket.data.userId`), never `socket.id`.                                                       |
+| Term                 | Meaning                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Room**             | A live lobby/match container keyed by room id. Holds settings, roster, and the active match.                             |
+| **MatchEngine**      | Server-side round-by-round game loop for one match (song → guess → reveal → score).                                      |
+| **PlaylistBuilder**  | Draws the song list + QCM distractors for a match, applying Watched/precision filters.                                   |
+| **Watched**          | Music source from the player's AniList/MAL list (`soundSelection === 'watched'`). Includes Dropped; excludes Planning.   |
+| **Precision**        | Answer granularity: `franchise` (whole franchise) vs `anime` (exact season). Legacy value `exact` normalizes to `anime`. |
+| **Medal**            | Solo game-over grade (Bronze → Argent → Or → Platine) from mastery ratio, adjusted by difficulty and precision.          |
+| **Vitesse**          | Standard multi typing modifier: podium bonus for the fastest correct answers (`speedBonusEnabled`). Not a GameType.      |
+| **Contre-la-montre** | Solo time-attack (`gameType: 'timeAttack'`). Budget clock, +1 per title. Multi is parked. Compact badge **CLM**.         |
+| **Player identity**  | Always the JWT `userId` (`socket.data.userId`), never `socket.id`.                                                       |
 
 ## Decisions
 

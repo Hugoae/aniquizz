@@ -14,6 +14,7 @@ export interface SpeedBonusSettings {
   responseType?: string | null;
   maxPlayers?: number | null;
   mode?: string | null;
+  gameType?: GameType | null;
 }
 
 /**
@@ -22,6 +23,7 @@ export interface SpeedBonusSettings {
  */
 export function isSpeedBonusEnabled(settings: SpeedBonusSettings | null | undefined): boolean {
   if (!settings?.speedBonusEnabled) return false;
+  if (settings.gameType === 'timeAttack') return false;
   if (settings.responseType !== 'typing') return false;
   if ((settings.maxPlayers ?? 2) < 2) return false;
   if (settings.mode === 'solo') return false;
@@ -35,7 +37,7 @@ export function speedBonusFromStoredMode(mode: string | null | undefined): boole
 
 /** Map a persisted Match.mode enum string to the shared GameType id. */
 export function gameTypeFromStoredMode(mode: string | null | undefined): GameType {
-  void mode;
+  if (mode?.toUpperCase() === 'TIME_ATTACK') return 'timeAttack';
   return 'standard';
 }
 

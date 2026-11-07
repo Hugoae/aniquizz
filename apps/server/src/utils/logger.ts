@@ -59,6 +59,8 @@ export interface AppLogger {
   http: (message: string, context?: string, meta?: MetaInput) => void;
   debug: (message: string, context?: string, meta?: MetaInput) => void;
   child: (bindings: LogBindings) => AppLogger;
+  /** Lets hot paths skip building log fields that would be discarded. */
+  isDebugEnabled: () => boolean;
 }
 
 const wrapPino = (instance: PinoLogger): AppLogger => {
@@ -77,6 +79,7 @@ const wrapPino = (instance: PinoLogger): AppLogger => {
     http: write('info'),
     debug: write('debug'),
     child: (bindings: LogBindings) => wrapPino(instance.child(bindings)),
+    isDebugEnabled: () => instance.isLevelEnabled('debug'),
   };
 };
 

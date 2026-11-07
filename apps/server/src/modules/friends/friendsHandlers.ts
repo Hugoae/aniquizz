@@ -3,16 +3,12 @@
 // After every mutation both parties get a fresh `friends:state` snapshot.
 
 import type { TypedServer, TypedSocket } from '../../core/socketTypes';
-import type {
-  FriendRequestInput,
-  FriendRequestActionInput,
-  FriendRemoveInput,
-  FriendUserIdInput,
-  FriendInviteInput,
-} from '@aniquizz/shared';
 import {
   canSendLobbyInvite,
   friendPrivacyInputSchema,
+  friendRequestActionInputSchema,
+  friendRequestInputSchema,
+  friendUserIdInputSchema,
   normalizeAccountPrivacy,
   normalizeLobbyInviteAudience,
 } from '@aniquizz/shared';
@@ -30,6 +26,12 @@ const INVITE_COOLDOWN_MS = 10_000;
 const inviteCooldownUntil = new Map<string, number>();
 
 const inviteCooldownKey = (fromId: string, toId: string) => `${fromId}:${toId}`;
+
+const purgeExpiredInviteCooldowns = (now: number) => {
+  for (const [key, until] of inviteCooldownUntil) {
+    if (until <= now) inviteCooldownUntil.delete(key);
+  }
+};
 
 export const registerFriendsHandlers = (
   io: TypedServer,
@@ -63,12 +65,14 @@ export const registerFriendsHandlers = (
     }
   };
 
-  const handleRequest = async (payload: FriendRequestInput) => {
+  const handleRequest = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendRequestInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
       const res = await friendsService.sendRequest(userId, {
-        username: payload?.username,
-        userId: payload?.userId,
+        username: parsed.username,
+        userId: parsed.userId,
       });
       await Promise.all([pushState(userId), pushState(res.other.id)]);
       if (res.type === 'created' && online(res.other.id)) {
@@ -81,50 +85,60 @@ export const registerFriendsHandlers = (
     }
   };
 
-  const handleAccept = async (payload: FriendRequestActionInput) => {
+  const handleAccept = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendRequestActionInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      const { otherId } = await friendsService.acceptRequest(userId, payload?.requestId ?? '');
+      const { otherId } = await friendsService.acceptRequest(userId, parsed.requestId);
       await Promise.all([pushState(userId), pushState(otherId)]);
     } catch (e) {
       fail(e, 'accept');
     }
   };
 
-  const handleReject = async (payload: FriendRequestActionInput) => {
+  const handleReject = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendRequestActionInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      const { otherId } = await friendsService.rejectRequest(userId, payload?.requestId ?? '');
+      const { otherId } = await friendsService.rejectRequest(userId, parsed.requestId);
       await Promise.all([pushState(userId), pushState(otherId)]);
     } catch (e) {
       fail(e, 'reject');
     }
   };
 
-  const handleRemove = async (payload: FriendRemoveInput) => {
+  const handleRemove = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendUserIdInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      const { otherId } = await friendsService.removeFriend(userId, payload?.userId ?? '');
+      const { otherId } = await friendsService.removeFriend(userId, parsed.userId);
       await Promise.all([pushState(userId), pushState(otherId)]);
     } catch (e) {
       fail(e, 'remove');
     }
   };
 
-  const handleBlock = async (payload: FriendUserIdInput) => {
+  const handleBlock = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendUserIdInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      const { otherId } = await friendsService.blockUser(userId, payload?.userId ?? '');
+      const { otherId } = await friendsService.blockUser(userId, parsed.userId);
       await Promise.all([pushState(userId), pushState(otherId)]);
     } catch (e) {
       fail(e, 'block');
     }
   };
 
-  const handleUnblock = async (payload: FriendUserIdInput) => {
+  const handleUnblock = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendUserIdInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
     try {
-      const { otherId } = await friendsService.unblockUser(userId, payload?.userId ?? '');
+      const { otherId } = await friendsService.unblockUser(userId, parsed.userId);
       await Promise.all([pushState(userId), pushState(otherId)]);
     } catch (e) {
       fail(e, 'unblock');
@@ -165,9 +179,11 @@ export const registerFriendsHandlers = (
     }
   };
 
-  const handleInvite = async (payload: FriendInviteInput) => {
+  const handleInvite = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendUserIdInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
-    const targetId = payload?.userId ?? '';
+    const targetId = parsed.userId;
     try {
       if (!targetId) throw new FriendServiceError('Ami introuvable.');
       if (targetId.startsWith('bot-')) throw new FriendServiceError('Ami introuvable.');
@@ -215,16 +231,20 @@ export const registerFriendsHandlers = (
         roomName: room.settings.name,
         isPrivate: room.settings.isPrivate,
       });
-      inviteCooldownUntil.set(cooldownKey, Date.now() + INVITE_COOLDOWN_MS);
+      const now = Date.now();
+      purgeExpiredInviteCooldowns(now);
+      inviteCooldownUntil.set(cooldownKey, now + INVITE_COOLDOWN_MS);
       socket.emit('friends:info', { message: 'Invitation envoyée.' });
     } catch (e) {
       fail(e, 'invite');
     }
   };
 
-  const handleGetPublic = async (payload: FriendUserIdInput) => {
+  const handleGetPublic = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, friendUserIdInputSchema, payload);
+    if (!parsed) return;
     const userId = socket.data.userId as string;
-    const targetId = payload?.userId ?? '';
+    const targetId = parsed.userId;
     try {
       if (!targetId) throw new FriendServiceError('Profil introuvable.');
       if (targetId.startsWith('bot-')) throw new FriendServiceError('Profil introuvable.');

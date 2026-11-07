@@ -12,6 +12,9 @@ import type { ScoringStrategy } from './ScoringStrategy';
 import type { PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
 import type { RoundClock } from './RoundClock';
+import type { MatchBudgetClock } from './MatchBudgetClock';
+
+export type EndRoundKind = 'reveal' | 'skip' | 'finish';
 
 export interface EngineDeps {
   builder: PlaylistBuilder;
@@ -26,6 +29,8 @@ export interface MatchEngineHost {
   room: Room;
   deps: EngineDeps;
   clock: RoundClock;
+  budget: MatchBudgetClock;
+  pausedDuringPhase: boolean;
   playlist: PlaylistItem[];
   currentRoundIndex: number;
   phase: MatchPhase;
@@ -45,11 +50,15 @@ export interface MatchEngineHost {
   finishedVictoryData: VictoryData | null;
   finishedRoundHistoryByUserId: Record<string, RoundHistoryEntry[]> | null;
   finishedMatchSettings: MatchSettingsSnapshot | null;
+  /** True from the first line of `finishMatch` until it returns. */
+  finishing: boolean;
+  /** Latched on the first finish so a later call cannot persist again. */
+  finishStarted: boolean;
 
   resetMatchState(): void;
   resetRoundState(p: RoomPlayer): void;
   startRound(): void;
-  endRound(): void;
+  endRound(kind?: EndRoundKind): void;
   finish(): Promise<void>;
   pause(): void;
   clearBotTimers(): void;

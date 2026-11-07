@@ -12,6 +12,7 @@ import {
   type RoomListItem,
   type RoomSettings,
   type RoomUpdatedPayload,
+  type ServerToClientEvents,
 } from '@aniquizz/shared';
 import type { LobbyPlayer } from '@/features/hub/components/LobbyPlayerCard';
 import { mapServerPlayersToLobby, type ServerLobbyPlayer } from '@/features/hub/mapLobbyPlayers';
@@ -288,14 +289,15 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
     };
 
     socket.on('rooms_update', onRoomsUpdate);
-    socket.on('lobby:joined', (data) => {
+    const onLobbyJoined: ServerToClientEvents['lobby:joined'] = (data) => {
       const isSameRoom = currentRoomIdRef.current === data.roomId;
       if (resolveLobbyJoinedKind({ isHost: Boolean(data.isHost), isSameRoom }) === 'created') {
         onRoomCreated({ roomId: data.roomId, room: { ...data } });
       } else {
         onRoomJoined(data);
       }
-    });
+    };
+    socket.on('lobby:joined', onLobbyJoined);
     socket.on('room_updated', onRoomUpdated);
     socket.on('room_closed', onRoomClosed);
     socket.on('password_required', onPasswordRequired);
@@ -306,7 +308,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
     return () => {
       socket.off('connect', onConnect);
       socket.off('rooms_update', onRoomsUpdate);
-      socket.off('lobby:joined');
+      socket.off('lobby:joined', onLobbyJoined);
       socket.off('room_updated', onRoomUpdated);
       socket.off('room_closed', onRoomClosed);
       socket.off('password_required', onPasswordRequired);

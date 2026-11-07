@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { formatTimeAttackClock } from '@aniquizz/shared';
 import type { MyProfile } from './types';
 
 interface GameTopBarProps {
@@ -21,6 +22,8 @@ interface GameTopBarProps {
   showPause?: boolean;
   /** Hide Round N/M + bar when a custom meter (e.g. daily tracks) is shown below. */
   showRoundProgress?: boolean;
+  remainingMs?: number | null;
+  foundCount?: number | null;
 }
 
 export function GameTopBar({
@@ -37,8 +40,11 @@ export function GameTopBar({
   onShowSettings,
   showPause = true,
   showRoundProgress = true,
+  remainingMs = null,
+  foundCount = null,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
+  const timeAttackMeter = remainingMs != null;
 
   // Pause is a majority vote — surface the tally so a lone voter gets feedback
   // before the threshold is reached (a real gap today: nothing changed on click).
@@ -93,7 +99,21 @@ export function GameTopBar({
             AniQuizz
           </span>
         </div>
-        {showRoundProgress && (
+        {showRoundProgress && timeAttackMeter && (
+          <div className="pointer-events-auto flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
+            <span
+              className="font-mono text-sm font-bold tabular-nums text-aqua"
+              aria-live="polite"
+              aria-label={`Temps restant ${formatTimeAttackClock(remainingMs)}`}
+            >
+              {formatTimeAttackClock(remainingMs)}
+            </span>
+            <span className="font-mono font-bold tabular-nums" aria-live="polite">
+              {foundCount ?? 0} trouvé{(foundCount ?? 0) === 1 ? '' : 's'}
+            </span>
+          </div>
+        )}
+        {showRoundProgress && !timeAttackMeter && (
           <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">
             <span className="font-mono font-bold tabular-nums" aria-live="polite">
               Round {currentRound}/{totalRounds}

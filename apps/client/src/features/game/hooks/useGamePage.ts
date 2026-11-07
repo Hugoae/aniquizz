@@ -4,11 +4,13 @@ import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import {
   GAME_CONFIG,
+  GAME_TYPE_LABELS,
   type AnswerType,
   type GamePlayer,
   type RoomSettings,
   isBanSanctionReason,
   isSpeedBonusEnabled,
+  isTimeAttackSettings,
   getPrecisionChipLabel,
   normalizePrecision,
   normalizeVideoMode,
@@ -17,6 +19,7 @@ import {
   playlistSourceDisplayName,
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
+import { useTimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
@@ -35,6 +38,8 @@ const INPUT_TO_ANSWER_TYPE: Record<InputMode, AnswerType> = {
 };
 
 /** Owns in-match page state: socket, video, leave dialogs, and layout props. */
+const NO_CHOICES: string[] = [];
+
 export function useGamePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -79,7 +84,13 @@ export function useGamePage() {
 
   const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
   const speedBonusOn = isSpeedBonusEnabled(activeSettings);
+  const timeAttack = isTimeAttackSettings(activeSettings);
   const { phase, players, currentSong } = state;
+  const liveRemainingMs = useTimeAttackClock(
+    state.remainingMs,
+    state.budgetSyncedAt,
+    timeAttack && phase === 'guessing' && !state.isGamePaused,
+  );
 
   const {
     audioVolume,
@@ -120,23 +131,37 @@ export function useGamePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [loadingCount, setLoadingCount] = useState(3);
 
-  const myProfile = {
-    username: profile?.username || GAME_COPY.config.me,
-    avatar: profile?.avatar || 'player1',
-    xp: profile?.xp ?? 0,
-  };
+  const myProfile = useMemo(
+    () => ({
+      username: profile?.username || GAME_COPY.config.me,
+      avatar: profile?.avatar || 'player1',
+      xp: profile?.xp ?? 0,
+    }),
+    [profile?.username, profile?.avatar, profile?.xp],
+  );
   const amIHost = players.find((p: GamePlayer) => String(p.id) === currentUserId)?.isHost;
   const firstClipReady = state.preloadTarget !== null;
   const leaveSalonConsequences =
     gameMode === 'solo' ? GAME_COPY.consequences.solo : GAME_COPY.consequences.multi;
   const choices =
-    inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : [];
+    inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : NO_CHOICES;
 
   useEffect(() => {
     if (phase !== 'guessing') return;
     setSubmittedAnswer(null);
     setInputMode(activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
   }, [state.currentRound, phase, activeSettings.responseType]);
+
+  useEffect(() => {
+    if (phase !== 'guessing') return;
+    if (state.duoChoices.length > 0 && activeSettings.responseType === 'mix') {
+      setInputMode('duo');
+    }
+  }, [phase, state.duoChoices, activeSettings.responseType]);
+
+  const onShowLeave = useCallback(() => setShowLeaveChoice(true), []);
+  const onShowProfile = useCallback(() => setHardLeavePrompt('profile'), []);
+  const onShowSettings = useCallback(() => setShowSettings(true), []);
 
   const pointsShownForRoundRef = useRef<number>(0);
   useEffect(() => {
@@ -160,9 +185,10 @@ export function useGamePage() {
   }, [phase, players, currentUserId, state.currentRound]);
 
   const pointsBadge = useMemo(() => {
+    if (timeAttack) return '+1';
     if (!speedBonusOn || phase !== 'guessing') return undefined;
     return `Jusqu'à +${maxSpeedBonusPointsPerRound()} pts`;
-  }, [speedBonusOn, phase]);
+  }, [speedBonusOn, phase, timeAttack]);
 
   useEffect(() => {
     if (phase === 'guessing') setShowPointsAnimation(false);
@@ -186,6 +212,17 @@ export function useGamePage() {
     const interval = setInterval(tick, 250);
     return () => clearInterval(interval);
   }, [phase]);
+
+  // A solo room has no reason to outlive its game-over screen: leaving the page
+  // by any route (navbar, back button) must free the room instead of leaving a
+  // connected ghost in `finished`. Multi rooms stay (players may regroup in the lobby).
+  const soloFinishedRef = useRef(false);
+  soloFinishedRef.current = gameMode === 'solo' && Boolean(state.victoryData);
+  useEffect(() => {
+    return () => {
+      if (soloFinishedRef.current && roomId) socket.emit('leave_room', { roomId });
+    };
+  }, [roomId]);
 
   const handleReturnToLobby = () => {
     actions.returnToLobby();
@@ -212,10 +249,14 @@ export function useGamePage() {
   const handleAction = useCallback(
     (val: string) => {
       if (!val) return;
-      setSubmittedAnswer(val);
-      actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode], gameMode === 'solo' && soloAutoReveal);
+      if (!timeAttack) setSubmittedAnswer(val);
+      actions.answer(
+        val,
+        INPUT_TO_ANSWER_TYPE[inputMode],
+        gameMode === 'solo' && soloAutoReveal && !timeAttack,
+      );
     },
-    [actions, gameMode, inputMode, soloAutoReveal],
+    [actions, gameMode, inputMode, soloAutoReveal, timeAttack],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -223,8 +264,8 @@ export function useGamePage() {
   }, [activeSettings.responseType]);
 
   const handleSwitchDuo = useCallback(() => {
-    if (activeSettings.responseType === 'mix') setInputMode('duo');
-  }, [activeSettings.responseType]);
+    if (activeSettings.responseType === 'mix') actions.useDuo();
+  }, [actions, activeSettings.responseType]);
 
   const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, settings);
@@ -237,9 +278,15 @@ export function useGamePage() {
           ? settings.difficulty[0]
           : GAME_COPY.config.varied,
       precisionLabel: getPrecisionChipLabel(settings.precision),
-      modeLabel: GAME_COPY.config.standard,
+      modeLabel: GAME_TYPE_LABELS[activeSettings.gameType ?? 'standard'],
     }),
-    [settings.soundSelection, settings.difficulty, settings.precision, playlistName],
+    [
+      settings.soundSelection,
+      settings.difficulty,
+      settings.precision,
+      playlistName,
+      activeSettings.gameType,
+    ],
   );
 
   const gameOverSettings = {
@@ -280,9 +327,9 @@ export function useGamePage() {
     myProfile,
     sidebarCollapsed,
     setSidebarCollapsed,
-    onShowLeave: () => setShowLeaveChoice(true),
-    onShowProfile: () => setHardLeavePrompt('profile'),
-    onShowSettings: () => setShowSettings(true),
+    onShowLeave,
+    onShowProfile,
+    onShowSettings,
     currentUserId,
     gameMode,
     roomId,
@@ -302,6 +349,8 @@ export function useGamePage() {
     autofocusAnswer,
     submitOnEnter,
     showShortcutReminder,
+    remainingMs: timeAttack ? liveRemainingMs : null,
+    foundCount: timeAttack ? state.foundCount : null,
   };
 
   return {

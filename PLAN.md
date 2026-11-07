@@ -13,7 +13,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
 | **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
 | **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
-| **26.7**   | 🔄 In progress | **Vitesse** (Standard typing modifier) · pokédex + Admin rework remaining                                             |
+| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono solo** ✅ · pokédex + Admin rework remaining                                                |
 | **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
@@ -414,19 +414,21 @@ GitHub-only. The Home footer stays `v26.6`.
 
 ---
 
-## Update 26.7 — Vitesse, then pokédex & Admin rework
+## Update 26.7 — Vitesse, Chrono solo, then pokédex & Admin rework
 
-Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, then
-make collection progress readable, let players replay what they already know, and
-rebuild the staff console so the tools shipped in the post-26.6 audit (journal, repair
-queue, spectator, bounded MODERATOR) sit in a coherent panel.
+Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, add
+solo **Contre-la-montre**, then make collection progress readable, let players replay
+what they already know, and rebuild the staff console so the tools shipped in the
+post-26.6 audit (journal, repair queue, spectator, bounded MODERATOR) sit in a
+coherent panel.
 
-**26.6.2** is closed. **Vitesse** is the first 26.7 slice (this ship). Pokédex + Admin
-remain in 26.7 — do not start them in the same pass. Do not start HIBP or Chrono.
+**26.6.2** is closed. **Vitesse** and **Chrono solo** are the 26.7 slices already
+shipped in this phase. Pokédex + Admin remain in 26.7 — do not start them in the
+same pass. Do not start HIBP or Chrono **multi**.
 
 ### 1. Vitesse — Standard multi typing modifier ✅
 
-Sprint is no longer a `GameType`. Live `gameType` is `'standard'` only until Chrono.
+Sprint is no longer a `GameType`. Live `gameType` is `'standard' | 'timeAttack'`.
 
 - Flag `speedBonusEnabled` (not `speedBonus`, which is podium **points** on the player).
 - Switch in Général after response type; multi create/edit only; disabled unless typing;
@@ -435,6 +437,17 @@ Sprint is no longer a `GameType`. Live `gameType` is `'standard'` only until Chr
   the persisted value for speed-bonus matches (`docs/game/speed-bonus.md`).
 - Socket event `speed:leaderboard`. One-release lift of legacy `gameType: 'sprint'`.
 - No `SITE_VERSION` bump (footer stays `v26.6`). Short news article (id 9).
+
+### 1b. Contre-la-montre — solo time-attack ✅
+
+Second 26.7 slice. Spec: [`docs/game/time-attack.md`](./docs/game/time-attack.md).
+
+- Live `gameType: 'timeAttack'`. Prisma `GameMode.TIME_ATTACK`. Selector only on
+  solo create (`!isRoom`). Multi + `timeAttack` normalizes back to Standard.
+- Typing, beginning start, budget 1/2/3/5 min (default 3). Chrono ticks during guess
+  only. +1 per title; skip −5 s (no reveal); wrong −3 s (stay); reveal 3 s frozen.
+- Server `MatchBudgetClock` + `remainingMs` / `foundCount` on sync. No client `ended`.
+- Badge **CLM** + Timer, aqua token. News id 10. No `SITE_VERSION` bump.
 
 ### 2. Profile pokédex — found bar
 
@@ -479,6 +492,7 @@ console**.
 ### 26.7 checklist (at boundary)
 
 - [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`, news id 9 (no `SITE_VERSION` bump).
+- [x] Chrono solo: `gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge, news id 10 (no `SITE_VERSION` bump).
 - [ ] Profile found bar + tests.
 - [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
 - [ ] Admin panel rework (shell + existing tools, role bounds unchanged).
@@ -502,9 +516,9 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 | Item                                        | Notes                                                                                                                    |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat; seasons reuse leaderboard infra. Mix honor-system already clamped in 26.5.               |
+| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                    |
 | **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                        |
-| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** (time-budget typing) is a candidate after **26.7** — spec first, do not start.  |
+| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre solo** shipped in **26.7**. Chrono **multi** stays parked.                        |
 | **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy. |
 | **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                      |
 
@@ -539,7 +553,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** started with Vitesse; pokédex + Admin remain.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse + Chrono solo; pokédex + Admin remain.
 
 ---
 

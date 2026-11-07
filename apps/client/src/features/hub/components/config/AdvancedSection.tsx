@@ -9,10 +9,11 @@ interface AdvancedSectionProps {
 
 /** Video display + song start — merged under the Avancée nav section. */
 export function AdvancedSection({ config, update }: AdvancedSectionProps) {
+  const timeAttack = config.gameType === 'timeAttack';
   return (
     <div className="space-y-4">
       <VideoDisplaySection config={config} update={update} />
-      <SongStartSection config={config} update={update} />
+      {timeAttack ? null : <SongStartSection config={config} update={update} />}
     </div>
   );
 }

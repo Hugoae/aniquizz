@@ -180,7 +180,10 @@ export const registerProfileHandlers = (
     }
   };
 
-  socket.on('profile:get_stats', requireAuth(socket, handleGetStats));
+  socket.on(
+    'profile:get_stats',
+    guard(socket, 'profile:get_stats', RATE_LIMITS.profileRead, handleGetStats),
+  );
   socket.on(
     'update_profile_data',
     guard(socket, 'update_profile_data', RATE_LIMITS.updateProfile, handleUpdateProfile),

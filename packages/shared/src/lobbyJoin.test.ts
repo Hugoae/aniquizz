@@ -55,6 +55,23 @@ describe('evaluateLobbyJoin', () => {
     ).toEqual({ ok: true });
   });
 
+  it('treats a private flag with an empty password as a public room', () => {
+    expect(
+      evaluateLobbyJoin({
+        ...openPublic,
+        isPrivate: true,
+        storedPassword: '',
+      }),
+    ).toEqual({ ok: true });
+    expect(
+      evaluateLobbyJoin({
+        ...openPublic,
+        isPrivate: true,
+        storedPassword: '   ',
+      }),
+    ).toEqual({ ok: true });
+  });
+
   it('still requires the password on a private room (invites are not a bypass)', () => {
     expect(
       evaluateLobbyJoin({

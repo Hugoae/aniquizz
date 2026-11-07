@@ -84,6 +84,13 @@ export const roadmapData: RoadmapItem[] = [
     date: '16 septembre 2026',
   },
   {
+    title: 'Contre-la-montre',
+    description:
+      'Mode solo : budget 1 à 5 min, +1 par titre, skip −5 s, erreur −3 s. Pastille CLM.',
+    status: 'done',
+    date: '16 septembre 2026',
+  },
+  {
     title: 'Refonte du profil',
     description:
       "Refonte de l'historique de jeu, des statistiques et ajout de stats complémentaires.",

@@ -153,12 +153,14 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     }
   }
 
-  const discovered = await prisma.songHistory.groupBy({
-    by: ['songId'],
-    where: { song: { downloadStatus: 'COMPLETED' } },
-    _count: { _all: true },
-  });
-  const discoveredSongs = discovered.length;
+  // COUNT(DISTINCT) in SQL: a groupBy would ship one row per discovered song.
+  const [discoveredRow] = await prisma.$queryRaw<Array<{ total: bigint }>>`
+    SELECT COUNT(DISTINCT h."songId")::bigint AS total
+    FROM "SongHistory" h
+    INNER JOIN "Song" s ON s.id = h."songId"
+    WHERE s."downloadStatus" = 'COMPLETED'
+  `;
+  const discoveredSongs = Number(discoveredRow?.total ?? 0);
   const playableSongs = catalogue.completed;
 
   // Matches in the selected period (drives per-day chart, avg duration, modes).
@@ -252,10 +254,17 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     ...answerPeriodWhere,
     matchPlayer: { profileId: { not: { startsWith: BOT_PREFIX } } },
   };
-  const [answersTotal, answersCorrect] = await Promise.all([
-    prisma.roundAnswer.count({ where: answerWhere }),
-    prisma.roundAnswer.count({ where: { ...answerWhere, isCorrect: true } }),
-  ]);
+  const answerGroups = await prisma.roundAnswer.groupBy({
+    by: ['isCorrect'],
+    where: answerWhere,
+    _count: { _all: true },
+  });
+  let answersTotal = 0;
+  let answersCorrect = 0;
+  for (const group of answerGroups) {
+    answersTotal += group._count._all;
+    if (group.isCorrect) answersCorrect += group._count._all;
+  }
 
   return {
     community: {

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
+import { jsonLdScriptHtml } from '@/components/seo/jsonLdScript';
 import { stripUnmanagedSeoMeta } from '@/components/seo/stripUnmanagedCanonical';
 import {
   absoluteUrl,
@@ -79,7 +80,7 @@ export function SeoHead({
 
       {jsonLdBlocks.map((block, index) => (
         <script key={index} type="application/ld+json">
-          {JSON.stringify(block)}
+          {jsonLdScriptHtml(block)}
         </script>
       ))}
     </Helmet>

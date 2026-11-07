@@ -48,6 +48,8 @@ export interface RoomPlayer {
   isCorrect: boolean | null;
   roundPoints: number;
   answerType: AnswerType | null;
+  /** Mix: this player spent Duo this round, so the answer is scored as duo. */
+  duoCommitted: boolean;
   answerTimeMs: number | null;
 
   /** Speed-bonus reveal-only fields (reset each round). */
@@ -68,6 +70,8 @@ export interface PlaylistItem {
   videoKey: string;
   videoStartTime: number;
   guessDuration: number;
+  /** Catalogue clip length in seconds (time-attack EOF). */
+  clipDurationSeconds: number | null;
   cover: string | null;
   animeId: number;
   year: number | null;

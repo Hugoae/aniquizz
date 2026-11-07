@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { parseAdminTab } from './adminNavigation';
+import { parseAdminRoomId, parseAdminTab } from './adminNavigation';
+
+describe('parseAdminRoomId', () => {
+  it('keeps a room code and drops anything else', () => {
+    expect(parseAdminRoomId('Ab12')).toBe('Ab12');
+    expect(parseAdminRoomId('  ab  ')).toBe('ab');
+    expect(parseAdminRoomId(null)).toBeNull();
+    expect(parseAdminRoomId('')).toBeNull();
+    expect(parseAdminRoomId('has-dash')).toBeNull();
+    expect(parseAdminRoomId('a'.repeat(17))).toBeNull();
+  });
+});
 
 describe('parseAdminTab', () => {
   it('falls back to users for unknown or staff-only tabs', () => {

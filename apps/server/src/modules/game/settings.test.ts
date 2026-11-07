@@ -107,6 +107,38 @@ describe('speedBonusEnabled', () => {
   });
 });
 
+describe('timeAttack', () => {
+  it('forces typing, beginning, and a pool sized from the budget in solo', () => {
+    const settings = normalizeRoomSettings(
+      {
+        gameType: 'timeAttack',
+        mode: 'solo',
+        maxPlayers: 1,
+        responseType: 'qcm',
+        songStartMode: 'random',
+        timeBudgetSeconds: 180,
+        speedBonusEnabled: true,
+      },
+      meta,
+    );
+    expect(settings.gameType).toBe('timeAttack');
+    expect(settings.responseType).toBe('typing');
+    expect(settings.songStartMode).toBe('beginning');
+    expect(settings.speedBonusEnabled).toBe(false);
+    expect(settings.timeBudgetSeconds).toBe(180);
+    expect(settings.soundCount).toBe(60);
+  });
+
+  it('demotes multiplayer timeAttack to standard', () => {
+    const settings = normalizeRoomSettings(
+      { gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 8, timeBudgetSeconds: 180 },
+      meta,
+    );
+    expect(settings.gameType).toBe('standard');
+    expect(settings.timeBudgetSeconds).toBeUndefined();
+  });
+});
+
 describe('settings field caps', () => {
   it('rejects an oversized room name or password', () => {
     expect(() =>
@@ -121,5 +153,11 @@ describe('settings field caps', () => {
         meta,
       ),
     ).toThrow();
+  });
+
+  it('stores a private room with an empty password as public', () => {
+    const settings = normalizeRoomSettings({ isPrivate: true, password: '', maxPlayers: 8 }, meta);
+    expect(settings.isPrivate).toBe(false);
+    expect(settings.password).toBe('');
   });
 });

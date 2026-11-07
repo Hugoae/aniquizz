@@ -1,6 +1,7 @@
 import { prisma } from '@aniquizz/database';
 import type { RoomSettings } from '@aniquizz/shared';
 import {
+  addBotsInputSchema,
   canKickFromLobby,
   createLobbyInputSchema,
   evaluateLobbyJoin,
@@ -107,6 +108,7 @@ export const registerLobbyHandlers = (
         return;
       }
 
+      gameManager.leaveOtherRooms(uid(), null);
       const room = gameManager.createRoom(uid(), settings);
       void socket.join(room.id);
       room.addOrReconnect(uid(), username, avatar, socket.id, {
@@ -168,6 +170,7 @@ export const registerLobbyHandlers = (
         return socket.emit('error', { message: JOIN_ERROR_MESSAGE[decision.reason] });
       }
       if (!room) return;
+      gameManager.leaveOtherRooms(uid(), room.id);
       void socket.join(room.id);
       gameManager.cancelCleanup(room.id);
       room.addOrReconnect(uid(), username, avatar, socket.id, {
@@ -287,13 +290,21 @@ export const registerLobbyHandlers = (
   };
 
   // Host fills the lobby with simulated players. DEV: any host; production: ADMIN only.
-  const addBotsFromLobby = (payload: { roomId: string; count: number }) => {
-    const room = gameManager.getRoom(payload.roomId);
+  const addBotsFromLobby = async (payload: unknown) => {
+    const parsed = parseSocketPayload(socket, addBotsInputSchema, payload);
+    if (!parsed) return;
+    const room = gameManager.getRoom(parsed.roomId);
     if (!room || uid() !== room.hostId || room.status !== 'waiting') return;
     const isDev = process.env.NODE_ENV !== 'production';
-    if (!isDev && socket.data.role !== 'ADMIN') return;
-    const count = Math.max(1, Math.min(Number(payload.count) || 1, room.settings.maxPlayers));
-    const added = gameManager.addBotsToRoom(payload.roomId, count, DEV_BOT_CONFIG);
+    if (!isDev) {
+      const profile = await prisma.profile.findUnique({
+        where: { id: uid() },
+        select: { role: true },
+      });
+      if (profile?.role !== 'ADMIN') return;
+    }
+    const count = Math.min(parsed.count ?? 1, room.settings.maxPlayers);
+    const added = gameManager.addBotsToRoom(parsed.roomId, count, DEV_BOT_CONFIG);
     if (added > 0) {
       logger.info(`[Lobby] ${added} bot(s) added to room ${room.id} by host`, 'Dev');
       broadcastRooms();
@@ -306,6 +317,7 @@ export const registerLobbyHandlers = (
     const room = gameManager.getRoom(parsed.roomId);
     if (!room) return;
     const player = room.players.get(uid());
+    if (!player) return;
     void socket.leave(parsed.roomId);
     logger.info(`[Lobby] "${player?.username ?? uid()}" left room ${parsed.roomId}.`, 'Lobby');
 
@@ -344,12 +356,16 @@ export const registerLobbyHandlers = (
   socket.on('get_rooms', requireAuth(socket, getRooms));
   socket.on('lobby:subscribe_list', requireAuth(socket, subscribeRoomList));
   socket.on('lobby:unsubscribe_list', unsubscribeRoomList);
-  socket.on('transfer_host', requireAuth(socket, transferHost));
-  socket.on('lobby:kick', requireAuth(socket, kickFromLobby));
-  socket.on('dev:add_bots', requireAuth(socket, addBotsFromLobby));
+  socket.on('transfer_host', guard(socket, 'lobby:host', RATE_LIMITS.lobbyAction, transferHost));
+  socket.on('lobby:kick', guard(socket, 'lobby:host', RATE_LIMITS.lobbyAction, kickFromLobby));
+  socket.on('dev:add_bots', guard(socket, 'lobby:host', RATE_LIMITS.lobbyAction, addBotsFromLobby));
+  // Leave stays unthrottled: dropping it would trap the player in the room.
   socket.on('leave_room', requireAuth(socket, handleLeave));
-  socket.on('toggle_ready', requireAuth(socket, toggleReady));
-  socket.on('update_room_settings', requireAuth(socket, updateRoomSettings));
+  socket.on('toggle_ready', guard(socket, 'lobby:ready', RATE_LIMITS.lobbyAction, toggleReady));
+  socket.on(
+    'update_room_settings',
+    guard(socket, 'lobby:settings', RATE_LIMITS.lobbyAction, updateRoomSettings),
+  );
 
   // Reconnect-friendly disconnect: keep the player, tear down only after grace.
   socket.on('disconnect', () => {

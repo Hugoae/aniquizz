@@ -39,7 +39,10 @@ export function evaluateLobbyJoin(input: {
   if (!input.roomFound) return { ok: false, reason: 'not-found' };
   if (input.isReturning) return { ok: true };
 
-  if (input.isPrivate && input.storedPassword && input.storedPassword !== input.providedPassword) {
+  // A private flag with no password is a public room. Solo creates used to send
+  // that pair; multiplayer must not show a lock that join never enforces.
+  const storedPassword = input.storedPassword.trim();
+  if (input.isPrivate && storedPassword && storedPassword !== input.providedPassword) {
     if (!input.providedPassword) return { ok: false, reason: 'password-required' };
     return { ok: false, reason: 'bad-password' };
   }

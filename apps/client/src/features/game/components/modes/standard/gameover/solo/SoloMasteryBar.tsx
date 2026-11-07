@@ -4,6 +4,9 @@ import {
   medalMarkerScores,
   nextMedalGoal,
   normalizePrecision,
+  timeAttackMedalTargets,
+  timeAttackNextMedalGoal,
+  normalizeTimeBudgetSeconds,
   type Medal,
   type MedalTier,
   type Precision,
@@ -17,6 +20,8 @@ interface SoloMasteryBarProps {
   soloMedal: MedalTier;
   songDifficulties: string[];
   precision?: Precision;
+  timeAttack?: boolean;
+  timeBudgetSeconds?: number;
 }
 
 const MEDAL_ORDER: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -27,11 +32,27 @@ function goalMessage(
   difficulties: string[],
   soloMedal: MedalTier,
   precision?: Precision,
+  timeAttack?: boolean,
+  timeBudgetSeconds?: number,
 ): string | null {
-  const goal = nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision);
+  const goal = timeAttack
+    ? timeAttackNextMedalGoal(
+        score,
+        normalizeTimeBudgetSeconds(timeBudgetSeconds),
+        difficulties,
+        soloMedal,
+        precision,
+      )
+    : nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision);
   if (goal) {
-    const ptLabel = goal.pointsNeeded === 1 ? 'pt' : 'pts';
-    return `Encore ${goal.pointsNeeded} ${ptLabel} pour la Médaille ${goal.label}`;
+    const unit = timeAttack
+      ? goal.pointsNeeded === 1
+        ? 'titre'
+        : 'titres'
+      : goal.pointsNeeded === 1
+        ? 'pt'
+        : 'pts';
+    return `Encore ${goal.pointsNeeded} ${unit} pour la Médaille ${goal.label}`;
   }
   if (soloMedal === 'platinum') return 'Platine — performance maximale !';
   return null;
@@ -44,12 +65,29 @@ export function SoloMasteryBar({
   soloMedal,
   songDifficulties,
   precision,
+  timeAttack = false,
+  timeBudgetSeconds,
 }: SoloMasteryBarProps) {
   const resolvedPrecision = normalizePrecision(precision);
-  const scoreRatio = maxPossibleScore > 0 ? score / maxPossibleScore : 0;
+  const markerScores = timeAttack
+    ? timeAttackMedalTargets(
+        normalizeTimeBudgetSeconds(timeBudgetSeconds),
+        songDifficulties,
+        resolvedPrecision,
+      )
+    : medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision);
+  const barMax = timeAttack ? markerScores.platinum : maxPossibleScore;
+  const scoreRatio = barMax > 0 ? score / barMax : 0;
   const progressPercent = Math.min(100, scoreRatio * 100);
-  const markerScores = medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision);
-  const hint = goalMessage(score, maxPossibleScore, songDifficulties, soloMedal, resolvedPrecision);
+  const hint = goalMessage(
+    score,
+    maxPossibleScore,
+    songDifficulties,
+    soloMedal,
+    resolvedPrecision,
+    timeAttack,
+    timeBudgetSeconds,
+  );
 
   return (
     <div className="z-10 w-full">
@@ -57,8 +95,7 @@ export function SoloMasteryBar({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-4">
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct =
-              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
             const earned = score >= required;
             const meta = getMedalMeta(tier);
             if (!meta) return null;
@@ -88,8 +125,7 @@ export function SoloMasteryBar({
 
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct =
-              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
             const earned = score >= required;
             return (
               <div
@@ -113,8 +149,7 @@ export function SoloMasteryBar({
           </span>
           {MEDAL_ORDER.map((tier) => {
             const required = markerScores[tier];
-            const pct =
-              maxPossibleScore > 0 ? Math.min(100, (required / maxPossibleScore) * 100) : 0;
+            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
             const earned = score >= required;
             const meta = getMedalMeta(tier);
             return (
@@ -131,7 +166,7 @@ export function SoloMasteryBar({
             );
           })}
           <span className="absolute right-0 top-0 text-[9px] font-bold tabular-nums text-muted-foreground">
-            {maxPossibleScore}
+            {barMax}
           </span>
         </div>
       </div>

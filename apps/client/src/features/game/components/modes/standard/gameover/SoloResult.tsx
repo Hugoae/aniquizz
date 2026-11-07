@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { ChevronDown, ListMusic } from 'lucide-react';
 import {
   isSpeedBonusEnabled,
+  isTimeAttackSettings,
   type RoomSettings,
   type RoundHistoryEntry,
   type VictoryData,
@@ -73,7 +74,9 @@ export function SoloResult({
       {showStickySummary && (
         <div className="sticky top-0 z-[60] flex items-center justify-between gap-3 border-b border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md lg:hidden">
           <span className="font-mono text-sm font-bold tabular-nums">
-            {score}/{maxPossibleScore} pts
+            {isTimeAttackSettings(settings)
+              ? `${score} trouvé${score === 1 ? '' : 's'}`
+              : `${score}/${maxPossibleScore} pts`}
           </span>
           <span className="font-mono text-sm font-bold tabular-nums text-muted-foreground">
             {correctCount}/{totalRounds}
@@ -103,6 +106,8 @@ export function SoloResult({
               songDifficulties={songDifficulties}
               precision={settings.precision}
               xpEarned={me?.xpEarned}
+              timeAttack={isTimeAttackSettings(settings)}
+              timeBudgetSeconds={settings.timeBudgetSeconds}
             />
 
             <button

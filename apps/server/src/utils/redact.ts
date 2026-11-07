@@ -109,7 +109,8 @@ export function summarizeSocketPayload(
   }
 
   if (direction === 'inbound' && (event === 'get_rooms' || event === 'get_game_state')) {
-    return { _summary: event, ...((payload as object) ?? {}) };
+    const sanitized = sanitizePayload(payload);
+    return { _summary: event, ...(sanitized && typeof sanitized === 'object' ? sanitized : {}) };
   }
 
   return sanitizePayload(payload);

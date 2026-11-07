@@ -84,6 +84,8 @@ export function instrumentSocket(socket: TypedSocket): void {
 
   socket.on = ((event: string, listener: (...args: unknown[]) => void) => {
     const wrapped = (...args: unknown[]) => {
+      const atInfo = shouldLogInboundAtInfo(event);
+      if (!atInfo && !socketLogger.isDebugEnabled()) return listener(...args);
       const payload = args[0];
       const roomId = extractRoomId(payload);
       const actor = getActor(socket);
@@ -100,7 +102,7 @@ export function instrumentSocket(socket: TypedSocket): void {
         payload: summarizeSocketPayload(event, 'inbound', payload),
       };
 
-      if (shouldLogInboundAtInfo(event)) {
+      if (atInfo) {
         log.info(`socket:inbound:${event}`, undefined, fields);
       } else {
         log.debug(`socket:inbound:${event}`, undefined, fields);
@@ -113,6 +115,8 @@ export function instrumentSocket(socket: TypedSocket): void {
   }) as typeof socket.on;
 
   socket.emit = ((event: string, ...args: unknown[]) => {
+    const atInfo = CRITICAL_OUTBOUND_EVENTS.has(event);
+    if (!atInfo && !socketLogger.isDebugEnabled()) return originalEmit(event, ...args);
     const payload = args[0];
     const roomId = extractRoomId(payload);
     const log = socketLogger.child({ roomId });
@@ -122,7 +126,7 @@ export function instrumentSocket(socket: TypedSocket): void {
       payload: summarizeSocketPayload(event, 'outbound', payload),
     };
 
-    if (CRITICAL_OUTBOUND_EVENTS.has(event)) {
+    if (atInfo) {
       log.info(`socket:outbound:${event}`, undefined, fields);
     } else {
       log.debug(`socket:outbound:${event}`, undefined, fields);

@@ -1,3 +1,4 @@
+import { GAME_CONFIG } from '@aniquizz/shared';
 import type { UserListFilter, UserListSort } from '@/lib/adminApi';
 
 /** Users list snapshot restored when returning from a visited profile. */
@@ -52,6 +53,18 @@ export type AdminTab = (typeof ADMIN_TAB_VALUES)[number];
 
 const isAdminTab = (value: string): value is AdminTab =>
   (ADMIN_TAB_VALUES as readonly string[]).includes(value);
+
+const ROOM_ID_PATTERN = /^[A-Za-z0-9]+$/;
+
+/** Allowlisted `?room=` — same charset and length as a live room code. */
+export function parseAdminRoomId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (!ROOM_ID_PATTERN.test(trimmed) || trimmed.length > GAME_CONFIG.LIMITS.MAX_ROOM_ID_LENGTH) {
+    return null;
+  }
+  return trimmed;
+}
 
 /** Allowlisted `?tab=` — staff-only tabs collapse to users when the role cannot open them. */
 export function parseAdminTab(

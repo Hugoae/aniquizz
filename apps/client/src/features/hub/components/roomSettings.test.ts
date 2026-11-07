@@ -36,4 +36,23 @@ describe('buildLobbySettingChips', () => {
       value: 'Shonen ∩ Années 2010',
     });
   });
+
+  it('shows Chrono minutes for time-attack', () => {
+    const chips = buildLobbySettingChips({
+      soundCount: 60,
+      guessDuration: 15,
+      gameType: 'timeAttack',
+      timeBudgetSeconds: 180,
+      difficulty: ['medium'],
+      precision: 'franchise',
+      responseType: 'typing',
+      soundSelection: 'random',
+      videoMode: 'hidden',
+    });
+
+    expect(chips.find((c) => c.key === 'time')).toMatchObject({
+      label: 'Chrono',
+      value: '3 min',
+    });
+  });
 });

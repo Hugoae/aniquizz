@@ -3,7 +3,7 @@ import { GAME_CONFIG, type RoomSettings } from '@aniquizz/shared';
 import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
 import { Room } from './Room';
-import { standardScoring, type ScoringStrategy } from './ScoringStrategy';
+import { scoringForSettings, type ScoringStrategy } from './ScoringStrategy';
 import type { MatchRepository } from './MatchRepository';
 import type { PlaylistBuilder } from './PlaylistBuilder';
 import type { PlaylistItem } from './types';
@@ -58,6 +58,7 @@ export function makePlaylistItem(overrides: Partial<PlaylistItem> = {}): Playlis
     videoKey: 'videos/test.mp4',
     videoStartTime: 0,
     guessDuration: 10,
+    clipDurationSeconds: 10,
     cover: null,
     animeId: 20,
     year: 2002,
@@ -121,7 +122,7 @@ export function createEngineHarness(
   const engine = new MatchEngine(room, {
     builder,
     repo,
-    scoring: opts.scoring ?? standardScoring,
+    scoring: opts.scoring ?? scoringForSettings(settings),
   });
   room.attachEngine(engine);
 

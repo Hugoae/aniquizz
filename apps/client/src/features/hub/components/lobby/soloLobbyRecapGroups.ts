@@ -5,6 +5,7 @@ import {
   GAME_TYPE_LABELS,
   getPrecisionChipLabel,
   normalizeVideoMode,
+  normalizeTimeBudgetSeconds,
   VIDEO_MODE_LABELS,
 } from '@aniquizz/shared';
 import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
@@ -77,14 +78,20 @@ export function buildSoloLobbyRecapGroups(
           key: 'sound-count',
           icon: ListMusic,
           label: '',
-          value: `${config.soundCount} sons`,
+          value:
+            config.gameType === 'timeAttack'
+              ? `${normalizeTimeBudgetSeconds(config.timeBudgetSeconds) / 60} min`
+              : `${config.soundCount} sons`,
           className: SETTING_CHIP_NEUTRAL,
         },
         {
           key: 'guess-duration',
           icon: Clock,
           label: '',
-          value: `${config.guessDuration}s`,
+          value:
+            config.gameType === 'timeAttack'
+              ? `${config.soundCount} titres`
+              : `${config.guessDuration}s`,
           className: SETTING_CHIP_NEUTRAL,
         },
       ],

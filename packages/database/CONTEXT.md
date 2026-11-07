@@ -28,6 +28,7 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
 
 ## Known pitfalls
 
+- **Client grants are column-scoped on `Song`.** `anon` / `authenticated` can SELECT the catalogue except `videoKey` and `sourceUrl`. A table-level `GRANT SELECT` would expose those locators again. `Profile` INSERT is revoked; `handle_new_user()` is `SECURITY DEFINER`.
 - **Migrations are manual on Supabase.** `prisma migrate dev` fails (no shadow DB, P1001).
   Author `prisma/migrations/<ts>_<name>/migration.sql` by hand (additive/idempotent),
   `npx prisma db execute --file …`, then `migrate resolve --applied <ts>_<name>` and
@@ -35,6 +36,8 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
 - **`GameMode.SPRINT` is historical.** It stores Standard **Vitesse** matches
   (`speedBonusEnabled`). Do not rename the Prisma enum or its already-applied
   migration folder (`20260713160000_match_game_mode_sprint`).
+- **`GameMode.TIME_ATTACK`** stores solo Contre-la-montre matches. Additive
+  `ALTER TYPE` migration `20260916200000_match_game_mode_time_attack`.
 - **Pipeline steps are idempotent and lock-aware.** They upsert by AniList id / videoKey
   and never overwrite `isLocked` rows. Export locks (`export_db_to_json.ts`) **before**
   scaling `ANILIST_LIMIT` up (e.g. 30 → 500).

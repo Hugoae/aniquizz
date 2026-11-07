@@ -17,7 +17,7 @@ import { ProfileOwnMenu } from '@/features/profile/components/ProfileOwnMenu';
 import { ProfileRelationActions } from '@/features/profile/components/ProfileRelationActions';
 import { ProfileUsernameEditor } from '@/features/profile/components/ProfileUsernameEditor';
 
-const ANILIST_LOGO = 'https://upload.wikimedia.org/wikipedia/commons/6/61/AniList_logo.svg';
+const ANILIST_LOGO = '/logos/anilist.svg';
 const MAL_LOGO = '/logos/mal.png';
 
 const PROVIDER_LABEL: Record<WatchedListProvider, string> = {

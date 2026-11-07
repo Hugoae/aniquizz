@@ -41,18 +41,25 @@ export default function News() {
   const filteredNews = filter === 'all' ? allNews : allNews.filter((n) => n.type === filter);
   const latestId = allNews[0]?.id;
 
-  // Deep-link from home: /news#news-<id> expands and scrolls to the target card.
+  // A new deep link must show every card so the target is mounted. Adjusting
+  // during render (not in the scroll effect) avoids a wasted update when the
+  // filter is already "all", and leaves a later chip click alone.
+  const [appliedFocus, setAppliedFocus] = useState(focusedId);
+  if (focusedId !== appliedFocus) {
+    setAppliedFocus(focusedId);
+    if (focusedId !== null && allNews.some((item) => item.id === focusedId)) {
+      setFilter('all');
+    }
+  }
+
   useEffect(() => {
-    if (focusedId === null) return;
-    const exists = allNews.some((n) => n.id === focusedId);
-    if (!exists) return;
-    setFilter('all');
-    const t = window.setTimeout(() => {
+    if (focusedId === null || !allNews.some((item) => item.id === focusedId)) return;
+    const timer = window.setTimeout(() => {
       document
         .getElementById(`news-${focusedId}`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, [focusedId]);
 
   const chipClass = (active: boolean) =>

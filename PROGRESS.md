@@ -3,11 +3,103 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7** · Vitesse (this slice) · pokédex + Admin remaining (2026-09-16)
+## Current phase: **26.7** · Chrono solo (this slice) · pokédex + Admin remaining (2026-09-16)
 
-> **State:** **Vitesse** is the first **26.7** slice: Sprint is no longer a `gameType`; it is a Standard multi typing checkbox (`speedBonusEnabled`). No `SITE_VERSION` bump — the Home footer stays `v26.6`. Short news article (id 9). **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+). Do not start Chrono. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+### 26.7 — Ghost rooms fix (2026-11-07)
+
+Rooms stayed open for days (« Terminé » solo rooms, a `waiting` lobby past 30 min). Root causes: the idle sweep had no `finished` / `starting` rule, and `emitLobbyUpdate()` called `touch()`, so reconnect loops kept lobbies alive.
+
+| Item          | Outcome                                                                                                                                                                                                                           |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Policy module | `roomIdlePolicy.ts`: pure `evaluateRoomIdle` + constants. `finished` closes after 15 min, `starting` cancels after 3 min, `waiting` 30 min, hard cap 3 h for non-running rooms. `GameManager.sweepIdleRooms` applies the verdict. |
+| Activity      | `emitLobbyUpdate` no longer touches. Human events do: new member, leave, host transfer, ready, settings, return to lobby, match start/finish.                                                                                     |
+| Tests         | `roomIdlePolicy.test.ts` (every status branch, regression for finished ghosts).                                                                                                                                                   |
+| Client        | `useGamePage`: a solo room emits `leave_room` when the game-over page unmounts.                                                                                                                                                   |
+
+Pre-existing client typecheck errors (admin files, uncommitted rework) are unrelated. Suggested commit: `fix(server): close finished and stuck rooms, stop reconnects from resetting idle clock`.
+
+### 26.7 — Reviews and corrections (2026-10-17)
+
+Three read-only reviews, then the fixes. No `SITE_VERSION` bump. Do not reopen the parked rows.
+
+#### Security — server game path
+
+Nine findings. Mix scoring clamp and playback `nbf` were reviewed and deliberately not shipped.
+
+| Item          | Outcome                                                                                                                                                                                                                         |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Daily wall    | A guess POST past `DAILY_GUESS_WALL_MS` (15.5 s) is a stored miss. Inside that grace it still grades.                                                                                                                           |
+| Mix scoring   | Honour system kept. The displayed correct label is `correctTarget`, so a choice string is indistinguishable from an honest typist. No clamp. A client that already knows the answer can still claim 5 pts instead of 2.         |
+| Duo           | Pair is absent from `round_start`. Mix `game:use_duo` delivers `game:duo` to that socket and forces 1 pt, including an answer already sent. Claiming duo without the event is a 1 pt self-penalty. QCM never receives the pair. |
+| nextVideo     | Preload URL stays playable during reveal. The Worker cannot tell a preload GET from playback, and `nbf` would break cold start. Head start is bounded to the reveal length.                                                     |
+| Finish race   | Synchronous `finishing` flag, score snapshot before the XP await, `startMatch` refused while finishing.                                                                                                                         |
+| One room      | `lobby:create` / `lobby:join` leave every other room through `removePlayer`. Disconnected players cannot answer.                                                                                                                |
+| Private rooms | Empty password is stored and joined as public. Solo `isPrivate` + `password: ''` still creates (kept out of the public list by `maxPlayers === 1`).                                                                             |
+| Admin kick    | `force_logout` then `disconnect(true)`. The JWT is not revoked.                                                                                                                                                                 |
+| Role          | Production `dev:add_bots` re-reads `Profile.role`. A role PATCH updates live sockets and the lobby badge.                                                                                                                       |
+
+#### Database — Prisma, grants, live Supabase
+
+Review: N+1 queries, indexes, access rules. Prisma bypasses RLS; PostgREST is the client boundary.
+
+| Item             | Outcome                                                                                                                                                                                                                                                           |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SongHistory      | Match and daily heard-song writes are one `INSERT … ON CONFLICT` (`gen_random_uuid()`, unknown songs skipped via `INNER JOIN "Song"`). `recordHeardSongs` logs and does not throw. Rewind is one update plus one delete and throws, so an admin reset rolls back. |
+| Daily admin list | Exclusion lookback is one query for the horizon, sliced per day in memory (60-day songs, 14-day franchises). The target day itself is excluded.                                                                                                                   |
+| Profile INSERT   | Revoked from `anon` / `authenticated`. Policy "Users can insert their own profile" dropped. Signup stays `handle_new_user()` (SECURITY DEFINER). A missing row could previously be inserted with `role = ADMIN`.                                                  |
+| Song locators    | Table-level SELECT revoked, then column SELECT re-granted without `videoKey` / `sourceUrl`. A later table-level `GRANT SELECT` would re-expose them.                                                                                                              |
+| Policies in git  | Catalogue read policies for Anime, Franchise, Song, Profile, and SongHistory live in `20261017193000_client_catalogue_grants` (applied on Supabase and marked applied). Franchise keeps a public SELECT policy and no client SELECT grant.                        |
+| Index            | `DailyChallenge.reviewedById` — the only unindexed foreign key.                                                                                                                                                                                                   |
+
+Left on purpose: do not `FORCE ROW LEVEL SECURITY` (forcing it without `BYPASSRLS` breaks Prisma). Do not drop the unused-index advisor hits (low traffic). No trigram indexes. Avatar bucket listing and HIBP stay deferred ([`docs/security/rls-audit.md`](./docs/security/rls-audit.md)). Advisors still report 18 “RLS enabled, no policy” tables — deny-by-default, expected.
+
+#### Client — `src/components` and `src/pages`
+
+Review: effects, re-renders, duplicated state, XSS. No `dangerouslySetInnerHTML`, `eval`, `javascript:`, `any`, or `ts-ignore` in that scope.
+
+| Item       | Outcome                                                                                                                                                                                                                          |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON-LD    | `jsonLdScriptHtml` escapes `<`, `>`, `&`, U+2028, and U+2029 before Helmet copies script children into `innerHTML`. Callers today are static; the prop type is `Record<string, unknown>`.                                        |
+| News hash  | Filter resets to "all" during render when the focused id changes and exists. The effect only scrolls. A later chip click is left alone.                                                                                          |
+| Admin room | Highlight lives in `?room=` (`^[A-Za-z0-9]+$`, max 16). `goToSong` / `goToUser` delete `room`. Profile-return `location.state` seeds the query once. `RoomsPanel` still receives `highlightRoomId`.                              |
+| Play hub   | Lobby, password, and home stats are three memoized contexts. `GameHubRoutes` is memoized. A 20 s `home_stats` tick does not redraw the room list or the closed password dialog. Typing a password does not redraw the room list. |
+
+Left: Admin’s lazy panels have no local error boundary (nit). `VirtualScroll`, `ResetPassword`, `NotFound`, and `DelayedRouteFallback` were reviewed and not rewritten.
+
+**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi. HIBP stays parked.
+
+> **State:** **Vitesse** and **Contre-la-montre solo** are the shipped **26.7** slices. Live `gameType` is `'standard' | 'timeAttack'`. No `SITE_VERSION` bump — the Home footer stays `v26.6`. News id 9 (Vitesse) + id 10 (Chrono). Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+) · Chrono **multi** · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
+
+### 26.7 — Audit hardening pass (P1/P2) (2026-10-17)
+
+| Area              | What changed                                                                                                                                                                                                                                        |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Integration tests | `daily` no longer assumes an empty real-day board; `playerPrefs` resets `admin_dev` prefs to defaults in `beforeAll` (files already run serially).                                                                                                  |
+| Socket validation | Zod schemas `friendRequestInputSchema`, `friendRequestActionInputSchema`, `friendUserIdInputSchema`, `addBotsInputSchema`; all friends handlers + `dev:add_bots` parse at the handler.                                                              |
+| Rate limits       | New `RATE_LIMITS.lobbyAction` (kick/transfer/bots/ready/settings) and `profileRead` (`profile:get_stats`, watched reads, silent). `leave_room` stays unthrottled on purpose. IP buckets + invite cooldowns are now swept.                           |
+| Lobby / admin     | `leave_room` ignores non-members. Room passwords in `/admin/rooms` are ADMIN-only (moderators get `''`). Suggestion staff routes use `staff()` (role + admin rate limit).                                                                           |
+| Perf (server)     | Online count cached 5 s; socket instrumentation skips building log fields when the level is off; admin stats use `COUNT(DISTINCT)` + one `groupBy` for answer rate.                                                                                 |
+| Perf (client)     | `useGameSocket` memoizes `actions`, syncs latest-value refs in a layout effect, lazy roster map; `useGamePage` stabilizes `myProfile` / `choices` / modal callbacks. Admin panels are lazy chunks; 1 s tickers isolated in `LiveClock`.             |
+| Hygiene           | Catalogue loaders give up after 15 s; `lobby:joined` / reconnect-join listeners cleaned up; AniList logo self-hosted; CSP `sha256` + `jsonld-csp-hash.mjs` removed (JSON-LD is not executed); 3 `exhaustive-deps` warnings fixed; `redact.test.ts`. |
+| Docs              | Server `CONTEXT.md`: single-instance assumption. `PLAN.md`: Mix honor-system clamp is a ranked prerequisite, not shipped.                                                                                                                           |
+
+**C9 file splits (2026-10-17):** behaviour-neutral. `adminApi` is a folder (HTTP, types, endpoints). Rooms, catalogue, stats, and dev tools are split into section components. Edit dialogs are one file each. `useLobbyController` keeps socket state; emit actions live in `useLobbyActions`. No admin-panel rework in this pass.
+
+### 26.7 — Contre-la-montre solo (2026-09-16)
+
+Second slice of **26.7**. Spec: [`docs/game/time-attack.md`](./docs/game/time-attack.md).
+
+| Item            | What changed                                                                                                                                                                            |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contract**    | `GameType = 'standard' \| 'timeAttack'`. `timeBudgetSeconds`, `remainingMs` / `foundCount` on sync, event `timeAttack:budget`. Prisma `GameMode.TIME_ATTACK`.                           |
+| **Server**      | `normalizeRoomSettings` solo-only + typing + beginning. `MatchBudgetClock` beside `RoundClock`. +1 / skip −5 s / wrong −3 s / EOF reveal 3 s. Persist `TIME_ATTACK`.                    |
+| **Hub**         | Solo selector Standard \| Contre-la-montre. Duration chips 1/2/3/5 min. Hidden in multi. Pool size from `timeAttackPoolSize`.                                                           |
+| **In-game**     | Top bar clock + « N trouvés ». Typing stays open after a miss. Skip = Passer. Pause freezes budget + clip, including skip/reveal mid-pause. Game-over titres + medals. History **CLM**. |
+| **Copy / news** | Lobby intro + scoring lines. Roadmap **Contre-la-montre**. News id 10. No `SITE_VERSION` bump.                                                                                          |
+
+**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi.
 
 ### 26.7 — Vitesse (Standard typing modifier) (2026-09-16)
 
@@ -21,7 +113,7 @@ First slice of **26.7**. Not a 26.6.3 patch. Sprint lives on as Prisma `GameMode
 | **In-game**     | `SpeedLeaderboard`, round history breakdown, game-over + profile history use the same badge.                                                                     |
 | **Copy / news** | Lobby rules podium lines when the flag is on. Roadmap card **Vitesse**. News id 9 (« Sprint devient Vitesse »). Spec: `docs/game/speed-bonus.md`.                |
 
-**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono.
+**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Chrono solo shipped in the following section.
 
 ### 26.6.2 — volume persist + header XP (2026-09-16)
 
@@ -1195,7 +1287,7 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
 | **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
 | **26.6.2** | Volume persist across reload ✅ · header XP ring after matches ✅ · no `SITE_VERSION` bump                                                                                 |
-| **26.7**   | **Vitesse** ✅ · pokédex found bar · heard / found / liked playlists · Admin panel rework — remaining                                                                      |
+| **26.7**   | **Vitesse** ✅ · **Chrono solo** ✅ · pokédex found bar · heard / found / liked playlists · Admin panel rework — remaining                                                 |
 | **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions

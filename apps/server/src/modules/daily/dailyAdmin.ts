@@ -10,6 +10,7 @@ import { DailyHttpError } from './dailyErrors';
 import {
   generateDailyChallenge,
   loadChallengeByDate,
+  loadRecentExclusionMap,
   loadRecentExclusions,
 } from './dailyGenerator';
 import {
@@ -56,16 +57,16 @@ export async function listDailyAdmin(now = new Date()) {
     },
     orderBy: { challengeDate: 'asc' },
   });
-  const recents = await Promise.all(
-    rows.map((row) => loadRecentExclusions(isoDayFromDate(row.challengeDate))),
+  const recents = await loadRecentExclusionMap(
+    rows.map((row) => isoDayFromDate(row.challengeDate)),
   );
   return {
     today,
-    challenges: rows.map((row, index) => {
+    challenges: rows.map((row) => {
       const snapshots = snapshotsFromJson(row.rounds);
       const iso = isoDayFromDate(row.challengeDate);
       const attemptCount = row._count.attempts;
-      const recent = recents[index] ?? {
+      const recent = recents.get(iso) ?? {
         songIds: new Set<number>(),
         franchiseKeys: new Set<string>(),
       };

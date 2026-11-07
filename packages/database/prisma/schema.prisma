@@ -47,6 +47,7 @@ enum Difficulty {
 enum GameMode {
   STANDARD
   SPRINT
+  TIME_ATTACK
 }
 
 enum MatchStatus {
@@ -145,6 +146,7 @@ model Profile {
   anilistLastSync    DateTime?
   malLastSync        DateTime?
 
+  // Signup inserts via handle_new_user() (SECURITY DEFINER). Client INSERT is revoked.
   role UserRole @default(USER)
 
   // Admin moderation (Phase 6). Null = not banned / not muted.
@@ -553,6 +555,7 @@ model DailyChallenge {
   attempts DailyAttempt[]
 
   @@index([status, challengeDate])
+  @@index([reviewedById])
 }
 
 model DailyChallengeRound {

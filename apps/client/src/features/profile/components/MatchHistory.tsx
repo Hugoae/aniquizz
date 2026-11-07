@@ -1,5 +1,9 @@
 import { History, Trophy, Medal, Target, Zap, Users, Clock, X, Calendar } from 'lucide-react';
-import { speedBonusFromStoredMode, type MatchHistoryEntry } from '@aniquizz/shared';
+import {
+  speedBonusFromStoredMode,
+  gameTypeFromStoredMode,
+  type MatchHistoryEntry,
+} from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { formatDailyClock } from '@/features/daily/lib/dailyRecap';
@@ -103,6 +107,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
     : `#${entry.rank} / ${entry.playerCount}`;
 
   const duration = formatDuration(entry.durationMs);
+  const gameType = gameTypeFromStoredMode(entry.mode);
 
   return (
     <li className="relative overflow-hidden rounded-lg border border-border/40 bg-background/40 p-3">
@@ -125,6 +130,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <GameModeBadge
             compact
+            gameType={gameType}
             speedBonusEnabled={speedBonusFromStoredMode(entry.mode)}
             className="shadow-none"
           />
@@ -137,7 +143,9 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
           <span className="font-bold text-foreground">
-            {entry.score.toLocaleString('fr-FR')} pts
+            {gameType === 'timeAttack'
+              ? `${entry.score.toLocaleString('fr-FR')} trouvé${entry.score === 1 ? '' : 's'}`
+              : `${entry.score.toLocaleString('fr-FR')} pts`}
           </span>
           <span className="inline-flex items-center gap-1 text-success">
             <Target className="h-3 w-3" /> {entry.correctCount}/{entry.totalRounds}

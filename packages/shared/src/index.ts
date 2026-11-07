@@ -25,6 +25,7 @@ export * from './roles';
 export * from './videoMode';
 export * from './songStartMode';
 export * from './speedBonus';
+export * from './timeAttack';
 export * from './events';
 export * from './socketPayloads';
 export * from './library';

@@ -6,6 +6,8 @@ import type { MatchEngineHost } from './matchEngineHost';
 export async function startMatch(host: MatchEngineHost): Promise<boolean> {
   host.resetMatchState();
   host.startedAt = new Date();
+  host.budget.clear();
+  host.pausedDuringPhase = false;
   host.room.status = 'playing';
   host.currentRoundIndex = -1;
   host.phase = 'intro';

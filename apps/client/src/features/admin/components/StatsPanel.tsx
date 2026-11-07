@@ -3,26 +3,18 @@ import { toast } from 'sonner';
 import {
   Activity,
   Ban,
-  BarChart3,
   Clock,
   Cpu,
-  Disc,
   Gamepad2,
-  Layers,
   Link2,
   MemoryStick,
   MicOff,
-  Music2,
   Pause,
   Play,
   Radio,
   RefreshCw,
   Server,
   Shield,
-  Target,
-  Timer,
-  Trash2,
-  Trophy,
   UserCheck,
   UserPlus,
   Users,
@@ -42,178 +34,15 @@ import {
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { adminApi, AdminApiError, type StatsOverview, type StatsPeriod } from '@/lib/adminApi';
-import { StatsMatchesChart } from '@/features/admin/components/StatsMatchesChart';
+import { LiveClock } from './LiveClock';
+import { PERIOD_SHORT, PERIOD_TEXT, PERIODS, formatUptime } from './statsPanelFormat';
+import { SectionTitle, SegmentBar, StatCard } from './statsPanelParts';
+import { StatsActivitySection } from './StatsActivitySection';
 
 const errorMessage = (e: unknown): string =>
   e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
 
 const REFRESH_MS = 60_000;
-
-const PERIODS: { key: StatsPeriod; label: string }[] = [
-  { key: '24h', label: '24 h' },
-  { key: '7d', label: '7 j' },
-  { key: '30d', label: '30 j' },
-  { key: 'all', label: 'Tout' },
-];
-
-/** "sur …" suffix for period-scoped metrics. */
-const PERIOD_TEXT: Record<StatsPeriod, string> = {
-  '24h': '24 h',
-  '7d': '7 j',
-  '30d': '30 j',
-  all: "tout l'historique",
-};
-
-const PERIOD_SHORT: Record<StatsPeriod, string> = {
-  '24h': '24 h',
-  '7d': '7 j',
-  '30d': '30 j',
-  all: 'total',
-};
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  EASY: 'Facile',
-  MEDIUM: 'Moyen',
-  HARD: 'Difficile',
-};
-
-const MODE_LABELS: Record<string, string> = {
-  STANDARD: 'Standard',
-  SPRINT: 'Vitesse',
-};
-
-const formatUptime = (seconds: number): string => {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m ${s}s`;
-};
-
-const formatDuration = (seconds: number): string => {
-  if (!seconds) return '—';
-  const m = Math.floor(seconds / 60);
-  const s = Math.round(seconds % 60);
-  return m > 0 ? `${m}m ${s}s` : `${s}s`;
-};
-
-// --- SHARED PIECES ----------------------------------------------------------
-
-function SectionTitle({ icon: Icon, title }: { icon: typeof Activity; title: string }) {
-  return (
-    <div className="flex items-center gap-2 pt-2">
-      <Icon className="h-5 w-5 text-primary" />
-      <h2 className="text-lg font-bold">{title}</h2>
-    </div>
-  );
-}
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  secondary,
-  accent = 'text-primary',
-}: {
-  icon: typeof Activity;
-  label: string;
-  value: string | number;
-  secondary?: string;
-  accent?: string;
-}) {
-  return (
-    <div className="glass-card p-4 flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</span>
-        <Icon className={cn('h-4 w-4', accent)} />
-      </div>
-      <div className={cn('text-2xl font-bold', accent)}>{value}</div>
-      {secondary && <div className="text-xs text-muted-foreground">{secondary}</div>}
-    </div>
-  );
-}
-
-interface Segment {
-  label: string;
-  value: number;
-  className: string;
-  dot: string;
-}
-
-function SegmentBar({ segments }: { segments: Segment[] }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0);
-  return (
-    <div className="glass-card p-4 space-y-3">
-      <div className="flex h-3 w-full overflow-hidden rounded-full bg-secondary/50">
-        {total === 0 ? (
-          <div className="h-full w-full bg-secondary/50" />
-        ) : (
-          segments.map((seg) => (
-            <div
-              key={seg.label}
-              className={cn('h-full', seg.className)}
-              style={{ width: `${(seg.value / total) * 100}%` }}
-              title={`${seg.label}: ${seg.value}`}
-            />
-          ))
-        )}
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
-        {segments.map((seg) => (
-          <span key={seg.label} className="flex items-center gap-1.5 text-muted-foreground">
-            <span className={cn('h-2 w-2 rounded-full', seg.dot)} />
-            {seg.label} <span className="font-semibold text-foreground">{seg.value}</span>
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TopList({
-  icon: Icon,
-  title,
-  items,
-  empty,
-}: {
-  icon: typeof Activity;
-  title: string;
-  items: { primary: string; secondary?: string; count: number }[];
-  empty: string;
-}) {
-  return (
-    <div className="glass-card p-4 space-y-3">
-      <div className="flex items-center gap-2 text-sm font-semibold">
-        <Icon className="h-4 w-4 text-primary" />
-        {title}
-      </div>
-      {items.length === 0 ? (
-        <div className="text-xs text-muted-foreground">{empty}</div>
-      ) : (
-        <ol className="space-y-2">
-          {items.map((it, i) => (
-            <li key={`${it.primary}-${i}`} className="flex items-center gap-3 text-sm">
-              <span className="w-5 shrink-0 text-center text-xs font-bold text-muted-foreground">
-                {i + 1}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{it.primary}</div>
-                {it.secondary && (
-                  <div className="truncate text-xs text-muted-foreground">{it.secondary}</div>
-                )}
-              </div>
-              <span className="shrink-0 rounded-md bg-secondary/50 px-2 py-0.5 text-xs text-muted-foreground">
-                {it.count}
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-    </div>
-  );
-}
-
-// --- MAIN -------------------------------------------------------------------
 
 export function StatsPanel() {
   const { profile } = useAuth();
@@ -222,7 +51,6 @@ export function StatsPanel() {
   const [period, setPeriod] = useState<StatsPeriod>('7d');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
-  const [, tick] = useState(0);
   const [confirmReset, setConfirmReset] = useState(false);
   const [resetting, setResetting] = useState(false);
   const periodRef = useRef(period);
@@ -259,12 +87,6 @@ export function StatsPanel() {
     };
   }, [autoRefresh, load]);
 
-  // Ticker for the "refreshed Xs ago" label.
-  useEffect(() => {
-    const id = setInterval(() => tick((n) => n + 1), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const doReset = async () => {
     setResetting(true);
     try {
@@ -284,7 +106,6 @@ export function StatsPanel() {
   }
 
   const { live, community, activity } = data;
-  const secondsAgo = Math.floor((Date.now() - lastUpdated) / 1000);
   const periodText = PERIOD_TEXT[period];
   const periodShort = PERIOD_SHORT[period];
 
@@ -308,7 +129,11 @@ export function StatsPanel() {
         <span className="text-xs text-muted-foreground">Période des métriques historiques</span>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Rafraîchi il y a {secondsAgo}s</span>
+          <span className="text-xs text-muted-foreground">
+            <LiveClock
+              render={(now) => `Rafraîchi il y a ${Math.floor((now - lastUpdated) / 1000)}s`}
+            />
+          </span>
           <Button
             size="sm"
             variant="outline"
@@ -483,147 +308,13 @@ export function StatsPanel() {
         ]}
       />
 
-      {/* --- Activité de jeu --- */}
-      <div className="flex items-center justify-between pt-2">
-        <div className="flex items-center gap-2">
-          <Gamepad2 className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-bold">Activité de jeu</h2>
-        </div>
-        {isAdmin && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => setConfirmReset(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            Réinitialiser l'activité
-          </Button>
-        )}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          icon={Trophy}
-          label="Parties jouées"
-          value={activity.totalMatches}
-          secondary={`${activity.matchesToday} aujourd'hui — ${activity.matchesWeek} cette semaine`}
-          accent="text-primary"
-        />
-        <StatCard
-          icon={Timer}
-          label="Durée moyenne"
-          value={formatDuration(activity.avgMatchDurationSec)}
-          secondary={`sur ${periodText}`}
-          accent="text-accent"
-        />
-        <StatCard
-          icon={Target}
-          label="Taux de bonne réponse"
-          value={`${activity.correctRatePercent}%`}
-          secondary={`sur ${periodText}`}
-          accent="text-success"
-        />
-        <StatCard
-          icon={Disc}
-          label="Sons découverts"
-          value={activity.discoveredSongs}
-          secondary={`${activity.coveragePercent}% du catalogue jouable`}
-          accent="text-accent"
-        />
-        <StatCard
-          icon={Music2}
-          label="Catalogue jouable"
-          value={activity.playableSongs}
-          secondary={`${activity.catalogue.total} sons au total`}
-          accent="text-primary"
-        />
-        <StatCard
-          icon={Layers}
-          label="Difficulté populaire"
-          value={
-            activity.topDifficulty
-              ? (DIFFICULTY_LABELS[activity.topDifficulty.difficulty] ??
-                activity.topDifficulty.difficulty)
-              : '—'
-          }
-          accent="text-warning"
-        />
-        <StatCard
-          icon={Gamepad2}
-          label="Mode populaire"
-          value={
-            activity.modes[0]
-              ? (MODE_LABELS[activity.modes[0].mode] ?? activity.modes[0].mode)
-              : '—'
-          }
-          secondary={activity.modes[0] ? `${activity.modes[0].count} partie(s)` : undefined}
-          accent="text-info"
-        />
-        <StatCard
-          icon={BarChart3}
-          label={`Parties (${periodShort})`}
-          value={activity.matchesPeriod}
-          accent="text-success"
-        />
-      </div>
-
-      {/* Catalogue health */}
-      <SegmentBar
-        segments={[
-          {
-            label: 'Prêts',
-            value: activity.catalogue.completed,
-            className: 'bg-success',
-            dot: 'bg-success',
-          },
-          {
-            label: 'En attente',
-            value: activity.catalogue.pending,
-            className: 'bg-muted-foreground/40',
-            dot: 'bg-muted-foreground/40',
-          },
-          {
-            label: 'En cours',
-            value: activity.catalogue.processing,
-            className: 'bg-info',
-            dot: 'bg-info',
-          },
-          {
-            label: 'Erreurs',
-            value: activity.catalogue.error,
-            className: 'bg-destructive',
-            dot: 'bg-destructive',
-          },
-          {
-            label: 'Ignorés',
-            value: activity.catalogue.skipped,
-            className: 'bg-warning',
-            dot: 'bg-warning',
-          },
-        ]}
+      <StatsActivitySection
+        activity={activity}
+        periodText={periodText}
+        periodShort={periodShort}
+        isAdmin={isAdmin}
+        onRequestReset={() => setConfirmReset(true)}
       />
-
-      <div className="grid gap-3 md:grid-cols-2">
-        <TopList
-          icon={Trophy}
-          title="Top animes joués"
-          empty="Aucune partie sur la période."
-          items={activity.topAnimes.map((a) => ({ primary: a.name, count: a.count }))}
-        />
-        <TopList
-          icon={Music2}
-          title="Top sons joués"
-          empty="Aucune partie sur la période."
-          items={activity.topSongs.map((s) => ({
-            primary: s.title,
-            secondary: `${s.artist} — ${s.anime}`,
-            count: s.count,
-          }))}
-        />
-      </div>
-
-      <StatsMatchesChart data={activity.perDay} />
-
       <AlertDialog open={confirmReset} onOpenChange={(open) => !open && setConfirmReset(false)}>
         <AlertDialogContent>
           <AlertDialogHeader>

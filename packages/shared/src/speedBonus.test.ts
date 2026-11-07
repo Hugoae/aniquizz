@@ -69,6 +69,11 @@ describe('gameTypeFromStoredMode', () => {
     expect(gameTypeFromStoredMode('sprint')).toBe('standard');
     expect(gameTypeFromStoredMode(null)).toBe('standard');
   });
+
+  it('maps TIME_ATTACK rows to timeAttack', () => {
+    expect(gameTypeFromStoredMode('TIME_ATTACK')).toBe('timeAttack');
+    expect(gameTypeFromStoredMode('time_attack')).toBe('timeAttack');
+  });
 });
 
 describe('speedBonusFromStoredMode', () => {
@@ -113,9 +118,10 @@ describe('isSpeedBonusEnabled', () => {
     ).toBe(false);
     expect(
       isSpeedBonusEnabled({
-        speedBonusEnabled: false,
+        speedBonusEnabled: true,
         responseType: 'typing',
         maxPlayers: 8,
+        gameType: 'timeAttack',
       }),
     ).toBe(false);
   });

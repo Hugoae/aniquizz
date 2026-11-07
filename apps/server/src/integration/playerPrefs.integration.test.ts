@@ -33,6 +33,11 @@ describe.skipIf(!hasIntegrationEnv)('player prefs', () => {
       where: { id: TEST_USER_IDS.admin },
       select: PREFS_SELECT,
     });
+    // Shared dev account: assertions assume a default baseline.
+    await prisma.profile.update({
+      where: { id: TEST_USER_IDS.admin },
+      data: PLAYER_PREFS_DEFAULTS,
+    });
   });
 
   afterAll(async () => {
