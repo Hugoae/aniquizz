@@ -11,6 +11,7 @@ import {
   isBanSanctionReason,
   isSpeedBonusEnabled,
   isTimeAttackSettings,
+  normalizeTimeBudgetSeconds,
   getPrecisionChipLabel,
   normalizePrecision,
   normalizeVideoMode,
@@ -19,7 +20,7 @@ import {
   playlistSourceDisplayName,
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
-import { useTimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
+import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
@@ -86,10 +87,20 @@ export function useGamePage() {
   const speedBonusOn = isSpeedBonusEnabled(activeSettings);
   const timeAttack = isTimeAttackSettings(activeSettings);
   const { phase, players, currentSong } = state;
-  const liveRemainingMs = useTimeAttackClock(
-    state.remainingMs,
-    state.budgetSyncedAt,
-    timeAttack && phase === 'guessing' && !state.isGamePaused,
+  const budgetTicking = phase === 'guessing' && !state.isGamePaused;
+  const budgetMs = normalizeTimeBudgetSeconds(activeSettings.timeBudgetSeconds) * 1000;
+  // Interpolation lives in the stage overlay so 250 ms ticks never re-render the page.
+  const timeAttackClock = useMemo<TimeAttackClock | null>(
+    () =>
+      timeAttack && state.remainingMs != null
+        ? {
+            remainingMs: state.remainingMs,
+            syncedAt: state.budgetSyncedAt,
+            ticking: budgetTicking,
+            budgetMs,
+          }
+        : null,
+    [timeAttack, state.remainingMs, state.budgetSyncedAt, budgetTicking, budgetMs],
   );
 
   const {
@@ -349,8 +360,10 @@ export function useGamePage() {
     autofocusAnswer,
     submitOnEnter,
     showShortcutReminder,
-    remainingMs: timeAttack ? liveRemainingMs : null,
+    timeAttackClock,
     foundCount: timeAttack ? state.foundCount : null,
+    stageFeedback: timeAttack ? state.stageFeedback : null,
+    recentTitles: state.recentTitles,
   };
 
   return {

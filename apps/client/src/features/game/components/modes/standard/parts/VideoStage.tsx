@@ -7,6 +7,7 @@ import type { CurrentSong } from '@/features/game/state/gameReducer';
 import { peekClipPath, peekWindowRect, type VideoMode } from '@aniquizz/shared';
 import { MatchCountdownOverlays } from '../../../shared/MatchCountdownOverlays';
 import { cn } from '@/lib/utils';
+import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import type { GamePhase } from './types';
 import { guessingClipPaintKey } from './videoStagePaint';
 
@@ -35,6 +36,8 @@ interface VideoStageProps {
   skipVotes: number;
   skipRequired: number;
   onVoteSkip: () => void;
+  /** Must be referentially stable (memoised) — this component is memo'd. */
+  timeAttackClock?: TimeAttackClock | null;
 }
 
 export const VideoStage = memo(function VideoStage({
@@ -62,6 +65,7 @@ export const VideoStage = memo(function VideoStage({
   skipVotes,
   skipRequired,
   onVoteSkip,
+  timeAttackClock = null,
 }: VideoStageProps) {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [hasPaintedFrame, setHasPaintedFrame] = useState(false);
@@ -233,6 +237,7 @@ export const VideoStage = memo(function VideoStage({
           isPausePending={isPausePending}
           useCenterTimer={useCenterTimer}
           useBottomBar={useBottomBar}
+          timeAttack={timeAttackClock}
         />
       </DevRenderProfiler>
 

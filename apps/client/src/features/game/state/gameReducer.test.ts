@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import type { GamePlayer, GameSyncState, RoundStartPayload } from '@aniquizz/shared';
+import type {
+  GamePlayer,
+  GameSyncState,
+  RevealSong,
+  RoundRevealPayload,
+  RoundStartPayload,
+} from '@aniquizz/shared';
 import { createInitialState, gameReducer } from './gameReducer';
 
 const peek = { xPercent: 10, yPercent: 12, sizePercent: 22 };
@@ -154,5 +160,103 @@ describe('gameReducer SYNC', () => {
     expect(state.duoChoices).toEqual([]);
     state = gameReducer(state, { type: 'DUO_CHOICES', choices: ['A', 'B'] });
     expect(state.duoChoices).toEqual(['A', 'B']);
+  });
+});
+
+function song(id: number, anime: string): RevealSong {
+  return {
+    id,
+    anime,
+    title: `Song ${id}`,
+    artist: 'A',
+    type: 'OP1',
+    difficulty: 'easy',
+    videoKey: `clip-${id}`,
+    videoStartTime: 0,
+  };
+}
+
+function reveal(round: number, s: RevealSong, isCorrect: boolean): RoundRevealPayload {
+  return {
+    round,
+    song: s,
+    players: [{ ...player('u1'), isCorrect }],
+    nextVideo: null,
+    nextVideoStartTime: null,
+    serverNow: 1_000,
+    endsAt: 4_000,
+    durationSeconds: 3,
+  };
+}
+
+describe('gameReducer time-attack feedback', () => {
+  it('cues a wrong answer with the tax delta and keeps recent titles untouched', () => {
+    const state = gameReducer(createInitialState(20), {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: { remainingMs: 57_000, foundCount: 0, tax: 'wrong' },
+    });
+    expect(state.stageFeedback).toMatchObject({ kind: 'wrong', deltaMs: -3000, seq: 1 });
+    expect(state.recentTitles).toEqual([]);
+  });
+
+  it('bumps seq on every event so repeated wrong answers replay the cue', () => {
+    let state = createInitialState(20);
+    for (let i = 0; i < 2; i++) {
+      state = gameReducer(state, {
+        type: 'TIME_ATTACK_BUDGET',
+        payload: { remainingMs: 50_000, foundCount: 0, tax: 'wrong' },
+      });
+    }
+    expect(state.stageFeedback?.seq).toBe(2);
+  });
+
+  it('does not cue plain budget syncs', () => {
+    const state = gameReducer(createInitialState(20), {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: { remainingMs: 60_000, foundCount: 0 },
+    });
+    expect(state.stageFeedback).toBeNull();
+  });
+
+  it('records found, missed and skipped titles newest first, capped at five', () => {
+    let state = createInitialState(20);
+    state = gameReducer(state, {
+      type: 'ROUND_REVEAL',
+      payload: reveal(1, song(1, 'Naruto'), true),
+      myUserId: 'u1',
+    });
+    expect(state.stageFeedback?.kind).toBe('correct');
+    state = gameReducer(state, {
+      type: 'ROUND_REVEAL',
+      payload: reveal(2, song(2, 'Bleach'), false),
+      myUserId: 'u1',
+    });
+    expect(state.stageFeedback?.kind).toBe('missed');
+    state = { ...state, currentRound: 3 };
+    state = gameReducer(state, {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: {
+        remainingMs: 40_000,
+        foundCount: 1,
+        tax: 'skip',
+        skippedSong: song(3, 'One Piece'),
+      },
+    });
+    expect(state.stageFeedback).toMatchObject({ kind: 'skip', deltaMs: -5000 });
+    expect(state.recentTitles.map((t) => [t.anime, t.outcome])).toEqual([
+      ['One Piece', 'skipped'],
+      ['Bleach', 'missed'],
+      ['Naruto', 'found'],
+    ]);
+
+    for (let r = 4; r <= 8; r++) {
+      state = gameReducer(state, {
+        type: 'ROUND_REVEAL',
+        payload: reveal(r, song(r, `Anime ${r}`), true),
+        myUserId: 'u1',
+      });
+    }
+    expect(state.recentTitles).toHaveLength(5);
+    expect(state.recentTitles[0].anime).toBe('Anime 8');
   });
 });

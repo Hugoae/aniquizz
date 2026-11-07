@@ -2,9 +2,11 @@ import {
   isTimeAttackSettings,
   normalizeTimeBudgetSeconds,
   TIME_ATTACK_REVEAL_SECONDS,
+  type TimeAttackBudgetPayload,
   type TimeAttackTaxKind,
 } from '@aniquizz/shared';
 import type { MatchEngineHost } from './matchEngineHost';
+import { toRevealSong } from './matchEngineReveal';
 
 export function isTimeAttackHost(host: MatchEngineHost): boolean {
   return isTimeAttackSettings(host.room.settings);
@@ -25,11 +27,15 @@ export function timeAttackRemainingMs(host: MatchEngineHost): number {
   return normalizeTimeBudgetSeconds(host.room.settings.timeBudgetSeconds) * 1000;
 }
 
-export function emitTimeAttackBudget(host: MatchEngineHost): void {
+export function emitTimeAttackBudget(
+  host: MatchEngineHost,
+  extra: Pick<TimeAttackBudgetPayload, 'tax' | 'skippedSong'> = {},
+): void {
   if (!isTimeAttackHost(host)) return;
   host.channel.emit('timeAttack:budget', {
     remainingMs: timeAttackRemainingMs(host),
     foundCount: timeAttackFoundCount(host),
+    ...extra,
   });
 }
 
@@ -75,7 +81,9 @@ export function pauseTimeAttackBudget(host: MatchEngineHost): void {
 export function applyTimeAttackRoundTax(host: MatchEngineHost, kind: TimeAttackTaxKind): number {
   if (!isTimeAttackHost(host)) return timeAttackRemainingMs(host);
   const remaining = host.budget.tax(kind);
-  emitTimeAttackBudget(host);
+  const item = kind === 'skip' ? host.playlist[host.currentRoundIndex] : undefined;
+  // Solo-only mode, so revealing the skipped title on the room channel leaks nothing.
+  emitTimeAttackBudget(host, { tax: kind, ...(item ? { skippedSong: toRevealSong(item) } : {}) });
   return remaining;
 }
 

@@ -51,6 +51,29 @@ export const GAME_COPY = {
   stage: {
     pauseEndOfRound: 'Pause en fin de round',
   },
+  stageFeedback: {
+    correct: 'Trouvé !',
+    missed: 'Raté',
+    announce: {
+      correct: 'Bonne réponse',
+      wrong: 'Mauvaise réponse, moins 3 secondes',
+      skip: 'Titre passé, moins 5 secondes',
+      missed: 'Temps du clip écoulé, titre raté',
+    },
+  },
+  recentTitles: {
+    heading: 'Derniers titres',
+    empty: 'Les titres joués apparaîtront ici.',
+    outcome: {
+      found: 'Trouvé',
+      missed: 'Raté',
+      skipped: 'Passé',
+    },
+  },
+  timeAttack: {
+    clockAria: (clock: string) => `Temps restant de la partie : ${clock}`,
+    found: (n: number) => `${n} trouvé${n === 1 ? '' : 's'}`,
+  },
 } as const;
 
 export function playerDisconnectedToast(name: string): string {

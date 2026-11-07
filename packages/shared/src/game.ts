@@ -129,11 +129,6 @@ export interface DuoChoicesPayload {
   choices: string[];
 }
 
-/** Two labels for the player who spent the Mix Duo lifeline. Never broadcast. */
-export interface DuoChoicesPayload {
-  choices: string[];
-}
-
 /** Anti-cheat: only signals THAT a player answered, never the content. */
 export interface AnsweredPayload {
   userId: string;
@@ -176,6 +171,10 @@ export interface RoundRevealPayload extends PhaseTiming {
 export interface TimeAttackBudgetPayload {
   remainingMs: number;
   foundCount: number;
+  /** Set when this update is a tax, so the client can play wrong / skip feedback. */
+  tax?: 'skip' | 'wrong';
+  /** Skips have no reveal phase: the skipped title rides here for the recent-titles strip. */
+  skippedSong?: RevealSong;
 }
 
 /** Ask the client to warm a clip's buffer ahead of time (round 1 during the

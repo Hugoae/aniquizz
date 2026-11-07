@@ -4,8 +4,13 @@ import type { GamePlayer, Precision } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
-import type { CurrentSong } from '@/features/game/state/gameReducer';
+import type { CurrentSong, RecentTitle, StageFeedback } from '@/features/game/state/gameReducer';
+import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { activeMatchPlayers } from '../../../utils/ranking';
+import { StageFeedbackFrame } from './parts/StageFeedbackFrame';
+import { RecentTitlesStrip } from './parts/RecentTitlesStrip';
+
+const NO_RECENT_TITLES: RecentTitle[] = [];
 
 import { SongInfoCard } from '../../shared/SongInfoCard';
 import { GameSidebar } from '../../core/GameSidebar';
@@ -81,8 +86,11 @@ interface StandardGameLayoutProps {
   onSoloSkip?: () => void;
   /** Hide header Round N/M bar (daily uses its own track meter). */
   showRoundProgress?: boolean;
-  remainingMs?: number | null;
+  /** Solo time-attack run clock (memoised). Null outside time-attack. */
+  timeAttackClock?: TimeAttackClock | null;
   foundCount?: number | null;
+  stageFeedback?: StageFeedback | null;
+  recentTitles?: RecentTitle[];
   /** Daily — no running score or +pts toast. */
   hideScores?: boolean;
 }
@@ -146,10 +154,13 @@ function StandardGameLayoutInner({
   answerDisabled = false,
   onSoloSkip,
   showRoundProgress = true,
-  remainingMs = null,
+  timeAttackClock = null,
   foundCount = null,
+  stageFeedback = null,
+  recentTitles = NO_RECENT_TITLES,
   hideScores = false,
 }: StandardGameLayoutProps) {
+  const timeAttack = timeAttackClock != null;
   const revealSong =
     phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
@@ -211,8 +222,7 @@ function StandardGameLayoutInner({
         onShowSettings={onShowSettings}
         showPause={showPause}
         showRoundProgress={showRoundProgress}
-        remainingMs={remainingMs}
-        foundCount={foundCount}
+        foundCount={timeAttack ? foundCount : null}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -237,32 +247,35 @@ function StandardGameLayoutInner({
             <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
               {/* Left stack: video, answer slot, players floor. */}
               <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-y-auto overflow-x-hidden">
-                <VideoStage
-                  videoRef={videoRef}
-                  phase={phase}
-                  currentSong={currentSong}
-                  videoMode={videoMode}
-                  autoplayBlocked={autoplayBlocked}
-                  onSafePlay={onSafePlay}
-                  isGamePaused={isGamePaused}
-                  resumeCountdown={resumeCountdown}
-                  isMuted={isMuted}
-                  volume={volume}
-                  onToggleMute={onToggleMute}
-                  onVolumeChange={onVolumeChange}
-                  phaseEndsAt={phaseEndsAt}
-                  phaseDurationSeconds={phaseDurationSeconds}
-                  gameMode={gameMode}
-                  isPausePending={isPausePending}
-                  submittedAnswer={submittedAnswer}
-                  onSoloSkip={handleSoloSkip}
-                  soloSkipAlways={remainingMs != null}
-                  soloSkipLabel={remainingMs != null ? 'Passer' : 'Révéler'}
-                  playersCount={activeRosterCount}
-                  skipVotes={skipVotes}
-                  skipRequired={skipRequired}
-                  onVoteSkip={onVoteSkip}
-                />
+                <StageFeedbackFrame feedback={stageFeedback} enabled={timeAttack}>
+                  <VideoStage
+                    videoRef={videoRef}
+                    phase={phase}
+                    currentSong={currentSong}
+                    videoMode={videoMode}
+                    autoplayBlocked={autoplayBlocked}
+                    onSafePlay={onSafePlay}
+                    isGamePaused={isGamePaused}
+                    resumeCountdown={resumeCountdown}
+                    isMuted={isMuted}
+                    volume={volume}
+                    onToggleMute={onToggleMute}
+                    onVolumeChange={onVolumeChange}
+                    phaseEndsAt={phaseEndsAt}
+                    phaseDurationSeconds={phaseDurationSeconds}
+                    gameMode={gameMode}
+                    isPausePending={isPausePending}
+                    submittedAnswer={submittedAnswer}
+                    onSoloSkip={handleSoloSkip}
+                    soloSkipAlways={timeAttack}
+                    soloSkipLabel={timeAttack ? 'Passer' : 'Révéler'}
+                    playersCount={activeRosterCount}
+                    skipVotes={skipVotes}
+                    skipRequired={skipRequired}
+                    onVoteSkip={onVoteSkip}
+                    timeAttackClock={timeAttackClock}
+                  />
+                </StageFeedbackFrame>
 
                 {/* Slot under the video: answer input while guessing; on small screens
                   the reveal info shows here as a band (the big side card is hidden). */}
@@ -339,6 +352,7 @@ function StandardGameLayoutInner({
                     />
                   </div>
                 )}
+                {timeAttack && <RecentTitlesStrip titles={recentTitles} className="mt-4" />}
               </div>
             </div>
           </div>

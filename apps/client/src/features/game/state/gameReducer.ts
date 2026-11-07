@@ -19,7 +19,12 @@ import type {
   PeekWindow,
   VideoMode,
 } from '@aniquizz/shared';
-import { normalizeVideoMode, TIME_ATTACK_DEFAULT_BUDGET_SECONDS } from '@aniquizz/shared';
+import {
+  normalizeVideoMode,
+  TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
+  TIME_ATTACK_SKIP_TAX_MS,
+  TIME_ATTACK_WRONG_TAX_MS,
+} from '@aniquizz/shared';
 export type { RoundHistoryEntry };
 export type GamePhase = 'loading' | 'ready' | 'guessing' | 'revealed' | 'ended';
 /** Minimal shape the layout needs during guessing (no answer leaks). */
@@ -29,6 +34,22 @@ export interface GuessingSong {
   peekWindow?: PeekWindow;
 }
 export type CurrentSong = GuessingSong | RevealSong | null;
+export type StageFeedbackKind = 'correct' | 'wrong' | 'skip' | 'missed';
+/** One-shot stage cue; `seq` changes on every event so repeats replay the animation. */
+export interface StageFeedback {
+  kind: StageFeedbackKind;
+  seq: number;
+  /** Budget delta in ms for tax cues (negative). */
+  deltaMs?: number;
+}
+export type RecentTitleOutcome = 'found' | 'missed' | 'skipped';
+export interface RecentTitle {
+  key: string;
+  anime: string;
+  title: string;
+  outcome: RecentTitleOutcome;
+}
+export const RECENT_TITLES_LIMIT = 5;
 export interface GameState {
   phase: GamePhase;
   players: GamePlayer[];
@@ -62,6 +83,9 @@ export interface GameState {
   remainingMs: number | null;
   foundCount: number;
   budgetSyncedAt: number;
+  stageFeedback: StageFeedback | null;
+  /** Newest first, capped at `RECENT_TITLES_LIMIT`. Includes time-attack skips. */
+  recentTitles: RecentTitle[];
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
@@ -137,7 +161,28 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     remainingMs: null,
     foundCount: 0,
     budgetSyncedAt: 0,
+    stageFeedback: null,
+    recentTitles: [],
   };
+}
+
+function nextFeedback(state: GameState, kind: StageFeedbackKind, deltaMs?: number): StageFeedback {
+  return { kind, seq: (state.stageFeedback?.seq ?? 0) + 1, deltaMs };
+}
+
+function pushRecentTitle(
+  list: RecentTitle[],
+  song: RevealSong,
+  outcome: RecentTitleOutcome,
+  round: number,
+): RecentTitle[] {
+  const entry: RecentTitle = {
+    key: `${round}-${song.id}`,
+    anime: song.anime,
+    title: song.title,
+    outcome,
+  };
+  return [entry, ...list.filter((t) => t.key !== entry.key)].slice(0, RECENT_TITLES_LIMIT);
 }
 /** Convert an authoritative PhaseTiming envelope to a local end timestamp. */
 function localEndsAt(t: { serverNow: number; endsAt?: number; startsAt?: number }): number {
@@ -184,6 +229,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
             : null,
         foundCount: 0,
         budgetSyncedAt: Date.now(),
+        stageFeedback: null,
+        recentTitles: [],
       };
     }
     case 'PRELOAD': {
@@ -255,7 +302,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, speedLeaderboard: action.payload };
     }
     case 'TIME_ATTACK_BUDGET': {
-      return { ...state, ...budgetPatch(action.payload, state) };
+      const p = action.payload;
+      const next = { ...state, ...budgetPatch(p, state) };
+      if (!p.tax) return next;
+      const deltaMs = p.tax === 'skip' ? -TIME_ATTACK_SKIP_TAX_MS : -TIME_ATTACK_WRONG_TAX_MS;
+      return {
+        ...next,
+        stageFeedback: nextFeedback(state, p.tax, deltaMs),
+        recentTitles: p.skippedSong
+          ? pushRecentTitle(state.recentTitles, p.skippedSong, 'skipped', state.currentRound)
+          : state.recentTitles,
+      };
     }
     case 'ROUND_REVEAL': {
       const p = action.payload;
@@ -290,6 +347,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         skipVotes: 0,
         roundHistory: historyEntry ? [...state.roundHistory, historyEntry] : state.roundHistory,
         ...budgetPatch(p, state),
+        ...(me
+          ? {
+              stageFeedback: nextFeedback(state, me.isCorrect === true ? 'correct' : 'missed'),
+              recentTitles: pushRecentTitle(
+                state.recentTitles,
+                p.song,
+                me.isCorrect === true ? 'found' : 'missed',
+                p.round,
+              ),
+            }
+          : {}),
       };
     }
     case 'PLAYERS_UPDATE': {

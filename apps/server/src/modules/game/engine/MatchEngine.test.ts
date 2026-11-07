@@ -845,7 +845,7 @@ describe('MatchEngine', () => {
     });
 
     it('taxes 3s on a wrong answer and stays on the title', async () => {
-      const { engine } = createTimeAttackHarness();
+      const { engine, emitted } = createTimeAttackHarness();
       await advanceToGuessing(engine);
       const before = engine.getSyncState().remainingMs ?? 0;
 
@@ -854,6 +854,9 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().phase).toBe('guessing');
       expect(engine.getSyncState().currentRound).toBe(1);
       expect(engine.getSyncState().remainingMs).toBe(before - 3000);
+      const budget = emitted.filter((e) => e.event === 'timeAttack:budget').at(-1);
+      expect(budget?.payload).toMatchObject({ tax: 'wrong', remainingMs: before - 3000 });
+      expect((budget?.payload as { skippedSong?: unknown }).skippedSong).toBeUndefined();
     });
 
     it('ignores empty submits', async () => {
@@ -878,6 +881,10 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().currentRound).toBe(2);
       expect(engine.getSyncState().remainingMs).toBe(before - 5000);
       expect(emitted.some((e) => e.event === 'round_reveal')).toBe(false);
+      const budget = emitted.find(
+        (e) => e.event === 'timeAttack:budget' && (e.payload as { tax?: string }).tax === 'skip',
+      );
+      expect(budget?.payload).toMatchObject({ tax: 'skip', skippedSong: { anime: 'Naruto' } });
     });
 
     it('reveals 3s with 0 points on clip EOF', async () => {

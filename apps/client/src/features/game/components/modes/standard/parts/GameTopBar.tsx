@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
-import { formatTimeAttackClock } from '@aniquizz/shared';
+import { GAME_COPY } from '@/features/game/copy/gameCopy';
 import type { MyProfile } from './types';
 
 interface GameTopBarProps {
@@ -22,7 +22,7 @@ interface GameTopBarProps {
   showPause?: boolean;
   /** Hide Round N/M + bar when a custom meter (e.g. daily tracks) is shown below. */
   showRoundProgress?: boolean;
-  remainingMs?: number | null;
+  /** Solo time-attack: titles found (the run clock lives on the video stage). */
   foundCount?: number | null;
 }
 
@@ -40,11 +40,10 @@ export function GameTopBar({
   onShowSettings,
   showPause = true,
   showRoundProgress = true,
-  remainingMs = null,
   foundCount = null,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
-  const timeAttackMeter = remainingMs != null;
+  const timeAttackMeter = foundCount != null;
 
   // Pause is a majority vote — surface the tally so a lone voter gets feedback
   // before the threshold is reached (a real gap today: nothing changed on click).
@@ -100,18 +99,13 @@ export function GameTopBar({
           </span>
         </div>
         {showRoundProgress && timeAttackMeter && (
-          <div className="pointer-events-auto flex items-center justify-center gap-3 text-[10px] text-muted-foreground">
-            <span
-              className="font-mono text-sm font-bold tabular-nums text-aqua"
-              aria-live="polite"
-              aria-label={`Temps restant ${formatTimeAttackClock(remainingMs)}`}
-            >
-              {formatTimeAttackClock(remainingMs)}
-            </span>
-            <span className="font-mono font-bold tabular-nums" aria-live="polite">
-              {foundCount ?? 0} trouvé{(foundCount ?? 0) === 1 ? '' : 's'}
-            </span>
-          </div>
+          <span
+            key={foundCount}
+            className="pointer-events-auto animate-scale-in font-mono text-sm font-bold tabular-nums text-success"
+            aria-live="polite"
+          >
+            {GAME_COPY.timeAttack.found(foundCount)}
+          </span>
         )}
         {showRoundProgress && !timeAttackMeter && (
           <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">

@@ -115,7 +115,15 @@ Second slice of **26.7**, on `main` for playtest, **not finished**. Spec: `docs/
 | **In-game**     | Top bar clock + « N trouvés ». Typing stays open after a miss. Skip = Passer. Pause freezes budget + clip, including skip/reveal mid-pause. Game-over titres + medals. History **CLM**. |
 | **Copy / news** | Lobby intro + scoring lines. Roadmap **Contre-la-montre**. News id 10. No `SITE_VERSION` bump.                                                                                          |
 
-**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi.
+**Playtest round 1 (2026-11-07):**
+
+| Feedback          | Change                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Answers need feel | `StageFeedbackFrame` wraps the video: wrong = shake + red ring + « −3 s », skip = shake + amber ring + « −5 s », found = green ring + pop + « Trouvé ! », clip EOF = dim red ring + « Raté ». Unkeyed wrapper (the `<video>` must not remount); one-frame reset replays back-to-back cues. Cues stay visible, without motion, under reduced motion. `timeAttack:budget` now carries `tax` and, on skip, `skippedSong`. |
+| Recent titles     | `RecentTitlesStrip` under the reveal card (desktop right column): last 5 titles, found / missed / skipped. Reducer `recentTitles`, skips included.                                                                                                                                                                                                                                                                     |
+| Clock confusion   | Centre ring, blurred/peek bottom bar, and reveal badge show the **run budget** (m:ss, red under 10 s), not the 90 s clip. Header clock removed (keeps « N trouvés »). Interpolation moved into `MatchCountdownOverlays`, so the page no longer re-renders every 250 ms.                                                                                                                                                |
+
+**Next:** playtest round 2, then pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi.
 
 ### 26.7 — Vitesse (Standard typing modifier) (2026-09-16)
 

@@ -411,6 +411,55 @@
   animation: rank-flash 0.9s ease-out;
 }
 
+/* Answer cues on the video stage. No `forwards` fill on purpose: under reduced
+   motion the animation collapses and the cue stays visible until React unmounts it
+   (StageFeedbackFrame lifetime is slightly shorter than these durations). */
+@keyframes stage-flash {
+  0% {
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.animate-stage-flash {
+  animation: stage-flash 1.1s ease-out;
+}
+
+@keyframes stage-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.015);
+  }
+}
+.animate-stage-pop {
+  animation: stage-pop 0.45s ease-out;
+}
+
+@keyframes float-up {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 8px) scale(0.9);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.08);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -32px) scale(1);
+  }
+}
+.animate-float-up {
+  animation: float-up 1.1s ease-out;
+}
+
 /* Legal / policy pages — readable long-form without @tailwindcss/typography plugin */
 .legal-prose {
   @apply text-foreground;

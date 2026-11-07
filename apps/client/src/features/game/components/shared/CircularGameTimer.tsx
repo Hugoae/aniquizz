@@ -13,6 +13,11 @@ interface CircularGameTimerProps {
   /** Small element pinned just above the ring (e.g. the pause-pending pill). */
   topBadge?: ReactNode;
   className?: string;
+  /** Replaces the seconds digit (e.g. "2:45" for the time-attack budget). */
+  label?: string;
+  ariaLabel?: string;
+  /** Overrides the default "≤ 3 s" urgency rule. */
+  urgent?: boolean;
 }
 
 export function CircularGameTimer({
@@ -24,9 +29,12 @@ export function CircularGameTimer({
   showVisualizer = true,
   topBadge,
   className,
+  label,
+  ariaLabel,
+  urgent,
 }: CircularGameTimerProps) {
   const calculatedProgress = progress ?? Math.min((timeLeft / maxTime) * 100, 100);
-  const isUrgent = timeLeft <= 3 && timeLeft >= 0;
+  const isUrgent = urgent ?? (timeLeft <= 3 && timeLeft >= 0);
   const isReady = phase === 'ready';
 
   // Anchor above the ring — shared between guessing (with ring) and reveal (badge only).
@@ -54,7 +62,7 @@ export function CircularGameTimer({
 
       <div
         role="timer"
-        aria-label={`Temps restant : ${timeLeft} secondes`}
+        aria-label={ariaLabel ?? `Temps restant : ${timeLeft} secondes`}
         className={cn(
           'absolute inset-0 z-20 flex flex-col items-center justify-center bg-background transition-all duration-500',
           phase === 'revealed' ? 'pointer-events-none z-10 opacity-0' : 'opacity-100',
@@ -107,13 +115,14 @@ export function CircularGameTimer({
             ) : (
               <span
                 className={cn(
-                  'text-4xl font-black tabular-nums transition-colors duration-200',
+                  'font-black tabular-nums transition-colors duration-200',
+                  label && label.length > 3 ? 'text-3xl' : 'text-4xl',
                   isUrgent
                     ? 'text-destructive drop-shadow-[0_0_15px_hsl(var(--destructive)/0.8)] animate-pulse'
                     : 'text-foreground',
                 )}
               >
-                {timeLeft}
+                {label ?? timeLeft}
               </span>
             )}
           </div>

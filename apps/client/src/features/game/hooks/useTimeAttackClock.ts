@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 
+/** Server budget snapshot + interpolation inputs for the solo time-attack clock. */
+export interface TimeAttackClock {
+  remainingMs: number;
+  syncedAt: number;
+  ticking: boolean;
+  /** Full budget for the progress ring denominator. */
+  budgetMs: number;
+}
+
 /** Interpolate a server remaining-ms snapshot while guessing is live. */
 export function useTimeAttackClock(
   remainingMs: number | null,
