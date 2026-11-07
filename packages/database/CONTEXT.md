@@ -28,6 +28,7 @@ See [`README.md`](./README.md) for the full pipeline, scripts, and R2 workflows.
 
 ## Known pitfalls
 
+- **Client grants are column-scoped on `Song`.** `anon` / `authenticated` can SELECT the catalogue except `videoKey` and `sourceUrl`. A table-level `GRANT SELECT` would expose those locators again. `Profile` INSERT is revoked; `handle_new_user()` is `SECURITY DEFINER`.
 - **Migrations are manual on Supabase.** `prisma migrate dev` fails (no shadow DB, P1001).
   Author `prisma/migrations/<ts>_<name>/migration.sql` by hand (additive/idempotent),
   `npx prisma db execute --file …`, then `migrate resolve --applied <ts>_<name>` and

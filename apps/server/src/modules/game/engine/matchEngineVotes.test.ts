@@ -23,6 +23,7 @@ function player(partial: Partial<RoomPlayer> & Pick<RoomPlayer, 'userId'>): Room
     isCorrect: null,
     roundPoints: 0,
     answerType: null,
+    duoCommitted: false,
     answerTimeMs: null,
     speedRank: null,
     speedBonus: 0,

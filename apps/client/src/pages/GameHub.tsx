@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { memo, useEffect, useMemo } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { SeoHead } from '@/components/seo/SeoHead';
 import { PAGE_TITLES } from '@/lib/site';
@@ -28,6 +28,8 @@ import { ModeSelectView } from '@/features/hub/components/ModeSelectView';
 import {
   LobbyControllerProvider,
   useLobbyControllerContext,
+  useLobbyPasswordContext,
+  useLobbyStatsContext,
 } from '@/features/hub/context/LobbyControllerContext';
 import { PlayConfigPage } from '@/features/hub/pages/PlayConfigPage';
 import { PlayJoinPage } from '@/features/hub/pages/PlayJoinPage';
@@ -40,7 +42,7 @@ function PlayPasswordDialog() {
     passwordInput,
     setPasswordInput,
     submitPassword,
-  } = useLobbyControllerContext();
+  } = useLobbyPasswordContext();
 
   return (
     <Dialog open={showPasswordModal} onOpenChange={setShowPasswordModal}>
@@ -82,23 +84,15 @@ function PlayPasswordDialog() {
   );
 }
 
-function PlayHomePage() {
-  useEffect(() => {
-    prefetchGame();
-    void dailyApi.today().catch(() => undefined);
-  }, []);
-
+function PlayLobby() {
   const {
     user,
     profile,
-    view,
-    navigate,
     lobbyPlayers,
     currentRoomId,
     isAmIHost,
     gameStatus,
     isLaunchStarting,
-    multiplayerCount,
     roomConfig,
     patchRoomSettings,
     startLobbyGame,
@@ -108,7 +102,6 @@ function PlayHomePage() {
     addBots,
     goBack,
     openLobbySettings,
-    selectMode,
   } = useLobbyControllerContext();
 
   const isSoloLobby = roomConfig.maxPlayers === 1;
@@ -125,49 +118,52 @@ function PlayHomePage() {
 
   const canAddLobbyBots = import.meta.env.DEV || isAdmin(profile?.role);
 
-  if (view === 'lobby') {
-    return (
-      <>
-        <SeoHead title={PAGE_TITLES.play} noindex path="/play" />
-        {isSoloLobby ? (
-          <SoloReady
-            gameSettings={roomConfig}
-            playerName={profile?.username || HUB_COPY.player}
-            playerAvatar={profile?.avatar || 'player1'}
-            user={user}
-            profile={profile}
-            roomId={currentRoomId}
-            isLaunchStarting={isLaunchStarting}
-            onStart={startLobbyGame}
-            onLeave={goBack}
-            onOpenSettings={openLobbySettings}
-          />
-        ) : (
-          <MultiplayerLobby
-            roomName={roomConfig.roomName || HUB_COPY.defaultRoomName}
-            players={lobbyPlayers}
-            maxPlayers={roomConfig.maxPlayers}
-            isHost={isAmIHost}
-            currentUserId={user?.id ?? ''}
-            gameSettings={roomConfig}
-            roomCode={currentRoomId}
-            gameStatus={gameStatus}
-            isLaunchStarting={isLaunchStarting}
-            canAddBots={canAddLobbyBots}
-            onStartGame={startLobbyGame}
-            onToggleReady={toggleReady}
-            onLeave={goBack}
-            onOpenSettings={openLobbySettings}
-            onTransferHost={transferHost}
-            onKickPlayer={kickPlayer}
-            onAddBots={addBots}
-            watchedPlayersKey={watchedPlayersKey}
-            onPatchRoomSettings={patchRoomSettings}
-          />
-        )}
-      </>
-    );
-  }
+  return (
+    <>
+      <SeoHead title={PAGE_TITLES.play} noindex path="/play" />
+      {isSoloLobby ? (
+        <SoloReady
+          gameSettings={roomConfig}
+          playerName={profile?.username || HUB_COPY.player}
+          playerAvatar={profile?.avatar || 'player1'}
+          user={user}
+          profile={profile}
+          roomId={currentRoomId}
+          isLaunchStarting={isLaunchStarting}
+          onStart={startLobbyGame}
+          onLeave={goBack}
+          onOpenSettings={openLobbySettings}
+        />
+      ) : (
+        <MultiplayerLobby
+          roomName={roomConfig.roomName || HUB_COPY.defaultRoomName}
+          players={lobbyPlayers}
+          maxPlayers={roomConfig.maxPlayers}
+          isHost={isAmIHost}
+          currentUserId={user?.id ?? ''}
+          gameSettings={roomConfig}
+          roomCode={currentRoomId}
+          gameStatus={gameStatus}
+          isLaunchStarting={isLaunchStarting}
+          canAddBots={canAddLobbyBots}
+          onStartGame={startLobbyGame}
+          onToggleReady={toggleReady}
+          onLeave={goBack}
+          onOpenSettings={openLobbySettings}
+          onTransferHost={transferHost}
+          onKickPlayer={kickPlayer}
+          onAddBots={addBots}
+          watchedPlayersKey={watchedPlayersKey}
+          onPatchRoomSettings={patchRoomSettings}
+        />
+      )}
+    </>
+  );
+}
+
+function PlayModes() {
+  const { navigate, profile, selectMode } = useLobbyControllerContext();
+  const { multiplayerCount } = useLobbyStatsContext();
 
   return (
     <>
@@ -194,7 +190,18 @@ function PlayHomePage() {
   );
 }
 
-function GameHubRoutes() {
+function PlayHomePage() {
+  useEffect(() => {
+    prefetchGame();
+    void dailyApi.today().catch(() => undefined);
+  }, []);
+
+  const { view } = useLobbyControllerContext();
+  if (view === 'lobby') return <PlayLobby />;
+  return <PlayModes />;
+}
+
+const GameHubRoutes = memo(function GameHubRoutes() {
   return (
     <>
       <Routes>
@@ -205,7 +212,7 @@ function GameHubRoutes() {
       <PlayPasswordDialog />
     </>
   );
-}
+});
 
 export default function GameHub() {
   return (

@@ -14,6 +14,7 @@ export interface SpeedBonusSettings {
   responseType?: string | null;
   maxPlayers?: number | null;
   mode?: string | null;
+  gameType?: GameType | null;
 }
 
 /**

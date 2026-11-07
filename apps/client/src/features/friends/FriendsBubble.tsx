@@ -15,6 +15,10 @@ import { shouldIntervalPollFriendsHomeStats } from './friendsHomeStats';
  * Home-page friends widget: a bottom-left bubble showing "online / total friends"
  * and the total players online. Expands upward into the full friends list.
  */
+type FriendsCtx = NonNullable<ReturnType<typeof useFriendsOptional>>;
+const NO_FRIENDS: FriendsCtx['friends'] = [];
+const NO_INCOMING: FriendsCtx['incoming'] = [];
+
 export function FriendsBubble() {
   const { user } = useAuth();
   const friendsCtx = useFriendsOptional();
@@ -25,8 +29,8 @@ export function FriendsBubble() {
   const [totalOnline, setTotalOnline] = useState<number | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const friends = friendsCtx?.friends ?? [];
-  const incoming = friendsCtx?.incoming ?? [];
+  const friends = friendsCtx?.friends ?? NO_FRIENDS;
+  const incoming = friendsCtx?.incoming ?? NO_INCOMING;
   const onlineCount = friendsCtx?.onlineCount ?? 0;
   const accept = friendsCtx?.accept;
   const reject = friendsCtx?.reject;

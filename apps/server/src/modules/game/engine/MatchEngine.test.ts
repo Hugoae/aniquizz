@@ -157,6 +157,82 @@ describe('MatchEngine', () => {
       expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.TYPING);
     });
 
+    it('does not put the duo pair on round_start', async () => {
+      const { engine, emitted } = createEngineHarness({
+        settings: { responseType: 'mix' },
+      });
+      await advanceToGuessing(engine);
+
+      const roundStart = emitted.filter((e) => e.event === 'round_start').at(-1);
+      expect(roundStart?.payload).not.toHaveProperty('duo');
+      expect(emitted.some((e) => e.event === 'game:duo')).toBe(false);
+    });
+
+    it('scores a mix typing claim as duo after the lifeline is spent', async () => {
+      const { room, engine, emitted } = createEngineHarness({
+        settings: { responseType: 'mix' },
+      });
+      await advanceToGuessing(engine);
+
+      engine.useDuo('player-1');
+      const duoEvent = emitted.filter((e) => e.event === 'game:duo').at(-1);
+      expect(duoEvent?.payload).toEqual({
+        choices: ['Naruto', 'Bleach'],
+      });
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.forceEndRound();
+
+      const player = getPlayer(room, 'player-1');
+      expect(player.answerType).toBe('duo');
+      expect(player.roundPoints).toBe(GAME_CONFIG.SCORING.DUO);
+    });
+
+    it('rewrites an already submitted mix answer down to duo points', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'mix' },
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      expect(getPlayer(room, 'player-1').roundPoints).toBe(GAME_CONFIG.SCORING.TYPING);
+
+      engine.useDuo('player-1');
+      engine.forceEndRound();
+
+      const player = getPlayer(room, 'player-1');
+      expect(player.duoCommitted).toBe(true);
+      expect(player.answerType).toBe('duo');
+      expect(player.roundPoints).toBe(GAME_CONFIG.SCORING.DUO);
+    });
+
+    it('refuses the duo lifeline outside mix', async () => {
+      const { room, engine, emitted } = createEngineHarness({
+        settings: { responseType: 'qcm' },
+      });
+      await advanceToGuessing(engine);
+
+      engine.useDuo('player-1');
+
+      expect(getPlayer(room, 'player-1').duoCommitted).toBe(false);
+      expect(emitted.some((e) => e.event === 'game:duo')).toBe(false);
+      expect(emitted.some((e) => e.event === 'error')).toBe(true);
+    });
+
+    it('ignores an answer from a disconnected player', async () => {
+      const { room, engine } = createEngineHarness({
+        settings: { responseType: 'mix' },
+      });
+      await advanceToGuessing(engine);
+
+      const player = getPlayer(room, 'player-1');
+      player.isConnected = false;
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+
+      expect(player.hasAnswered).toBe(false);
+      expect(player.score).toBe(0);
+    });
+
     it('keeps mix typing when the title is not an offered choice', async () => {
       const { room, engine } = createEngineHarness({
         settings: { responseType: 'mix' },
@@ -649,6 +725,44 @@ describe('MatchEngine', () => {
       expect(vi.mocked(repo.persistMatch)).toHaveBeenCalled();
       const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as { songIds: number[] };
       expect(persisted.songIds).toEqual([11, 22]);
+    });
+
+    it('refuses a relaunch while finish is awaiting and persists the snapshotted score', async () => {
+      const { room, engine, repo } = createEngineHarness({
+        playlist: [makePlaylistItem({ id: 1 })],
+        playerIds: ['player-1'],
+        settings: { maxPlayers: 1, mode: 'solo', soundCount: 1 },
+      });
+      vi.mocked(repo.getXpState).mockImplementation(async () => {
+        const player = getPlayer(room, 'player-1');
+        expect(player.score).toBeGreaterThan(0);
+        player.score = 0;
+        player.matchCorrectCount = 0;
+        player.correctSongIds.clear();
+        expect(room.canStartMatch('player-1').ok).toBe(false);
+        await room.startMatch();
+        expect(room.status).toBe('finished');
+        await (engine as unknown as { finish: () => Promise<void> }).finish();
+        return new Map([['player-1', { xp: 0, currentWinStreak: 0 }]]);
+      });
+
+      await advanceToGuessing(engine);
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      for (let i = 0; i < 8; i++) await Promise.resolve();
+
+      expect(vi.mocked(repo.persistMatch)).toHaveBeenCalledTimes(1);
+
+      const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as {
+        players: { score: number; correctCount: number }[];
+      };
+      expect(persisted.players[0]?.score).toBe(GAME_CONFIG.SCORING.TYPING);
+      expect(persisted.players[0]?.correctCount).toBe(1);
+      expect(engine.finishing).toBe(false);
+
+      await (engine as unknown as { finish: () => Promise<void> }).finish();
+      expect(vi.mocked(repo.persistMatch)).toHaveBeenCalledTimes(1);
     });
   });
 

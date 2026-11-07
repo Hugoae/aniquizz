@@ -140,6 +140,35 @@ export const listProviderOpInputSchema = z
   })
   .strip();
 
+/** Friend request by username or userId (at least one). */
+export const friendRequestInputSchema = z
+  .object({
+    username: usernameSchema.optional(),
+    userId: targetIdSchema.optional(),
+  })
+  .strip()
+  .refine((value) => Boolean(value.username) || Boolean(value.userId));
+
+export const friendRequestActionInputSchema = z
+  .object({
+    requestId: targetIdSchema,
+  })
+  .strip();
+
+/** Remove / block / unblock / invite / public profile — one target user. */
+export const friendUserIdInputSchema = z
+  .object({
+    userId: targetIdSchema,
+  })
+  .strip();
+
+export const addBotsInputSchema = z
+  .object({
+    roomId: roomIdSchema,
+    count: z.coerce.number().int().min(1).max(GAME_CONFIG.LIMITS.MAX_PLAYERS_PER_LOBBY).default(1),
+  })
+  .strip();
+
 export type RoomIdInputParsed = z.infer<typeof roomIdInputSchema>;
 export type AnswerInputParsed = z.infer<typeof answerInputSchema>;
 export type UpdateRoomSettingsInputParsed = z.infer<typeof updateRoomSettingsInputSchema>;

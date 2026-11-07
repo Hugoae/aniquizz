@@ -67,6 +67,7 @@ export type GameAction =
   | { type: 'ROUND_START'; payload: RoundStartPayload; clientVideoMode?: VideoMode }
   | { type: 'ANSWERED'; userId: string }
   | { type: 'SPEED_LEADERBOARD'; payload: SpeedLeaderboardPayload }
+  | { type: 'DUO_CHOICES'; choices: string[] }
   | { type: 'ROUND_REVEAL'; payload: RoundRevealPayload; myUserId?: string }
   | { type: 'PLAYERS_UPDATE'; payload: PlayersUpdatePayload }
   | {
@@ -190,7 +191,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         nextVideoKey: null,
         preloadTarget: null,
         qcmChoices: p.choices ?? [],
-        duoChoices: p.duo ?? [],
+        duoChoices: [],
         // `endsAt` already includes the load buffer + end grace; the visible
         // countdown subtracts that tail in the ticker so it lands on 0.
         phaseEndsAt: localEndsAt(p),
@@ -212,6 +213,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           speedBonus: undefined,
         })),
       };
+    }
+    case 'DUO_CHOICES': {
+      return { ...state, duoChoices: action.choices };
     }
     case 'ANSWERED': {
       return {
@@ -332,7 +336,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
         nextVideoKey = null;
         qcmChoices = s.round.choices ?? [];
-        duoChoices = s.round.duo ?? [];
+        duoChoices =
+          s.currentRound === state.currentRound && state.duoChoices.length > 0
+            ? state.duoChoices
+            : [];
         phaseEndsAt = localEndsAt(s.round);
         phaseDurationSeconds = s.round.durationSeconds;
         videoMode = syncMode;

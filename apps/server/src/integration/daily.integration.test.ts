@@ -174,7 +174,32 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     expect(dupBody.reveal.song.anime).toBe(reveal.reveal.song.anime);
   });
 
-  it('accepts a late answer after the guess wall and opens reveal', async () => {
+  it('still grades an answer that arrives inside the guess-wall grace', async () => {
+    await prisma.dailyAttempt.deleteMany({
+      where: { profileId: TEST_USER_IDS.admin, challengeId },
+    });
+    const started = await fetch(`${bundle.url}/daily/attempt`, {
+      method: 'POST',
+      headers: authHeaders(),
+    });
+    const { attempt } = await started.json();
+    // Past the 15s play clock, still inside DAILY_GUESS_WALL_MS (15.5s).
+    await prisma.dailyAttempt.update({
+      where: { id: attempt.attemptId },
+      data: { currentRoundStartedAt: new Date(Date.now() - 15_200) },
+    });
+    const late = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ selected: attempt.choices[0] }),
+    });
+    expect(late.status).toBe(200);
+    const body = await late.json();
+    expect(body.reveal.selectedLabel).toBe(attempt.choices[0]);
+    expect(body.reveal.song.anime).toBeTruthy();
+  });
+
+  it('records a miss when the answer arrives after the guess wall', async () => {
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
@@ -194,8 +219,14 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     });
     expect(late.status).toBe(200);
     const body = await late.json();
-    expect(body.reveal.selectedLabel).toBe(attempt.choices[0]);
+    expect(body.reveal.selectedLabel).toBeNull();
+    expect(body.reveal.isCorrect).toBe(false);
     expect(body.reveal.song.anime).toBeTruthy();
+    const stored = await prisma.dailyAttemptAnswer.findFirst({
+      where: { attemptId: attempt.attemptId },
+    });
+    expect(stored?.selectedLabel).toBeNull();
+    expect(stored?.isCorrect).toBe(false);
   });
 
   it('exposes the leaderboard before play and does not bump ordinary stats', async () => {
@@ -217,7 +248,12 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     expect(anon.status).toBe(200);
     const before = await fetch(`${bundle.url}/daily/leaderboard`, { headers: authHeaders() });
     const beforeBody = await before.json();
-    expect(beforeBody.entries).toEqual([]);
+    // Real calendar day: other accounts may already be on the board.
+    expect(
+      beforeBody.entries.some(
+        (entry: { profileId: string }) => entry.profileId === TEST_USER_IDS.admin,
+      ),
+    ).toBe(false);
 
     const started = await fetch(`${bundle.url}/daily/attempt`, {
       method: 'POST',

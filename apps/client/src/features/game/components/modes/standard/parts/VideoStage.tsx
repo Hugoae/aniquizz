@@ -29,6 +29,8 @@ interface VideoStageProps {
   gameMode: 'solo' | 'multiplayer';
   submittedAnswer: string | null;
   onSoloSkip: () => void;
+  soloSkipAlways?: boolean;
+  soloSkipLabel?: string;
   playersCount: number;
   skipVotes: number;
   skipRequired: number;
@@ -54,6 +56,8 @@ export const VideoStage = memo(function VideoStage({
   gameMode,
   submittedAnswer,
   onSoloSkip,
+  soloSkipAlways = false,
+  soloSkipLabel = 'Révéler',
   playersCount,
   skipVotes,
   skipRequired,
@@ -208,13 +212,17 @@ export const VideoStage = memo(function VideoStage({
         </div>
       </div>
 
-      {gameMode === 'solo' && phase === 'guessing' && !isGamePaused && submittedAnswer && (
-        <div className={cn('absolute right-4 z-50', useBottomBar ? 'bottom-14' : 'bottom-4')}>
-          <Button variant="default" onClick={onSoloSkip} className="gap-2 shadow-glow">
-            <Eye className="h-4 w-4" /> Révéler
-          </Button>
-        </div>
-      )}
+      {gameMode === 'solo' &&
+        phase === 'guessing' &&
+        !isGamePaused &&
+        (soloSkipAlways || submittedAnswer) && (
+          <div className={cn('absolute right-4 z-50', useBottomBar ? 'bottom-14' : 'bottom-4')}>
+            <Button variant="default" onClick={onSoloSkip} className="gap-2 shadow-glow">
+              {soloSkipAlways ? <SkipForward className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {soloSkipLabel}
+            </Button>
+          </div>
+        )}
 
       <DevRenderProfiler id="MatchCountdownOverlays">
         <MatchCountdownOverlays

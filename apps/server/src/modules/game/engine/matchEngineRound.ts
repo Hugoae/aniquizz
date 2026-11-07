@@ -154,6 +154,9 @@ export function endRound(host: MatchEngineHost): void {
   host.emitSpeedLeaderboard();
 
   const next = host.playlist[host.currentRoundIndex + 1];
+  // The next clip URL is playable during the reveal on purpose: the Worker
+  // cannot tell a preload GET from playback, and an nbf would break cold-start
+  // preload. The head start is only as long as this reveal.
   const payload: RoundRevealPayload = {
     round: host.currentRoundIndex + 1,
     song: toRevealSong(item),
@@ -223,7 +226,6 @@ export function buildRoundStartPayload(host: MatchEngineHost, item: PlaylistItem
     endsAt: host.clock.endsAt,
     durationSeconds: item.guessDuration,
     choices: item.choices,
-    duo: item.duo,
     peekWindow: host.currentPeekWindow ?? undefined,
     videoMode,
   };

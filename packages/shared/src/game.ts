@@ -114,12 +114,15 @@ export interface RoundStartPayload extends PhaseTiming {
   startBuffer: number;
   /** QCM choices (present when responseType is `qcm` or `mix`). */
   choices?: string[];
-  /** Duo choices (present when responseType is `mix`). */
-  duo?: string[];
   /** Present when `videoMode === 'peek'` — server-generated at round start. */
   peekWindow?: PeekWindow;
   /** Room setting echoed for client rendering (reconnect-safe). */
   videoMode?: VideoMode;
+}
+
+/** Two labels for the player who spent the Mix Duo lifeline. Never broadcast. */
+export interface DuoChoicesPayload {
+  choices: string[];
 }
 
 /** Anti-cheat: only signals THAT a player answered, never the content. */

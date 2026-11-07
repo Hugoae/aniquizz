@@ -1,6 +1,7 @@
 import { prisma, Prisma } from '@aniquizz/database';
 import {
   DAILY_GUESS_MS,
+  DAILY_GUESS_WALL_MS,
   DAILY_LEADERBOARD_SIZE,
   DAILY_REVEAL_MS,
   assignDailyRanks,
@@ -217,8 +218,12 @@ export async function answerDailyAttempt(
 ) {
   const loaded = await loadAttempt(attemptId, profileId);
   if (!loaded) throw new DailyHttpError(404, 'Tentative introuvable.');
-  // Keep the open guess: timeout_guess on GET/next must not steal this POST.
-  const attempt = await settleAttempt(loaded, now, { keepOpenGuess: true });
+  // Grace only: an answer that left the client before the wall must not lose
+  // to a concurrent GET/next timeout. Past DAILY_GUESS_WALL_MS the settler
+  // writes the miss and this handler returns that reveal.
+  const startedAtMs = loaded.currentRoundStartedAt?.getTime() ?? null;
+  const withinGuessWall = startedAtMs != null && now.getTime() <= startedAtMs + DAILY_GUESS_WALL_MS;
+  const attempt = await settleAttempt(loaded, now, { keepOpenGuess: withinGuessWall });
   if (TERMINAL.has(attempt.state)) {
     return { reveal: null, result: await resultFor(attempt), finished: true };
   }

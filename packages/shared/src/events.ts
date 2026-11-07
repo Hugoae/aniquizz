@@ -42,6 +42,7 @@ import type {
   SpeedLeaderboardPayload,
   GameReadyPayload,
   GameOverPayload,
+  DuoChoicesPayload,
   RoundHistoryEntry,
   VictoryData,
   VoteUpdatePayload,
@@ -158,6 +159,8 @@ export interface ServerToClientEvents {
   /** Round-1 only: intro done, UI up, 0.5s before audio + timer. */
   'game:ready': (payload: GameReadyPayload) => void;
   round_start: (payload: RoundStartPayload) => void;
+  /** Duo pair for this socket only, after `game:use_duo` (or a reconnect replay). */
+  'game:duo': (payload: DuoChoicesPayload) => void;
   'game:answered': (payload: AnsweredPayload) => void;
   /** Speed bonus — final top-3 correct times + personalized "you" row (reveal). */
   'speed:leaderboard': (payload: SpeedLeaderboardPayload) => void;
@@ -269,6 +272,8 @@ export interface ClientToServerEvents {
   // Match
   start_game: (payload: RoomIdInput) => void;
   'game:answer': (payload: AnswerInput) => void;
+  /** Mix only. Spends the Duo lifeline for the current round (server scores it as duo). */
+  'game:use_duo': (payload: RoomIdInput) => void;
   vote_pause: (payload: RoomIdInput) => void;
   vote_skip: (payload: RoomIdInput) => void;
   'game:skip_round': (payload: RoomIdInput) => void;

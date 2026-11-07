@@ -1,4 +1,4 @@
-import { Trophy, Zap } from 'lucide-react';
+import { Trophy, Zap, Timer } from 'lucide-react';
 import { GAME_TYPE_LABELS, type GameType } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 

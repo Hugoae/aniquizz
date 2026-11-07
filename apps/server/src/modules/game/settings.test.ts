@@ -122,4 +122,10 @@ describe('settings field caps', () => {
       ),
     ).toThrow();
   });
+
+  it('stores a private room with an empty password as public', () => {
+    const settings = normalizeRoomSettings({ isPrivate: true, password: '', maxPlayers: 8 }, meta);
+    expect(settings.isPrivate).toBe(false);
+    expect(settings.password).toBe('');
+  });
 });

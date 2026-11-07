@@ -55,10 +55,26 @@ const isRateLimited = (socket: TypedSocket, key: string, rule: RateLimitRule): b
   return false;
 };
 
+/** Longest IP-limited window; entries older than this can never count again. */
+const IP_BUCKET_MAX_WINDOW_MS = 60 * 60_000;
+const IP_BUCKET_SWEEP_INTERVAL_MS = 5 * 60_000;
+let lastIpSweepAt = 0;
+
+/** Drops IPs whose newest hit is outside every window, so the map stays bounded. */
+const sweepIpBuckets = (now: number): void => {
+  if (now - lastIpSweepAt < IP_BUCKET_SWEEP_INTERVAL_MS) return;
+  lastIpSweepAt = now;
+  for (const [mapKey, hits] of ipBuckets) {
+    const newest = hits[hits.length - 1] ?? 0;
+    if (newest <= now - IP_BUCKET_MAX_WINDOW_MS) ipBuckets.delete(mapKey);
+  }
+};
+
 /** Sliding-window IP limit (reconnect does not reset). Returns true when the call should drop. */
 export const consumeIpRateLimit = (ip: string, key: string, rule: RateLimitRule): boolean => {
   const mapKey = `${key}:${ip}`;
   const now = Date.now();
+  sweepIpBuckets(now);
   const hits = pruneHits(ipBuckets.get(mapKey) ?? [], now, rule.durationMs);
   if (hits.length >= rule.points) {
     ipBuckets.set(mapKey, hits);
@@ -71,6 +87,7 @@ export const consumeIpRateLimit = (ip: string, key: string, rule: RateLimitRule)
 
 export const resetIpRateLimitForTests = (): void => {
   ipBuckets.clear();
+  lastIpSweepAt = 0;
 };
 
 /** Wrap a handler so it only runs for authenticated sockets. */
@@ -166,6 +183,10 @@ export const RATE_LIMITS = {
   startGame: { points: 5, durationMs: 10_000 },
   /** Pause / skip / skip-round votes. Same order of magnitude as chat. */
   vote: { points: 8, durationMs: 5_000 },
+  /** Lobby host/member actions (kick, transfer, ready, settings, leave, dev bots). */
+  lobbyAction: { points: 20, durationMs: 10_000 },
+  /** DB-backed profile reads (stats, watched pool). Drop silently past this. */
+  profileRead: { points: 15, durationMs: 10_000 },
   /** Account deletion: strict cap to slow abuse / accidental double-submit. */
   deleteAccount: { points: 3, durationMs: 60 * 60_000 },
 } as const;

@@ -1,5 +1,9 @@
 import { History, Trophy, Medal, Target, Zap, Users, Clock, X, Calendar } from 'lucide-react';
-import { speedBonusFromStoredMode, type MatchHistoryEntry } from '@aniquizz/shared';
+import {
+  speedBonusFromStoredMode,
+  gameTypeFromStoredMode,
+  type MatchHistoryEntry,
+} from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { formatDailyClock } from '@/features/daily/lib/dailyRecap';
@@ -103,6 +107,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
     : `#${entry.rank} / ${entry.playerCount}`;
 
   const duration = formatDuration(entry.durationMs);
+  const gameType = gameTypeFromStoredMode(entry.mode);
 
   return (
     <li className="relative overflow-hidden rounded-lg border border-border/40 bg-background/40 p-3">
@@ -125,6 +130,7 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <GameModeBadge
             compact
+            gameType={gameType}
             speedBonusEnabled={speedBonusFromStoredMode(entry.mode)}
             className="shadow-none"
           />

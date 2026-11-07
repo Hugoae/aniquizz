@@ -83,8 +83,11 @@ export function ProfileView({
             {anilistUsername && (
               <div className="flex items-center justify-center sm:justify-start gap-2 text-sm text-aqua mt-2 bg-aqua/10 px-3 py-1 rounded-md w-fit mx-auto sm:mx-0">
                 <img
-                  src="https://upload.wikimedia.org/wikipedia/commons/6/61/AniList_logo.svg"
+                  src="/logos/anilist.svg"
                   alt="AniList"
+                  width={16}
+                  height={16}
+                  loading="lazy"
                   className="w-4 h-4"
                 />
                 <span>

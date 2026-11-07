@@ -111,6 +111,13 @@ export const registerGameHandlers = (
     gameManager.cancelCleanup(room.id);
     room.reattachMatchSocket(uid(), socket.id);
     socket.emit('game_state_sync', room.getSyncState());
+    room.replayDuo(uid());
+  };
+
+  const useDuo = (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.useDuo(uid());
   };
 
   const getMyWatched = async () => {
@@ -189,6 +196,7 @@ export const registerGameHandlers = (
 
   socket.on('start_game', guard(socket, 'start_game', RATE_LIMITS.startGame, startGame));
   socket.on('game:answer', guard(socket, 'game:answer', RATE_LIMITS.answer, submitAnswer));
+  socket.on('game:use_duo', guard(socket, 'game:use_duo', RATE_LIMITS.vote, useDuo));
   socket.on('vote_pause', guard(socket, 'vote_pause', RATE_LIMITS.vote, votePause));
   socket.on('vote_skip', guard(socket, 'vote_skip', RATE_LIMITS.vote, voteSkip));
   socket.on(
@@ -198,8 +206,14 @@ export const registerGameHandlers = (
   socket.on('game:return_to_lobby', requireAuth(socket, returnToLobby));
   socket.on('game:cancel', requireAuth(socket, cancelGame));
   socket.on('get_game_state', requireAuth(socket, getGameState));
-  socket.on('get_my_watched', requireAuth(socket, getMyWatched));
-  socket.on('get_watched_count', requireAuth(socket, getWatchedCount));
+  socket.on(
+    'get_my_watched',
+    guardSilent(socket, 'watched:read', RATE_LIMITS.profileRead, getMyWatched),
+  );
+  socket.on(
+    'get_watched_count',
+    guardSilent(socket, 'watched:read', RATE_LIMITS.profileRead, getWatchedCount),
+  );
   socket.on(
     'anime:search',
     guardSilent(socket, 'anime:search', RATE_LIMITS.animeSearch, animeSearch),

@@ -182,7 +182,7 @@ export function useProfilePage() {
       socket.off('profile:public', onPublic);
       socket.off(PUBLIC_PROFILE_LOAD_ERROR_EVENT, onLoadError);
     };
-  }, [isOwn, userId]);
+  }, [isOwn, userId, navigate]);
 
   const vm: ProfileVM | null = useMemo(() => {
     if (isOwn) {
@@ -216,12 +216,16 @@ export function useProfilePage() {
         return;
       }
       const reader = new FileReader();
-      reader.addEventListener('load', () => {
-        if (typeof reader.result === 'string') {
-          setSelectedFile(reader.result);
-          setShowCropModal(true);
-        }
-      });
+      reader.addEventListener(
+        'load',
+        () => {
+          if (typeof reader.result === 'string') {
+            setSelectedFile(reader.result);
+            setShowCropModal(true);
+          }
+        },
+        { once: true },
+      );
       reader.readAsDataURL(file);
     }
   };

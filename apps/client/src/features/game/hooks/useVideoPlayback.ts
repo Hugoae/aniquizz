@@ -121,21 +121,24 @@ export function useVideoPlayback({
 
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
-  const applyVolume = (el: HTMLVideoElement) => {
+  const applyVolume = useCallback((el: HTMLVideoElement) => {
     applyPlayerAudioToMedia(el, volumeRef.current, isMutedRef.current);
-  };
+  }, []);
 
-  const playElement = async (el: HTMLVideoElement, signal?: AbortSignal): Promise<void> => {
-    applyVolume(el);
-    try {
-      await el.play();
-      if (!signal?.aborted) setAutoplayBlocked(false);
-    } catch (e) {
-      if (signal?.aborted) return;
-      if (e instanceof DOMException && e.name === 'AbortError') return;
-      setAutoplayBlocked(true);
-    }
-  };
+  const playElement = useCallback(
+    async (el: HTMLVideoElement, signal?: AbortSignal): Promise<void> => {
+      applyVolume(el);
+      try {
+        await el.play();
+        if (!signal?.aborted) setAutoplayBlocked(false);
+      } catch (e) {
+        if (signal?.aborted) return;
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        setAutoplayBlocked(true);
+      }
+    },
+    [applyVolume],
+  );
 
   /**
    * Warm an upcoming clip in a hidden, muted element so the browser fetches and
@@ -210,7 +213,7 @@ export function useVideoPlayback({
     })();
 
     return () => controller.abort();
-  }, [currentSong]);
+  }, [currentSong, playElement]);
 
   // Pause the media element whenever the match is paused.
   useEffect(() => {

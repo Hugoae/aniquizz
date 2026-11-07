@@ -4,6 +4,7 @@ import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import {
   GAME_CONFIG,
+  GAME_TYPE_LABELS,
   type AnswerType,
   type GamePlayer,
   type RoomSettings,
@@ -35,6 +36,8 @@ const INPUT_TO_ANSWER_TYPE: Record<InputMode, AnswerType> = {
 };
 
 /** Owns in-match page state: socket, video, leave dialogs, and layout props. */
+const NO_CHOICES: string[] = [];
+
 export function useGamePage() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -120,23 +123,37 @@ export function useGamePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [loadingCount, setLoadingCount] = useState(3);
 
-  const myProfile = {
-    username: profile?.username || GAME_COPY.config.me,
-    avatar: profile?.avatar || 'player1',
-    xp: profile?.xp ?? 0,
-  };
+  const myProfile = useMemo(
+    () => ({
+      username: profile?.username || GAME_COPY.config.me,
+      avatar: profile?.avatar || 'player1',
+      xp: profile?.xp ?? 0,
+    }),
+    [profile?.username, profile?.avatar, profile?.xp],
+  );
   const amIHost = players.find((p: GamePlayer) => String(p.id) === currentUserId)?.isHost;
   const firstClipReady = state.preloadTarget !== null;
   const leaveSalonConsequences =
     gameMode === 'solo' ? GAME_COPY.consequences.solo : GAME_COPY.consequences.multi;
   const choices =
-    inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : [];
+    inputMode === 'carre' ? state.qcmChoices : inputMode === 'duo' ? state.duoChoices : NO_CHOICES;
 
   useEffect(() => {
     if (phase !== 'guessing') return;
     setSubmittedAnswer(null);
     setInputMode(activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
   }, [state.currentRound, phase, activeSettings.responseType]);
+
+  useEffect(() => {
+    if (phase !== 'guessing') return;
+    if (state.duoChoices.length > 0 && activeSettings.responseType === 'mix') {
+      setInputMode('duo');
+    }
+  }, [phase, state.duoChoices, activeSettings.responseType]);
+
+  const onShowLeave = useCallback(() => setShowLeaveChoice(true), []);
+  const onShowProfile = useCallback(() => setHardLeavePrompt('profile'), []);
+  const onShowSettings = useCallback(() => setShowSettings(true), []);
 
   const pointsShownForRoundRef = useRef<number>(0);
   useEffect(() => {
@@ -187,6 +204,17 @@ export function useGamePage() {
     return () => clearInterval(interval);
   }, [phase]);
 
+  // A solo room has no reason to outlive its game-over screen: leaving the page
+  // by any route (navbar, back button) must free the room instead of leaving a
+  // connected ghost in `finished`. Multi rooms stay (players may regroup in the lobby).
+  const soloFinishedRef = useRef(false);
+  soloFinishedRef.current = gameMode === 'solo' && Boolean(state.victoryData);
+  useEffect(() => {
+    return () => {
+      if (soloFinishedRef.current && roomId) socket.emit('leave_room', { roomId });
+    };
+  }, [roomId]);
+
   const handleReturnToLobby = () => {
     actions.returnToLobby();
     navigate('/play', { state: { returnToLobby: true, roomId }, replace: true });
@@ -223,8 +251,8 @@ export function useGamePage() {
   }, [activeSettings.responseType]);
 
   const handleSwitchDuo = useCallback(() => {
-    if (activeSettings.responseType === 'mix') setInputMode('duo');
-  }, [activeSettings.responseType]);
+    if (activeSettings.responseType === 'mix') actions.useDuo();
+  }, [actions, activeSettings.responseType]);
 
   const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, settings);
@@ -237,9 +265,15 @@ export function useGamePage() {
           ? settings.difficulty[0]
           : GAME_COPY.config.varied,
       precisionLabel: getPrecisionChipLabel(settings.precision),
-      modeLabel: GAME_COPY.config.standard,
+      modeLabel: GAME_TYPE_LABELS[activeSettings.gameType ?? 'standard'],
     }),
-    [settings.soundSelection, settings.difficulty, settings.precision, playlistName],
+    [
+      settings.soundSelection,
+      settings.difficulty,
+      settings.precision,
+      playlistName,
+      activeSettings.gameType,
+    ],
   );
 
   const gameOverSettings = {
@@ -280,9 +314,9 @@ export function useGamePage() {
     myProfile,
     sidebarCollapsed,
     setSidebarCollapsed,
-    onShowLeave: () => setShowLeaveChoice(true),
-    onShowProfile: () => setHardLeavePrompt('profile'),
-    onShowSettings: () => setShowSettings(true),
+    onShowLeave,
+    onShowProfile,
+    onShowSettings,
     currentUserId,
     gameMode,
     roomId,

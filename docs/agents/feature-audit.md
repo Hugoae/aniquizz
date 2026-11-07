@@ -14,8 +14,9 @@ pas.
 ```
 Audite FEATURE de bout en bout. N’implémente rien tant que je ne demande pas
 explicitement de corriger un finding. Ne démarre pas le pokédex / rework
-Admin ni le travail en parking (HIBP). La phase courante est **26.7**
-(premier slice : Vitesse — voir PLAN.md). Ne démarre pas le Contre-la-montre.
+Admin ni le travail en parking (HIBP, Chrono **multi**). La phase courante
+est **26.7** (Vitesse livré ; Chrono solo en chantier sur la branche
+`feat/time-attack`, non livré — voir PLAN.md).
 
 Repo : pnpm + Turborepo. Graphify d’abord (`.cursor/rules/graphify.mdc`).
 Lis CONTEXT-MAP.md et les CONTEXT.md des packages concernés avant de scanner.

@@ -82,7 +82,7 @@ const scoringLines = (
   const typingToleranceLine =
     "Une tolérance aux fautes de frappe s'applique sur les réponses longues.";
   const qcmLine = `Carré : ${SCORING.QCM} pts — choisis parmi 4 propositions.`;
-  const duoLine = `Duo : ${SCORING.DUO} pt — choisis entre 2 propositions (joker pour éliminer des mauvaises réponses).`;
+  const duoLine = `Duo : ${SCORING.DUO} pt — joker Mix : les 2 propositions n'apparaissent qu'après l'avoir choisi, et la manche vaut alors 1 pt.`;
 
   switch (responseType) {
     case 'typing':

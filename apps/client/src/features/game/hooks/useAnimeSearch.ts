@@ -17,6 +17,8 @@ import {
 } from '@/features/game/hooks/animeSearchIndex';
 
 const RETRY_INTERVAL_MS = 2_500;
+/** Give up so a dead server does not poll forever; the next `connect` retries. */
+const LOAD_TIMEOUT_MS = 15_000;
 const DEBOUNCE_TYPING_MS = 35;
 const DEBOUNCE_DELETING_MS = 200;
 const SEARCH_TIMEOUT_MS = 4_000;
@@ -58,6 +60,14 @@ function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
     const retry = setInterval(() => {
       if (socket.connected) socket.emit('anime:get_all');
     }, RETRY_INTERVAL_MS);
+    const giveUp = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      clearInterval(retry);
+      socket.off('anime:all_names', onAll);
+      inflightCatalogue = null;
+      resolve([]);
+    }, LOAD_TIMEOUT_MS);
 
     const onAll = (payload: { animes: FuzzyAnimeCandidate[] }) => {
       const list = payload?.animes ?? [];
@@ -65,6 +75,7 @@ function loadCatalogue(): Promise<FuzzyAnimeCandidate[]> {
       if (settled) return;
       settled = true;
       clearInterval(retry);
+      clearTimeout(giveUp);
       socket.off('anime:all_names', onAll);
       const prepared = prepareFuzzyCatalogue(list);
       cachedCatalogue = prepared;

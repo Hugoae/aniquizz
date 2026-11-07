@@ -48,6 +48,8 @@ export interface RoomPlayer {
   isCorrect: boolean | null;
   roundPoints: number;
   answerType: AnswerType | null;
+  /** Mix: this player spent Duo this round, so the answer is scored as duo. */
+  duoCommitted: boolean;
   answerTimeMs: number | null;
 
   /** Speed-bonus reveal-only fields (reset each round). */

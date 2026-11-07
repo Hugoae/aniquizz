@@ -26,10 +26,15 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
 
 ## Known pitfalls
 
+- **Single instance only.** Rooms, matches, socket rate limits (`core/guards.ts`
+  per-socket + per-IP buckets), invite cooldowns, the online-count cache and the
+  duplicate-session kick in `SocketManager` all live in process memory. Scaling
+  to 2+ Render instances needs sticky sessions plus a shared store (Redis
+  adapter, shared rate limiter) first — do not scale horizontally as-is.
 - **Do not import `apps/client` or React.** The SPA consumes this process over
   the socket/HTTP contract in `@aniquizz/shared`. ESLint `no-restricted-imports`
   enforces this.
-- **Mutating socket events are Zod-parsed.** `game:answer`, `update_room_settings`,
+- **Mutating socket events are Zod-parsed.** `game:answer`, `game:use_duo`, `update_room_settings`,
   `start_game`, `vote_pause`, `vote_skip`, `game:skip_round`, `game:return_to_lobby`,
   `game:cancel`, `get_game_state`, `chat:sendMessage`, `update_profile_data`,
   `profile:update_prefs`, `profile:update_privacy`, `profile:delete_account`,
@@ -54,10 +59,23 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   `GET /daily/today` settles with `allowAdvance: false`: it may complete a fully
   answered run, never start the next song or time out the current guess, and never
   returns a playable round. Reopening `/daily` forfeits `IN_PROGRESS`.
+  A guess POST past `DAILY_GUESS_WALL_MS` is stored as a miss; `keepOpenGuess` is only the network grace inside that wall.
 - **`round_start` must stay reconnect-safe.** `videoMode` / `peekWindow` / `videoStartTime`
   are echoed on the payload so a reconnecting client re-renders identically.
   `videoKey` (and `nextVideo` / `game:preload`) is a playback locator, not a
   readable R2 filename, when the media Worker is configured.
+  `nextVideo` during reveal is intentionally playable: the Worker cannot tell a
+  preload GET from playback, and an `nbf` would break cold-start preload. The
+  head start is bounded to the reveal length. Do not add `nbf`.
+  Duo choices are not on `round_start`. Mix spends them with `game:use_duo`,
+  which forces that round to score as duo (1 pt). QCM never receives the pair.
+- **Mix typing stays on the honour system.** The correct label is the canonical
+  title, so a button copy is indistinguishable from an honest typist. Do not
+  clamp Mix typing down to QCM. A client that already knows the answer can claim
+  5 pts instead of 2; closing that is a product decision.
+- **One live room per user.** `lobby:create` / `lobby:join` call
+  `leaveOtherRooms` (the leave path) before seating. A private flag with an empty
+  password is stored and joined as public.
 - **Watched vs Random distractors differ.** In Watched / playlist mode QCM candidates must use the
   same restricted anime ids as the songs, or players deduce answers they never saw. Playlist fallback never leaves the snapshot.
 - **List mutators are Zod-parsed.** `lists:link` / `set_active` / `refresh` / `unlink` go through
@@ -71,7 +89,7 @@ See [`README.md`](./README.md) for structure, endpoints, env, and deploy details
   the user out while PII remains. If Auth delete fails, the French support
   message is intentional. Profile stats use SQL aggregates for career daily /
   match counts — do not `findMany` every finished match into Node.
-- **`/admin` is REST + JWT `requireRole`.** Mute/ban/disconnect cannot target the caller (400). Owner lock: username `kirikou` plus `PROTECTED_ACCOUNT_EMAILS`. `POST /admin/dev/claim-admin` needs `ALLOW_DEV_CLAIM_ADMIN=true` and is ignored in production. Staff routes are rate-limited (`adminStaff`, 90/min); claim-admin is not. Mute/ban/role/disconnect persist to `StaffAuditLog`. Catalogue writes, playlists, and daily admin are ADMIN-only.
+- **`/admin` is REST + JWT `requireRole`.** Mute/ban/disconnect cannot target the caller (400). Disconnect emits `force_logout` and then `disconnect(true)` — a kick, not a JWT revoke. Role changes are pushed onto live sockets and lobby rosters; `dev:add_bots` re-reads `Profile.role` in production. Owner lock: username `kirikou` plus `PROTECTED_ACCOUNT_EMAILS`. `POST /admin/dev/claim-admin` needs `ALLOW_DEV_CLAIM_ADMIN=true` and is ignored in production. Staff routes are rate-limited (`adminStaff`, 90/min); claim-admin is not. Mute/ban/role/disconnect persist to `StaffAuditLog`. Catalogue writes, playlists, and daily admin are ADMIN-only.
 - **Public boards omit bots, active bans, and `LEADERBOARD_HIDDEN_USERNAMES` (`admin_dev`).** Filter in `leaderboardQuery` / daily ranking so ranks compact. Do not hide Kirikou. In-match scoreboards stay unfiltered.
 - Bind to `0.0.0.0:$PORT` — Render requirement; filesystem is ephemeral.
 - **Guessing payloads must not contain the R2 filename.** `toPlaybackUrl` is identity

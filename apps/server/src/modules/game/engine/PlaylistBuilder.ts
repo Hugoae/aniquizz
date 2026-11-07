@@ -148,6 +148,7 @@ export class PlaylistBuilder {
           choicePool,
           guessDuration,
           needsChoices,
+          settings.responseType === 'mix',
           songStartMode,
         ),
       )
@@ -190,6 +191,7 @@ export class PlaylistBuilder {
     choicePool: ChoicePool,
     guessDuration: number,
     needsChoices: boolean,
+    buildDuoPair: boolean,
     songStartMode: SongStartMode,
   ): PlaylistItem {
     const franchise = song.anime.franchise?.name ?? null;
@@ -207,7 +209,9 @@ export class PlaylistBuilder {
       : precision === 'artist'
         ? buildArtistChoices(song.artist, song.artistNames ?? [], choicePool.artistRows, 4)
         : buildChoices(answers.correctTarget, choicePool.names, 4);
-    const duo = needsChoices ? buildDuo(answers.correctTarget, choices) : [];
+    // Built for mix only, and never placed on round_start — the player receives
+    // the pair through `game:duo` after spending the lifeline.
+    const duo = buildDuoPair && choices.length > 0 ? buildDuo(answers.correctTarget, choices) : [];
 
     return {
       id: song.id,

@@ -14,6 +14,7 @@ const item: PlaylistItem = {
   videoKey: 'clip',
   videoStartTime: 12,
   guessDuration: 15,
+  clipDurationSeconds: 90,
   cover: null,
   animeId: 20,
   year: 2002,

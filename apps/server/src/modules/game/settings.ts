@@ -52,6 +52,12 @@ const settingsSchema = z
         path: ['playlistId'],
       });
     }
+  })
+  .transform((data) => {
+    if (data.isPrivate && data.password.trim() === '') {
+      return { ...data, isPrivate: false, password: '' };
+    }
+    return data;
   });
 
 /** One-release compat: old clients still send `gameType: 'sprint'`. */

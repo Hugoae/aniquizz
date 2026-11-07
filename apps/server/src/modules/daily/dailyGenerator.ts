@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
 import { prisma, Prisma } from '@aniquizz/database';
 import {
-  DAILY_FRANCHISE_LOOKBACK_DAYS,
   DAILY_HORIZON_DAYS,
   DAILY_RULES_VERSION,
   DAILY_SONG_LOOKBACK_DAYS,
@@ -26,6 +25,7 @@ import {
   snapshotFromSong,
   type DailySongRow,
 } from './dailySnapshot';
+import { exclusionsByDate, type RecentExclusionSets } from './dailyExclusions';
 import { validateDailySnapshots, type DailyValidationWarning } from './dailyValidation';
 
 const HORIZON_MS = 6 * 60 * 60 * 1000;
@@ -39,16 +39,42 @@ export interface GeneratedChallenge {
   created: boolean;
 }
 
-export async function loadRecentExclusions(
-  beforeDate: string,
-): Promise<{ songIds: Set<number>; franchiseKeys: Set<string> }> {
-  const songFrom = addCalendarDays(beforeDate, -DAILY_SONG_LOOKBACK_DAYS);
-  const franchiseFrom = addCalendarDays(beforeDate, -DAILY_FRANCHISE_LOOKBACK_DAYS);
+const emptyExclusions = (): RecentExclusionSets => ({
+  songIds: new Set(),
+  franchiseKeys: new Set(),
+});
+
+const franchiseKeyFromSnapshot = (snapshot: unknown): string | null => {
+  try {
+    const snap = parseDailySnapshot(snapshot);
+    return franchiseKeyFor(snap.franchiseId, snap.animeId);
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * One read for every requested day. Each date still uses its own 60/14-day window.
+ */
+export async function loadRecentExclusionMap(
+  beforeDates: readonly string[],
+): Promise<Map<string, RecentExclusionSets>> {
+  const dates = [...new Set(beforeDates)];
+  if (!dates.length) return new Map();
+
+  let earliest = dates[0] ?? '';
+  let latest = dates[0] ?? '';
+  for (const date of dates) {
+    if (date < earliest) earliest = date;
+    if (date > latest) latest = date;
+  }
+
+  const songFrom = addCalendarDays(earliest, -DAILY_SONG_LOOKBACK_DAYS);
   const rounds = await prisma.dailyChallengeRound.findMany({
     where: {
       challenge: {
         status: { not: 'CANCELLED' },
-        challengeDate: { gte: dateFromIsoDay(songFrom), lt: dateFromIsoDay(beforeDate) },
+        challengeDate: { gte: dateFromIsoDay(songFrom), lt: dateFromIsoDay(latest) },
       },
     },
     select: {
@@ -58,20 +84,19 @@ export async function loadRecentExclusions(
     },
   });
 
-  const songIds = new Set<number>();
-  const franchiseKeys = new Set<string>();
-  for (const round of rounds) {
-    if (round.songId) songIds.add(round.songId);
-    const day = isoDayFromDate(round.challenge.challengeDate);
-    if (day < franchiseFrom) continue;
-    try {
-      const snap = parseDailySnapshot(round.snapshot);
-      franchiseKeys.add(franchiseKeyFor(snap.franchiseId, snap.animeId));
-    } catch {
-      /* ignore malformed historical snapshots */
-    }
-  }
-  return { songIds, franchiseKeys };
+  return exclusionsByDate(
+    dates,
+    rounds.map((round) => ({
+      day: isoDayFromDate(round.challenge.challengeDate),
+      songId: round.songId,
+      franchiseKey: franchiseKeyFromSnapshot(round.snapshot),
+    })),
+  );
+}
+
+export async function loadRecentExclusions(beforeDate: string): Promise<RecentExclusionSets> {
+  const map = await loadRecentExclusionMap([beforeDate]);
+  return map.get(beforeDate) ?? emptyExclusions();
 }
 
 const nextChallengeNumber = async (tx: Prisma.TransactionClient): Promise<number> => {

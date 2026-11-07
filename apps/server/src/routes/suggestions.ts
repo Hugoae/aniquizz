@@ -8,6 +8,7 @@ import {
   SUGGESTION_TITLE_MAX,
 } from '@aniquizz/shared';
 import { optionalAuth, requireRole, type AuthedRequest } from '../core/httpAuth';
+import { staff } from '../modules/admin/adminHttp';
 import { clientIp, enforceHttpRateLimit, HTTP_RATE_LIMITS } from '../core/httpRateLimit';
 import {
   browseSuggestions,
@@ -211,7 +212,7 @@ export function registerSuggestionRoutes(app: Application): void {
 
   app.patch(
     '/admin/suggestions/:id',
-    requireRole('MODERATOR'),
+    ...staff('MODERATOR'),
     wrap(async (req, res) => {
       const parsed = adminUpdateSchema.safeParse(req.body);
       if (!parsed.success) {
@@ -224,7 +225,7 @@ export function registerSuggestionRoutes(app: Application): void {
 
   app.delete(
     '/admin/suggestions/:id',
-    requireRole('ADMIN'),
+    ...staff('ADMIN'),
     wrap(async (req, res) => {
       await deleteSuggestionByStaff(suggestionId(req));
       res.status(204).end();

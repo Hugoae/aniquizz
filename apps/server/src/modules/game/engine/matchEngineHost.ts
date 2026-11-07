@@ -45,6 +45,10 @@ export interface MatchEngineHost {
   finishedVictoryData: VictoryData | null;
   finishedRoundHistoryByUserId: Record<string, RoundHistoryEntry[]> | null;
   finishedMatchSettings: MatchSettingsSnapshot | null;
+  /** True from the first line of `finishMatch` until it returns. */
+  finishing: boolean;
+  /** Latched on the first finish so a later call cannot persist again. */
+  finishStarted: boolean;
 
   resetMatchState(): void;
   resetRoundState(p: RoomPlayer): void;

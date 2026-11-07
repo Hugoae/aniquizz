@@ -2,7 +2,15 @@
 // the typed server contract into reducer actions. UI concerns (video, input,
 // dialogs, animations) stay in the page; this hook is the state boundary.
 
-import { useEffect, useReducer, useRef, useState, useCallback } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { toast } from 'sonner';
 import { notifyModerationBan } from '@/lib/suspension';
 import { socket } from '@/lib/socket';
@@ -18,6 +26,7 @@ import type {
   PreloadVideoPayload,
   RoundRevealPayload,
   RoundStartPayload,
+  DuoChoicesPayload,
   SpeedLeaderboardPayload,
   VictoryData,
   VoteUpdatePayload,
@@ -53,6 +62,7 @@ export interface GameActions {
   returnToLobby: () => void;
   cancel: () => void;
   requestSync: () => void;
+  useDuo: () => void;
 }
 
 export interface UseGameSocketResult {
@@ -82,18 +92,21 @@ export function useGameSocket({
   const [myWatchedIds, setMyWatchedIds] = useState<number[]>([]);
 
   const clientVideoModeRef = useRef<VideoMode>(normalizeVideoMode(initialVideoMode));
-  clientVideoModeRef.current = normalizeVideoMode(initialVideoMode ?? clientVideoModeRef.current);
   const resumeTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const phaseRef = useRef(state.phase);
-  phaseRef.current = state.phase;
   const onCancelledRef = useRef(onCancelled);
-  onCancelledRef.current = onCancelled;
   const onClosedRef = useRef(onClosed);
-  onClosedRef.current = onClosed;
   const currentUserIdRef = useRef(currentUserId);
-  currentUserIdRef.current = currentUserId;
   const isSoloRef = useRef(isSolo);
-  isSoloRef.current = isSolo;
+  // Sync "latest value" refs after commit (not during render) for socket listeners.
+  useLayoutEffect(() => {
+    clientVideoModeRef.current = normalizeVideoMode(initialVideoMode ?? clientVideoModeRef.current);
+    phaseRef.current = state.phase;
+    onCancelledRef.current = onCancelled;
+    onClosedRef.current = onClosed;
+    currentUserIdRef.current = currentUserId;
+    isSoloRef.current = isSolo;
+  });
 
   // Track connection state across PLAYERS_UPDATE payloads so we can announce when
   // someone drops or leaves. Seeded from the initial roster (all assumed present).
@@ -103,22 +116,24 @@ export function useGameSocket({
     username: string;
     isBot: boolean;
   }
-  const connStateRef = useRef<Map<string, PresenceEntry>>(
-    new Map(
-      initialPlayers.map((p) => {
-        const ext = p as GamePlayer & { name?: string };
-        return [
-          String(p.id),
-          {
-            connected: ext.isConnected !== false,
-            inGame: ext.isInGame !== false,
-            username: playerDisplayName(ext),
-            isBot: ext.isBot === true,
-          },
-        ];
-      }),
-    ),
+  const [initialConnState] = useState(
+    () =>
+      new Map<string, PresenceEntry>(
+        initialPlayers.map((p) => {
+          const ext = p as GamePlayer & { name?: string };
+          return [
+            String(p.id),
+            {
+              connected: ext.isConnected !== false,
+              inGame: ext.isInGame !== false,
+              username: playerDisplayName(ext),
+              isBot: ext.isBot === true,
+            },
+          ];
+        }),
+      ),
   );
+  const connStateRef = useRef(initialConnState);
 
   // --- Personal watched list (autocomplete now runs server-side per keystroke) ---
   useEffect(() => {
@@ -195,6 +210,7 @@ export function useGameSocket({
       'game:ready': (p: GameReadyPayload) => dispatch({ type: 'GAME_READY', payload: p }),
       round_start: (p: RoundStartPayload) =>
         dispatch({ type: 'ROUND_START', payload: p, clientVideoMode: clientVideoModeRef.current }),
+      'game:duo': (p: DuoChoicesPayload) => dispatch({ type: 'DUO_CHOICES', choices: p.choices }),
       'game:answered': (p: AnsweredPayload) => dispatch({ type: 'ANSWERED', userId: p.userId }),
       'speed:leaderboard': (p: SpeedLeaderboardPayload) =>
         dispatch({ type: 'SPEED_LEADERBOARD', payload: p }),
@@ -254,6 +270,7 @@ export function useGameSocket({
     socket.on('game_started', handlers.game_started);
     socket.on('game:ready', handlers['game:ready']);
     socket.on('round_start', handlers.round_start);
+    socket.on('game:duo', handlers['game:duo']);
     socket.on('game:answered', handlers['game:answered']);
     socket.on('speed:leaderboard', handlers['speed:leaderboard']);
     socket.on('round_reveal', handlers.round_reveal);
@@ -275,6 +292,7 @@ export function useGameSocket({
       socket.off('game_started', handlers.game_started);
       socket.off('game:ready', handlers['game:ready']);
       socket.off('round_start', handlers.round_start);
+      socket.off('game:duo', handlers['game:duo']);
       socket.off('game:answered', handlers['game:answered']);
       socket.off('speed:leaderboard', handlers['speed:leaderboard']);
       socket.off('round_reveal', handlers.round_reveal);
@@ -339,10 +357,16 @@ export function useGameSocket({
   );
   const cancel = useCallback(() => socket.emit('game:cancel', { roomId }), [roomId]);
   const requestSync = useCallback(() => socket.emit('get_game_state', { roomId }), [roomId]);
+  const useDuo = useCallback(() => socket.emit('game:use_duo', { roomId }), [roomId]);
+
+  const actions = useMemo(
+    () => ({ answer, votePause, voteSkip, skipRound, returnToLobby, cancel, requestSync, useDuo }),
+    [answer, votePause, voteSkip, skipRound, returnToLobby, cancel, requestSync, useDuo],
+  );
 
   return {
     state,
     myWatchedIds,
-    actions: { answer, votePause, voteSkip, skipRound, returnToLobby, cancel, requestSync },
+    actions,
   };
 }

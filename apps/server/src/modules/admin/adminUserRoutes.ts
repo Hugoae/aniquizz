@@ -142,6 +142,10 @@ export function registerAdminUserRoutes(
       if (!(await guardProtectedTarget(req, res, pid(req)))) return;
       const previous = await adminService.getProfileRole(pid(req));
       const result = await adminService.setUserRole(pid(req), parsed.data.role as UserRole);
+      forEachUserSocket(pid(req), (s) => {
+        s.data.role = parsed.data.role as UserRole;
+      });
+      gameManager.refreshUserRole(pid(req), parsed.data.role as UserRole);
       logger.info(
         `Admin ${req.actor!.username} set role ${parsed.data.role} on ${pid(req)}`,
         'Admin',
@@ -263,6 +267,7 @@ export function registerAdminUserRoutes(
       let count = 0;
       forEachUserSocket(targetId, (s) => {
         s.emit('force_logout', { reason: 'Vous avez été déconnecté par la modération.' });
+        s.disconnect(true);
         count += 1;
       });
       logger.info(

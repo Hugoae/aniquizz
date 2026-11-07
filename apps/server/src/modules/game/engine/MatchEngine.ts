@@ -27,6 +27,7 @@ import {
   startRound,
 } from './matchEngineRound';
 import { finishMatch } from './matchEngineFinish';
+import { replayDuoLifeline, useDuoLifeline } from './matchEngineDuo';
 import { buildAdminProgress, buildMatchSyncState, heardSongIds } from './matchEngineSync';
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
@@ -61,6 +62,10 @@ export class MatchEngine {
   private finishedMatchSettings: MatchSettingsSnapshot | null = null;
   /** Peek geometry for the active guessing round (reconnect sync). */
   private currentPeekWindow: PeekWindow | null = null;
+  /** Set synchronously for the whole `finishMatch` await so a relaunch cannot wipe scores. */
+  finishing = false;
+  /** Stays set so a second finish on this engine cannot persist the match twice. */
+  private finishStarted = false;
 
   constructor(room: Room, deps: EngineDeps) {
     this.room = room;
@@ -94,6 +99,7 @@ export class MatchEngine {
     p.isCorrect = null;
     p.roundPoints = 0;
     p.answerType = null;
+    p.duoCommitted = false;
     p.answerTimeMs = null;
     p.speedRank = null;
     p.speedBonus = 0;
@@ -107,6 +113,14 @@ export class MatchEngine {
     return buildRoundStartPayload(this.asHost(), item);
   }
 
+  useDuo(userId: string): void {
+    useDuoLifeline(this.asHost(), userId);
+  }
+
+  replayDuo(userId: string): void {
+    replayDuoLifeline(this.asHost(), userId);
+  }
+
   handleAnswer(
     userId: string,
     answer: string,
@@ -116,7 +130,7 @@ export class MatchEngine {
     if (this.phase !== 'guessing' || this.isRoundEnded) return;
     const player = this.room.players.get(userId);
     const item = this.playlist[this.currentRoundIndex];
-    if (!player || !item) return;
+    if (!player || !item || !player.isConnected) return;
     // Players may change their answer until the round ends — bots answer once,
     // so guard only their re-entry (their timer fires a single time anyway).
     if (player.isBot && player.hasAnswered) return;
@@ -125,7 +139,9 @@ export class MatchEngine {
     // Typing-only always scores as typing; QCM-only never awards typing. Mix
     // honours the claim — the correct title is always a QCM label, so the
     // old "string matches a button → qcm" clamp made honest Mix typing worth 2.
-    const effectiveType = this.effectiveAnswerType(answerType);
+    // Spending Duo sets `duoCommitted` first, which overrides that honour system
+    // so the 50/50 cannot be answered at typing or QCM points.
+    const effectiveType = player.duoCommitted ? 'duo' : this.effectiveAnswerType(answerType);
 
     const timeMs = Math.max(0, Date.now() - this.guessStartAt);
     const isCorrect = isAnswerCorrect(answer, item.validAnswers);

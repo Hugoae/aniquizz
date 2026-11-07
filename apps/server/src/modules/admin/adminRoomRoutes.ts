@@ -6,12 +6,12 @@ import type { GameManager } from '../game/gameManager';
 import { ADMIN_ERRORS, guardProtectedTarget, pid, staff, wrap } from './adminHttp';
 
 export function registerAdminRoomRoutes(router: Router, gameManager: GameManager): void {
-  router.get('/rooms', ...staff('MODERATOR'), (_req, res) => {
-    res.json({ rooms: gameManager.getRoomDetails() });
+  router.get('/rooms', ...staff('MODERATOR'), (req: AuthedRequest, res) => {
+    res.json({ rooms: gameManager.getRoomDetails(req.actor?.role === 'ADMIN') });
   });
 
   router.get('/rooms/:id', ...staff('MODERATOR'), (req: AuthedRequest, res) => {
-    const room = gameManager.getRoomDetail(pid(req));
+    const room = gameManager.getRoomDetail(pid(req), req.actor?.role === 'ADMIN');
     if (!room) {
       res.status(404).json({ error: ADMIN_ERRORS.roomNotFound });
       return;
