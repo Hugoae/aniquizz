@@ -13,7 +13,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
 | **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
 | **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
-| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono solo** 🚧 (branch, not shipped) · pokédex + Admin rework remaining                          |
+| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono solo** 🚧 (on `main` for playtest) · pokédex + Admin rework remaining                       |
 | **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
@@ -423,13 +423,13 @@ post-26.6 audit (journal, repair queue, spectator, bounded MODERATOR) sit in a
 coherent panel.
 
 **26.6.2** is closed. **Vitesse** is the shipped 26.7 slice. **Chrono solo** is
-unfinished and lives on branch `feat/time-attack` (not on `main`, not released).
-Pokédex + Admin remain in 26.7 — do not start them in the same pass. Do not start
-HIBP or Chrono **multi**.
+unfinished and is on `main` (commit `9245d8e`, 2026-11-07) so it can be playtested
+on aniquizz.com. It is not a finished release. Pokédex + Admin remain in 26.7 — do
+not start them in the same pass. Do not start HIBP or Chrono **multi**.
 
 ### 1. Vitesse — Standard multi typing modifier ✅
 
-Sprint is no longer a `GameType`. Live `gameType` on `main` is `'standard'` only; `'timeAttack'` exists on `feat/time-attack`.
+Sprint is no longer a `GameType`. Live `gameType` values on `main` are `'standard'` and `'timeAttack'` (Chrono still unfinished).
 
 - Flag `speedBonusEnabled` (not `speedBonus`, which is podium **points** on the player).
 - Switch in Général after response type; multi create/edit only; disabled unless typing;
@@ -441,9 +441,9 @@ Sprint is no longer a `GameType`. Live `gameType` on `main` is `'standard'` only
 
 ### 1b. Contre-la-montre — solo time-attack 🚧 (in progress, NOT shipped)
 
-Second 26.7 slice. Code lives on branch **`feat/time-attack`** only (kept out of `main` on
-2026-11-07 so the release stays clean). Spec: `docs/game/time-attack.md` (on that branch).
-To be finished and playtested, then merged into `main` as one release.
+Second 26.7 slice. Merged to `main` on 2026-11-07 (`9245d8e`) so solo playtests can run
+on aniquizz.com. Spec: `docs/game/time-attack.md`. Still unfinished: playtest, then fixes.
+Branch `feat/time-attack` points at the same commit.
 
 **Intended design (what was built so far):**
 
@@ -513,7 +513,7 @@ console**.
 ### 26.7 checklist (at boundary)
 
 - [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`, news id 9 (no `SITE_VERSION` bump).
-- [ ] Chrono solo: finish + playtest on `feat/time-attack`, then merge (`gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge, news id 10, no `SITE_VERSION` bump).
+- [ ] Chrono solo: playtest on aniquizz.com, then fixes (`gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge, news id 10, no `SITE_VERSION` bump). Code is on `main` (`9245d8e`).
 - [ ] Profile found bar + tests.
 - [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
 - [ ] Admin panel rework (shell + existing tools, role bounds unchanged).
@@ -535,13 +535,13 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 ### Game modes (new engines or major variants)
 
-| Item                                        | Notes                                                                                                                              |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                              |
-| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                                  |
-| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre solo** in progress for **26.7** (branch `feat/time-attack`). Chrono **multi** stays parked. |
-| **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy.           |
-| **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                                |
+| Item                                        | Notes                                                                                                                          |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                          |
+| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                              |
+| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre solo** is on `main` for playtest (**26.7**, unfinished). Chrono **multi** stays parked. |
+| **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy.       |
+| **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                            |
 
 ### Product & UX
 
@@ -574,7 +574,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse; Chrono solo in progress on `feat/time-attack`; pokédex + Admin remain.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse; Chrono solo is on `main` for playtest (`9245d8e`); pokédex + Admin remain.
 
 ---
 
