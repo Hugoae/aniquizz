@@ -31,6 +31,7 @@ export const DIFFICULTY_LABELS: Record<string, string> = {
 export const MODE_LABELS: Record<string, string> = {
   STANDARD: 'Standard',
   SPRINT: 'Vitesse',
+  TIME_ATTACK: 'Contre-la-montre',
 };
 
 export const formatUptime = (seconds: number): string => {

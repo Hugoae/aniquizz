@@ -76,6 +76,7 @@ const ROOM_LIST_BROADCAST_MS = 150;
 const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => ({
   gameType: settings.gameType,
   speedBonusEnabled: settings.speedBonusEnabled ?? false,
+  timeBudgetSeconds: settings.timeBudgetSeconds,
   soundCount: settings.soundCount,
   difficulty: settings.difficulty,
   guessDuration: settings.guessDuration,

@@ -5,6 +5,25 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
+    id: 10,
+    title: 'Contre-la-montre en solo',
+    description:
+      'Nouveau mode solo : trouvez le plus de titres avant la fin du chrono. Skip −5 s, erreur −3 s.',
+    content:
+      'Le **Contre-la-montre** arrive en solo (pastille **CLM**).\n\n' +
+      '**Comment ça marche**\n' +
+      '• Budget **1 / 2 / 3 / 5 min** (3 min par défaut). Le chrono ne tourne que pendant le guess.\n' +
+      '• Typing obligatoire, départ au début du clip. Chaque titre trouvé vaut **1 point**.\n' +
+      '• Un skip retire **5 secondes** et enchaîne tout de suite. Une erreur validée retire **3 secondes** ; vous restez sur le titre.\n' +
+      '• La révélation dure **3 secondes**, hors chrono. Le temps est gelé en pause.\n\n' +
+      '**Médailles**\n' +
+      '• Les seuils comptent les titres trouvés par minute, puis le même malus de difficulté / précision que le Standard.\n' +
+      '• En 3 min, sur moyen + franchise : Bronze 6, Argent 9, Or 12, Platine 15.\n\n' +
+      'Pas encore de Contre-la-montre multijoueur — ça viendra plus tard.',
+    date: '2026-09-16T20:00:00Z',
+    type: 'update',
+  },
+  {
     id: 9,
     title: 'Sprint devient Vitesse',
     description:

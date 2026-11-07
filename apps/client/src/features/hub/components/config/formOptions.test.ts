@@ -7,5 +7,13 @@ describe('estimateMatchMinutes', () => {
     expect(estimateMatchMinutes({ soundCount: 10, guessDuration: 20 })).toBe(6);
     // 10 × (5s + 5s) = 100s → 2 min
     expect(estimateMatchMinutes({ soundCount: 10, guessDuration: 5 })).toBe(2);
+    expect(
+      estimateMatchMinutes({
+        soundCount: 60,
+        guessDuration: 15,
+        gameType: 'timeAttack',
+        timeBudgetSeconds: 180,
+      }),
+    ).toBe(3);
   });
 });

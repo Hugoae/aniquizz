@@ -70,6 +70,8 @@ export interface PlaylistItem {
   videoKey: string;
   videoStartTime: number;
   guessDuration: number;
+  /** Catalogue clip length in seconds (time-attack EOF). */
+  clipDurationSeconds: number | null;
   cover: string | null;
   animeId: number;
   year: number | null;

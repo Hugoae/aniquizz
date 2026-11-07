@@ -1,8 +1,10 @@
 import {
   computeSpeedPodiumBonus,
   isSpeedBonusEnabled,
+  isTimeAttackSettings,
   scoreForAnswer,
   type AnswerType,
+  type GameType,
   type RankedCorrectAnswer,
 } from '@aniquizz/shared';
 
@@ -25,11 +27,18 @@ export const speedBonusScoring: ScoringStrategy = {
   roundBonus: (rankedCorrect) => computeSpeedPodiumBonus(rankedCorrect),
 };
 
+export const timeAttackScoring: ScoringStrategy = {
+  scoreFor: () => 1,
+  roundBonus: () => new Map(),
+};
+
 export function scoringForSettings(settings: {
   speedBonusEnabled?: boolean;
   responseType?: string;
   maxPlayers?: number;
   mode?: string;
+  gameType?: GameType;
 }): ScoringStrategy {
+  if (isTimeAttackSettings(settings)) return timeAttackScoring;
   return isSpeedBonusEnabled(settings) ? speedBonusScoring : standardScoring;
 }

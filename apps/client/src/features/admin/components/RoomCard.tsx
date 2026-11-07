@@ -105,6 +105,7 @@ export function RoomCard({
           {/* Config badges */}
           <div className="flex flex-wrap gap-1.5 pt-0.5">
             <ConfigBadge>{MODE_LABELS[room.settings.mode] ?? room.settings.mode}</ConfigBadge>
+            {room.settings.gameType === 'timeAttack' && <ConfigBadge>Contre-la-montre</ConfigBadge>}
             {room.settings.speedBonusEnabled && (
               <ConfigBadge>
                 <Zap className="h-3 w-3" /> Vitesse

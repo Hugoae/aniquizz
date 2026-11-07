@@ -94,10 +94,15 @@ export function getDifficultyBadge(diffs: string[] = []): { label: string; class
 type SourceChipSettings = Pick<
   GameConfig,
   'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection'
-> & { playlistName?: string | null };
+> &
+  Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds' | 'videoMode'>> & {
+    playlistName?: string | null;
+  };
 
 /** Core room settings (excluding difficulty) — neutral styling, consistent icons. */
 export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[] {
+  const timeAttack = s.gameType === 'timeAttack';
+  const timeValue = timeAttack ? `${(s.timeBudgetSeconds ?? 180) / 60} min` : `${s.guessDuration}s`;
   return [
     {
       key: 'sounds',
@@ -109,8 +114,8 @@ export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[]
     {
       key: 'time',
       icon: Clock,
-      label: 'Temps',
-      value: `${s.guessDuration}s`,
+      label: timeAttack ? 'Chrono' : 'Temps',
+      value: timeValue,
       className: SETTING_CHIP_NEUTRAL,
     },
     {
@@ -141,14 +146,11 @@ export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[]
 export function buildLobbySettingChips(
   config: Pick<
     GameConfig,
-    | 'soundCount'
-    | 'guessDuration'
-    | 'precision'
-    | 'responseType'
-    | 'soundSelection'
-    | 'difficulty'
-    | 'videoMode'
-  > & { playlistName?: string | null },
+    'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection' | 'difficulty'
+  > &
+    Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds' | 'videoMode'>> & {
+      playlistName?: string | null;
+    },
 ): SettingChipSpec[] {
   const difficulty = getDifficultyBadge(config.difficulty ?? []);
   const videoMode = normalizeVideoMode(config.videoMode);

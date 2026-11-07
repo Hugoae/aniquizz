@@ -52,6 +52,9 @@ export interface LobbyRulesSection {
 const STANDARD_MODE_INTRO =
   "Blindtest anime : écoute un extrait et devine l'anime avant la fin du chrono.";
 
+const TIME_ATTACK_INTRO =
+  'Trouvez le plus de titres avant la fin du temps. Un skip retire 5 secondes. Une erreur retire 3 secondes.';
+
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
 
@@ -64,10 +67,19 @@ const speedScoringLines = (): string[] => {
   ];
 };
 
-const scoringLinesForConfig = (config: GameConfig): string[] =>
-  isSpeedBonusEnabled(config)
+const scoringLinesForConfig = (config: GameConfig): string[] => {
+  if (config.gameType === 'timeAttack') {
+    return [
+      'Chaque titre trouvé vaut 1 point.',
+      'Un skip illimité retire 5 secondes et enchaîne tout de suite, sans révélation.',
+      'Une erreur validée retire 3 secondes ; vous restez sur le même titre.',
+      'La révélation dure 3 secondes, hors chrono.',
+    ];
+  }
+  return isSpeedBonusEnabled(config)
     ? speedScoringLines()
     : scoringLines(config.responseType, config.precision);
+};
 
 const scoringLines = (
   responseType: GameConfig['responseType'],
@@ -256,6 +268,13 @@ const soloBronzeThresholdLine = (
 
 const victoryLines = (context: LobbyRulesContext, config: GameConfig): string[] => {
   if (context.lobbyMode === 'solo') {
+    if (config.gameType === 'timeAttack') {
+      return [
+        'Victoire solo : obtenir au moins la médaille Bronze.',
+        'Les seuils comptent les titres trouvés par minute, puis le même malus de difficulté / précision que le Standard.',
+        'Quatre médailles à viser : Bronze, Argent, Or et Platine.',
+      ];
+    }
     return [
       'Victoire solo : obtenir au moins la médaille Bronze.',
       soloBronzeThresholdLine(config.difficulty, config.precision),
@@ -313,7 +332,7 @@ export function buildLobbyRulesSections(
     {
       id: 'summary',
       title: 'Résumé de la partie',
-      intro: STANDARD_MODE_INTRO,
+      intro: config.gameType === 'timeAttack' ? TIME_ATTACK_INTRO : STANDARD_MODE_INTRO,
       chips: buildLobbyRulesSummaryChips(config, context.playlistName),
     },
     {

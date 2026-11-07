@@ -78,5 +78,19 @@ describe('buildSoloLobbyRecapGroups', () => {
 describe('soloLobbyModeBadge', () => {
   it('uses GAME_TYPE_LABELS with Solo suffix', () => {
     expect(soloLobbyModeBadge({ gameType: 'standard' })).toBe('Standard · Solo');
+    expect(soloLobbyModeBadge({ gameType: 'timeAttack' })).toBe('Contre-la-montre · Solo');
+  });
+});
+
+describe('time-attack recap', () => {
+  it('shows budget minutes and prepared title count', () => {
+    const groups = buildSoloLobbyRecapGroups({
+      ...baseConfig,
+      gameType: 'timeAttack',
+      responseType: 'typing',
+      timeBudgetSeconds: 180,
+      soundCount: 60,
+    });
+    expect(groups[0]?.chips.map((c) => c.value)).toEqual(['3 min', '60 titres']);
   });
 });

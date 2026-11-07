@@ -15,6 +15,8 @@ interface SoloScoreCardProps {
   songDifficulties: string[];
   precision?: Precision;
   xpEarned?: number;
+  timeAttack?: boolean;
+  timeBudgetSeconds?: number;
 }
 
 export function SoloScoreCard({
@@ -26,6 +28,8 @@ export function SoloScoreCard({
   songDifficulties,
   precision,
   xpEarned,
+  timeAttack = false,
+  timeBudgetSeconds,
 }: SoloScoreCardProps) {
   const medalMeta = getMedalMeta(soloMedal);
 
@@ -100,7 +104,7 @@ export function SoloScoreCard({
         <h2 className="font-display text-5xl font-black tracking-tight">
           {score}{' '}
           <span className="text-lg font-medium text-muted-foreground">
-            / {maxPossibleScore} pts
+            {timeAttack ? `trouvés` : `/ ${maxPossibleScore} pts`}
           </span>
         </h2>
       </div>
@@ -113,6 +117,8 @@ export function SoloScoreCard({
           soloMedal={soloMedal}
           songDifficulties={songDifficulties}
           precision={precision}
+          timeAttack={timeAttack}
+          timeBudgetSeconds={timeBudgetSeconds}
         />
       </div>
     </div>

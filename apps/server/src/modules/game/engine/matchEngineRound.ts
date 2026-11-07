@@ -11,9 +11,18 @@ import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import { logger } from '../../../utils/logger';
 import { scheduleBotAnswers } from './matchEngineBots';
 import { toRevealSong } from './matchEngineReveal';
-import type { MatchEngineHost } from './matchEngineHost';
+import type { EndRoundKind, MatchEngineHost } from './matchEngineHost';
 import type { PlaylistItem, RecordedRound } from './types';
 import { START_BUFFER_MS, GUESS_END_GRACE_MS } from './matchEngineTimers';
+import {
+  isTimeAttackHost,
+  keepTimeAttackFrozenIfPaused,
+  pauseTimeAttackBudget,
+  startTimeAttackBudget,
+  timeAttackFields,
+  timeAttackRemainingMs,
+  timeAttackRevealSeconds,
+} from './matchEngineBudget';
 
 export function startRound(host: MatchEngineHost): void {
   host.readyStartsAt = null;
@@ -21,6 +30,13 @@ export function startRound(host: MatchEngineHost): void {
   host.clearBotTimers();
   host.room.touch();
   host.isRoundLoading = true;
+
+  if (isTimeAttackHost(host) && host.budget.isArmed && timeAttackRemainingMs(host) <= 0) {
+    host.isRoundLoading = false;
+    void host.finish();
+    return;
+  }
+
   host.currentRoundIndex++;
 
   if (host.currentRoundIndex >= host.playlist.length) {
@@ -32,14 +48,19 @@ export function startRound(host: MatchEngineHost): void {
   host.phase = 'guessing';
   host.isRoundEnded = false;
   host.skipVotes.clear();
-  host.pauseVotes.clear();
-  host.isPausePending = false;
+  const keepPaused = host.room.status === 'paused';
+  if (!keepPaused) {
+    host.pauseVotes.clear();
+    host.isPausePending = false;
+  }
 
   for (const p of host.room.players.values()) host.resetRoundState(p);
 
   const required = host.requiredVotes();
   host.channel.emit('vote_update', { type: 'skip', count: 0, required });
-  host.channel.emit('vote_update', { type: 'pause', count: 0, required, isPending: false });
+  if (!keepPaused) {
+    host.channel.emit('vote_update', { type: 'pause', count: 0, required, isPending: false });
+  }
 
   const videoMode = normalizeVideoMode(host.room.settings.videoMode);
   host.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
@@ -63,6 +84,9 @@ export function startRound(host: MatchEngineHost): void {
   );
   host.isRoundLoading = false;
 
+  if (isTimeAttackHost(host)) startTimeAttackBudget(host);
+  keepTimeAttackFrozenIfPaused(host);
+
   logger.info(
     `[MatchEngine ${host.room.id}] Round ${host.currentRoundIndex + 1}/${host.playlist.length} — ${item.anime}`,
     'GameLoop',
@@ -71,7 +95,7 @@ export function startRound(host: MatchEngineHost): void {
   host.channel.emit('round_start', host.buildRoundStartPayload(item));
 }
 
-export function endRound(host: MatchEngineHost): void {
+export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): void {
   if (host.isRoundLoading || host.isRoundEnded) return;
 
   const item = host.playlist[host.currentRoundIndex];
@@ -136,15 +160,34 @@ export function endRound(host: MatchEngineHost): void {
   }
   host.recordedRounds.push(recorded);
 
-  const revealSeconds = revealDurationSeconds(item.guessDuration);
+  if (
+    kind === 'finish' ||
+    (kind === 'skip' && isTimeAttackHost(host) && timeAttackRemainingMs(host) <= 0)
+  ) {
+    void host.finish();
+    return;
+  }
+
+  if (kind === 'skip') {
+    host.startRound();
+    return;
+  }
+
+  const timeAttack = isTimeAttackHost(host);
+  if (timeAttack) pauseTimeAttackBudget(host);
+
+  const revealSeconds = timeAttack
+    ? timeAttackRevealSeconds()
+    : revealDurationSeconds(item.guessDuration);
   const revealMs = revealSeconds * 1000;
   host.clock.start(revealMs, () => {
-    if (host.isPausePending) {
-      host.pause();
+    if (host.isPausePending || host.room.status === 'paused') {
+      if (host.room.status !== 'paused') host.pause();
     } else {
       host.startRound();
     }
   });
+  keepTimeAttackFrozenIfPaused(host);
 
   logger.info(
     `[MatchEngine ${host.room.id}] Round ${host.currentRoundIndex + 1} reveal.`,
@@ -166,6 +209,7 @@ export function endRound(host: MatchEngineHost): void {
     serverNow: Date.now(),
     endsAt: host.clock.endsAt,
     durationSeconds: revealSeconds,
+    ...timeAttackFields(host),
   };
   host.channel.emit('round_reveal', payload);
 }
@@ -228,5 +272,6 @@ export function buildRoundStartPayload(host: MatchEngineHost, item: PlaylistItem
     choices: item.choices,
     peekWindow: host.currentPeekWindow ?? undefined,
     videoMode,
+    ...timeAttackFields(host),
   };
 }

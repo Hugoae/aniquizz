@@ -13,6 +13,7 @@ import {
 import {
   PRECISION_META,
   revealDurationSeconds,
+  normalizeTimeBudgetSeconds,
   type GameConfig,
   type Precision,
 } from '@aniquizz/shared';
@@ -104,8 +105,12 @@ export const PRECISION_OPTIONS: PrecisionOption[] = [
  * window plus the reveal shown afterwards. Used for the "≈ N min" hint.
  */
 export function estimateMatchMinutes(
-  config: Pick<GameConfig, 'soundCount' | 'guessDuration'>,
+  config: Pick<GameConfig, 'soundCount' | 'guessDuration'> &
+    Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds'>>,
 ): number {
+  if (config.gameType === 'timeAttack') {
+    return normalizeTimeBudgetSeconds(config.timeBudgetSeconds) / 60;
+  }
   const revealPerSong = revealDurationSeconds(config.guessDuration);
   const totalSeconds = config.soundCount * (config.guessDuration + revealPerSong);
   return Math.max(1, Math.round(totalSeconds / 60));

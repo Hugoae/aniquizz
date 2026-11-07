@@ -3,6 +3,8 @@ import {
   GAME_CONFIG,
   isSpeedBonusEnabled,
   normalizePrecision,
+  normalizeTimeBudgetSeconds,
+  timeAttackPoolSize,
   type RoomSettings,
 } from '@aniquizz/shared';
 
@@ -14,7 +16,7 @@ import {
 const settingsSchema = z
   .object({
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
-    gameType: z.enum(['standard']).default('standard'),
+    gameType: z.enum(['standard', 'timeAttack']).default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
     soundCount: z.coerce.number().int().min(5).max(100).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
@@ -31,6 +33,7 @@ const settingsSchema = z
     decadePlaylistId: z.string().uuid().nullable().optional(),
     playlistWatched: z.boolean().default(false),
     speedBonusEnabled: z.boolean().default(false),
+    timeBudgetSeconds: z.coerce.number().int().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -78,13 +81,49 @@ function applySpeedBonusRules<
     responseType: string;
     maxPlayers: number;
     mode: string;
-    gameType: 'standard';
+    gameType: 'standard' | 'timeAttack';
   },
 >(settings: T): T {
+  if (settings.gameType === 'timeAttack') {
+    return { ...settings, speedBonusEnabled: false };
+  }
   return {
     ...settings,
     gameType: 'standard',
-    speedBonusEnabled: isSpeedBonusEnabled(settings),
+    speedBonusEnabled: isSpeedBonusEnabled({ ...settings, gameType: 'standard' }),
+  };
+}
+
+function applyTimeAttackRules<
+  T extends {
+    gameType: 'standard' | 'timeAttack';
+    mode: string;
+    maxPlayers: number;
+    responseType: string;
+    songStartMode: 'random' | 'beginning';
+    speedBonusEnabled: boolean;
+    timeBudgetSeconds?: number;
+    soundCount: number;
+  },
+>(settings: T): T {
+  const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
+  if (settings.gameType !== 'timeAttack' || !solo) {
+    return {
+      ...settings,
+      gameType: 'standard',
+      timeBudgetSeconds: undefined,
+    };
+  }
+
+  const timeBudgetSeconds = normalizeTimeBudgetSeconds(settings.timeBudgetSeconds);
+  return {
+    ...settings,
+    gameType: 'timeAttack',
+    responseType: 'typing',
+    songStartMode: 'beginning',
+    speedBonusEnabled: false,
+    timeBudgetSeconds,
+    soundCount: timeAttackPoolSize(timeBudgetSeconds),
   };
 }
 
@@ -96,13 +135,13 @@ export interface SettingsMeta {
 
 export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomSettings => {
   const parsed = settingsSchema.parse(liftLegacySprint(input ?? {}));
-  const withSpeedBonus = applySpeedBonusRules(parsed);
-  const name = (meta.roomName || withSpeedBonus.roomName || `Salon de ${meta.hostName}`).trim();
+  const withModes = applyTimeAttackRules(applySpeedBonusRules(parsed));
+  const name = (meta.roomName || withModes.roomName || `Salon de ${meta.hostName}`).trim();
 
   return {
-    ...withSpeedBonus,
-    playlistId: withSpeedBonus.playlistId ?? undefined,
-    decadePlaylistId: withSpeedBonus.decadePlaylistId ?? undefined,
+    ...withModes,
+    playlistId: withModes.playlistId ?? undefined,
+    decadePlaylistId: withModes.decadePlaylistId ?? undefined,
     roomName: name,
     name,
     hostName: meta.hostName,

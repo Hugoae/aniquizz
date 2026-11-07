@@ -2,7 +2,9 @@ import {
   buildArtistChoices,
   buildChoices,
   buildDuo,
+  clipGuessSeconds,
   formatSongTypeLabel,
+  isTimeAttackSettings,
   normalizePrecision,
   normalizeSongStartMode,
   playlistSourceIds,
@@ -138,8 +140,9 @@ export class PlaylistBuilder {
       return { playlist: [], fallbackUsed, difficultyRelaxed, abortReason: 'no_songs' };
     }
 
-    const guessDuration = settings.guessDuration || 20;
-    const songStartMode = normalizeSongStartMode(settings.songStartMode);
+    const timeAttack = isTimeAttackSettings(settings);
+    const guessDuration = timeAttack ? clipGuessSeconds(null) : settings.guessDuration || 20;
+    const songStartMode = timeAttack ? 'beginning' : normalizeSongStartMode(settings.songStartMode);
     const playlist = songs
       .map((song) =>
         this.toPlaylistItem(
@@ -150,6 +153,7 @@ export class PlaylistBuilder {
           needsChoices,
           settings.responseType === 'mix',
           songStartMode,
+          timeAttack,
         ),
       )
       .filter((item) => precision !== 'artist' || item.validAnswers.length > 0);
@@ -193,6 +197,7 @@ export class PlaylistBuilder {
     needsChoices: boolean,
     buildDuoPair: boolean,
     songStartMode: SongStartMode,
+    timeAttack: boolean,
   ): PlaylistItem {
     const franchise = song.anime.franchise?.name ?? null;
     const answers = resolveRoundAnswerSet({
@@ -212,6 +217,8 @@ export class PlaylistBuilder {
     // Built for mix only, and never placed on round_start — the player receives
     // the pair through `game:duo` after spending the lifeline.
     const duo = buildDuoPair && choices.length > 0 ? buildDuo(answers.correctTarget, choices) : [];
+    const clipDurationSeconds = song.duration ?? null;
+    const roundGuessDuration = timeAttack ? clipGuessSeconds(clipDurationSeconds) : guessDuration;
 
     return {
       id: song.id,
@@ -223,8 +230,9 @@ export class PlaylistBuilder {
       typeLabel: formatSongTypeLabel(song.songType, song.sequence),
       difficulty: song.difficulty.toLowerCase(),
       videoKey: song.videoKey,
-      videoStartTime: this.pickStartTime(song.duration, guessDuration, songStartMode),
-      guessDuration,
+      videoStartTime: this.pickStartTime(song.duration, roundGuessDuration, songStartMode),
+      guessDuration: roundGuessDuration,
+      clipDurationSeconds,
       cover: song.anime.coverImage,
       animeId: song.anime.id,
       year: song.anime.seasonYear,

@@ -20,6 +20,7 @@ interface MatchConfigHeaderProps {
       | 'soundSelection'
       | 'playlistId'
       | 'decadePlaylistId'
+      | 'timeBudgetSeconds'
     >
   >;
   className?: string;
@@ -35,6 +36,8 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
   const chips = buildLobbySettingChips({
     soundCount: settings.soundCount ?? 10,
     guessDuration: settings.guessDuration ?? 15,
+    gameType,
+    timeBudgetSeconds: settings.timeBudgetSeconds,
     difficulty: settings.difficulty ?? [],
     precision: settings.precision ?? 'franchise',
     responseType: settings.responseType ?? 'typing',
@@ -49,7 +52,14 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
         className,
       )}
     >
-      <div className="flex shrink-0 items-center self-stretch bg-primary px-3 text-primary-foreground shadow-sm">
+      <div
+        className={cn(
+          'flex shrink-0 items-center self-stretch px-3 shadow-sm',
+          gameType === 'timeAttack'
+            ? 'bg-aqua text-aqua-foreground'
+            : 'bg-primary text-primary-foreground',
+        )}
+      >
         <GameModeBadge
           gameType={gameType}
           speedBonusEnabled={Boolean(settings.speedBonusEnabled)}

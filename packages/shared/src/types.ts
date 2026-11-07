@@ -12,10 +12,11 @@ export type GameMode = 'solo' | 'multiplayer' | 'competitive';
 export type SoundSelection = 'random' | 'mix' | 'watched' | 'playlist';
 
 /** Match rules variant. Speed podium is `speedBonusEnabled` on Standard, not a GameType. */
-export type GameType = 'standard';
+export type GameType = 'standard' | 'timeAttack';
 
 export const GAME_TYPE_LABELS: Record<GameType, string> = {
   standard: 'Standard',
+  timeAttack: 'Contre-la-montre',
 };
 
 export type GameTypeId = GameType;
@@ -47,6 +48,10 @@ export interface GameConfig {
    * Ignored unless response type is typing and the room has at least two seats.
    */
   speedBonusEnabled?: boolean;
+  /**
+   * Solo time-attack budget in seconds (60 | 120 | 180 | 300). Ignored on Standard.
+   */
+  timeBudgetSeconds?: number;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */

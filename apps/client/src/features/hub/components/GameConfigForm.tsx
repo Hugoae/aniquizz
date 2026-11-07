@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 import type { User } from '@supabase/supabase-js';
-import type { GameConfig, RoomConfig } from '@aniquizz/shared';
+import type { GameConfig, GameType, RoomConfig } from '@aniquizz/shared';
 import {
   withPlaylistPoolSoundCount,
   withWatchedPoolSoundCount,
   hasWatchedListLink,
   hasPlaylistSource,
+  TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
+  timeAttackPoolSize,
 } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
@@ -26,6 +28,7 @@ import {
 } from './config/watchedSource';
 import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playlistSource';
 import { PLAYLISTS_COPY } from './config/playlistsCopy';
+import { GameTypeSelector } from './GameTypeSelector';
 import { HUB_COPY } from '@/features/hub/copy/hubCopy';
 import { ConfigPoolCard } from './config/ConfigPoolCard';
 import { resolveConfigPoolPreview } from './config/configPoolPreview';
@@ -71,6 +74,22 @@ export function GameConfigForm<T extends GameConfig>({
   const cfg = config as unknown as RoomConfig;
 
   const update = (patch: Partial<RoomConfig>) => setConfig((prev) => ({ ...prev, ...patch }) as T);
+
+  const handleGameTypeChange = (gameType: GameType) => {
+    if (gameType === 'timeAttack') {
+      const timeBudgetSeconds = cfg.timeBudgetSeconds ?? TIME_ATTACK_DEFAULT_BUDGET_SECONDS;
+      update({
+        gameType,
+        responseType: 'typing',
+        songStartMode: 'beginning',
+        timeBudgetSeconds,
+        soundCount: timeAttackPoolSize(timeBudgetSeconds),
+        speedBonusEnabled: false,
+      });
+      return;
+    }
+    update({ gameType: 'standard' });
+  };
 
   const toggleDifficulty = (id: string) =>
     setConfig((prev) => {
@@ -232,6 +251,11 @@ export function GameConfigForm<T extends GameConfig>({
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        {!isRoom && (
+          <div className="mb-3">
+            <GameTypeSelector value={cfg.gameType ?? 'standard'} onChange={handleGameTypeChange} />
+          </div>
+        )}
         <div className="glass-card custom-scrollbar flex-1 overflow-y-auto px-5 pb-4 pt-3 md:px-6 md:pb-5 md:pt-3 lg:px-8 lg:pb-6">
           {activeSectionLabel && (
             <h2 className="mb-3 border-b border-border/60 pb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">

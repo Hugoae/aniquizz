@@ -787,4 +787,173 @@ describe('MatchEngine', () => {
       ).toBe(true);
     });
   });
+
+  describe('time-attack solo', () => {
+    const timeAttackSettings = {
+      gameType: 'timeAttack' as const,
+      mode: 'solo' as const,
+      maxPlayers: 1,
+      responseType: 'typing' as const,
+      songStartMode: 'beginning' as const,
+      timeBudgetSeconds: 60,
+      soundCount: 20,
+    };
+
+    function createTimeAttackHarness(
+      opts: {
+        playlist?: ReturnType<typeof makePlaylistItem>[];
+        timeBudgetSeconds?: number;
+      } = {},
+    ) {
+      return createEngineHarness({
+        settings: {
+          ...timeAttackSettings,
+          timeBudgetSeconds: opts.timeBudgetSeconds ?? 60,
+        },
+        playerIds: ['player-1'],
+        playlist: opts.playlist ?? [
+          makePlaylistItem({ id: 1, guessDuration: 10, clipDurationSeconds: 10 }),
+          makePlaylistItem({
+            id: 2,
+            anime: 'Bleach',
+            validAnswers: ['Bleach'],
+            guessDuration: 10,
+            clipDurationSeconds: 10,
+          }),
+          makePlaylistItem({
+            id: 3,
+            anime: 'One Piece',
+            validAnswers: ['One Piece'],
+            guessDuration: 10,
+            clipDurationSeconds: 10,
+          }),
+        ],
+      });
+    }
+
+    it('awards +1 on a correct answer and reveals for 3s', async () => {
+      const { room, engine, emitted } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing', { revealAfterAnswer: true });
+
+      const player = getPlayer(room, 'player-1');
+      expect(player.score).toBe(1);
+      expect(engine.getSyncState().phase).toBe('reveal');
+      const reveal = emitted.find((e) => e.event === 'round_reveal');
+      expect((reveal?.payload as { durationSeconds: number }).durationSeconds).toBe(3);
+    });
+
+    it('taxes 3s on a wrong answer and stays on the title', async () => {
+      const { engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      const before = engine.getSyncState().remainingMs ?? 0;
+
+      engine.handleAnswer('player-1', 'Wrong', 'typing', { revealAfterAnswer: true });
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(1);
+      expect(engine.getSyncState().remainingMs).toBe(before - 3000);
+    });
+
+    it('ignores empty submits', async () => {
+      const { engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      const before = engine.getSyncState().remainingMs ?? 0;
+
+      engine.handleAnswer('player-1', '   ', 'typing');
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().remainingMs).toBe(before);
+    });
+
+    it('taxes 5s on skip and starts the next title without a reveal', async () => {
+      const { engine, emitted } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      const before = engine.getSyncState().remainingMs ?? 0;
+
+      engine.forceEndRound();
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(2);
+      expect(engine.getSyncState().remainingMs).toBe(before - 5000);
+      expect(emitted.some((e) => e.event === 'round_reveal')).toBe(false);
+    });
+
+    it('reveals 3s with 0 points on clip EOF', async () => {
+      const { room, engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+
+      await vi.advanceTimersByTimeAsync(10_500);
+
+      expect(engine.getSyncState().phase).toBe('reveal');
+      expect(getPlayer(room, 'player-1').score).toBe(0);
+      expect(engine.getSyncState().reveal?.durationSeconds).toBe(3);
+    });
+
+    it('ends the match when the budget reaches 0', async () => {
+      const { room, engine, repo } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(room.status).toBe('finished');
+      expect(vi.mocked(repo.persistMatch)).toHaveBeenCalled();
+      const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as {
+        timeAttack?: boolean;
+        totalRounds: number;
+      };
+      expect(persisted.timeAttack).toBe(true);
+      expect(persisted.totalRounds).toBeGreaterThanOrEqual(1);
+    });
+
+    it('freezes the budget while paused', async () => {
+      const { engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      await vi.advanceTimersByTimeAsync(2000);
+      const afterTick = engine.getSyncState().remainingMs ?? 0;
+
+      engine.votePause('player-1');
+      await vi.advanceTimersByTimeAsync(8000);
+
+      expect(engine.getSyncState().remainingMs).toBe(afterTick);
+      expect(engine.getSyncState().status).toBe('paused');
+    });
+
+    it('keeps the budget frozen after a skip while paused', async () => {
+      const { engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      engine.votePause('player-1');
+      const pausedAt = engine.getSyncState().remainingMs ?? 0;
+
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(8000);
+
+      expect(engine.getSyncState().currentRound).toBe(2);
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().remainingMs).toBe(pausedAt - 5000);
+      expect(engine.getSyncState().status).toBe('paused');
+    });
+
+    it('finishes when the playlist is exhausted', async () => {
+      const { room, engine, repo } = createTimeAttackHarness({
+        playlist: [makePlaylistItem({ id: 1, guessDuration: 10, clipDurationSeconds: 10 })],
+      });
+      await advanceToGuessing(engine);
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      await vi.advanceTimersByTimeAsync(3000);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(room.status).toBe('finished');
+      const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as {
+        timeAttack?: boolean;
+        totalRounds: number;
+      };
+      expect(persisted.timeAttack).toBe(true);
+      expect(persisted.totalRounds).toBe(1);
+    });
+  });
 });

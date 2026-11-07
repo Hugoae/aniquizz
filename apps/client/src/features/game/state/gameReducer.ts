@@ -12,13 +12,14 @@ import type {
   RoundRevealPayload,
   RoundStartPayload,
   SpeedLeaderboardPayload,
+  TimeAttackBudgetPayload,
   VictoryData,
   MatchSettingsSnapshot,
   VoteUpdatePayload,
   PeekWindow,
   VideoMode,
 } from '@aniquizz/shared';
-import { normalizeVideoMode } from '@aniquizz/shared';
+import { normalizeVideoMode, TIME_ATTACK_DEFAULT_BUDGET_SECONDS } from '@aniquizz/shared';
 export type { RoundHistoryEntry };
 export type GamePhase = 'loading' | 'ready' | 'guessing' | 'revealed' | 'ended';
 /** Minimal shape the layout needs during guessing (no answer leaks). */
@@ -58,6 +59,9 @@ export interface GameState {
   videoMode: VideoMode;
   /** Speed bonus — reveal speed board for the current round. */
   speedLeaderboard: SpeedLeaderboardPayload | null;
+  remainingMs: number | null;
+  foundCount: number;
+  budgetSyncedAt: number;
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
@@ -67,6 +71,7 @@ export type GameAction =
   | { type: 'ROUND_START'; payload: RoundStartPayload; clientVideoMode?: VideoMode }
   | { type: 'ANSWERED'; userId: string }
   | { type: 'SPEED_LEADERBOARD'; payload: SpeedLeaderboardPayload }
+  | { type: 'TIME_ATTACK_BUDGET'; payload: TimeAttackBudgetPayload }
   | { type: 'DUO_CHOICES'; choices: string[] }
   | { type: 'ROUND_REVEAL'; payload: RoundRevealPayload; myUserId?: string }
   | { type: 'PLAYERS_UPDATE'; payload: PlayersUpdatePayload }
@@ -129,6 +134,9 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     matchSettings: null,
     videoMode: 'hidden',
     speedLeaderboard: null,
+    remainingMs: null,
+    foundCount: 0,
+    budgetSyncedAt: 0,
   };
 }
 /** Convert an authoritative PhaseTiming envelope to a local end timestamp. */
@@ -136,6 +144,18 @@ function localEndsAt(t: { serverNow: number; endsAt?: number; startsAt?: number 
   const target = t.endsAt ?? t.startsAt;
   if (target === undefined) return Date.now();
   return Date.now() + (target - t.serverNow);
+}
+
+function budgetPatch(
+  payload: { remainingMs?: number; foundCount?: number },
+  state: GameState,
+): Pick<GameState, 'remainingMs' | 'foundCount' | 'budgetSyncedAt'> | Record<string, never> {
+  if (payload.remainingMs == null && payload.foundCount == null) return {};
+  return {
+    remainingMs: payload.remainingMs ?? state.remainingMs,
+    foundCount: payload.foundCount ?? state.foundCount,
+    budgetSyncedAt: Date.now(),
+  };
 }
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -157,6 +177,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         roundHistory: [],
         matchSettings: null,
         videoMode,
+        speedLeaderboard: null,
+        remainingMs:
+          p.settings.gameType === 'timeAttack'
+            ? (p.settings.timeBudgetSeconds ?? TIME_ATTACK_DEFAULT_BUDGET_SECONDS) * 1000
+            : null,
+        foundCount: 0,
+        budgetSyncedAt: Date.now(),
       };
     }
     case 'PRELOAD': {
@@ -196,9 +223,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         // countdown subtracts that tail in the ticker so it lands on 0.
         phaseEndsAt: localEndsAt(p),
         phaseDurationSeconds: p.durationSeconds,
-        isGamePaused: false,
         isPausePending: false,
-        pauseVotes: 0,
         skipVotes: 0,
         videoMode,
         speedLeaderboard: null,
@@ -212,6 +237,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           speedRank: undefined,
           speedBonus: undefined,
         })),
+        ...budgetPatch(p, state),
       };
     }
     case 'DUO_CHOICES': {
@@ -227,6 +253,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'SPEED_LEADERBOARD': {
       return { ...state, speedLeaderboard: action.payload };
+    }
+    case 'TIME_ATTACK_BUDGET': {
+      return { ...state, ...budgetPatch(action.payload, state) };
     }
     case 'ROUND_REVEAL': {
       const p = action.payload;
@@ -260,6 +289,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         phaseDurationSeconds: p.durationSeconds,
         skipVotes: 0,
         roundHistory: historyEntry ? [...state.roundHistory, historyEntry] : state.roundHistory,
+        ...budgetPatch(p, state),
       };
     }
     case 'PLAYERS_UPDATE': {
@@ -371,6 +401,14 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         roundHistory,
         matchSettings,
         videoMode,
+        isGamePaused: s.status === 'paused',
+        ...budgetPatch(
+          {
+            remainingMs: s.remainingMs ?? s.round?.remainingMs ?? s.reveal?.remainingMs,
+            foundCount: s.foundCount ?? s.round?.foundCount ?? s.reveal?.foundCount,
+          },
+          state,
+        ),
       };
     }
     default:

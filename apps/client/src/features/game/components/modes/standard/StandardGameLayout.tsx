@@ -81,6 +81,8 @@ interface StandardGameLayoutProps {
   onSoloSkip?: () => void;
   /** Hide header Round N/M bar (daily uses its own track meter). */
   showRoundProgress?: boolean;
+  remainingMs?: number | null;
+  foundCount?: number | null;
   /** Daily — no running score or +pts toast. */
   hideScores?: boolean;
 }
@@ -144,6 +146,8 @@ function StandardGameLayoutInner({
   answerDisabled = false,
   onSoloSkip,
   showRoundProgress = true,
+  remainingMs = null,
+  foundCount = null,
   hideScores = false,
 }: StandardGameLayoutProps) {
   const revealSong =
@@ -207,6 +211,8 @@ function StandardGameLayoutInner({
         onShowSettings={onShowSettings}
         showPause={showPause}
         showRoundProgress={showRoundProgress}
+        remainingMs={remainingMs}
+        foundCount={foundCount}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -250,6 +256,8 @@ function StandardGameLayoutInner({
                   isPausePending={isPausePending}
                   submittedAnswer={submittedAnswer}
                   onSoloSkip={handleSoloSkip}
+                  soloSkipAlways={remainingMs != null}
+                  soloSkipLabel={remainingMs != null ? 'Passer' : 'Révéler'}
                   playersCount={activeRosterCount}
                   skipVotes={skipVotes}
                   skipRequired={skipRequired}

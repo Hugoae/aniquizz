@@ -28,6 +28,7 @@ import type {
   RoundStartPayload,
   DuoChoicesPayload,
   SpeedLeaderboardPayload,
+  TimeAttackBudgetPayload,
   VictoryData,
   VoteUpdatePayload,
   GameOverPayload,
@@ -214,6 +215,8 @@ export function useGameSocket({
       'game:answered': (p: AnsweredPayload) => dispatch({ type: 'ANSWERED', userId: p.userId }),
       'speed:leaderboard': (p: SpeedLeaderboardPayload) =>
         dispatch({ type: 'SPEED_LEADERBOARD', payload: p }),
+      'timeAttack:budget': (p: TimeAttackBudgetPayload) =>
+        dispatch({ type: 'TIME_ATTACK_BUDGET', payload: p }),
       round_reveal: (p: RoundRevealPayload) =>
         dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserIdRef.current }),
       'game:preload': (p: PreloadVideoPayload) =>
@@ -273,6 +276,7 @@ export function useGameSocket({
     socket.on('game:duo', handlers['game:duo']);
     socket.on('game:answered', handlers['game:answered']);
     socket.on('speed:leaderboard', handlers['speed:leaderboard']);
+    socket.on('timeAttack:budget', handlers['timeAttack:budget']);
     socket.on('round_reveal', handlers.round_reveal);
     socket.on('game:preload', handlers['game:preload']);
     socket.on('update_players', handlers.update_players);
@@ -295,6 +299,7 @@ export function useGameSocket({
       socket.off('game:duo', handlers['game:duo']);
       socket.off('game:answered', handlers['game:answered']);
       socket.off('speed:leaderboard', handlers['speed:leaderboard']);
+      socket.off('timeAttack:budget', handlers['timeAttack:budget']);
       socket.off('round_reveal', handlers.round_reveal);
       socket.off('game:preload', handlers['game:preload']);
       socket.off('update_players', handlers.update_players);

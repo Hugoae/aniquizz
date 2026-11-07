@@ -2,16 +2,21 @@ import {
   computeVictory,
   computeCompetitionRanks,
   isSpeedBonusEnabled,
+  isTimeAttackSettings,
   levelFromXp,
   xpForMatch,
   normalizePrecision,
+  normalizeTimeBudgetSeconds,
   pickMatchSettings,
   matchPlaylistPersistence,
+  timeAttackMedal,
+  timeAttackMedalTargets,
   type CorrectByDifficulty,
   type ResponseType,
   type SongDifficulty,
   type VictoryData,
   type GameOverPayload,
+  type VictoryResult,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { buildRoundHistoryByUser } from './matchEngineReveal';
@@ -38,6 +43,50 @@ export function tallyCorrectByDifficulty(
     if (diff) tally[diff] += 1;
   }
   return tally;
+}
+
+function soloDifficultyLabel(difficulties: string[]): string {
+  const set = new Set(difficulties.map((d) => d.toLowerCase()));
+  if (set.size > 1) return 'Mixte';
+  if (set.has('easy')) return 'Facile';
+  if (set.has('hard')) return 'Difficile';
+  if (set.has('medium')) return 'Moyen';
+  return 'Normal';
+}
+
+function computeTimeAttackVictory(
+  host: MatchEngineHost,
+  players: FinishPlayerSnapshot[],
+): VictoryResult {
+  const settings = host.room.settings;
+  const precision = normalizePrecision(settings.precision);
+  const budget = normalizeTimeBudgetSeconds(settings.timeBudgetSeconds);
+  const heardIds = new Set(host.recordedRounds.map((round) => round.songId));
+  const songDifficulties = host.playlist
+    .filter((item) => heardIds.has(item.id))
+    .map((item) => normalizeSongDifficulty(item.difficulty));
+  const competitors = players
+    .filter((p) => !p.isBot)
+    .map((p) => ({
+      userId: p.userId,
+      score: p.score,
+      correctCount: p.matchCorrectCount,
+      totalCount: p.matchTotalCount,
+    }));
+  const rankings = [...competitors].sort((a, b) => b.score - a.score);
+  const found = rankings[0]?.score ?? 0;
+  const targets = timeAttackMedalTargets(budget, songDifficulties, precision);
+  const soloMedal = timeAttackMedal(found, budget, songDifficulties, precision);
+  const winnerIds = soloMedal && rankings[0] ? [rankings[0].userId] : [];
+  return {
+    winnerIds,
+    rankings,
+    maxPossibleScore: targets.platinum,
+    soloTargetRatio: targets.bronze / Math.max(1, targets.platinum),
+    soloMedal,
+    soloDifficultyLabel: soloDifficultyLabel(settings.difficulty ?? []),
+    multiWinnerCount: 1,
+  };
 }
 
 export type MatchXpOutcome = {
@@ -136,6 +185,7 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
   try {
     host.phase = null;
     host.clock.clear();
+    host.budget.clear();
     host.room.status = 'finished';
     // Starts the finished-room idle clock (see roomIdlePolicy).
     host.room.touch();
@@ -146,20 +196,22 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
     const settings = host.room.settings;
     const responseType = (settings.responseType ?? 'mix') as ResponseType;
     const competitors = players.filter((p) => !p.isBot);
-    const result = computeVictory({
-      players: competitors.map((p) => ({
-        userId: p.userId,
-        score: p.score,
-        correctCount: p.matchCorrectCount,
-        totalCount: p.matchTotalCount,
-      })),
-      totalRounds: host.playlist.length,
-      responseType,
-      isSolo: host.room.isSolo,
-      difficulties: settings.difficulty ?? [],
-      songDifficulties: host.playlist.map((s) => normalizeSongDifficulty(s.difficulty)),
-      precision: normalizePrecision(settings.precision),
-    });
+    const result = isTimeAttackSettings(settings)
+      ? computeTimeAttackVictory(host, players)
+      : computeVictory({
+          players: competitors.map((p) => ({
+            userId: p.userId,
+            score: p.score,
+            correctCount: p.matchCorrectCount,
+            totalCount: p.matchTotalCount,
+          })),
+          totalRounds: host.playlist.length,
+          responseType,
+          isSolo: host.room.isSolo,
+          difficulties: settings.difficulty ?? [],
+          songDifficulties: host.playlist.map((s) => normalizeSongDifficulty(s.difficulty)),
+          precision: normalizePrecision(settings.precision),
+        });
 
     const rankByUser = computeCompetitionRanks(
       result.rankings.map((r) => ({ id: r.userId, score: r.score })),
@@ -227,7 +279,8 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
     void host.deps.repo
       .persistMatch({
         speedBonusEnabled: isSpeedBonusEnabled(settings),
-        totalRounds: host.playlist.length,
+        timeAttack: isTimeAttackSettings(settings),
+        totalRounds: recordedRounds.length,
         startedAt: host.startedAt,
         endedAt: new Date(),
         responseType: (settings.responseType ?? 'mix') as 'typing' | 'qcm' | 'mix',

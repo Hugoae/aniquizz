@@ -10,6 +10,7 @@ import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import { toRevealSong } from './matchEngineReveal';
 import type { MatchEngineHost } from './matchEngineHost';
 import type { AdminMatchProgress } from './types';
+import { isTimeAttackHost, timeAttackFields, timeAttackRevealSeconds } from './matchEngineBudget';
 
 export function heardSongIds(host: MatchEngineHost): number[] {
   const inProgress =
@@ -43,6 +44,7 @@ export function buildMatchSyncState(host: MatchEngineHost): GameSyncState {
           ? toPlaybackUrl(host.playlist[0].videoKey)
           : null
         : undefined,
+    ...timeAttackFields(host),
   };
 
   if (host.room.status === 'finished' && host.finishedVictoryData) {
@@ -70,7 +72,10 @@ export function buildMatchSyncState(host: MatchEngineHost): GameSyncState {
       nextVideoStartTime: nextItem?.videoStartTime ?? null,
       serverNow: Date.now(),
       endsAt: host.clock.endsAt,
-      durationSeconds: revealDurationSeconds(item.guessDuration),
+      durationSeconds: isTimeAttackHost(host)
+        ? timeAttackRevealSeconds()
+        : revealDurationSeconds(item.guessDuration),
+      ...timeAttackFields(host),
     };
   }
 

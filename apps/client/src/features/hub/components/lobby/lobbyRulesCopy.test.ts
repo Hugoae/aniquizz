@@ -321,4 +321,23 @@ describe('buildLobbyRulesSections', () => {
     expect(scoring?.lines?.some((l) => l.startsWith('Typing :'))).toBe(true);
     expect(scoring?.lines?.some((l) => l.includes('Bonus vitesse'))).toBe(false);
   });
+
+  it('describes solo time-attack scoring and skip tax', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        gameType: 'timeAttack',
+        responseType: 'typing',
+        timeBudgetSeconds: 180,
+        songStartMode: 'beginning',
+      },
+      { lobbyMode: 'solo' },
+    );
+    const summary = sections.find((s) => s.id === 'summary');
+    expect(summary?.intro).toContain('skip retire 5 secondes');
+    const scoring = sections.find((s) => s.id === 'scoring');
+    expect(scoring?.lines?.some((l) => l.includes('1 point'))).toBe(true);
+    expect(scoring?.lines?.some((l) => l.includes('5 secondes'))).toBe(true);
+    expect(scoring?.lines?.some((l) => l.includes('3 secondes'))).toBe(true);
+  });
 });

@@ -10,6 +10,11 @@ const GAME_TYPES: { id: GameType; icon: typeof Trophy; description: string }[] =
     icon: Trophy,
     description: 'Devinez le plus de sons et remportez des points',
   },
+  {
+    id: 'timeAttack',
+    icon: Timer,
+    description: 'Trouvez le plus de titres avant la fin du temps',
+  },
 ];
 
 interface GameTypeSelectorProps {
@@ -18,10 +23,8 @@ interface GameTypeSelectorProps {
   className?: string;
 }
 
-/** Shown only when more than one GameType exists (Chrono will add a second card). */
+/** Solo create only — Chrono is not offered in multiplayer this slice. */
 export function GameTypeSelector({ value, onChange, className }: GameTypeSelectorProps) {
-  if (GAME_TYPES.length < 2) return null;
-
   return (
     <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-stretch', className)}>
       {GAME_TYPES.map(({ id, icon: Icon, description }) => {
@@ -44,7 +47,11 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
               <Icon
                 className={cn(
                   'h-4 w-4',
-                  active ? 'text-primary' : 'text-muted-foreground',
+                  active
+                    ? id === 'timeAttack'
+                      ? 'text-aqua'
+                      : 'text-primary'
+                    : 'text-muted-foreground',
                   id === 'standard' && active && 'fill-current',
                 )}
                 aria-hidden="true"

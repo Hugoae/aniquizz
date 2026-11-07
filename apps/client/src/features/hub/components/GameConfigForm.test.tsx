@@ -168,7 +168,25 @@ describe('GameConfigForm', () => {
     );
 
     expect(screen.queryByRole('switch', { name: /vitesse/i })).toBeNull();
-    expect(screen.queryByText(/devinez le plus de sons/i)).toBeNull();
+    expect(screen.getByText(/devinez le plus de sons/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /contre-la-montre/i })).toBeInTheDocument();
+  });
+
+  it('hides Contre-la-montre in multiplayer create', () => {
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, mode: 'multiplayer', maxPlayers: 8 }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /contre-la-montre/i })).toBeNull();
   });
 
   it('shows a disabled Vitesse switch in multi QCM', () => {

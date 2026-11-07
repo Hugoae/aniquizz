@@ -10,6 +10,7 @@ import {
   type VictoryData,
 } from '@aniquizz/shared';
 import { RoundClock } from './RoundClock';
+import { MatchBudgetClock } from './MatchBudgetClock';
 import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
 import {
@@ -18,7 +19,7 @@ import {
   playerCanVote,
   requiredVoteCount,
 } from './matchEngineVotes';
-import type { EngineDeps, MatchEngineHost } from './matchEngineHost';
+import type { EndRoundKind, EngineDeps, MatchEngineHost } from './matchEngineHost';
 import { startMatch } from './matchEngineStart';
 import {
   buildRoundStartPayload,
@@ -29,6 +30,13 @@ import {
 import { finishMatch } from './matchEngineFinish';
 import { replayDuoLifeline, useDuoLifeline } from './matchEngineDuo';
 import { buildAdminProgress, buildMatchSyncState, heardSongIds } from './matchEngineSync';
+import {
+  applyTimeAttackRoundTax,
+  isTimeAttackHost,
+  onTimeAttackBudgetExpired,
+  resumeFrozenTimeAttack,
+  skipTimeAttackRound,
+} from './matchEngineBudget';
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
 export class MatchEngine {
@@ -40,6 +48,8 @@ export class MatchEngine {
   private phase: 'intro' | 'ready' | 'guessing' | 'reveal' | null = null;
 
   private readonly clock = new RoundClock();
+  private readonly budget = new MatchBudgetClock();
+  private pausedDuringPhase = false;
   private introTimer: NodeJS.Timeout | null = null;
   private readyTimer: NodeJS.Timeout | null = null;
   /** When `round_start` fires during the round-1 ready beat (for reconnect sync). */
@@ -135,6 +145,15 @@ export class MatchEngine {
     // so guard only their re-entry (their timer fires a single time anyway).
     if (player.isBot && player.hasAnswered) return;
 
+    const host = this.asHost();
+    if (isTimeAttackHost(host) && this.budget.getRemainingMs() <= 0) {
+      onTimeAttackBudgetExpired(host);
+      return;
+    }
+
+    const trimmed = answer.trim();
+    if (isTimeAttackHost(host) && trimmed.length === 0) return;
+
     // Anti-cheat: never trust the client's claimed type beyond the room mode.
     // Typing-only always scores as typing; QCM-only never awards typing. Mix
     // honours the claim — the correct title is always a QCM label, so the
@@ -157,13 +176,23 @@ export class MatchEngine {
 
     this.channel.emit('game:answered', { userId });
 
+    if (isTimeAttackHost(host)) {
+      if (isCorrect) {
+        this.endRound('reveal');
+        return;
+      }
+      const remaining = applyTimeAttackRoundTax(host, 'wrong');
+      if (remaining <= 0) onTimeAttackBudgetExpired(host);
+      return;
+    }
+
     if (options?.revealAfterAnswer === true && this.room.isSolo) {
       this.forceEndRound();
     }
   }
 
-  private endRound(): void {
-    endRound(this.asHost());
+  private endRound(kind?: EndRoundKind): void {
+    endRound(this.asHost(), kind);
   }
 
   private async finish(): Promise<void> {
@@ -190,6 +219,14 @@ export class MatchEngine {
       required,
       isPending: this.isPausePending,
     });
+    if (
+      this.isPausePending &&
+      isTimeAttackHost(this.asHost()) &&
+      (this.phase === 'guessing' || this.phase === 'reveal')
+    ) {
+      this.pausedDuringPhase = true;
+      this.pause();
+    }
   }
 
   voteSkip(userId: string): void {
@@ -201,6 +238,11 @@ export class MatchEngine {
     this.channel.emit('vote_update', { type: 'skip', count, required });
 
     if (count < required) return;
+    const host = this.asHost();
+    if (isTimeAttackHost(host) && !this.isRoundEnded) {
+      skipTimeAttackRound(host);
+      return;
+    }
     this.clock.clear();
     if (this.isRoundEnded) {
       if (this.isPausePending) this.pause();
@@ -237,11 +279,21 @@ export class MatchEngine {
   }
 
   forceEndRound(): void {
+    const host = this.asHost();
+    if (isTimeAttackHost(host)) {
+      skipTimeAttackRound(host);
+      return;
+    }
     if (!this.isRoundEnded && !this.isRoundLoading) this.endRound();
   }
 
   private pause(): void {
-    this.clock.clear();
+    if (this.pausedDuringPhase) {
+      this.clock.pause();
+      this.budget.pause();
+    } else {
+      this.clock.clear();
+    }
     this.room.status = 'paused';
     this.room.markPaused();
     this.isPausePending = false;
@@ -255,7 +307,12 @@ export class MatchEngine {
     this.resumeTimer = setTimeout(() => {
       this.room.status = 'playing';
       this.channel.emit('game_paused', { isPaused: false });
-      this.startRound();
+      if (this.pausedDuringPhase) {
+        this.pausedDuringPhase = false;
+        resumeFrozenTimeAttack(this.asHost());
+      } else {
+        this.startRound();
+      }
     }, GAME_CONFIG.TIMERS.RESUME_COUNTDOWN);
   }
 
@@ -273,6 +330,8 @@ export class MatchEngine {
 
   cancel(): void {
     this.clock.clear();
+    this.budget.clear();
+    this.pausedDuringPhase = false;
     this.clearBotTimers();
     if (this.introTimer) clearTimeout(this.introTimer);
     if (this.readyTimer) clearTimeout(this.readyTimer);

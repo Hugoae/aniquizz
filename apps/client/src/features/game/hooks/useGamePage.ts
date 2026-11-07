@@ -10,6 +10,7 @@ import {
   type RoomSettings,
   isBanSanctionReason,
   isSpeedBonusEnabled,
+  isTimeAttackSettings,
   getPrecisionChipLabel,
   normalizePrecision,
   normalizeVideoMode,
@@ -18,6 +19,7 @@ import {
   playlistSourceDisplayName,
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
+import { useTimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
@@ -82,7 +84,13 @@ export function useGamePage() {
 
   const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
   const speedBonusOn = isSpeedBonusEnabled(activeSettings);
+  const timeAttack = isTimeAttackSettings(activeSettings);
   const { phase, players, currentSong } = state;
+  const liveRemainingMs = useTimeAttackClock(
+    state.remainingMs,
+    state.budgetSyncedAt,
+    timeAttack && phase === 'guessing' && !state.isGamePaused,
+  );
 
   const {
     audioVolume,
@@ -177,9 +185,10 @@ export function useGamePage() {
   }, [phase, players, currentUserId, state.currentRound]);
 
   const pointsBadge = useMemo(() => {
+    if (timeAttack) return '+1';
     if (!speedBonusOn || phase !== 'guessing') return undefined;
     return `Jusqu'à +${maxSpeedBonusPointsPerRound()} pts`;
-  }, [speedBonusOn, phase]);
+  }, [speedBonusOn, phase, timeAttack]);
 
   useEffect(() => {
     if (phase === 'guessing') setShowPointsAnimation(false);
@@ -240,10 +249,14 @@ export function useGamePage() {
   const handleAction = useCallback(
     (val: string) => {
       if (!val) return;
-      setSubmittedAnswer(val);
-      actions.answer(val, INPUT_TO_ANSWER_TYPE[inputMode], gameMode === 'solo' && soloAutoReveal);
+      if (!timeAttack) setSubmittedAnswer(val);
+      actions.answer(
+        val,
+        INPUT_TO_ANSWER_TYPE[inputMode],
+        gameMode === 'solo' && soloAutoReveal && !timeAttack,
+      );
     },
-    [actions, gameMode, inputMode, soloAutoReveal],
+    [actions, gameMode, inputMode, soloAutoReveal, timeAttack],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -336,6 +349,8 @@ export function useGamePage() {
     autofocusAnswer,
     submitOnEnter,
     showShortcutReminder,
+    remainingMs: timeAttack ? liveRemainingMs : null,
+    foundCount: timeAttack ? state.foundCount : null,
   };
 
   return {
