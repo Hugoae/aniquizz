@@ -16,7 +16,6 @@ import {
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { PLAYLISTS_COPY } from '@/features/hub/components/config/playlistsCopy';
-import { TEST_MATCH_NOTICE } from '@/features/hub/components/config/TestMatchOption';
 import {
   watchedModeDisplayLabel,
   WATCHED_LIST_STATUSES_OU,
@@ -373,7 +372,6 @@ export function buildLobbyRulesSections(
             ? TIME_ATTACK_RACE_INTRO
             : TIME_ATTACK_INTRO,
       chips: buildLobbyRulesSummaryChips(config, context.playlistName),
-      lines: config.testMatch ? [TEST_MATCH_NOTICE] : undefined,
     },
     {
       id: 'flow',

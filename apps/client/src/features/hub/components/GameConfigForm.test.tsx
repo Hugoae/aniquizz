@@ -344,7 +344,7 @@ describe('GameConfigForm', () => {
       />,
     );
 
-    expect(screen.queryByRole('switch', { name: /partie test/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /partie test/i })).not.toBeInTheDocument();
 
     rerender(
       <GameConfigForm
@@ -358,8 +358,8 @@ describe('GameConfigForm', () => {
       />,
     );
 
-    const toggle = screen.getByRole('switch', { name: /partie test/i });
-    expect(toggle).not.toBeChecked();
+    const toggle = screen.getByRole('button', { name: /partie test/i });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
     await user.click(toggle);
 
     const updater = setConfig.mock.calls[0]?.[0] as (prev: RoomConfig) => RoomConfig;

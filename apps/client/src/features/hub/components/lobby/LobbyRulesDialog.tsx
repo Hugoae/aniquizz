@@ -10,6 +10,7 @@ import {
   type LobbyRulesContext,
 } from '@/features/hub/components/lobby/lobbyRulesCopy';
 import { SettingChip } from '@/features/hub/components/SettingChip';
+import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 
 interface LobbyRulesDialogProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
             <span className="inline-flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" aria-hidden="true" />
               Règles de la partie
+              {config.testMatch ? <TestMatchMark /> : null}
             </span>
             <span className="text-sm font-normal text-muted-foreground">
               (selon la config actuelle)

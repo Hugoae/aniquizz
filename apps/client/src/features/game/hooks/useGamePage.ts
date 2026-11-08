@@ -390,6 +390,7 @@ export function useGamePage() {
     nextSkipTaxMs: timeAttack ? state.nextSkipTaxMs : null,
     stageFeedback: state.stageFeedback,
     recentTitles: state.recentTitles,
+    testMatch: activeSettings.testMatch === true,
     race:
       timeAttack && gameMode !== 'solo'
         ? { board: state.raceBoard, laneDone: state.laneDone }

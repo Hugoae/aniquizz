@@ -1,14 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import {
-  Clock,
-  Eye,
-  FlaskConical,
-  Gauge,
-  Keyboard,
-  ListMusic,
-  Shuffle,
-  Target,
-} from 'lucide-react';
+import { Clock, Eye, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 import { getPrecisionChipLabel, normalizeVideoMode, VIDEO_MODE_LABELS } from '@aniquizz/shared';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
@@ -160,7 +151,7 @@ export function buildLobbySettingChips(
     GameConfig,
     'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection' | 'difficulty'
   > &
-    Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds' | 'videoMode' | 'testMatch'>> & {
+    Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds' | 'videoMode'>> & {
       playlistName?: string | null;
     },
 ): SettingChipSpec[] {
@@ -168,17 +159,6 @@ export function buildLobbySettingChips(
   const videoMode = normalizeVideoMode(config.videoMode);
 
   return [
-    ...(config.testMatch
-      ? [
-          {
-            key: 'test',
-            icon: FlaskConical,
-            label: 'Test',
-            value: 'Non enregistrée',
-            className: SETTING_CHIP_NEUTRAL,
-          },
-        ]
-      : []),
     {
       key: 'diff',
       icon: Gauge,

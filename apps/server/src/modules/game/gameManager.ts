@@ -86,6 +86,7 @@ const toRoomListSettings = (settings: RoomSettings): RoomListSettingsSummary => 
   videoMode: settings.videoMode,
   playlistId: settings.playlistId ?? undefined,
   decadePlaylistId: settings.decadePlaylistId ?? undefined,
+  testMatch: settings.testMatch === true,
 });
 
 export class GameManager {

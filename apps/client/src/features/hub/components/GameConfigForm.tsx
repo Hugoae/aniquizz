@@ -258,6 +258,7 @@ export function GameConfigForm<T extends GameConfig>({
         </nav>
 
         <ConfigPoolCard preview={poolPreview} />
+        {isAdmin(profile?.role) ? <TestMatchOption config={cfg} update={update} /> : null}
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -301,7 +302,6 @@ export function GameConfigForm<T extends GameConfig>({
         </div>
 
         <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-border/60 pt-3 md:mt-4 md:pt-4">
-          {isAdmin(profile?.role) ? <TestMatchOption config={cfg} update={update} /> : null}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" onClick={onReset} className="gap-2 rounded-lg sm:w-auto">
               <RotateCcw className="h-4 w-4" aria-hidden="true" />

@@ -26,7 +26,6 @@ import { checkPlaylistPoolLaunch } from '@/features/hub/components/config/playli
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
-import { TestMatchBanner } from '@/features/hub/components/config/TestMatchOption';
 import { MultiplayerLobbyHeader } from '@/features/hub/components/lobby/MultiplayerLobbyHeader';
 import { MultiplayerLobbyRoster } from '@/features/hub/components/lobby/MultiplayerLobbyRoster';
 import { MultiplayerLobbyFooter } from '@/features/hub/components/lobby/MultiplayerLobbyFooter';
@@ -261,8 +260,6 @@ export function MultiplayerLobby({
         humanCount={humanCount}
         playlistName={playlistName}
       />
-
-      {gameSettings?.testMatch ? <TestMatchBanner /> : null}
 
       {showWatchedPoolBanner && (
         <div

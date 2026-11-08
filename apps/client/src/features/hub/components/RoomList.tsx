@@ -9,6 +9,7 @@ import { useFriends } from '@/features/friends/FriendsContext';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { isRoomListJoinable, roomJoinButtonLabel } from '@/features/hub/components/roomListJoin';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
@@ -122,6 +123,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                       <h3 className="font-black text-xl truncate text-foreground group-hover:text-primary transition-colors tracking-tight">
                         {room.name}
                       </h3>
+                      {s.testMatch ? <TestMatchMark /> : null}
                     </div>
 
                     {room.isPrivate && (

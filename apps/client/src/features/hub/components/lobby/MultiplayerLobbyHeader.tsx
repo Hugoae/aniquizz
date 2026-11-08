@@ -7,6 +7,7 @@ import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import type { SettingChipSpec } from '@/features/hub/components/roomSettings';
 
 interface MultiplayerLobbyHeaderProps {
@@ -64,6 +65,7 @@ export function MultiplayerLobbyHeader({
 
             <h1 className="flex flex-wrap items-center gap-3 text-3xl font-black uppercase tracking-tight">
               {roomName}
+              {gameSettings?.testMatch ? <TestMatchMark /> : null}
             </h1>
 
             <div className="mt-2 flex flex-wrap items-center gap-3">

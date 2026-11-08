@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
 interface MatchConfigHeaderProps {
@@ -21,6 +22,7 @@ interface MatchConfigHeaderProps {
       | 'playlistId'
       | 'decadePlaylistId'
       | 'timeBudgetSeconds'
+      | 'testMatch'
     >
   >;
   className?: string;
@@ -54,7 +56,7 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
     >
       <div
         className={cn(
-          'flex shrink-0 items-center self-stretch px-3 shadow-sm',
+          'flex shrink-0 items-center gap-2 self-stretch px-3 shadow-sm',
           gameType === 'timeAttack'
             ? 'bg-aqua text-aqua-foreground'
             : 'bg-primary text-primary-foreground',
@@ -66,6 +68,7 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
           compact
           className="bg-transparent px-0 py-0 shadow-none"
         />
+        {settings.testMatch ? <TestMatchMark /> : null}
       </div>
       <SettingChipList className="flex-1 px-4 py-3">
         {chips.map((spec) => (

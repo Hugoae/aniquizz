@@ -1,22 +1,18 @@
 import type { RoomConfig } from '@aniquizz/shared';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 
-/** Shown to every participant: the match still plays, nothing is stored. */
-export const TEST_MATCH_NOTICE =
-  "Partie test : elle se joue normalement, mais rien n'est enregistré (historique, XP, statistiques).";
-
-export function TestMatchBanner({ className }: { className?: string }) {
+/** Compact red mark shown next to a room or mode name. */
+export function TestMatchMark({ className }: { className?: string }) {
   return (
-    <p
+    <span
       className={cn(
-        'rounded-xl border border-warning/40 bg-warning/10 px-3 py-2 text-sm leading-snug text-foreground',
+        'inline-flex shrink-0 items-center rounded-md bg-destructive px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-destructive-foreground',
         className,
       )}
     >
-      {TEST_MATCH_NOTICE}
-    </p>
+      Test
+    </span>
   );
 }
 
@@ -25,22 +21,23 @@ interface TestMatchOptionProps {
   update: (patch: Partial<RoomConfig>) => void;
 }
 
-/** Admin create/edit control. The server ignores this flag for anyone else. */
+/** Admin-only toggle. The server ignores this flag for anyone else. */
 export function TestMatchOption({ config, update }: TestMatchOptionProps) {
+  const active = config.testMatch === true;
   return (
-    <div className="flex items-start justify-between gap-3 rounded-xl border border-warning/40 bg-warning/10 px-3 py-2.5">
-      <div className="min-w-0 space-y-1">
-        <Label htmlFor="test-match" className="text-sm font-semibold">
-          Partie test
-        </Label>
-        <p className="text-xs leading-snug text-muted-foreground">{TEST_MATCH_NOTICE}</p>
-      </div>
-      <Switch
-        id="test-match"
-        checked={config.testMatch === true}
-        onCheckedChange={(testMatch) => update({ testMatch })}
-        className="mt-0.5 shrink-0"
-      />
-    </div>
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={() => update({ testMatch: !active })}
+      className={cn(
+        'w-full rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors',
+        FOCUS_RING,
+        active
+          ? 'border-destructive bg-destructive text-destructive-foreground shadow-sm'
+          : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:bg-card/80 hover:text-foreground',
+      )}
+    >
+      Partie test
+    </button>
   );
 }

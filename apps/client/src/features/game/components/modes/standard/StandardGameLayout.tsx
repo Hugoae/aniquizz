@@ -105,6 +105,8 @@ interface StandardGameLayoutProps {
   race?: { board: RaceBoardState | null; laneDone: boolean } | null;
   /** Daily — no running score or +pts toast. */
   hideScores?: boolean;
+  /** Admin test match. Shown next to the header title. */
+  testMatch?: boolean;
 }
 
 export const StandardGameLayout = memo(StandardGameLayoutInner);
@@ -174,6 +176,7 @@ function StandardGameLayoutInner({
   recentTitles = NO_RECENT_TITLES,
   race = null,
   hideScores = false,
+  testMatch = false,
 }: StandardGameLayoutProps) {
   const laneOver = race?.laneDone === true;
   const timeAttack = timeAttackClock != null;
@@ -247,6 +250,7 @@ function StandardGameLayoutInner({
         foundCount={timeAttack ? foundCount : null}
         heardCount={timeAttack ? heardCount : null}
         nextMedal={timeAttack && race == null ? nextMedal : null}
+        testMatch={testMatch}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">

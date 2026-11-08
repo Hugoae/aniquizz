@@ -405,6 +405,8 @@ export interface RoomListSettingsSummary {
   videoMode?: VideoMode;
   playlistId?: string;
   decadePlaylistId?: string;
+  /** Admin test match. The public list shows a mark; the password stays off this summary. */
+  testMatch?: boolean;
 }
 
 export interface RoomListItem {

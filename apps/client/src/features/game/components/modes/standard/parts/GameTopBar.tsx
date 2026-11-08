@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
 import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
+import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { TimeAttackMedalCue, type TimeAttackMedalCueState } from './TimeAttackMedalCue';
 import type { MyProfile } from './types';
 
@@ -30,6 +31,8 @@ interface GameTopBarProps {
   heardCount?: number | null;
   /** Solo time-attack medal icons. Null outside solo Chrono. */
   nextMedal?: TimeAttackMedalCueState | null;
+  /** Admin test match: nothing from this run is saved. */
+  testMatch?: boolean;
 }
 
 export function GameTopBar({
@@ -49,6 +52,7 @@ export function GameTopBar({
   foundCount = null,
   heardCount = null,
   nextMedal = null,
+  testMatch = false,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
   const timeAttackMeter = foundCount != null;
@@ -105,6 +109,7 @@ export function GameTopBar({
           <span className="font-display text-xl font-extrabold leading-none tracking-tight gradient-text">
             AniQuizz
           </span>
+          {testMatch ? <TestMatchMark /> : null}
         </div>
         {showRoundProgress && timeAttackMeter && (
           <div className="pointer-events-auto flex items-center gap-3 font-mono text-sm tabular-nums">

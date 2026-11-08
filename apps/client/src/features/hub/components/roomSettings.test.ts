@@ -37,20 +37,6 @@ describe('buildLobbySettingChips', () => {
     });
   });
 
-  it('marks an unsaved test match', () => {
-    const chips = buildLobbySettingChips({
-      soundCount: 20,
-      guessDuration: 15,
-      difficulty: ['medium'],
-      precision: 'franchise',
-      responseType: 'typing',
-      soundSelection: 'random',
-      testMatch: true,
-    });
-
-    expect(chips[0]).toMatchObject({ key: 'test', label: 'Test', value: 'Non enregistrée' });
-  });
-
   it('shows Chrono minutes for time-attack', () => {
     const chips = buildLobbySettingChips({
       soundCount: 60,
