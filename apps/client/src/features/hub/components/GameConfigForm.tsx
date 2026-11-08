@@ -13,6 +13,7 @@ import {
   hasPlaylistSource,
   TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
   TIME_ATTACK_RACE_MAX_PLAYERS,
+  isAdmin,
   timeAttackPoolSize,
 } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
@@ -22,6 +23,7 @@ import { raceRoomPatch } from './config/raceLobby';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { AdvancedSection } from './config/AdvancedSection';
+import { TestMatchOption } from './config/TestMatchOption';
 import {
   isWatchedSourceBlocked,
   checkWatchedPoolLaunch,
@@ -299,6 +301,7 @@ export function GameConfigForm<T extends GameConfig>({
         </div>
 
         <div className="mt-3 flex shrink-0 flex-col gap-2 border-t border-border/60 pt-3 md:mt-4 md:pt-4">
+          {isAdmin(profile?.role) ? <TestMatchOption config={cfg} update={update} /> : null}
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button variant="outline" onClick={onReset} className="gap-2 rounded-lg sm:w-auto">
               <RotateCcw className="h-4 w-4" aria-hidden="true" />

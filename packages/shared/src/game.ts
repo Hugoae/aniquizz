@@ -320,6 +320,7 @@ export type MatchSettingsSnapshot = Pick<
   | 'songStartMode'
   | 'playlistId'
   | 'decadePlaylistId'
+  | 'testMatch'
 >;
 
 export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot {
@@ -337,6 +338,7 @@ export function pickMatchSettings(settings: RoomSettings): MatchSettingsSnapshot
     songStartMode: settings.songStartMode,
     playlistId: settings.playlistId ?? undefined,
     decadePlaylistId: settings.decadePlaylistId ?? undefined,
+    testMatch: settings.testMatch === true,
   };
 }
 

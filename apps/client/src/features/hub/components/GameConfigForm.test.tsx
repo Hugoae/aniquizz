@@ -328,4 +328,41 @@ describe('GameConfigForm', () => {
       }),
     );
   });
+
+  it('shows the test switch only to an admin', async () => {
+    const user = userEvent.setup();
+    const setConfig = vi.fn();
+    const { rerender } = render(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={setConfig}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        user={{ id: 'u1' } as never}
+        profile={{ role: 'USER' } as never}
+      />,
+    );
+
+    expect(screen.queryByRole('switch', { name: /partie test/i })).not.toBeInTheDocument();
+
+    rerender(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={setConfig}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        user={{ id: 'u1' } as never}
+        profile={{ role: 'ADMIN' } as never}
+      />,
+    );
+
+    const toggle = screen.getByRole('switch', { name: /partie test/i });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+
+    const updater = setConfig.mock.calls[0]?.[0] as (prev: RoomConfig) => RoomConfig;
+    expect(updater(baseConfig).testMatch).toBe(true);
+  });
 });

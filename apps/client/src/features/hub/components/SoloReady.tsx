@@ -28,6 +28,7 @@ import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
 import { usePlaylistPoolStats } from '@/features/hub/hooks/usePlaylistPoolStats';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDialog';
+import { TestMatchBanner } from '@/features/hub/components/config/TestMatchOption';
 import { SoloLobbyRecap } from '@/features/hub/components/lobby/SoloLobbyRecap';
 import { soloLobbyModeBadge } from '@/features/hub/components/lobby/soloLobbyRecapGroups';
 
@@ -167,6 +168,7 @@ export function SoloReady({
             </div>
 
             <div className="glass-card flex flex-col gap-5 p-5 md:p-6">
+              {gameSettings?.testMatch ? <TestMatchBanner /> : null}
               {gameSettings && (
                 <>
                   <SoloLobbyRecap config={gameSettings} playlistName={playlistName} />

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { computeRanks } from '@/features/game/utils/ranking';
 import { ConfettiLayer } from './ConfettiLayer';
 import { GLOW, MULTI_DEFEAT_CONFETTI, MULTI_VICTORY_CONFETTI } from './confettiPresets';
+import { TestMatchBanner } from '@/features/hub/components/config/TestMatchOption';
 import { MatchConfigHeader } from './MatchConfigHeader';
 import { MultiPodium } from './MultiPodium';
 import { FinalRanking } from './FinalRanking';
@@ -66,6 +67,7 @@ export function MultiResult({
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-7xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
         <MatchConfigHeader settings={settings} />
+        {settings.testMatch ? <TestMatchBanner /> : null}
 
         <div className="grid min-h-0 flex-1 grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
           <MultiPodium

@@ -230,13 +230,10 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
     );
     const matchSettings = pickMatchSettings(host.room.settings);
 
-    const xpByUser = await computeMatchXp(
-      host,
-      players,
-      result.winnerIds,
-      rankByUser,
-      rankings.length,
-    );
+    const unsavedTest = settings.testMatch === true;
+    const xpByUser = unsavedTest
+      ? new Map<string, MatchXpOutcome>()
+      : await computeMatchXp(host, players, result.winnerIds, rankByUser, rankings.length);
     for (const rp of rankings) {
       const outcome = xpByUser.get(String(rp.id));
       if (outcome) rp.xpEarned = outcome.earned;
@@ -274,6 +271,14 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
           xp: outcome.newXp,
         });
       }
+    }
+
+    if (unsavedTest) {
+      logger.info(
+        `[MatchEngine ${host.room.id}] Test match finished; results were not saved.`,
+        'Game',
+      );
+      return;
     }
 
     void host.deps.repo

@@ -209,6 +209,36 @@ describe('timeAttack', () => {
     expect(chrono.soloInstantReveal).toBe(false);
   });
 
+  it('keeps a test match only when the host is allowed to set one', () => {
+    const denied = normalizeRoomSettings({ mode: 'solo', maxPlayers: 1, testMatch: true }, meta);
+    expect(denied.testMatch).toBe(false);
+
+    const allowed = normalizeRoomSettings(
+      { mode: 'multiplayer', maxPlayers: 8, gameType: 'timeAttack', testMatch: true },
+      { ...meta, allowTestMatch: true },
+    );
+    expect(allowed.testMatch).toBe(true);
+    expect(allowed.gameType).toBe('timeAttack');
+  });
+
+  it('lets only an admin host change the test flag', () => {
+    const current = normalizeRoomSettings(
+      { mode: 'solo', maxPlayers: 1, testMatch: true },
+      { ...meta, allowTestMatch: true },
+    );
+    expect(mergeRoomSettings(current, { soundCount: 10 }).testMatch).toBe(true);
+    expect(
+      mergeRoomSettings(current, { testMatch: false }, { allowTestMatch: true }).testMatch,
+    ).toBe(false);
+    expect(mergeRoomSettings(current, { testMatch: false }).testMatch).toBe(true);
+
+    const plain = normalizeRoomSettings({ mode: 'solo', maxPlayers: 1 }, meta);
+    expect(mergeRoomSettings(plain, { testMatch: true }).testMatch).toBe(false);
+    expect(mergeRoomSettings(plain, { testMatch: true }, { allowTestMatch: true }).testMatch).toBe(
+      true,
+    );
+  });
+
   it('does not clamp a standard multiplayer room to 8', () => {
     const settings = normalizeRoomSettings({ mode: 'multiplayer', maxPlayers: 20 }, meta);
     expect(settings.maxPlayers).toBe(20);

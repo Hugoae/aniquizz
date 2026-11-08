@@ -10,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { ConfettiLayer } from './ConfettiLayer';
 import { GLOW, SOLO_DEFEAT_CONFETTI, SOLO_VICTORY_CONFETTI } from './confettiPresets';
+import { TestMatchBanner } from '@/features/hub/components/config/TestMatchOption';
 import { MatchConfigHeader } from './MatchConfigHeader';
 import { RoundHistoryList } from './RoundHistoryList';
 import { SoloScoreCard } from './solo/SoloScoreCard';
@@ -93,6 +94,7 @@ export function SoloResult({
       )}
 
       <div className="relative z-10 mx-auto flex min-h-dvh w-full max-w-6xl flex-col gap-6 p-4 md:min-h-0 md:p-8">
+        {settings.testMatch ? <TestMatchBanner /> : null}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
           <MatchConfigHeader className="lg:col-span-3 lg:col-start-3" settings={settings} />
 

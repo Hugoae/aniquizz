@@ -12,7 +12,12 @@ import {
   type VictoryData,
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
-import { computeMatchXp, normalizeSongDifficulty, snapshotPlayers } from './matchEngineFinish';
+import {
+  computeMatchXp,
+  normalizeSongDifficulty,
+  snapshotPlayers,
+  type MatchXpOutcome,
+} from './matchEngineFinish';
 import { buildRoundHistoryByUser } from './matchEngineReveal';
 import type { RaceEngine } from './RaceEngine';
 import type { RaceLane } from './RaceLane';
@@ -114,13 +119,10 @@ export async function finishRace(engine: RaceEngine): Promise<void> {
     }
 
     // Placement XP follows the human race: a bot ahead must not drop a player's place.
-    const xpByUser = await computeMatchXp(
-      engine,
-      players,
-      winnerIds,
-      humanRankByUser,
-      humanRanked.length,
-    );
+    const unsavedTest = settings.testMatch === true;
+    const xpByUser = unsavedTest
+      ? new Map<string, MatchXpOutcome>()
+      : await computeMatchXp(engine, players, winnerIds, humanRankByUser, humanRanked.length);
     for (const rp of rankings) {
       const outcome = xpByUser.get(String(rp.id));
       if (outcome) rp.xpEarned = outcome.earned;
@@ -159,6 +161,11 @@ export async function finishRace(engine: RaceEngine): Promise<void> {
           xp: outcome.newXp,
         });
       }
+    }
+
+    if (unsavedTest) {
+      logger.info(`[RaceEngine ${room.id}] Test match finished; results were not saved.`, 'Game');
+      return;
     }
 
     const rounds = mergeLaneRounds(engine);

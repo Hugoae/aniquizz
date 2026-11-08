@@ -67,6 +67,12 @@ export interface GameConfig {
    * Ignored in multiplayer and in time attack. Default off.
    */
   soloInstantReveal?: boolean;
+  /**
+   * Admin-only. The match plays through, but nothing is written for the
+   * participants (history, XP, stats, heard songs). The server drops this
+   * unless the host who set it is an admin.
+   */
+  testMatch?: boolean;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */

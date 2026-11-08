@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAME_CONFIG, revealDurationMs } from '@aniquizz/shared';
+import { GAME_CONFIG, revealDurationMs, type GameOverPayload } from '@aniquizz/shared';
 import { speedBonusScoring } from './ScoringStrategy';
 import {
   advanceToGuessing,
@@ -725,6 +725,28 @@ describe('MatchEngine', () => {
       expect(vi.mocked(repo.persistMatch)).toHaveBeenCalled();
       const persisted = vi.mocked(repo.persistMatch).mock.calls[0]?.[0] as { songIds: number[] };
       expect(persisted.songIds).toEqual([11, 22]);
+    });
+
+    it('plays a test match through without saving XP or history', async () => {
+      const { engine, repo, emitted } = createEngineHarness({
+        playlist: [makePlaylistItem({ id: 1 })],
+        playerIds: ['player-1'],
+        settings: { maxPlayers: 1, mode: 'solo', soundCount: 1, testMatch: true },
+      });
+      await advanceToGuessing(engine);
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.forceEndRound();
+      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(repo.persistMatch).not.toHaveBeenCalled();
+      expect(repo.getXpState).not.toHaveBeenCalled();
+      const over = emitted.find((event) => event.event === 'game_over');
+      const payload = over?.payload as GameOverPayload;
+      expect(payload.matchSettings.testMatch).toBe(true);
+      expect(payload.victoryData.rankings[0]?.xpEarned).toBeUndefined();
+      expect(payload.victoryData.rankings[0]?.score).toBeGreaterThan(0);
     });
 
     it('refuses a relaunch while finish is awaiting and persists the snapshotted score', async () => {

@@ -223,6 +223,24 @@ describe('RaceEngine', () => {
     expect(repo.persistMatch).toHaveBeenCalledTimes(1);
   });
 
+  it('finishes a test race without saving it', async () => {
+    const { engine, emitted, repo } = createRaceHarness({
+      playlist,
+      settings: { testMatch: true, timeBudgetSeconds: 60 },
+    });
+    await advanceRaceToGuessing(engine);
+    engine.handleAnswer('player-1', 'Anime 1', 'typing');
+    await vi.advanceTimersByTimeAsync(180_000);
+
+    const over = named(emitted, 'game_over');
+    expect(over).toHaveLength(1);
+    const payload = over[0]!.payload as GameOverPayload;
+    expect(payload.matchSettings.testMatch).toBe(true);
+    expect(payload.victoryData.winnerIds.length).toBeGreaterThan(0);
+    expect(repo.persistMatch).not.toHaveBeenCalled();
+    expect(repo.getXpState).not.toHaveBeenCalled();
+  });
+
   it('breaks a tie on titles with fewer songs heard', async () => {
     const { engine, emitted } = createRaceHarness({ playlist });
     await advanceRaceToGuessing(engine);

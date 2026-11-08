@@ -6,6 +6,7 @@ import {
   createLobbyInputSchema,
   evaluateLobbyJoin,
   hasWatchedListLink,
+  isAdmin,
   isTimeAttackRace,
   joinLobbyInputSchema,
   lobbyTargetInputSchema,
@@ -103,6 +104,7 @@ export const registerLobbyHandlers = (
         roomName,
         hostName: username,
         hostAvatar: avatar,
+        allowTestMatch: isAdmin(socket.data.role),
       });
       const sourceCheck = await assertPublishedPlaylistSource(settings);
       if (!sourceCheck.ok) {
@@ -216,7 +218,9 @@ export const registerLobbyHandlers = (
     if (!room || uid() !== room.hostId) return;
     let next: RoomSettings;
     try {
-      next = mergeRoomSettings(room.settings, parsed.settings);
+      next = mergeRoomSettings(room.settings, parsed.settings, {
+        allowTestMatch: isAdmin(socket.data.role),
+      });
     } catch {
       socket.emit('error', { message: 'Paramètres invalides.' });
       return;

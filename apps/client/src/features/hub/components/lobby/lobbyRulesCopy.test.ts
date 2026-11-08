@@ -35,6 +35,16 @@ describe('buildLobbyRulesSections', () => {
     expect(flow?.lines?.[1]).toContain('au tout début');
   });
 
+  it('explains that a test match is not saved', () => {
+    const sections = buildLobbyRulesSections(
+      { ...baseConfig, testMatch: true },
+      { lobbyMode: 'multi' },
+    );
+    const summary = sections.find((section) => section.id === 'summary');
+    expect(summary?.lines?.[0]).toContain("n'est enregistré");
+    expect(summary?.chips?.some((chip) => chip.key === 'test')).toBe(true);
+  });
+
   it('shows song start chip in summary', () => {
     const sections = buildLobbyRulesSections(
       { ...baseConfig, songStartMode: 'random' },

@@ -39,6 +39,7 @@ const settingsSchema = z
     timeAttackReveal: z.boolean().optional(),
     timeAttackPunitiveSkip: z.boolean().optional(),
     soloInstantReveal: z.boolean().optional(),
+    testMatch: z.boolean().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -164,6 +165,11 @@ export interface SettingsMeta {
   roomName?: string;
   hostName: string;
   hostAvatar: string;
+  /**
+   * Only an admin host may turn a match into an unsaved test.
+   * Omitted or false forces `testMatch` off at create time.
+   */
+  allowTestMatch?: boolean;
 }
 
 export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomSettings => {
@@ -179,6 +185,7 @@ export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomS
     name,
     hostName: meta.hostName,
     hostAvatar: meta.hostAvatar,
+    testMatch: meta.allowTestMatch === true && withModes.testMatch === true,
   };
 };
 
@@ -187,13 +194,27 @@ const usesWatchedFallback = (settings: RoomSettings): boolean =>
   (settings.soundSelection === 'playlist' && Boolean(settings.playlistWatched));
 
 /** Merge a settings patch onto existing settings (host edits), re-validated. */
-export const mergeRoomSettings = (current: RoomSettings, patch: unknown): RoomSettings => {
+export const mergeRoomSettings = (
+  current: RoomSettings,
+  patch: unknown,
+  meta: { allowTestMatch?: boolean } = {},
+): RoomSettings => {
   const merged = { ...current, ...(patch as Record<string, unknown>) };
   const next = normalizeRoomSettings(merged, {
     roomName: (merged as RoomSettings).roomName,
     hostName: current.hostName ?? 'Hôte',
     hostAvatar: current.hostAvatar ?? 'player1',
+    // The create-time gate would clear a test flag the moment a non-admin
+    // host edits anything else. Keep the stored flag unless an admin changes it.
+    allowTestMatch: true,
   });
+  const patchRecord =
+    patch && typeof patch === 'object' ? (patch as Record<string, unknown>) : null;
+  const requested =
+    patchRecord && 'testMatch' in patchRecord
+      ? patchRecord.testMatch === true
+      : current.testMatch === true;
+  next.testMatch = meta.allowTestMatch === true ? requested : current.testMatch === true;
   if (!usesWatchedFallback(next)) {
     next.watchedAllowFallback = false;
   }
