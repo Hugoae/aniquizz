@@ -3,6 +3,7 @@ import { Clock, Eye, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-
 import type { GameConfig } from '@aniquizz/shared';
 import { getPrecisionChipLabel, normalizeVideoMode, VIDEO_MODE_LABELS } from '@aniquizz/shared';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
+import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
 /**
  * Shared room-settings display helpers — lobbies, room list, game-over, rules modal.
  * Neutral chips everywhere; semantic color reserved for difficulty tiers only.
@@ -102,7 +103,9 @@ type SourceChipSettings = Pick<
 /** Core room settings (excluding difficulty) — neutral styling, consistent icons. */
 export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[] {
   const timeAttack = s.gameType === 'timeAttack';
-  const timeValue = timeAttack ? `${(s.timeBudgetSeconds ?? 180) / 60} min` : `${s.guessDuration}s`;
+  const timeValue = timeAttack
+    ? formatTimeAttackBudget(s.timeBudgetSeconds)
+    : `${s.guessDuration}s`;
   return [
     {
       key: 'sounds',

@@ -1,8 +1,13 @@
 import {
   isTimeAttackSettings,
+  normalizePrecision,
   normalizeTimeBudgetSeconds,
+  timeAttackMedal,
+  timeAttackNextMedalGoal,
+  timeAttackTaxMs,
   TIME_ATTACK_REVEAL_SECONDS,
   type TimeAttackBudgetPayload,
+  type TimeAttackNextMedal,
   type TimeAttackTaxKind,
 } from '@aniquizz/shared';
 import type { MatchEngineHost } from './matchEngineHost';
@@ -27,14 +32,40 @@ export function timeAttackRemainingMs(host: MatchEngineHost): number {
   return normalizeTimeBudgetSeconds(host.room.settings.timeBudgetSeconds) * 1000;
 }
 
+/**
+ * Same inputs as the game-over medal: budget, precision, and the difficulties of
+ * songs actually heard (the current clip counts). Not the lobby difficulty filter.
+ */
+export function timeAttackRunCue(host: MatchEngineHost): {
+  nextSkipTaxMs: number;
+  nextMedal: TimeAttackNextMedal | null;
+} {
+  const heard = new Set(host.recordedRounds.map((round) => round.songId));
+  const current = host.playlist[host.currentRoundIndex];
+  if (current) heard.add(current.id);
+  const difficulties = host.playlist
+    .filter((item) => heard.has(item.id))
+    .map((item) => item.difficulty);
+  const budget = normalizeTimeBudgetSeconds(host.room.settings.timeBudgetSeconds);
+  const precision = normalizePrecision(host.room.settings.precision);
+  const found = timeAttackFoundCount(host);
+  const medal = timeAttackMedal(found, budget, difficulties, precision);
+  const goal = timeAttackNextMedalGoal(found, budget, difficulties, medal, precision);
+  return {
+    nextSkipTaxMs: timeAttackTaxMs('skip', host.budget.skips, timeAttackPunitiveSkip(host)),
+    nextMedal: goal ? { tier: goal.tier, pointsNeeded: goal.pointsNeeded } : null,
+  };
+}
+
 export function emitTimeAttackBudget(
   host: MatchEngineHost,
-  extra: Pick<TimeAttackBudgetPayload, 'tax' | 'skippedSong'> = {},
+  extra: Pick<TimeAttackBudgetPayload, 'tax' | 'taxMs' | 'roundResult'> = {},
 ): void {
   if (!isTimeAttackHost(host)) return;
   host.channel.emit('timeAttack:budget', {
     remainingMs: timeAttackRemainingMs(host),
     foundCount: timeAttackFoundCount(host),
+    ...timeAttackRunCue(host),
     ...extra,
   });
 }
@@ -42,11 +73,14 @@ export function emitTimeAttackBudget(
 export function timeAttackFields(host: MatchEngineHost): {
   remainingMs?: number;
   foundCount?: number;
+  nextSkipTaxMs?: number;
+  nextMedal?: TimeAttackNextMedal | null;
 } {
   if (!isTimeAttackHost(host)) return {};
   return {
     remainingMs: timeAttackRemainingMs(host),
     foundCount: timeAttackFoundCount(host),
+    ...timeAttackRunCue(host),
   };
 }
 
@@ -80,10 +114,18 @@ export function pauseTimeAttackBudget(host: MatchEngineHost): void {
 
 export function applyTimeAttackRoundTax(host: MatchEngineHost, kind: TimeAttackTaxKind): number {
   if (!isTimeAttackHost(host)) return timeAttackRemainingMs(host);
-  const remaining = host.budget.tax(kind);
-  const item = kind === 'skip' ? host.playlist[host.currentRoundIndex] : undefined;
+  const remaining = host.budget.tax(kind, timeAttackPunitiveSkip(host));
+  // With the reveal on, the skipped title rides on round_reveal instead.
+  const item =
+    kind === 'skip' && !timeAttackRevealEnabled(host)
+      ? host.playlist[host.currentRoundIndex]
+      : undefined;
   // Solo-only mode, so revealing the skipped title on the room channel leaks nothing.
-  emitTimeAttackBudget(host, { tax: kind, ...(item ? { skippedSong: toRevealSong(item) } : {}) });
+  emitTimeAttackBudget(host, {
+    tax: kind,
+    taxMs: host.budget.lastTax,
+    ...(item ? { roundResult: { outcome: 'skipped' as const, song: toRevealSong(item) } } : {}),
+  });
   return remaining;
 }
 
@@ -123,6 +165,16 @@ export function resumeFrozenTimeAttack(host: MatchEngineHost): void {
     });
     emitTimeAttackBudget(host);
   }
+}
+
+/** Host option (default on): false keeps every skip at the flat 5 s tax. */
+export function timeAttackPunitiveSkip(host: MatchEngineHost): boolean {
+  return host.room.settings.timeAttackPunitiveSkip !== false;
+}
+
+/** Host option (default on): false skips the 3 s reveal after found / missed titles. */
+export function timeAttackRevealEnabled(host: MatchEngineHost): boolean {
+  return host.room.settings.timeAttackReveal !== false;
 }
 
 export function timeAttackRevealSeconds(): number {

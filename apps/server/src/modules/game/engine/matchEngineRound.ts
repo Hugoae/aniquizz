@@ -17,8 +17,10 @@ import { START_BUFFER_MS, GUESS_END_GRACE_MS } from './matchEngineTimers';
 import {
   isTimeAttackHost,
   keepTimeAttackFrozenIfPaused,
+  emitTimeAttackBudget,
   pauseTimeAttackBudget,
   startTimeAttackBudget,
+  timeAttackRevealEnabled,
   timeAttackFields,
   timeAttackRemainingMs,
   timeAttackRevealSeconds,
@@ -168,7 +170,17 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
     return;
   }
 
-  if (kind === 'skip') {
+  const skipReveal = isTimeAttackHost(host) && !timeAttackRevealEnabled(host);
+  if (skipReveal) {
+    if (kind !== 'skip') {
+      // No round_reveal here: tell the client how the title ended (cue + history).
+      const found = [...host.room.players.values()].some((p) => p.isCorrect === true);
+      emitTimeAttackBudget(host, {
+        roundResult: { outcome: found ? 'found' : 'missed', song: toRevealSong(item) },
+      });
+    }
+    // No round_reveal, so the roster (streak) must be pushed here.
+    host.room.emitLobbyUpdate();
     host.startRound();
     return;
   }
@@ -202,6 +214,7 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
   // preload. The head start is only as long as this reveal.
   const payload: RoundRevealPayload = {
     round: host.currentRoundIndex + 1,
+    ...(kind === 'skip' ? { skipped: true } : {}),
     song: toRevealSong(item),
     players: host.room.toPublicPlayers(true),
     nextVideo: next ? toPlaybackUrl(next.videoKey) : null,

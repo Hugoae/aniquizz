@@ -210,6 +210,35 @@ describe('gameReducer time-attack feedback', () => {
     expect(state.stageFeedback?.seq).toBe(2);
   });
 
+  it('cues and records a found title when the reveal is disabled', () => {
+    const state = gameReducer(createInitialState(20), {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: {
+        remainingMs: 50_000,
+        foundCount: 1,
+        roundResult: { outcome: 'found', song: song(1, 'Naruto') },
+      },
+    });
+    expect(state.stageFeedback).toMatchObject({ kind: 'correct' });
+    expect(state.recentTitles[0]).toMatchObject({ anime: 'Naruto', outcome: 'found' });
+    expect(state.foundCount).toBe(1);
+  });
+
+  it('keeps the server medal cue and the next skip cost', () => {
+    const state = gameReducer(createInitialState(20), {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: {
+        remainingMs: 50_000,
+        foundCount: 4,
+        nextSkipTaxMs: 7000,
+        nextMedal: { tier: 'silver', pointsNeeded: 2 },
+      },
+    });
+    expect(state.nextSkipTaxMs).toBe(7000);
+    expect(state.nextMedal).toEqual({ tier: 'silver', pointsNeeded: 2 });
+    expect(state.stageFeedback).toBeNull();
+  });
+
   it('does not cue plain budget syncs', () => {
     const state = gameReducer(createInitialState(20), {
       type: 'TIME_ATTACK_BUDGET',
@@ -239,10 +268,11 @@ describe('gameReducer time-attack feedback', () => {
         remainingMs: 40_000,
         foundCount: 1,
         tax: 'skip',
-        skippedSong: song(3, 'One Piece'),
+        taxMs: 7000,
+        roundResult: { outcome: 'skipped', song: song(3, 'One Piece') },
       },
     });
-    expect(state.stageFeedback).toMatchObject({ kind: 'skip', deltaMs: -5000 });
+    expect(state.stageFeedback).toMatchObject({ kind: 'skip', deltaMs: -7000 });
     expect(state.recentTitles.map((t) => [t.anime, t.outcome])).toEqual([
       ['One Piece', 'skipped'],
       ['Bleach', 'missed'],

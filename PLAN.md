@@ -448,16 +448,17 @@ Branch `feat/time-attack` points at the same commit.
 **Intended design (what was built so far):**
 
 - **Rules:** solo only, typing only, clips start at the beginning. One global **budget**
-  (1 / 2 / 3 / 5 min, default 3). The clock ticks **only while guessing**.
+  (1 to 5 min, step 30 s, default 3). The clock ticks **only while guessing**.
 - **Scoring:** correct title **+1** then a **3 s** reveal (clock frozen) · **Skip** −5 s,
-  no reveal, next title at once · validated **wrong** answer −3 s, stay on the same title
-  (typing stays open; empty / too-short submits ignored) · clip reaches its end → 0 pt,
-  3 s reveal, next title · budget 0 or pool exhausted → game over (no point on the title
-  in progress).
+  then −7 / −9 … capped at −15 s unless punitive skip is off (flat −5 s), and the same 3 s reveal unless `timeAttackReveal` is off
+  · validated **wrong** answer −3 s, stay on the same title (typing stays open; empty /
+  too-short submits ignored) · clip reaches its end → 0 pt, 3 s reveal, next title ·
+  budget 0 or pool exhausted → game over (no point on the title in progress).
 - **Pool:** `min(80, max(20, ceil(budget / 3)))` titles (3 min → 60). Watched / playlist
   gates require `playable >= poolSize` (no silent catalogue fill).
-- **Medals:** found titles per minute (2 / 3 / 4 / 5 on medium + franchise → 6 / 9 / 12 /
-  15 in 3 min), same difficulty / precision malus as Standard. Victory = at least Bronze.
+- **Medals:** found titles per minute (**4 / 5 / 7 / 9** on medium + franchise → 12 / 15 /
+  21 / 27 in 3 min), same difficulty / precision malus as Standard. The live « encore N »
+  cue is server-side (`nextMedal`), from songs actually heard. Victory = at least Bronze.
 - **Server authority:** `MatchBudgetClock` beside `RoundClock`; `remainingMs` / `foundCount`
   in round payloads, sync and `timeAttack:budget`. The client interpolates, no client
   `ended` event. Solo pause freezes budget **and** clip, including a skip / reveal that
@@ -466,9 +467,10 @@ Branch `feat/time-attack` points at the same commit.
   « N trouvés », badge **CLM** + Timer (`aqua`), game-over in titles + medals, history CLM.
   Multi + `timeAttack` normalizes back to Standard.
 
-**Left before release:** end-to-end playtest (logged-in solo, all four budgets, pause
-mid-phase, skip spam, wrong answers, EOF, Watched pool gate), fix what the playtest finds,
-news id 10 + roadmap card, migration `…_match_game_mode_time_attack` on prod, then merge.
+**Left before release:** playtest rounds 1–5 are in the working tree (not committed).
+Still open: history on small screens (the right column is `hidden` below `lg`), then a
+commit. News id 10 and the roadmap card exist. Do not start Chrono multi. No `SITE_VERSION`
+bump until the slice is called shipped.
 
 ### 2. Profile pokédex — found bar
 

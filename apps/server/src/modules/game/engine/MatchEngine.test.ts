@@ -803,12 +803,14 @@ describe('MatchEngine', () => {
       opts: {
         playlist?: ReturnType<typeof makePlaylistItem>[];
         timeBudgetSeconds?: number;
+        reveal?: boolean;
       } = {},
     ) {
       return createEngineHarness({
         settings: {
           ...timeAttackSettings,
           timeBudgetSeconds: opts.timeBudgetSeconds ?? 60,
+          timeAttackReveal: opts.reveal ?? true,
         },
         playerIds: ['player-1'],
         playlist: opts.playlist ?? [
@@ -856,7 +858,7 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().remainingMs).toBe(before - 3000);
       const budget = emitted.filter((e) => e.event === 'timeAttack:budget').at(-1);
       expect(budget?.payload).toMatchObject({ tax: 'wrong', remainingMs: before - 3000 });
-      expect((budget?.payload as { skippedSong?: unknown }).skippedSong).toBeUndefined();
+      expect((budget?.payload as { roundResult?: unknown }).roundResult).toBeUndefined();
     });
 
     it('ignores empty submits', async () => {
@@ -870,8 +872,23 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().remainingMs).toBe(before);
     });
 
-    it('taxes 5s on skip and starts the next title without a reveal', async () => {
+    it('reveals the skipped title for 3 s with the budget frozen', async () => {
       const { engine, emitted } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      const before = engine.getSyncState().remainingMs ?? 0;
+
+      engine.forceEndRound();
+      expect(engine.getSyncState().phase).toBe('reveal');
+      const reveal = emitted.find((e) => e.event === 'round_reveal');
+      expect(reveal?.payload).toMatchObject({ skipped: true });
+
+      await vi.advanceTimersByTimeAsync(3000);
+      expect(engine.getSyncState().currentRound).toBe(2);
+      expect(engine.getSyncState().remainingMs).toBe(before - 5000);
+    });
+
+    it('taxes 5s on skip and starts the next title without a reveal when disabled', async () => {
+      const { engine, emitted } = createTimeAttackHarness({ reveal: false });
       await advanceToGuessing(engine);
       const before = engine.getSyncState().remainingMs ?? 0;
 
@@ -884,7 +901,65 @@ describe('MatchEngine', () => {
       const budget = emitted.find(
         (e) => e.event === 'timeAttack:budget' && (e.payload as { tax?: string }).tax === 'skip',
       );
-      expect(budget?.payload).toMatchObject({ tax: 'skip', skippedSong: { anime: 'Naruto' } });
+      expect(budget?.payload).toMatchObject({
+        tax: 'skip',
+        taxMs: 5000,
+        nextSkipTaxMs: 7000,
+        roundResult: { outcome: 'skipped', song: { anime: 'Naruto' } },
+      });
+    });
+
+    it('escalates the skip tax 5 s, 7 s, 9 s within a run', async () => {
+      const { engine } = createTimeAttackHarness({ timeBudgetSeconds: 300, reveal: false });
+      await advanceToGuessing(engine);
+      const start = engine.getSyncState().remainingMs ?? 0;
+
+      engine.forceEndRound();
+      engine.forceEndRound();
+
+      expect(engine.getSyncState().remainingMs).toBe(start - 5000 - 7000);
+    });
+
+    it('jumps straight to the next title when the reveal is disabled', async () => {
+      const { room, engine, emitted } = createEngineHarness({
+        settings: { ...timeAttackSettings, timeAttackReveal: false },
+        playerIds: ['player-1'],
+        playlist: [
+          makePlaylistItem({ id: 1, guessDuration: 10, clipDurationSeconds: 10 }),
+          makePlaylistItem({ id: 2, anime: 'Bleach', validAnswers: ['Bleach'] }),
+        ],
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+
+      expect(getPlayer(room, 'player-1').score).toBe(1);
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(2);
+      expect(emitted.some((e) => e.event === 'round_reveal')).toBe(false);
+      const result = emitted.find(
+        (e) =>
+          e.event === 'timeAttack:budget' &&
+          (e.payload as { roundResult?: { outcome: string } }).roundResult?.outcome === 'found',
+      );
+      expect(result).toBeDefined();
+    });
+
+    it('sends the next medal from heard songs, not the lobby difficulty', async () => {
+      const { engine, emitted } = createEngineHarness({
+        settings: { ...timeAttackSettings, difficulty: ['hard'], timeBudgetSeconds: 180 },
+        playerIds: ['player-1'],
+        playlist: [
+          makePlaylistItem({ difficulty: 'medium', guessDuration: 10, clipDurationSeconds: 10 }),
+        ],
+      });
+      await advanceToGuessing(engine);
+      const budget = emitted.find((e) => e.event === 'timeAttack:budget');
+      expect(budget?.payload).toMatchObject({
+        nextSkipTaxMs: 5000,
+        nextMedal: { tier: 'bronze', pointsNeeded: 12 },
+      });
+      expect(engine.getSyncState().nextMedal).toEqual({ tier: 'bronze', pointsNeeded: 12 });
     });
 
     it('reveals 3s with 0 points on clip EOF', async () => {
@@ -929,8 +1004,47 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().status).toBe('paused');
     });
 
-    it('keeps the budget frozen after a skip while paused', async () => {
+    it('pushes the frozen budget to the client on pause', async () => {
+      const { engine, emitted } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      await vi.advanceTimersByTimeAsync(2000);
+      emitted.length = 0;
+
+      engine.votePause('player-1');
+
+      const budget = emitted.find((e) => e.event === 'timeAttack:budget');
+      expect((budget?.payload as { remainingMs: number }).remainingMs).toBe(
+        engine.getSyncState().remainingMs,
+      );
+    });
+
+    it('resumes the clip and the budget once, even if resume is clicked twice', async () => {
       const { engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      engine.votePause('player-1');
+      engine.votePause('player-1');
+      engine.votePause('player-1');
+      await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.RESUME_COUNTDOWN + 50);
+
+      expect(engine.getSyncState().status).toBe('playing');
+      const before = engine.getSyncState().remainingMs ?? 0;
+      await vi.advanceTimersByTimeAsync(2000);
+      expect(engine.getSyncState().remainingMs).toBe(before - 2000);
+    });
+
+    it('ignores answers while paused', async () => {
+      const { room, engine } = createTimeAttackHarness();
+      await advanceToGuessing(engine);
+      engine.votePause('player-1');
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+
+      expect(getPlayer(room, 'player-1').score).toBe(0);
+      expect(engine.getSyncState().phase).toBe('guessing');
+    });
+
+    it('keeps the budget frozen after a skip while paused', async () => {
+      const { engine } = createTimeAttackHarness({ reveal: false });
       await advanceToGuessing(engine);
       engine.votePause('player-1');
       const pausedAt = engine.getSyncState().remainingMs ?? 0;

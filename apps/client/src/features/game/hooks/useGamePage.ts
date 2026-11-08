@@ -21,6 +21,7 @@ import {
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
+import { playAnswerSting } from '@/features/game/lib/playAnswerSting';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
@@ -54,6 +55,9 @@ export function useGamePage() {
     initialState.mode === 'solo' || settings.maxPlayers === 1 ? 'solo' : 'multiplayer';
 
   const currentUserId = profile?.id ?? '';
+  // "Retour Lobby" navigates to a lobby that re-joins this very room: freeing it on
+  // unmount would turn that join into « Salon introuvable » toasts.
+  const keepRoomRef = useRef(false);
 
   useEffect(() => suppressFloatingSettings(), []);
 
@@ -66,7 +70,10 @@ export function useGamePage() {
     initialVideoMode: normalizeVideoMode(settings.videoMode),
     watchedListLinked: hasWatchedListLink(profile ?? {}),
     isSolo: gameMode === 'solo',
-    onCancelled: () => navigate('/play', { state: { returnToLobby: true, roomId }, replace: true }),
+    onCancelled: () => {
+      keepRoomRef.current = true;
+      navigate('/play', { state: { returnToLobby: true, roomId }, replace: true });
+    },
     onClosed: (reason) => {
       if (isBanSanctionReason(reason)) {
         navigate('/', { replace: true });
@@ -114,12 +121,29 @@ export function useGamePage() {
     submitOnEnter,
     showShortcutReminder,
   } = usePlayerPrefs();
+
+  // Short sting so the answer is confirmed without looking away from the input.
+  const lastStingSeq = useRef(state.stageFeedback?.seq ?? 0);
+  useEffect(() => {
+    const fb = state.stageFeedback;
+    if (!timeAttack || !fb || fb.seq === lastStingSeq.current) return;
+    lastStingSeq.current = fb.seq;
+    if (!audioMuted) playAnswerSting(fb.kind, audioVolume);
+  }, [timeAttack, state.stageFeedback, audioMuted, audioVolume]);
+
+  const nextMedal =
+    !timeAttack || state.nextMedal === undefined
+      ? null
+      : state.nextMedal
+        ? GAME_COPY.timeAttack.nextMedal(state.nextMedal.pointsNeeded, state.nextMedal.tier)
+        : GAME_COPY.timeAttack.topMedal;
   const { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent } = useVideoPlayback({
     currentSong,
     phase,
     isGamePaused: state.isGamePaused,
     volume: audioVolume,
     isMuted: audioMuted,
+    resumeAfterPause: timeAttack,
   });
 
   const onVolumeChange = useCallback(
@@ -231,11 +255,14 @@ export function useGamePage() {
   soloFinishedRef.current = gameMode === 'solo' && Boolean(state.victoryData);
   useEffect(() => {
     return () => {
-      if (soloFinishedRef.current && roomId) socket.emit('leave_room', { roomId });
+      if (soloFinishedRef.current && !keepRoomRef.current && roomId) {
+        socket.emit('leave_room', { roomId });
+      }
     };
   }, [roomId]);
 
   const handleReturnToLobby = () => {
+    keepRoomRef.current = true;
     actions.returnToLobby();
     navigate('/play', { state: { returnToLobby: true, roomId }, replace: true });
   };
@@ -362,6 +389,8 @@ export function useGamePage() {
     showShortcutReminder,
     timeAttackClock,
     foundCount: timeAttack ? state.foundCount : null,
+    nextMedal,
+    nextSkipTaxMs: timeAttack ? state.nextSkipTaxMs : null,
     stageFeedback: timeAttack ? state.stageFeedback : null,
     recentTitles: state.recentTitles,
   };

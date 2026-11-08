@@ -34,6 +34,8 @@ const settingsSchema = z
     playlistWatched: z.boolean().default(false),
     speedBonusEnabled: z.boolean().default(false),
     timeBudgetSeconds: z.coerce.number().int().optional(),
+    timeAttackReveal: z.boolean().optional(),
+    timeAttackPunitiveSkip: z.boolean().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -103,6 +105,8 @@ function applyTimeAttackRules<
     songStartMode: 'random' | 'beginning';
     speedBonusEnabled: boolean;
     timeBudgetSeconds?: number;
+    timeAttackReveal?: boolean;
+    timeAttackPunitiveSkip?: boolean;
     soundCount: number;
   },
 >(settings: T): T {
@@ -112,6 +116,8 @@ function applyTimeAttackRules<
       ...settings,
       gameType: 'standard',
       timeBudgetSeconds: undefined,
+      timeAttackReveal: undefined,
+      timeAttackPunitiveSkip: undefined,
     };
   }
 
@@ -123,6 +129,8 @@ function applyTimeAttackRules<
     songStartMode: 'beginning',
     speedBonusEnabled: false,
     timeBudgetSeconds,
+    timeAttackReveal: settings.timeAttackReveal !== false,
+    timeAttackPunitiveSkip: settings.timeAttackPunitiveSkip !== false,
     soundCount: timeAttackPoolSize(timeBudgetSeconds),
   };
 }

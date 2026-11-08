@@ -24,6 +24,8 @@ interface GameTopBarProps {
   showRoundProgress?: boolean;
   /** Solo time-attack: titles found (the run clock lives on the video stage). */
   foundCount?: number | null;
+  /** Solo time-attack: distance to the next medal, e.g. « encore 4 pour l'or ». */
+  nextMedal?: string | null;
 }
 
 export function GameTopBar({
@@ -41,6 +43,7 @@ export function GameTopBar({
   showPause = true,
   showRoundProgress = true,
   foundCount = null,
+  nextMedal = null,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
   const timeAttackMeter = foundCount != null;
@@ -99,13 +102,16 @@ export function GameTopBar({
           </span>
         </div>
         {showRoundProgress && timeAttackMeter && (
-          <span
-            key={foundCount}
-            className="pointer-events-auto animate-scale-in font-mono text-sm font-bold tabular-nums text-success"
-            aria-live="polite"
-          >
-            {GAME_COPY.timeAttack.found(foundCount)}
-          </span>
+          <div className="pointer-events-auto flex items-baseline gap-2 font-mono text-sm tabular-nums">
+            <span
+              key={foundCount}
+              className="animate-scale-in font-bold text-success"
+              aria-live="polite"
+            >
+              {GAME_COPY.timeAttack.found(foundCount)}
+            </span>
+            {nextMedal && <span className="text-xs font-semibold text-accent">· {nextMedal}</span>}
+          </div>
         )}
         {showRoundProgress && !timeAttackMeter && (
           <div className="pointer-events-auto flex w-64 items-center justify-center gap-3 text-[10px] text-muted-foreground">

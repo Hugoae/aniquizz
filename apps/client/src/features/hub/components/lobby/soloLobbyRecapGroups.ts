@@ -5,9 +5,9 @@ import {
   GAME_TYPE_LABELS,
   getPrecisionChipLabel,
   normalizeVideoMode,
-  normalizeTimeBudgetSeconds,
   VIDEO_MODE_LABELS,
 } from '@aniquizz/shared';
+import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
 import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { SOUND_TYPES } from '@/features/hub/components/config/formOptions';
@@ -80,7 +80,7 @@ export function buildSoloLobbyRecapGroups(
           label: '',
           value:
             config.gameType === 'timeAttack'
-              ? `${normalizeTimeBudgetSeconds(config.timeBudgetSeconds) / 60} min`
+              ? formatTimeAttackBudget(config.timeBudgetSeconds)
               : `${config.soundCount} sons`,
           className: SETTING_CHIP_NEUTRAL,
         },

@@ -127,6 +127,7 @@ describe('timeAttack', () => {
     expect(settings.speedBonusEnabled).toBe(false);
     expect(settings.timeBudgetSeconds).toBe(180);
     expect(settings.soundCount).toBe(60);
+    expect(settings.timeAttackPunitiveSkip).toBe(true);
   });
 
   it('demotes multiplayer timeAttack to standard', () => {

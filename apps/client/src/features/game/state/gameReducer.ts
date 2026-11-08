@@ -13,6 +13,7 @@ import type {
   RoundStartPayload,
   SpeedLeaderboardPayload,
   TimeAttackBudgetPayload,
+  TimeAttackNextMedal,
   VictoryData,
   MatchSettingsSnapshot,
   VoteUpdatePayload,
@@ -45,8 +46,14 @@ export interface StageFeedback {
 export type RecentTitleOutcome = 'found' | 'missed' | 'skipped';
 export interface RecentTitle {
   key: string;
+  /** 1-based title number in the run. */
+  round: number;
   anime: string;
   title: string;
+  /** Display label, e.g. "OP1". */
+  type: string;
+  difficulty: string;
+  cover: string | null;
   outcome: RecentTitleOutcome;
 }
 export const RECENT_TITLES_LIMIT = 5;
@@ -83,6 +90,10 @@ export interface GameState {
   remainingMs: number | null;
   foundCount: number;
   budgetSyncedAt: number;
+  /** Next skip cost (ms). Null until the server sends a time-attack cue. */
+  nextSkipTaxMs: number | null;
+  /** Undefined until the first cue. Null means the top medal is already reached. */
+  nextMedal: TimeAttackNextMedal | null | undefined;
   stageFeedback: StageFeedback | null;
   /** Newest first, capped at `RECENT_TITLES_LIMIT`. Includes time-attack skips. */
   recentTitles: RecentTitle[];
@@ -161,6 +172,8 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     remainingMs: null,
     foundCount: 0,
     budgetSyncedAt: 0,
+    nextSkipTaxMs: null,
+    nextMedal: undefined,
     stageFeedback: null,
     recentTitles: [],
   };
@@ -178,8 +191,12 @@ function pushRecentTitle(
 ): RecentTitle[] {
   const entry: RecentTitle = {
     key: `${round}-${song.id}`,
+    round,
     anime: song.anime,
     title: song.title,
+    type: song.type,
+    difficulty: song.difficulty,
+    cover: song.cover ?? null,
     outcome,
   };
   return [entry, ...list.filter((t) => t.key !== entry.key)].slice(0, RECENT_TITLES_LIMIT);
@@ -192,14 +209,30 @@ function localEndsAt(t: { serverNow: number; endsAt?: number; startsAt?: number 
 }
 
 function budgetPatch(
-  payload: { remainingMs?: number; foundCount?: number },
+  payload: {
+    remainingMs?: number;
+    foundCount?: number;
+    nextSkipTaxMs?: number;
+    nextMedal?: TimeAttackNextMedal | null;
+  },
   state: GameState,
-): Pick<GameState, 'remainingMs' | 'foundCount' | 'budgetSyncedAt'> | Record<string, never> {
-  if (payload.remainingMs == null && payload.foundCount == null) return {};
+):
+  | Pick<GameState, 'remainingMs' | 'foundCount' | 'budgetSyncedAt' | 'nextSkipTaxMs' | 'nextMedal'>
+  | Record<string, never> {
+  if (
+    payload.remainingMs == null &&
+    payload.foundCount == null &&
+    payload.nextSkipTaxMs == null &&
+    payload.nextMedal === undefined
+  ) {
+    return {};
+  }
   return {
     remainingMs: payload.remainingMs ?? state.remainingMs,
     foundCount: payload.foundCount ?? state.foundCount,
     budgetSyncedAt: Date.now(),
+    nextSkipTaxMs: payload.nextSkipTaxMs ?? state.nextSkipTaxMs,
+    nextMedal: payload.nextMedal !== undefined ? payload.nextMedal : state.nextMedal,
   };
 }
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -304,13 +337,28 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'TIME_ATTACK_BUDGET': {
       const p = action.payload;
       const next = { ...state, ...budgetPatch(p, state) };
-      if (!p.tax) return next;
-      const deltaMs = p.tax === 'skip' ? -TIME_ATTACK_SKIP_TAX_MS : -TIME_ATTACK_WRONG_TAX_MS;
+      if (!p.tax && !p.roundResult) return next;
+      const result = p.roundResult;
+      const kind: StageFeedbackKind = p.tax
+        ? p.tax
+        : result?.outcome === 'found'
+          ? 'correct'
+          : 'missed';
+      const fallbackTax = p.tax === 'skip' ? -TIME_ATTACK_SKIP_TAX_MS : -TIME_ATTACK_WRONG_TAX_MS;
       return {
         ...next,
-        stageFeedback: nextFeedback(state, p.tax, deltaMs),
-        recentTitles: p.skippedSong
-          ? pushRecentTitle(state.recentTitles, p.skippedSong, 'skipped', state.currentRound)
+        stageFeedback: nextFeedback(state, kind, p.tax ? -(p.taxMs ?? -fallbackTax) : undefined),
+        recentTitles: result
+          ? pushRecentTitle(
+              state.recentTitles,
+              result.song,
+              result.outcome === 'found'
+                ? 'found'
+                : result.outcome === 'skipped'
+                  ? 'skipped'
+                  : 'missed',
+              state.currentRound,
+            )
           : state.recentTitles,
       };
     }
@@ -349,11 +397,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         ...budgetPatch(p, state),
         ...(me
           ? {
-              stageFeedback: nextFeedback(state, me.isCorrect === true ? 'correct' : 'missed'),
+              stageFeedback: p.skipped
+                ? state.stageFeedback
+                : nextFeedback(state, me.isCorrect === true ? 'correct' : 'missed'),
               recentTitles: pushRecentTitle(
                 state.recentTitles,
                 p.song,
-                me.isCorrect === true ? 'found' : 'missed',
+                p.skipped ? 'skipped' : me.isCorrect === true ? 'found' : 'missed',
                 p.round,
               ),
             }
@@ -474,6 +524,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           {
             remainingMs: s.remainingMs ?? s.round?.remainingMs ?? s.reveal?.remainingMs,
             foundCount: s.foundCount ?? s.round?.foundCount ?? s.reveal?.foundCount,
+            nextSkipTaxMs: s.nextSkipTaxMs ?? s.round?.nextSkipTaxMs ?? s.reveal?.nextSkipTaxMs,
+            nextMedal:
+              s.nextMedal !== undefined
+                ? s.nextMedal
+                : s.round?.nextMedal !== undefined
+                  ? s.round.nextMedal
+                  : s.reveal?.nextMedal,
           },
           state,
         ),

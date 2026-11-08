@@ -53,7 +53,7 @@ const STANDARD_MODE_INTRO =
   "Blindtest anime : écoute un extrait et devine l'anime avant la fin du chrono.";
 
 const TIME_ATTACK_INTRO =
-  'Trouvez le plus de titres avant la fin du temps. Un skip retire 5 secondes. Une erreur retire 3 secondes.';
+  'Trouvez le plus de titres avant la fin du temps. Un skip retire 5 secondes, puis 7, 9… Une erreur retire 3 secondes.';
 
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
@@ -71,9 +71,13 @@ const scoringLinesForConfig = (config: GameConfig): string[] => {
   if (config.gameType === 'timeAttack') {
     return [
       'Chaque titre trouvé vaut 1 point.',
-      'Un skip illimité retire 5 secondes et enchaîne tout de suite, sans révélation.',
+      config.timeAttackPunitiveSkip === false
+        ? 'Un skip illimité retire 5 secondes.'
+        : "Un skip illimité retire 5 secondes, puis 7, 9… jusqu'à 15.",
       'Une erreur validée retire 3 secondes ; vous restez sur le même titre.',
-      'La révélation dure 3 secondes, hors chrono.',
+      config.timeAttackReveal === false
+        ? 'Sans révélation : trouvé, raté ou passé, le titre suivant démarre tout de suite (réponse dans l’historique).'
+        : 'Trouvé, raté ou passé : révélation de 3 secondes, hors chrono.',
     ];
   }
   return isSpeedBonusEnabled(config)

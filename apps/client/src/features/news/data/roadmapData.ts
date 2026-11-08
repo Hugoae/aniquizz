@@ -86,7 +86,7 @@ export const roadmapData: RoadmapItem[] = [
   {
     title: 'Contre-la-montre',
     description:
-      'Mode solo : budget 1 à 5 min, +1 par titre, skip −5 s, erreur −3 s. Pastille CLM.',
+      'Mode solo : budget 1 à 5 min, +1 par titre, skip −5 s puis 7, 9…, erreur −3 s. Pastille CLM.',
     status: 'done',
     date: '16 septembre 2026',
   },

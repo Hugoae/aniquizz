@@ -189,6 +189,25 @@ describe('GameConfigForm', () => {
     expect(screen.queryByRole('button', { name: /contre-la-montre/i })).toBeNull();
   });
 
+  it('keeps the mode selector when editing a solo room', () => {
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, gameType: 'timeAttack', maxPlayers: 1 }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        hideRoomSettings
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /standard/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /contre-la-montre/i })).toBeInTheDocument();
+  });
+
   it('shows a disabled Vitesse switch in multi QCM', () => {
     render(
       <GameConfigForm

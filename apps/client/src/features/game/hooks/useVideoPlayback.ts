@@ -14,6 +14,8 @@ interface UseVideoPlaybackArgs {
   volume: number;
   /** Player mute flag (owned by player prefs, not this hook). */
   isMuted: boolean;
+  /** Replay the current clip when the pause ends (phase was frozen, not restarted). */
+  resumeAfterPause?: boolean;
 }
 
 interface UseVideoPlaybackResult {
@@ -111,12 +113,15 @@ export function useVideoPlayback({
   isGamePaused,
   volume,
   isMuted,
+  resumeAfterPause = false,
 }: UseVideoPlaybackArgs): UseVideoPlaybackResult {
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement>(null);
   const volumeRef = useRef(volume);
   const isMutedRef = useRef(isMuted);
   const loadedClipRef = useRef<string | null>(null);
+  const pausedRef = useRef(isGamePaused);
+  pausedRef.current = isGamePaused;
   const warmedClipRef = useRef<string | null>(null);
 
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -204,6 +209,8 @@ export function useVideoPlayback({
         await loadClipAtOffset(el, videoKey, startTime, controller.signal);
         if (controller.signal.aborted) return;
         loadedClipRef.current = clipKey;
+        // A skip can land while paused: stay silent, the resume effect plays it.
+        if (pausedRef.current) return;
         await playElement(el, controller.signal);
       } catch (e) {
         if (controller.signal.aborted) return;
@@ -215,10 +222,23 @@ export function useVideoPlayback({
     return () => controller.abort();
   }, [currentSong, playElement]);
 
-  // Pause the media element whenever the match is paused.
+  // Pause the media element whenever the match is paused. Modes that freeze a
+  // phase mid-clip (solo time-attack) keep the same clip on resume, so it must be
+  // played again here; other modes restart on a fresh round_start instead.
+  const wasPausedRef = useRef(false);
   useEffect(() => {
-    if (isGamePaused) videoRef.current?.pause();
-  }, [isGamePaused]);
+    const el = videoRef.current;
+    if (isGamePaused) {
+      wasPausedRef.current = true;
+      el?.pause();
+      return;
+    }
+    if (!wasPausedRef.current) return;
+    wasPausedRef.current = false;
+    if (!resumeAfterPause || !el || el.ended) return;
+    if (phase !== 'guessing' && phase !== 'revealed') return;
+    void playElement(el);
+  }, [isGamePaused, resumeAfterPause, phase, playElement]);
 
   const resumeCurrent = () => {
     const el = videoRef.current;

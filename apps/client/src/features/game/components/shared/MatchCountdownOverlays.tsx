@@ -127,17 +127,9 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
           className="absolute left-4 top-4 z-20 flex items-center gap-2 rounded-lg border border-border/60 bg-background/95 px-3 py-1.5"
           role="status"
           aria-live="polite"
-          aria-label={budget?.ariaLabel}
         >
-          <div
-            className={cn(
-              'h-2 w-2 animate-pulse rounded-full',
-              budget?.urgent ? 'bg-destructive' : budget ? 'bg-aqua' : 'bg-primary',
-            )}
-          />
-          <span className="font-mono font-bold tabular-nums text-foreground">
-            {budget ? budget.label : `${timeLeft}s`}
-          </span>
+          <div className={cn('h-2 w-2 animate-pulse rounded-full', 'bg-primary')} />
+          <span className="font-mono font-bold tabular-nums text-foreground">{`${timeLeft}s`}</span>
         </div>
       )}
 

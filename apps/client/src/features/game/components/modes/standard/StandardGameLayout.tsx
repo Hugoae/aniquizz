@@ -9,6 +9,7 @@ import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { activeMatchPlayers } from '../../../utils/ranking';
 import { StageFeedbackFrame } from './parts/StageFeedbackFrame';
 import { RecentTitlesStrip } from './parts/RecentTitlesStrip';
+import { RecentTitlesPills } from './parts/RecentTitlesPills';
 
 const NO_RECENT_TITLES: RecentTitle[] = [];
 
@@ -89,6 +90,8 @@ interface StandardGameLayoutProps {
   /** Solo time-attack run clock (memoised). Null outside time-attack. */
   timeAttackClock?: TimeAttackClock | null;
   foundCount?: number | null;
+  nextMedal?: string | null;
+  nextSkipTaxMs?: number | null;
   stageFeedback?: StageFeedback | null;
   recentTitles?: RecentTitle[];
   /** Daily — no running score or +pts toast. */
@@ -156,6 +159,8 @@ function StandardGameLayoutInner({
   showRoundProgress = true,
   timeAttackClock = null,
   foundCount = null,
+  nextMedal = null,
+  nextSkipTaxMs = null,
   stageFeedback = null,
   recentTitles = NO_RECENT_TITLES,
   hideScores = false,
@@ -223,6 +228,7 @@ function StandardGameLayoutInner({
         showPause={showPause}
         showRoundProgress={showRoundProgress}
         foundCount={timeAttack ? foundCount : null}
+        nextMedal={timeAttack ? nextMedal : null}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -268,7 +274,11 @@ function StandardGameLayoutInner({
                     submittedAnswer={submittedAnswer}
                     onSoloSkip={handleSoloSkip}
                     soloSkipAlways={timeAttack}
-                    soloSkipLabel={timeAttack ? 'Passer' : 'Révéler'}
+                    soloSkipLabel={
+                      timeAttack
+                        ? `Passer −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`
+                        : 'Révéler'
+                    }
                     playersCount={activeRosterCount}
                     skipVotes={skipVotes}
                     skipRequired={skipRequired}
@@ -316,6 +326,10 @@ function StandardGameLayoutInner({
                   )}
                 </div>
 
+                {timeAttack && (
+                  <RecentTitlesPills titles={recentTitles} className="mb-2 lg:hidden" />
+                )}
+
                 <PlayersFloor
                   players={players}
                   currentUserId={currentUserId}
@@ -329,8 +343,8 @@ function StandardGameLayoutInner({
               </div>
 
               {/* Right column: song info card + speed board (aligned with player cards). */}
-              <div className="hidden shrink-0 flex-col self-start lg:flex lg:w-[440px] xl:w-[520px]">
-                <div className="h-[34vh] shrink-0">
+              <div className="hidden h-full min-h-0 shrink-0 flex-col overflow-hidden lg:flex lg:w-[440px] xl:w-[520px]">
+                <div className={cn('shrink-0', timeAttack ? 'h-[28vh]' : 'h-[34vh]')}>
                   <SongInfoCard
                     variant="card"
                     isRevealed={phase === 'revealed'}
@@ -352,7 +366,9 @@ function StandardGameLayoutInner({
                     />
                   </div>
                 )}
-                {timeAttack && <RecentTitlesStrip titles={recentTitles} className="mt-4" />}
+                {timeAttack && (
+                  <RecentTitlesStrip titles={recentTitles} className="mt-6 shrink-0" />
+                )}
               </div>
             </div>
           </div>

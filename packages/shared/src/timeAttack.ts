@@ -11,22 +11,30 @@ import {
 import type { Precision } from './precision';
 import type { GameType } from './types';
 
-export const TIME_ATTACK_BUDGETS_SECONDS = [60, 120, 180, 300] as const;
-export type TimeAttackBudgetSeconds = (typeof TIME_ATTACK_BUDGETS_SECONDS)[number];
-
-export const TIME_ATTACK_DEFAULT_BUDGET_SECONDS: TimeAttackBudgetSeconds = 180;
+/** Guess budget, 1 min to 5 min, one step every 30 s. */
+export const TIME_ATTACK_MIN_BUDGET_SECONDS = 60;
+export const TIME_ATTACK_MAX_BUDGET_SECONDS = 300;
+export const TIME_ATTACK_BUDGET_STEP_SECONDS = 30;
+export const TIME_ATTACK_DEFAULT_BUDGET_SECONDS = 180;
 export const TIME_ATTACK_REVEAL_SECONDS = 3;
 export const TIME_ATTACK_SKIP_TAX_MS = 5_000;
+export const TIME_ATTACK_SKIP_TAX_STEP_MS = 2_000;
+export const TIME_ATTACK_SKIP_TAX_MAX_MS = 15_000;
 export const TIME_ATTACK_WRONG_TAX_MS = 3_000;
 export const TIME_ATTACK_MIN_CLIP_SECONDS = 8;
 export const TIME_ATTACK_MAX_CLIP_SECONDS = 90;
 
-/** Found titles per minute required for each medal on medium + franchise. */
+/**
+ * Found titles per minute required for each medal on medium + franchise.
+ * Raised after the first playtest: 2/3/4/5 (3 min → 6/9/12/15) was cleared too
+ * easily once autocomplete is in play. 4/6/8/10 was a notch too steep; 4/5/7/9
+ * → 12/15/21/27 in 3 min.
+ */
 const TIME_ATTACK_FOUND_PER_MINUTE: Record<Medal, number> = {
-  bronze: 2,
-  silver: 3,
-  gold: 4,
-  platinum: 5,
+  bronze: 4,
+  silver: 5,
+  gold: 7,
+  platinum: 9,
 };
 
 export type TimeAttackTaxKind = 'skip' | 'wrong';
@@ -37,11 +45,16 @@ export interface TimeAttackSettings {
   maxPlayers?: number | null;
 }
 
-export function normalizeTimeBudgetSeconds(
-  value: number | null | undefined,
-): TimeAttackBudgetSeconds {
-  if (value === 60 || value === 120 || value === 180 || value === 300) return value;
-  return TIME_ATTACK_DEFAULT_BUDGET_SECONDS;
+export function normalizeTimeBudgetSeconds(value: number | null | undefined): number {
+  if (value == null || !Number.isFinite(value)) return TIME_ATTACK_DEFAULT_BUDGET_SECONDS;
+  const clamped = Math.min(
+    TIME_ATTACK_MAX_BUDGET_SECONDS,
+    Math.max(TIME_ATTACK_MIN_BUDGET_SECONDS, value),
+  );
+  const steps = Math.round(
+    (clamped - TIME_ATTACK_MIN_BUDGET_SECONDS) / TIME_ATTACK_BUDGET_STEP_SECONDS,
+  );
+  return TIME_ATTACK_MIN_BUDGET_SECONDS + steps * TIME_ATTACK_BUDGET_STEP_SECONDS;
 }
 
 export function timeAttackPoolSize(budgetSeconds: number): number {
@@ -57,9 +70,31 @@ export function clipGuessSeconds(duration: number | null | undefined): number {
   );
 }
 
-export function applyTimeAttackTax(remainingMs: number, kind: TimeAttackTaxKind): number {
-  const tax = kind === 'skip' ? TIME_ATTACK_SKIP_TAX_MS : TIME_ATTACK_WRONG_TAX_MS;
-  return Math.max(0, remainingMs - tax);
+/**
+ * Skips get pricier within a run (5 s, 7 s, 9 s … capped), so « skip everything I
+ * do not know in two seconds » stops being the optimal strategy. Wrong answers are flat.
+ */
+export function timeAttackTaxMs(
+  kind: TimeAttackTaxKind,
+  skipsSoFar = 0,
+  escalateSkips = true,
+): number {
+  if (kind === 'wrong' || !escalateSkips) {
+    return kind === 'wrong' ? TIME_ATTACK_WRONG_TAX_MS : TIME_ATTACK_SKIP_TAX_MS;
+  }
+  return Math.min(
+    TIME_ATTACK_SKIP_TAX_MAX_MS,
+    TIME_ATTACK_SKIP_TAX_MS + Math.max(0, skipsSoFar) * TIME_ATTACK_SKIP_TAX_STEP_MS,
+  );
+}
+
+export function applyTimeAttackTax(
+  remainingMs: number,
+  kind: TimeAttackTaxKind,
+  skipsSoFar = 0,
+  escalateSkips = true,
+): number {
+  return Math.max(0, remainingMs - timeAttackTaxMs(kind, skipsSoFar, escalateSkips));
 }
 
 /** True after settings normalize: live time-attack is solo-only this slice. */
@@ -74,8 +109,8 @@ function minutesForBudget(budgetSeconds: number): number {
 }
 
 /**
- * Integer found-count bars. Medium + franchise stays 2/3/4/5 per minute
- * (3 min → 6/9/12/15). Difficulty / precision use the same relative malus as
+ * Integer found-count bars. Medium + franchise is 4/5/7/9 per minute
+ * (3 min → 12/15/21/27). Difficulty / precision use the same relative malus as
  * Standard mastery ratios.
  */
 export function timeAttackMedalTargets(

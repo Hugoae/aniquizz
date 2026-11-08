@@ -1,4 +1,4 @@
-import { applyTimeAttackTax, type TimeAttackTaxKind } from '@aniquizz/shared';
+import { applyTimeAttackTax, timeAttackTaxMs, type TimeAttackTaxKind } from '@aniquizz/shared';
 
 /**
  * Match-wide guess budget for solo time-attack. Ticks only while guessing;
@@ -11,6 +11,18 @@ export class MatchBudgetClock {
   private startedAt = 0;
   private onExpire: (() => void) | null = null;
   private armed = false;
+  private skipCount = 0;
+  private lastTaxMs = 0;
+
+  /** Amount removed by the latest `tax()` call (ms). */
+  get lastTax(): number {
+    return this.lastTaxMs;
+  }
+
+  /** Skips already taken this run. The next skip costs `timeAttackTaxMs('skip', skips)`. */
+  get skips(): number {
+    return this.skipCount;
+  }
 
   get isArmed(): boolean {
     return this.armed;
@@ -27,6 +39,8 @@ export class MatchBudgetClock {
     this.armed = true;
     this.running = false;
     this.startedAt = 0;
+    this.skipCount = 0;
+    this.lastTaxMs = 0;
   }
 
   /** Start or resume ticking. No-op when unarmed or already running. */
@@ -61,8 +75,11 @@ export class MatchBudgetClock {
    * Subtract a skip/wrong tax. Restarts the live timer when ticking.
    * Does not fire `onExpire` — the caller decides whether to finish.
    */
-  tax(kind: TimeAttackTaxKind): number {
-    const next = applyTimeAttackTax(this.getRemainingMs(), kind);
+  tax(kind: TimeAttackTaxKind, escalateSkips = true): number {
+    const skipsSoFar = this.skipCount;
+    if (kind === 'skip') this.skipCount += 1;
+    this.lastTaxMs = timeAttackTaxMs(kind, skipsSoFar, escalateSkips);
+    const next = applyTimeAttackTax(this.getRemainingMs(), kind, skipsSoFar, escalateSkips);
     this.remainingStoredMs = next;
     if (this.running) {
       this.clearTimer();
@@ -85,6 +102,8 @@ export class MatchBudgetClock {
     this.armed = false;
     this.onExpire = null;
     this.startedAt = 0;
+    this.skipCount = 0;
+    this.lastTaxMs = 0;
   }
 
   private clearTimer(): void {

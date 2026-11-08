@@ -73,6 +73,9 @@ export const GAME_COPY = {
   timeAttack: {
     clockAria: (clock: string) => `Temps restant de la partie : ${clock}`,
     found: (n: number) => `${n} trouvé${n === 1 ? '' : 's'}`,
+    nextMedal: (needed: number, tier: 'bronze' | 'silver' | 'gold' | 'platinum') =>
+      `encore ${needed} pour ${{ bronze: 'le bronze', silver: "l'argent", gold: "l'or", platinum: 'le platine' }[tier]}`,
+    topMedal: 'médaille maximale !',
   },
 } as const;
 

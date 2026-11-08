@@ -1,4 +1,4 @@
-import { Trophy, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
+import { Timer, Trophy, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import {
   withPlaylistPoolSoundCount,
@@ -119,7 +119,7 @@ export function SoloReady({
     !poolCheck.blocked &&
     !playlistPoolCheck.blocked;
   const modeBadge = gameSettings ? soloLobbyModeBadge(gameSettings) : 'Standard · Solo';
-  const ModeIcon = Trophy;
+  const ModeIcon = gameSettings?.gameType === 'timeAttack' ? Timer : Trophy;
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col bg-background">

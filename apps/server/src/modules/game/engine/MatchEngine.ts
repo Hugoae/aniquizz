@@ -32,6 +32,7 @@ import { replayDuoLifeline, useDuoLifeline } from './matchEngineDuo';
 import { buildAdminProgress, buildMatchSyncState, heardSongIds } from './matchEngineSync';
 import {
   applyTimeAttackRoundTax,
+  emitTimeAttackBudget,
   isTimeAttackHost,
   onTimeAttackBudgetExpired,
   resumeFrozenTimeAttack,
@@ -138,6 +139,8 @@ export class MatchEngine {
     options?: { revealAfterAnswer?: boolean },
   ): void {
     if (this.phase !== 'guessing' || this.isRoundEnded) return;
+    // Frozen clocks: an answer now would score (or tax) against a stopped round.
+    if (this.room.status === 'paused') return;
     const player = this.room.players.get(userId);
     const item = this.playlist[this.currentRoundIndex];
     if (!player || !item || !player.isConnected) return;
@@ -291,6 +294,9 @@ export class MatchEngine {
     if (this.pausedDuringPhase) {
       this.clock.pause();
       this.budget.pause();
+      // Without this the client keeps the budget from the last tax / round start,
+      // shows a stale clock while paused, then jumps when play resumes.
+      emitTimeAttackBudget(this.asHost());
     } else {
       this.clock.clear();
     }
@@ -302,9 +308,14 @@ export class MatchEngine {
   }
 
   private resume(): void {
+    // A second click during the 3 s countdown must not stack another resume
+    // (it would double-start the clocks and the next round).
+    if (this.resumeTimer) return;
     this.room.markResumed();
     this.channel.emit('game_resuming', { duration: 3 });
     this.resumeTimer = setTimeout(() => {
+      this.resumeTimer = null;
+      if (this.room.status !== 'paused') return;
       this.room.status = 'playing';
       this.channel.emit('game_paused', { isPaused: false });
       if (this.pausedDuringPhase) {

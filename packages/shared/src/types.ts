@@ -49,9 +49,19 @@ export interface GameConfig {
    */
   speedBonusEnabled?: boolean;
   /**
-   * Solo time-attack budget in seconds (60 | 120 | 180 | 300). Ignored on Standard.
+   * Solo time-attack budget in seconds (60–300, step 30). Ignored on Standard.
    */
   timeBudgetSeconds?: number;
+  /**
+   * Solo time-attack: skips get more expensive within the run (default true).
+   * False keeps every skip at the flat 5 s tax.
+   */
+  timeAttackPunitiveSkip?: boolean;
+  /**
+   * Solo time-attack: show the 3 s reveal after a found / missed title (default true).
+   * False jumps straight to the next clip; the recent-titles list still shows the answer.
+   */
+  timeAttackReveal?: boolean;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */

@@ -23,7 +23,7 @@ interface GameTypeSelectorProps {
   className?: string;
 }
 
-/** Solo create only — Chrono is not offered in multiplayer this slice. */
+/** Solo create and solo lobby edit. Chrono is not offered in multiplayer this slice. */
 export function GameTypeSelector({ value, onChange, className }: GameTypeSelectorProps) {
   return (
     <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-stretch', className)}>

@@ -1,6 +1,7 @@
 import type { RoomConfig } from '@aniquizz/shared';
 import { VideoDisplaySection } from './VideoDisplaySection';
 import { SongStartSection } from './SongStartSection';
+import { TimeAttackRevealOption } from './TimeAttackRevealOption';
 
 interface AdvancedSectionProps {
   config: RoomConfig;
@@ -13,7 +14,11 @@ export function AdvancedSection({ config, update }: AdvancedSectionProps) {
   return (
     <div className="space-y-4">
       <VideoDisplaySection config={config} update={update} />
-      {timeAttack ? null : <SongStartSection config={config} update={update} />}
+      {timeAttack ? (
+        <TimeAttackRevealOption config={config} update={update} />
+      ) : (
+        <SongStartSection config={config} update={update} />
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 // Player identity is ALWAYS `userId` (Supabase auth). Never socket.id.
 
 import type { GamePlayer, GameType, RoomConfig } from './types';
-import type { MedalTier } from './grading';
+import type { Medal, MedalTier } from './grading';
 import type { UserRole } from './roles';
 import type { Precision } from './precision';
 import type { PeekWindow, VideoMode } from './videoMode';
@@ -122,6 +122,10 @@ export interface RoundStartPayload extends PhaseTiming {
   remainingMs?: number;
   /** Solo time-attack: titles found so far. */
   foundCount?: number;
+  /** Solo time-attack: cost of the next skip (ms). */
+  nextSkipTaxMs?: number;
+  /** Solo time-attack: titles still needed for the next medal. Null = top medal. */
+  nextMedal?: TimeAttackNextMedal | null;
 }
 
 /** Two labels for the player who spent the Mix Duo lifeline. Never broadcast. */
@@ -156,6 +160,8 @@ export interface SpeedLeaderboardPayload {
 
 export interface RoundRevealPayload extends PhaseTiming {
   round: number;
+  /** Time-attack: this reveal follows a skip (history shows « passé », not « raté »). */
+  skipped?: boolean;
   song: RevealSong;
   /** Full player states, answers + correctness + points revealed here only. */
   players: GamePlayer[];
@@ -165,16 +171,33 @@ export interface RoundRevealPayload extends PhaseTiming {
   nextVideoStartTime: number | null;
   remainingMs?: number;
   foundCount?: number;
+  nextSkipTaxMs?: number;
+  nextMedal?: TimeAttackNextMedal | null;
+}
+
+/** Distance to the next time-attack medal, from songs actually heard. */
+export interface TimeAttackNextMedal {
+  tier: Medal;
+  pointsNeeded: number;
 }
 
 /** Solo time-attack budget after a tax or phase change (server-authoritative). */
 export interface TimeAttackBudgetPayload {
   remainingMs: number;
   foundCount: number;
+  /** Cost of the next skip (ms). Skips escalate within the run. */
+  nextSkipTaxMs?: number;
+  /** Null once the top medal is already reached. */
+  nextMedal?: TimeAttackNextMedal | null;
   /** Set when this update is a tax, so the client can play wrong / skip feedback. */
   tax?: 'skip' | 'wrong';
-  /** Skips have no reveal phase: the skipped title rides here for the recent-titles strip. */
-  skippedSong?: RevealSong;
+  /** Time removed by `tax` (ms); skips escalate within a run. */
+  taxMs?: number;
+  /**
+   * How a title ended when no `round_reveal` follows (skip, or reveal disabled):
+   * drives the recent-titles list and the found / missed cues.
+   */
+  roundResult?: { outcome: 'found' | 'missed' | 'skipped'; song: RevealSong };
 }
 
 /** Ask the client to warm a clip's buffer ahead of time (round 1 during the
@@ -304,6 +327,10 @@ export interface GameSyncState {
   remainingMs?: number;
   /** Solo time-attack: titles found so far. Absent on Standard. */
   foundCount?: number;
+  /** Solo time-attack: cost of the next skip (ms). Absent on Standard. */
+  nextSkipTaxMs?: number;
+  /** Solo time-attack: next medal, or null at the top. Absent on Standard. */
+  nextMedal?: TimeAttackNextMedal | null;
 }
 
 // --- LOBBY PAYLOADS ---

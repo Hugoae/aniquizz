@@ -251,7 +251,7 @@ export function GameConfigForm<T extends GameConfig>({
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {!isRoom && (
+        {(!isRoom || (cfg.maxPlayers ?? 1) <= 1) && (
           <div className="mb-3">
             <GameTypeSelector value={cfg.gameType ?? 'standard'} onChange={handleGameTypeChange} />
           </div>
