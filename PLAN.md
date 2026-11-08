@@ -2,19 +2,19 @@
 
 Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned updates.
 
-| Version    | Status         | Summary                                                                                                               |
-| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
-| **26.0**   | 🚀 Launch      | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                     |
-| **26.1**   | ✅ Shipped     | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10). |
-| **26.2**   | ✅ Shipped     | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                    |
-| **26.3**   | ✅ Shipped     | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                              |
-| **26.4**   | ✅ Shipped     | Song likes, suggestions, library views, community leaderboard                                                         |
-| **26.5**   | ✅ Shipped     | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                      |
-| **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
-| **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
-| **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
+| Version    | Status         | Summary                                                                                                                                       |
+| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| **26.0**   | 🚀 Launch      | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                                             |
+| **26.1**   | ✅ Shipped     | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10).                         |
+| **26.2**   | ✅ Shipped     | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                                            |
+| **26.3**   | ✅ Shipped     | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                                                      |
+| **26.4**   | ✅ Shipped     | Song likes, suggestions, library views, community leaderboard                                                                                 |
+| **26.5**   | ✅ Shipped     | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                                              |
+| **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                                           |
+| **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                                                     |
+| **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                                          |
 | **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 + footer `v26.7` ✅ · pokédex found bar remaining |
-| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                               |
+| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                                                       |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
 
@@ -516,13 +516,13 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 ### Game modes (new engines or major variants)
 
-| Item                                        | Notes                                                                                                                          |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                          |
-| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                              |
-| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** solo and versus shipped in **26.7** (spec `docs/game/time-attack.md`). |
-| **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy.       |
-| **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                            |
+| Item                                        | Notes                                                                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                    |
+| **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                        |
+| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** solo and versus shipped in **26.7** (spec `docs/game/time-attack.md`).          |
+| **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy. |
+| **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                      |
 
 ### Product & UX
 
@@ -531,7 +531,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | **Traduction EN**                    | Wire i18n; UI strings already isolated (French default).                                                                                                                                                         |
 | **Light mode**                       | Removed Phase 8 (dark-only); re-add requires token audit + `UserAvatar`/game surfaces.                                                                                                                           |
 | **Franchise catalogue cleanup**      | Data pass: DBZ, Naruto, AOT spin-offs → canonical franchises.                                                                                                                                                    |
-| **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources were dropped from **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                              |
+| **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources were dropped from **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                             |
 | **Graphiques statistiques (profil)** | Visual breakdown on profile · period filter · Recharts lazy on `/profile`. DB snapshots already persist (`Match.responseType`, `Match.precision`, `MatchPlayer.soloMedal`); UI + aggregation API still deferred. |
 
 ### Infra & quality (as needed)

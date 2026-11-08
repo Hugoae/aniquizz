@@ -9,27 +9,27 @@
 
 Playtest closed. Spec: `docs/game/time-attack.md`. Solo is on `main` (`9245d8e`). Versus and the fixes below are uncommitted. Do not reopen the mode.
 
-| Piece        | Decision                                                                                                                                                                                                                                    |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Solo**     | Found/heard instead of points. Header medal cue is four icons. A zero budget still reveals the title, then the end screen. Heard is the round index, not the 5-title window.                                                              |
+| Piece        | Decision                                                                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Solo**     | Found/heard instead of points. Header medal cue is four icons. A zero budget still reveals the title, then the end screen. Heard is the round index, not the 5-title window.                                                                 |
 | **Versus**   | `RaceEngine`, 2–8, shared playlist, Watched forbidden. Private round events. Board: found, heard, budget, streak, no titles. Rank = most found, then fewest heard. Humans only for the win, podium, and placement XP. Bots stay in the list. |
-| **Playback** | Video mode stays the room setting. Song start defaults to the beginning; random may shorten the clip (8 s floor, reveal + 2 s margin). Pool stays `budget / 3` (20–80): that already covers an 8 s tail and a 5 s skip.                    |
-| **Release**  | News id 9 (2026-11-08) and Home footer `v26.7`. No roadmap card. The found bar is not in that note.                                                                                                                                         |
+| **Playback** | Video mode stays the room setting. Song start defaults to the beginning; random may shorten the clip (8 s floor, reveal + 2 s margin). Pool stays `budget / 3` (20–80): that already covers an 8 s tail and a 5 s skip.                      |
+| **Release**  | News id 9 (2026-11-08) and Home footer `v26.7`. No roadmap card. The found bar is not in that note.                                                                                                                                          |
 
 ### Admin console (2026-11-08, dev server, not committed)
 
 Staff shell only. No new tool, no new sanction, no role change. Same working tree as the Chrono race: not committed.
 
-| Piece        | Decision                                                                                                                                                                                                                          |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Nav**      | Modération (users, rooms, journal), Contenu (catalogue, playlists, daily, suggestions), Lecture (stats), Dev (admin and local only). `?tab=` values are unchanged.                                                                |
-| **Desk**     | One line: matches in progress (playing or paused), repair-queue size, open suggestions. Catalogue shows the repair count. Polls every 15 s and pauses while the tab is hidden.                                                   |
-| **Users**    | Denser list. Opens sorted by activity, newest visit first. A missing `lastSeenAt` stays last in both directions (`userListOrderBy`): Postgres otherwise treats that empty date as the newest, which put « jamais vu » on top. |
-| **Copy**     | User filters, room filters, and row confirmations live in `adminCopy`. Actions, the user toolbar, and catalogue dialogs are split out.                                                                                          |
-| **Preview**  | The player preview uses `ProfilePokedexSection` and `border-border`. The white border and the purple bar glow are gone.                                                                                                          |
-| **Crash**    | `AdminPanelBoundary` wraps the active tab, so one panel crash leaves the nav up.                                                                                                                                                 |
-| **Roles**    | MODERATOR stays bounded: no catalogue writes, no playlists, no daily, no dev tools.                                                                                                                                              |
-| **Checked**  | Client typecheck, admin eslint, nav / desk / role-confirm tests, server order test. A full logged-in pass of every tab was not done. The users tab was opened and the activity sort was corrected from that.                    |
+| Piece       | Decision                                                                                                                                                                                                                      |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Nav**     | Modération (users, rooms, journal), Contenu (catalogue, playlists, daily, suggestions), Lecture (stats), Dev (admin and local only). `?tab=` values are unchanged.                                                            |
+| **Desk**    | One line: matches in progress (playing or paused), repair-queue size, open suggestions. Catalogue shows the repair count. Polls every 15 s and pauses while the tab is hidden.                                                |
+| **Users**   | Denser list. Opens sorted by activity, newest visit first. A missing `lastSeenAt` stays last in both directions (`userListOrderBy`): Postgres otherwise treats that empty date as the newest, which put « jamais vu » on top. |
+| **Copy**    | User filters, room filters, and row confirmations live in `adminCopy`. Actions, the user toolbar, and catalogue dialogs are split out.                                                                                        |
+| **Preview** | The player preview uses `ProfilePokedexSection` and `border-border`. The white border and the purple bar glow are gone.                                                                                                       |
+| **Crash**   | `AdminPanelBoundary` wraps the active tab, so one panel crash leaves the nav up.                                                                                                                                              |
+| **Roles**   | MODERATOR stays bounded: no catalogue writes, no playlists, no daily, no dev tools.                                                                                                                                           |
+| **Checked** | Client typecheck, admin eslint, nav / desk / role-confirm tests, server order test. A full logged-in pass of every tab was not done. The users tab was opened and the activity sort was corrected from that.                  |
 
 ### Pokédex — found bar (reverted 2026-11-08)
 
@@ -37,22 +37,22 @@ A second bar (`foundSongs` / `foundPercent`, `SongHistory.correctCount > 0`, sam
 
 ### Answer cues, solo reveal, public name, licence (2026-11-08, dev server, not committed)
 
-| Piece | Decision |
-| ----- | -------- |
-| **Cues** | Standard plays the Chrono sting and stage animation. A submitted wrong answer is `wrong` with the chip « Faux ! » (no second tax). A timeout stays « Raté ». Chrono still shows `−N s` when a tax exists. |
-| **Mute** | Site option `answerSounds`, default on. The global mute still cuts the stings. New `Profile.answerSounds` column, applied on the AniQuizz database. |
-| **Reveal** | « Révéler tout de suite » left the global settings. Solo Standard advanced config owns `soloInstantReveal` (default off). Multi and Chrono force it off. The daily quiz no longer uses the old preference. |
-| **Name** | The public section is **Avis & bugs** (home, page title, first-paint shell). Route stays `/suggestions`. Shipped news articles keep their old wording. |
+| Piece       | Decision                                                                                                                                                                                                     |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Cues**    | Standard plays the Chrono sting and stage animation. A submitted wrong answer is `wrong` with the chip « Faux ! » (no second tax). A timeout stays « Raté ». Chrono still shows `−N s` when a tax exists.    |
+| **Mute**    | Site option `answerSounds`, default on. The global mute still cuts the stings. New `Profile.answerSounds` column, applied on the AniQuizz database.                                                          |
+| **Reveal**  | « Révéler tout de suite » left the global settings. Solo Standard advanced config owns `soloInstantReveal` (default off). Multi and Chrono force it off. The daily quiz no longer uses the old preference.   |
+| **Name**    | The public section is **Avis & bugs** (home, page title, first-paint shell). Route stays `/suggestions`. Shipped news articles keep their old wording.                                                       |
 | **Licence** | `LICENSE` is all rights reserved, Hugo (Hugoae), 2026. Package fields are `UNLICENSED`. Copies already received under MIT keep that grant. GitHub shows the new file only after it is on the default branch. |
 
 ### Mode select (2026-11-08, dev server, not committed)
 
 The home visual pass (live facts, live catalogue, « Nouveau » card, one news teaser) was reverted the same day. The landing stays the eyebrow « + de 3 000 sons », the two newest articles, and **Avis & bugs**.
 
-| Piece | Decision |
-| ----- | -------- |
+| Piece     | Decision                                                                                                                                    |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Modes** | Solo and Multijoueur are the two cards. Solo names Standard and Chrono. Compétitif is one quiet line. The daily quiz sits with that choice. |
-| **Home** | Dropped. Do not put the facts or the Nouveau card back unless that is the task. Footer is `v26.7`. |
+| **Home**  | Dropped. Do not put the facts or the Nouveau card back unless that is the task. Footer is `v26.7`.                                          |
 
 ### Release note (2026-11-08)
 
@@ -64,11 +64,11 @@ News id 9 is the public 26.7 note: Contre-la-montre, Vitesse, answer cues, the s
 
 Everything uncommitted since 26.6.2 was split in two on 2026-11-07:
 
-| Where                       | What                                                                                                                                                                                                                                |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main` (pushed)             | Vitesse commit · ghost-rooms fix · Oct. 17 reviews (security, database, client) · P1/P2 hardening · C9 file splits (admin API / panels, lobby hooks) · migration `20261017193000_client_catalogue_grants`. **No time-attack code.** |
+| Where                       | What                                                                                                                                                                                                                                     |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main` (pushed)             | Vitesse commit · ghost-rooms fix · Oct. 17 reviews (security, database, client) · P1/P2 hardening · C9 file splits (admin API / panels, lobby hooks) · migration `20261017193000_client_catalogue_grants`. **No time-attack code.**      |
 | `feat/time-attack` (pushed) | Solo **Contre-la-montre** as of the split (closed later): shared helpers, `MatchBudgetClock`, `matchEngineBudget`, selector / clock / badge UI, migration `20260916200000_match_game_mode_time_attack`, spec `docs/game/time-attack.md`. |
-| `5c0f777` (branch history)  | Raw snapshot of the whole working tree before the split (safety net).                                                                                                                                                               |
+| `5c0f777` (branch history)  | Raw snapshot of the whole working tree before the split (safety net).                                                                                                                                                                    |
 
 Also fixed while splitting (they were already red in the tree): 8 client typecheck errors from the admin split (`CatalogueTree` name clash, `BOT_PRESETS`, `UserListFilter` / `UserListSort` imports, `RefObject` typing).
 
@@ -1385,7 +1385,7 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
 | **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
 | **26.6.2** | Volume persist across reload ✅ · header XP ring after matches ✅ · no `SITE_VERSION` bump                                                                                 |
-| **26.7**   | **Vitesse** ✅ · **Chrono** solo + versus ✅ · pokédex found bar ✅ · Admin panel rework remaining · heard / found / liked sources dropped |
+| **26.7**   | **Vitesse** ✅ · **Chrono** solo + versus ✅ · pokédex found bar ✅ · Admin panel rework remaining · heard / found / liked sources dropped                                 |
 | **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions
