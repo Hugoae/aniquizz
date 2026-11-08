@@ -77,20 +77,6 @@ export const roadmapData: RoadmapItem[] = [
     date: '15 septembre 2026, v26.6',
   },
   {
-    title: 'Vitesse',
-    description:
-      'Sprint devient une option du Standard multijoueur : case Vitesse en typing, pastille STD plus un éclair.',
-    status: 'done',
-    date: '16 septembre 2026',
-  },
-  {
-    title: 'Contre-la-montre',
-    description:
-      'Mode solo : budget 1 à 5 min, +1 par titre, skip −5 s puis 7, 9…, erreur −3 s. Pastille CLM.',
-    status: 'done',
-    date: '16 septembre 2026',
-  },
-  {
     title: 'Refonte du profil',
     description:
       "Refonte de l'historique de jeu, des statistiques et ajout de stats complémentaires.",

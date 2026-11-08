@@ -469,7 +469,8 @@ Branch `feat/time-attack` points at the same commit.
 
 **Left before release:** playtest rounds 1–5 are in the working tree (not committed).
 Still open: history on small screens (the right column is `hidden` below `lg`), then a
-commit. News id 10 and the roadmap card exist. Do not start Chrono multi. No `SITE_VERSION`
+commit. No news article or roadmap card for Chrono or Vitesse until 26.7 is finished (removed
+on purpose). Do not start Chrono multi. No `SITE_VERSION`
 bump until the slice is called shipped.
 
 ### 2. Profile pokédex — found bar
@@ -514,8 +515,8 @@ console**.
 
 ### 26.7 checklist (at boundary)
 
-- [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`, news id 9 (no `SITE_VERSION` bump).
-- [ ] Chrono solo: playtest on aniquizz.com, then fixes (`gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge, news id 10, no `SITE_VERSION` bump). Code is on `main` (`9245d8e`).
+- [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`; news + roadmap card deferred to the end of 26.7 (no `SITE_VERSION` bump).
+- [ ] Chrono solo: playtest on aniquizz.com, then fixes (`gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge; news + roadmap card deferred to the end of 26.7, no `SITE_VERSION` bump). Code is on `main` (`9245d8e`).
 - [ ] Profile found bar + tests.
 - [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
 - [ ] Admin panel rework (shell + existing tools, role bounds unchanged).

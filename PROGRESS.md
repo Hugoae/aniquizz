@@ -9,11 +9,11 @@
 
 Everything uncommitted since 26.6.2 was split in two on 2026-11-07:
 
-| Where                       | What                                                                                                                                                                                                                                            |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `main` (pushed)             | Vitesse commit · ghost-rooms fix · Oct. 17 reviews (security, database, client) · P1/P2 hardening · C9 file splits (admin API / panels, lobby hooks) · migration `20261017193000_client_catalogue_grants`. **No time-attack code.**             |
-| `feat/time-attack` (pushed) | Solo **Contre-la-montre**, unfinished: shared helpers, `MatchBudgetClock`, `matchEngineBudget`, selector / clock / badge UI, news id 10, roadmap card, migration `20260916200000_match_game_mode_time_attack`, spec `docs/game/time-attack.md`. |
-| `5c0f777` (branch history)  | Raw snapshot of the whole working tree before the split (safety net).                                                                                                                                                                           |
+| Where                       | What                                                                                                                                                                                                                                |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main` (pushed)             | Vitesse commit · ghost-rooms fix · Oct. 17 reviews (security, database, client) · P1/P2 hardening · C9 file splits (admin API / panels, lobby hooks) · migration `20261017193000_client_catalogue_grants`. **No time-attack code.** |
+| `feat/time-attack` (pushed) | Solo **Contre-la-montre**, unfinished: shared helpers, `MatchBudgetClock`, `matchEngineBudget`, selector / clock / badge UI, migration `20260916200000_match_game_mode_time_attack`, spec `docs/game/time-attack.md`.               |
+| `5c0f777` (branch history)  | Raw snapshot of the whole working tree before the split (safety net).                                                                                                                                                               |
 
 Also fixed while splitting (they were already red in the tree): 8 client typecheck errors from the admin split (`CatalogueTree` name clash, `BOT_PRESETS`, `UserListFilter` / `UserListSort` imports, `RefObject` typing).
 
@@ -84,7 +84,7 @@ Left: Admin’s lazy panels have no local error boundary (nit). `VirtualScroll`,
 
 **Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi. HIBP stays parked.
 
-> **State:** **Vitesse** is the shipped **26.7** slice. **Contre-la-montre solo** is on `main` (`9245d8e`) for playtest on aniquizz.com and is still unfinished. Live `gameType` values are `'standard'` and `'timeAttack'`. No `SITE_VERSION` bump — the Home footer stays `v26.6`. News id 9 (Vitesse) and news id 10 (Chrono) are on `main`. Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+) · Chrono **multi** · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **Vitesse** is the shipped **26.7** slice. **Contre-la-montre solo** is on `main` (`9245d8e`) for playtest on aniquizz.com and is still unfinished. Live `gameType` values are `'standard'` and `'timeAttack'`. No `SITE_VERSION` bump — the Home footer stays `v26.6`. News articles and roadmap cards for Vitesse and Chrono were **removed on purpose** (they were on `main`); they are written once, when the whole 26.7 update is done (see PLAN § 26.7 release content). Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+) · Chrono **multi** · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
 
@@ -113,7 +113,7 @@ Second slice of **26.7**, on `main` for playtest, **not finished**. Spec: `docs/
 | **Server**      | `normalizeRoomSettings` solo-only + typing + beginning. `MatchBudgetClock` beside `RoundClock`. +1 / skip −5 s / wrong −3 s / EOF reveal 3 s. Persist `TIME_ATTACK`.                    |
 | **Hub**         | Solo selector Standard \| Contre-la-montre. Duration chips 1/2/3/5 min. Hidden in multi. Pool size from `timeAttackPoolSize`.                                                           |
 | **In-game**     | Top bar clock + « N trouvés ». Typing stays open after a miss. Skip = Passer. Pause freezes budget + clip, including skip/reveal mid-pause. Game-over titres + medals. History **CLM**. |
-| **Copy / news** | Lobby intro + scoring lines. Roadmap **Contre-la-montre**. News id 10. No `SITE_VERSION` bump.                                                                                          |
+| **Copy / news** | Lobby intro + scoring lines. News + roadmap card removed (deferred to the end of 26.7). No `SITE_VERSION` bump.                                                                         |
 
 **Playtest round 1 (2026-11-07):**
 
@@ -138,7 +138,9 @@ Second slice of **26.7**, on `main` for playtest, **not finished**. Spec: `docs/
 
 **Playtest round 5 (2026-11-08, not committed):** solo lobby uses the Timer icon. The reveal badge counts the 3 s reveal, not the run budget. A skip uses that reveal when the option is on. `nextMedal` and `nextSkipTaxMs` are server-authoritative (heard-song difficulties, same as game over) and the skip button shows « Passer · −N s ». Medal bars eased from 4/6/8/10 to **4/5/7/9** per minute (3 min, medium, franchise → 12/15/21/27). Mid-game refresh keeps the room (15 s disconnect grace). Explicit « Quitter le salon » emits `leave_room`: the last human cancels the engine (clocks cleared, no persist) and `removeRoom` drops it.
 
-**Playtest round 6 (2026-11-08, not committed):** solo lobby edit keeps the Standard / Contre-la-montre selector. Budget is a full-width slider, 1–5 min step 30 s. General-tab option `timeAttackPunitiveSkip` (default on) can freeze the skip tax at 5 s. Skip button reads `Passer −N s`.
+**Round 7 (2026-11-08, `cd2daf7` + news cleanup):** small screens get `RecentTitlesPills` (last 5 titles, below `lg`). `ErrorBoundary` always logs to the console and reloads once per 30 s on a stale lazy chunk (`Failed to fetch dynamically imported module`, which was the admin "Une erreur est survenue"). Chrono and Vitesse news articles and roadmap cards were removed on purpose and will be written at the end of 26.7. **Versus (parallel race, one budget per player, same seeded playlist) is designed, not coded.** Open decisions: disconnect behaviour (clock keeps running recommended), tie-break (remaining budget, then time of last find), Watched forbidden in versus, 2–8 players, leaderboard exclusion at first.
+
+**Playtest round 6 (2026-11-08):** solo lobby edit keeps the Standard / Contre-la-montre selector. Budget is a full-width slider, 1–5 min step 30 s. General-tab option `timeAttackPunitiveSkip` (default on) can freeze the skip tax at 5 s. Skip button reads `Passer −N s`.
 
 **Next:** small-screen history, then commit this playtest tree. After that, pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi.
 
@@ -152,7 +154,7 @@ First slice of **26.7**. Not a 26.6.3 patch. Sprint lives on as Prisma `GameMode
 | **Server**      | Settings normalize QCM/Mix/solo off. One-release lift of `gameType: 'sprint'` → standard + typing + flag. Persist `Match.mode = SPRINT` iff the modifier was on. |
 | **Hub**         | Vitesse switch in Général (multi, typing only). `GameTypeSelector` hidden (single type). Badge STD + trophy + accent lightning.                                  |
 | **In-game**     | `SpeedLeaderboard`, round history breakdown, game-over + profile history use the same badge.                                                                     |
-| **Copy / news** | Lobby rules podium lines when the flag is on. Roadmap card **Vitesse**. News id 9 (« Sprint devient Vitesse »). Spec: `docs/game/speed-bonus.md`.                |
+| **Copy / news** | Lobby rules podium lines when the flag is on. News + roadmap card removed (deferred to the end of 26.7). Spec: `docs/game/speed-bonus.md`.                       |
 
 **Next:** playtest Chrono on aniquizz.com (section above), then pokédex found bar, heard/found/liked sources, Admin panel rework.
 

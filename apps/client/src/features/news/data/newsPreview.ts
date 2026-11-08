@@ -5,19 +5,18 @@ export type NewsPreviewItem = Omit<NewsItem, 'content'>;
 
 export const latestNewsPreview: NewsPreviewItem[] = [
   {
-    id: 10,
-    title: 'Contre-la-montre en solo',
+    id: 8,
+    title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:
-      'Nouveau mode solo : trouvez le plus de titres avant la fin du chrono. Skip −5 s, erreur −3 s.',
-    date: '2026-09-16T20:00:00Z',
+      'Défi quotidien, paramètres joueur, précision Artiste, bouton Soutenir, et un passage catalogue.',
+    date: '2026-09-15T12:00:00Z',
     type: 'update',
   },
   {
-    id: 9,
-    title: 'Sprint devient Vitesse',
-    description:
-      'Sprint n’est plus un mode à part : c’est l’option Vitesse du Standard multijoueur, en typing.',
-    date: '2026-09-16T18:00:00Z',
+    id: 7,
+    title: 'Mise à jour v26.5 - Endings & Playlists',
+    description: 'Plus de 1800 endings ajoutés, playlists thématiques (shonen, seinen, décennies…)',
+    date: '2026-09-11T17:00:00Z',
     type: 'update',
   },
 ];

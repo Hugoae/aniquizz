@@ -5,45 +5,6 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
-    id: 10,
-    title: 'Contre-la-montre en solo',
-    description:
-      'Nouveau mode solo : trouvez le plus de titres avant la fin du chrono. Skip −5 s, erreur −3 s.',
-    content:
-      'Le **Contre-la-montre** arrive en solo (pastille **CLM**).\n\n' +
-      '**Comment ça marche**\n' +
-      '• Budget de **1 à 5 min**, par pas de 30 s (3 min par défaut). Le chrono ne tourne que pendant le guess.\n' +
-      '• Typing obligatoire, départ au début du clip. Chaque titre trouvé vaut **1 point**.\n' +
-      '• Un skip retire **5 secondes** (puis 7, 9… jusqu’à 15). Le skip punitif se coupe dans les paramètres généraux : chaque skip reste alors à 5 secondes. Une erreur validée retire **3 secondes** ; vous restez sur le titre.\n' +
-      '• Trouvé, raté en fin de clip, ou passé : révélation de **3 secondes**, hors chrono. Une option avancée retire cette révélation. Le temps est gelé en pause.\n\n' +
-      '**Médailles**\n' +
-      '• Les seuils comptent les titres trouvés par minute, puis le même malus de difficulté / précision que le Standard.\n' +
-      '• En 3 min, sur moyen + franchise : Bronze 12, Argent 15, Or 21, Platine 27.\n\n' +
-      'Pas encore de Contre-la-montre multijoueur — ça viendra plus tard.',
-    date: '2026-09-16T20:00:00Z',
-    type: 'update',
-  },
-  {
-    id: 9,
-    title: 'Sprint devient Vitesse',
-    description:
-      'Sprint n’est plus un mode à part : c’est l’option Vitesse du Standard multijoueur, en typing.',
-    content:
-      'Le mode **Sprint** devient une case dans le Standard.\n\n' +
-      '**Option Vitesse (multijoueur)**\n' +
-      '• Dans **Général**, après le mode de réponse, une case **Vitesse** (désactivée par défaut).\n' +
-      '• Disponible **uniquement en typing**. En QCM ou Mix, la case est grisée et se décoche.\n' +
-      '• Solo : pas de case — le bonus podium n’a de sens qu’à plusieurs.\n' +
-      '• Bonus inchangé : parmi les bonnes réponses, +3 / +2 / +1 pour les trois plus rapides (selon le nombre de trouvés).\n' +
-      '• Le classement vitesse s’affiche toujours à la révélation.\n\n' +
-      '**Pastille**\n' +
-      '• Partout (liste des salons, lobby, fin de partie, historique) : **STD** et la coupe, plus un petit éclair si Vitesse est active.\n' +
-      '• Plus de pastille jaune « Sprint ».\n\n' +
-      'Les anciennes parties Sprint restent dans votre historique, avec la nouvelle pastille.',
-    date: '2026-09-16T18:00:00Z',
-    type: 'update',
-  },
-  {
     id: 8,
     title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:
