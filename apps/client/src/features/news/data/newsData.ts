@@ -5,6 +5,38 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
+    id: 9,
+    title: 'Mise à jour v26.7 - Contre-la-montre, Vitesse & retours en partie',
+    description:
+      'Course contre le temps en solo et à plusieurs, bonus de rapidité en Standard, et des retours plus clairs à chaque réponse.',
+    content:
+      '**Contre-la-montre**\n' +
+      '• Nouveau mode, en solo ou à plusieurs (2 à 8). Le but : trouver le plus de titres avant la fin du temps.\n' +
+      '• On ne compte plus des points : les titres trouvés, et ceux entendus. En solo, les médailles suivent ce rythme.\n' +
+      '• À plusieurs, chacun joue sa manche sur la même liste. Le classement retient le plus de trouvés, puis le moins d’entendus. Deux résultats identiques restent à égalité.\n' +
+      '• La série s’affiche à partir de 3. Pas de pause, et pas de vote pour passer : chacun passe pour soi, et cela coûte du temps.\n' +
+      '• Le son part du début. Un départ aléatoire reste possible dans les options avancées.\n' +
+      '• Le mode Watched n’est pas proposé à plusieurs : tout le monde joue les mêmes titres.\n' +
+      '**Vitesse**\n' +
+      '• L’ancien mode Sprint devient une option du Standard, en multijoueur et en saisie uniquement.\n' +
+      '• Parmi les bonnes réponses, les plus rapides reçoivent un bonus, jusqu’à +3 pour le premier.\n' +
+      '**Retours en partie**\n' +
+      '• En Standard, une bonne réponse, une mauvaise réponse et un temps écoulé ont le même jingle et la même animation qu’en contre-la-montre.\n' +
+      '• En contre-la-montre, la pénalité de temps reste affichée quand il y en a une.\n' +
+      '• Nouveau réglage **Sons de bonne et mauvaise réponse**, activé par défaut. Le mute global les coupe aussi.\n\n' +
+      '**Révéler tout de suite**\n' +
+      '• L’option a quitté les paramètres généraux. Elle se règle dans la configuration avancée d’une partie solo Standard, et elle est coupée par défaut.\n' +
+      '• Le multijoueur, le contre-la-montre et le quiz du jour ne l’utilisent pas.\n\n' +
+      '**Avis & bugs**\n' +
+      '• La section **Idées** s’appelle désormais **Avis & bugs**, sur l’accueil et sur la page. Même adresse : un avis, un bug, un son manquant ou une idée.\n\n' +
+      '**Choix du mode**\n' +
+      '• La carte Solo nomme les deux parties : Standard (points et médailles) et Contre-la-montre.\n' +
+      '• Compétitif n’est pas encore jouable. Une ligne indique que le classé arrive.\n\n' +
+      'Bonne course !',
+    date: '2026-11-08T16:00:00Z',
+    type: 'update',
+  },
+  {
     id: 8,
     title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:

@@ -57,8 +57,8 @@ const ROUTES = {
     body: `<p>${escapeHtml(libraryHero.subtitle)}</p>`,
   },
   '/suggestions': {
-    title: `Boîte à idées | ${SITE}`,
-    body: '<p>Proposez et soutenez les prochaines améliorations, chansons et corrections du catalogue AniQuizz.</p>',
+    title: `Avis & bugs | ${SITE}`,
+    body: '<p>Avis, bugs, sons manquants et idées pour AniQuizz.</p>',
   },
   '/legal/confidentialite': {
     title: `Confidentialité | ${SITE}`,

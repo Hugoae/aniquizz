@@ -63,7 +63,12 @@ const buildFilterWhere = (
   }
 };
 
-const mapOrderBy = (
+/**
+ * Postgres treats NULL as larger than any timestamp, so `lastSeenAt DESC`
+ * puts "never seen" first. Those rows stay last in both directions: no visit
+ * is not a recent visit, and it is not an old one either.
+ */
+export const userListOrderBy = (
   sort: UserListSort,
   dir: 'asc' | 'desc',
 ): Prisma.ProfileOrderByWithRelationInput => {
@@ -75,7 +80,7 @@ const mapOrderBy = (
     case 'created':
       return { createdAt: dir };
     case 'seen':
-      return { lastSeenAt: dir };
+      return { lastSeenAt: { sort: dir, nulls: 'last' } };
     default:
       return { username: dir };
   }
@@ -117,7 +122,7 @@ export const listUsers = async (opts: {
   const filterWhere = isProfileIdQuery(opts.query ?? '')
     ? {}
     : buildFilterWhere(filter, now, onlineIds, inGameIds);
-  const orderBy = mapOrderBy(sort, sortDir);
+  const orderBy = userListOrderBy(sort, sortDir);
 
   // Bots are never surfaced in the admin user list; `all` = humans only.
   const where = mergeWhere(searchWhere, filterWhere, { NOT: { id: { startsWith: BOT_PREFIX } } });

@@ -1,7 +1,7 @@
 import {
   computeSpeedPodiumBonus,
   isSpeedBonusEnabled,
-  isTimeAttackSettings,
+  isTimeAttackGame,
   scoreForAnswer,
   type AnswerType,
   type GameType,
@@ -39,6 +39,6 @@ export function scoringForSettings(settings: {
   mode?: string;
   gameType?: GameType;
 }): ScoringStrategy {
-  if (isTimeAttackSettings(settings)) return timeAttackScoring;
+  if (isTimeAttackGame(settings)) return timeAttackScoring;
   return isSpeedBonusEnabled(settings) ? speedBonusScoring : standardScoring;
 }

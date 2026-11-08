@@ -29,6 +29,8 @@ import type {
   DuoChoicesPayload,
   SpeedLeaderboardPayload,
   TimeAttackBudgetPayload,
+  RaceBoardPayload,
+  RaceLaneDonePayload,
   VictoryData,
   VoteUpdatePayload,
   GameOverPayload,
@@ -217,6 +219,9 @@ export function useGameSocket({
         dispatch({ type: 'SPEED_LEADERBOARD', payload: p }),
       'timeAttack:budget': (p: TimeAttackBudgetPayload) =>
         dispatch({ type: 'TIME_ATTACK_BUDGET', payload: p }),
+      'race:board': (p: RaceBoardPayload) => dispatch({ type: 'RACE_BOARD', payload: p }),
+      'race:lane_done': (p: RaceLaneDonePayload) =>
+        dispatch({ type: 'RACE_LANE_DONE', foundCount: p.foundCount }),
       round_reveal: (p: RoundRevealPayload) =>
         dispatch({ type: 'ROUND_REVEAL', payload: p, myUserId: currentUserIdRef.current }),
       'game:preload': (p: PreloadVideoPayload) =>
@@ -277,6 +282,8 @@ export function useGameSocket({
     socket.on('game:answered', handlers['game:answered']);
     socket.on('speed:leaderboard', handlers['speed:leaderboard']);
     socket.on('timeAttack:budget', handlers['timeAttack:budget']);
+    socket.on('race:board', handlers['race:board']);
+    socket.on('race:lane_done', handlers['race:lane_done']);
     socket.on('round_reveal', handlers.round_reveal);
     socket.on('game:preload', handlers['game:preload']);
     socket.on('update_players', handlers.update_players);
@@ -300,6 +307,8 @@ export function useGameSocket({
       socket.off('game:answered', handlers['game:answered']);
       socket.off('speed:leaderboard', handlers['speed:leaderboard']);
       socket.off('timeAttack:budget', handlers['timeAttack:budget']);
+      socket.off('race:board', handlers['race:board']);
+      socket.off('race:lane_done', handlers['race:lane_done']);
       socket.off('round_reveal', handlers.round_reveal);
       socket.off('game:preload', handlers['game:preload']);
       socket.off('update_players', handlers.update_players);
@@ -316,7 +325,7 @@ export function useGameSocket({
 
   // Recover from dropped round_reveal (reconnect, Render restart, etc.).
   useEffect(() => {
-    if (!roomId || state.phase !== 'guessing' || state.isGamePaused) return;
+    if (!roomId || state.phase !== 'guessing' || state.isGamePaused || state.laneDone) return;
 
     const tailMs = GAME_CONFIG.TIMERS.GUESS_START_BUFFER + GAME_CONFIG.TIMERS.GUESS_END_GRACE;
     const staleAt = state.phaseEndsAt - tailMs + 1500;
@@ -345,7 +354,7 @@ export function useGameSocket({
       window.clearTimeout(recoveryTimer);
       if (skipTimer) window.clearTimeout(skipTimer);
     };
-  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused]);
+  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, state.laneDone]);
 
   const answer = useCallback(
     (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => {

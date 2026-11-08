@@ -98,7 +98,7 @@ export type MatchXpOutcome = {
 };
 
 /** Score fields copied before the first await so a relaunch cannot wipe them. */
-interface FinishPlayerSnapshot {
+export interface FinishPlayerSnapshot {
   userId: string;
   isBot: boolean;
   socketId: string | null;
@@ -109,7 +109,7 @@ interface FinishPlayerSnapshot {
   correctSongIds: Set<number>;
 }
 
-function snapshotPlayers(host: MatchEngineHost): FinishPlayerSnapshot[] {
+export function snapshotPlayers(host: Pick<MatchEngineHost, 'room'>): FinishPlayerSnapshot[] {
   return [...host.room.players.values()].map((player) => ({
     userId: player.userId,
     isBot: player.isBot === true,
@@ -128,7 +128,7 @@ function snapshotPlayers(host: MatchEngineHost): FinishPlayerSnapshot[] {
  * earn no XP this round).
  */
 export async function computeMatchXp(
-  host: MatchEngineHost,
+  host: Pick<MatchEngineHost, 'deps' | 'playlist' | 'room'>,
   players: FinishPlayerSnapshot[],
   winnerIds: string[],
   rankByUser: Map<string, number>,

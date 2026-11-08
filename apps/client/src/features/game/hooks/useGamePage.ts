@@ -8,9 +8,10 @@ import {
   type AnswerType,
   type GamePlayer,
   type RoomSettings,
+  type TimeAttackNextMedal,
   isBanSanctionReason,
   isSpeedBonusEnabled,
-  isTimeAttackSettings,
+  isTimeAttackGame,
   normalizeTimeBudgetSeconds,
   getPrecisionChipLabel,
   normalizePrecision,
@@ -92,7 +93,7 @@ export function useGamePage() {
 
   const activeSettings = (state.matchSettings ?? settings) as Partial<RoomSettings>;
   const speedBonusOn = isSpeedBonusEnabled(activeSettings);
-  const timeAttack = isTimeAttackSettings(activeSettings);
+  const timeAttack = isTimeAttackGame(activeSettings);
   const { phase, players, currentSong } = state;
   const budgetTicking = phase === 'guessing' && !state.isGamePaused;
   const budgetMs = normalizeTimeBudgetSeconds(activeSettings.timeBudgetSeconds) * 1000;
@@ -116,7 +117,7 @@ export function useGamePage() {
     setAudioVolume,
     setAudioMuted,
     toggleMute,
-    soloAutoReveal,
+    answerSounds,
     autofocusAnswer,
     submitOnEnter,
     showShortcutReminder,
@@ -126,17 +127,13 @@ export function useGamePage() {
   const lastStingSeq = useRef(state.stageFeedback?.seq ?? 0);
   useEffect(() => {
     const fb = state.stageFeedback;
-    if (!timeAttack || !fb || fb.seq === lastStingSeq.current) return;
+    if (!fb || fb.seq === lastStingSeq.current) return;
     lastStingSeq.current = fb.seq;
-    if (!audioMuted) playAnswerSting(fb.kind, audioVolume);
-  }, [timeAttack, state.stageFeedback, audioMuted, audioVolume]);
+    if (answerSounds && !audioMuted) playAnswerSting(fb.kind, audioVolume);
+  }, [state.stageFeedback, answerSounds, audioMuted, audioVolume]);
 
-  const nextMedal =
-    !timeAttack || state.nextMedal === undefined
-      ? null
-      : state.nextMedal
-        ? GAME_COPY.timeAttack.nextMedal(state.nextMedal.pointsNeeded, state.nextMedal.tier)
-        : GAME_COPY.timeAttack.topMedal;
+  const nextMedal: TimeAttackNextMedal | 'max' | null =
+    !timeAttack || state.nextMedal === undefined ? null : (state.nextMedal ?? 'max');
   const { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent } = useVideoPlayback({
     currentSong,
     phase,
@@ -291,10 +288,10 @@ export function useGamePage() {
       actions.answer(
         val,
         INPUT_TO_ANSWER_TYPE[inputMode],
-        gameMode === 'solo' && soloAutoReveal && !timeAttack,
+        gameMode === 'solo' && !timeAttack && activeSettings.soloInstantReveal === true,
       );
     },
-    [actions, gameMode, inputMode, soloAutoReveal, timeAttack],
+    [actions, activeSettings.soloInstantReveal, gameMode, inputMode, timeAttack],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -391,8 +388,12 @@ export function useGamePage() {
     foundCount: timeAttack ? state.foundCount : null,
     nextMedal,
     nextSkipTaxMs: timeAttack ? state.nextSkipTaxMs : null,
-    stageFeedback: timeAttack ? state.stageFeedback : null,
+    stageFeedback: state.stageFeedback,
     recentTitles: state.recentTitles,
+    race:
+      timeAttack && gameMode !== 'solo'
+        ? { board: state.raceBoard, laneDone: state.laneDone }
+        : null,
   };
 
   return {

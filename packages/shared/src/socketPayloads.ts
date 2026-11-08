@@ -90,6 +90,7 @@ export const updatePrefsInputSchema = z
     autofocusAnswer: z.boolean().optional(),
     submitOnEnter: z.boolean().optional(),
     soloAutoReveal: z.boolean().optional(),
+    answerSounds: z.boolean().optional(),
     showShortcutReminder: z.boolean().optional(),
     friendRequestVisual: z.boolean().optional(),
     friendRequestSound: z.boolean().optional(),

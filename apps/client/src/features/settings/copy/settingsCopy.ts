@@ -45,8 +45,9 @@ export const SETTINGS_COPY = {
   autofocusHint: 'Le champ est sélectionné à chaque nouveau round.',
   submitOnEnterLabel: 'Valider avec Entrée',
   submitOnEnterHint: 'Les flèches et Échap de l’autocomplétion restent actifs.',
-  soloAutoRevealLabel: 'Révéler tout de suite en solo',
-  soloAutoRevealHint: 'Après l’envoi, le clip et la réponse s’affichent sans attendre le bouton.',
+  answerSoundsLabel: 'Sons de bonne et mauvaise réponse',
+  answerSoundsHint:
+    'Court jingle quand une réponse est trouvée, ratée ou passée. Le volume de la partie s’applique, et le son global les coupe aussi.',
   shortcutReminderLabel: 'Rappel des raccourcis clavier',
   shortcutReminderHint: 'Affiché uniquement sur un appareil avec clavier.',
   notificationsHeading: 'Notifications',

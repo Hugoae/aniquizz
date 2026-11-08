@@ -31,7 +31,7 @@ These terms mean the same thing everywhere. Per-context glossaries add local det
 | **Precision**        | Answer granularity: `franchise` (whole franchise) vs `anime` (exact season). Legacy value `exact` normalizes to `anime`. |
 | **Medal**            | Solo game-over grade (Bronze → Argent → Or → Platine) from mastery ratio, adjusted by difficulty and precision.          |
 | **Vitesse**          | Standard multi typing modifier: podium bonus for the fastest correct answers (`speedBonusEnabled`). Not a GameType.      |
-| **Contre-la-montre** | Solo time-attack (`gameType: 'timeAttack'`). Budget clock, +1 per title. Multi is parked. Compact badge **CLM**.         |
+| **Contre-la-montre** | Time-attack (`gameType: 'timeAttack'`). Solo budget clock, or a 2–8 versus race. Compact badge **CLM**.                  |
 | **Player identity**  | Always the JWT `userId` (`socket.data.userId`), never `socket.id`.                                                       |
 
 ## Decisions

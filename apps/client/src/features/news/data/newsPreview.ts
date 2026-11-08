@@ -5,18 +5,19 @@ export type NewsPreviewItem = Omit<NewsItem, 'content'>;
 
 export const latestNewsPreview: NewsPreviewItem[] = [
   {
+    id: 9,
+    title: 'Mise à jour v26.7 - Contre-la-montre, Vitesse & retours en partie',
+    description:
+      'Course contre le temps en solo et à plusieurs, bonus de rapidité en Standard, et des retours plus clairs à chaque réponse.',
+    date: '2026-11-08T16:00:00Z',
+    type: 'update',
+  },
+  {
     id: 8,
     title: 'Mise à jour v26.6 - Quiz du jour, Paramètres, Précision Artiste & Soutenir',
     description:
       'Défi quotidien, paramètres joueur, précision Artiste, bouton Soutenir, et un passage catalogue.',
     date: '2026-09-15T12:00:00Z',
-    type: 'update',
-  },
-  {
-    id: 7,
-    title: 'Mise à jour v26.5 - Endings & Playlists',
-    description: 'Plus de 1800 endings ajoutés, playlists thématiques (shonen, seinen, décennies…)',
-    date: '2026-09-11T17:00:00Z',
     type: 'update',
   },
 ];

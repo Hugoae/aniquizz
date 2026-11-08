@@ -339,5 +339,23 @@ describe('buildLobbyRulesSections', () => {
     expect(scoring?.lines?.some((l) => l.includes('1 point'))).toBe(true);
     expect(scoring?.lines?.some((l) => l.includes('5 secondes'))).toBe(true);
     expect(scoring?.lines?.some((l) => l.includes('3 secondes'))).toBe(true);
+    const flow = sections.find((s) => s.id === 'flow');
+    expect(flow?.lines?.some((l) => l.includes('au plus court'))).toBe(false);
+  });
+
+  it('explains that a late Chrono start still covers the clock', () => {
+    const sections = buildLobbyRulesSections(
+      {
+        ...baseConfig,
+        gameType: 'timeAttack',
+        responseType: 'typing',
+        timeBudgetSeconds: 180,
+        songStartMode: 'random',
+      },
+      { lobbyMode: 'solo' },
+    );
+    const flow = sections.find((s) => s.id === 'flow');
+    expect(flow?.lines?.some((l) => l.includes('8 s minimum'))).toBe(true);
+    expect(flow?.lines?.some((l) => l.includes('couvre le chrono'))).toBe(true);
   });
 });

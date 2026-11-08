@@ -1,15 +1,22 @@
 import { useMemo, useState, memo, type ReactNode } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
-import type { GamePlayer, Precision } from '@aniquizz/shared';
+import type { GamePlayer, Precision, TimeAttackNextMedal } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
-import type { CurrentSong, RecentTitle, StageFeedback } from '@/features/game/state/gameReducer';
+import type {
+  CurrentSong,
+  RaceBoardState,
+  RecentTitle,
+  StageFeedback,
+} from '@/features/game/state/gameReducer';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { activeMatchPlayers } from '../../../utils/ranking';
 import { StageFeedbackFrame } from './parts/StageFeedbackFrame';
 import { RecentTitlesStrip } from './parts/RecentTitlesStrip';
 import { RecentTitlesPills } from './parts/RecentTitlesPills';
+import { RaceBoard } from './parts/RaceBoard';
+import { RaceLaneDone } from './parts/RaceLaneDone';
 
 const NO_RECENT_TITLES: RecentTitle[] = [];
 
@@ -90,10 +97,12 @@ interface StandardGameLayoutProps {
   /** Solo time-attack run clock (memoised). Null outside time-attack. */
   timeAttackClock?: TimeAttackClock | null;
   foundCount?: number | null;
-  nextMedal?: string | null;
+  nextMedal?: TimeAttackNextMedal | 'max' | null;
   nextSkipTaxMs?: number | null;
   stageFeedback?: StageFeedback | null;
   recentTitles?: RecentTitle[];
+  /** Versus time-attack: live lanes board, no pause and no skip vote. Null elsewhere. */
+  race?: { board: RaceBoardState | null; laneDone: boolean } | null;
   /** Daily — no running score or +pts toast. */
   hideScores?: boolean;
 }
@@ -163,9 +172,17 @@ function StandardGameLayoutInner({
   nextSkipTaxMs = null,
   stageFeedback = null,
   recentTitles = NO_RECENT_TITLES,
+  race = null,
   hideScores = false,
 }: StandardGameLayoutProps) {
+  const laneOver = race?.laneDone === true;
   const timeAttack = timeAttackClock != null;
+  const raceHeard =
+    race?.board?.entries.find((entry) => entry.userId === currentUserId)?.heardCount ?? null;
+  // recentTitles is only the last five rows. The round index is every title
+  // started, including the one on screen, so found cannot outrun heard.
+  const soloHeard = phase === 'guessing' || phase === 'revealed' ? currentRound : 0;
+  const heardCount = race ? raceHeard : timeAttack ? soloHeard : null;
   const revealSong =
     phase === 'revealed' && currentSong && 'anime' in currentSong ? currentSong : null;
   const activeRosterCount = useMemo(() => activeMatchPlayers(players).length, [players]);
@@ -225,10 +242,11 @@ function StandardGameLayoutInner({
         onVotePause={onVotePause}
         onShowProfile={onShowProfile}
         onShowSettings={onShowSettings}
-        showPause={showPause}
+        showPause={showPause && race == null}
         showRoundProgress={showRoundProgress}
         foundCount={timeAttack ? foundCount : null}
-        nextMedal={timeAttack ? nextMedal : null}
+        heardCount={timeAttack ? heardCount : null}
+        nextMedal={timeAttack && race == null ? nextMedal : null}
       />
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -253,110 +271,140 @@ function StandardGameLayoutInner({
             <div className="relative flex min-h-0 w-full flex-1 flex-col items-stretch justify-center gap-5 lg:flex-row lg:justify-center">
               {/* Left stack: video, answer slot, players floor. */}
               <div className="flex h-full w-full min-h-0 flex-1 flex-col items-center justify-start overflow-y-auto overflow-x-hidden">
-                <StageFeedbackFrame feedback={stageFeedback} enabled={timeAttack}>
-                  <VideoStage
-                    videoRef={videoRef}
-                    phase={phase}
-                    currentSong={currentSong}
-                    videoMode={videoMode}
-                    autoplayBlocked={autoplayBlocked}
-                    onSafePlay={onSafePlay}
-                    isGamePaused={isGamePaused}
-                    resumeCountdown={resumeCountdown}
-                    isMuted={isMuted}
-                    volume={volume}
-                    onToggleMute={onToggleMute}
-                    onVolumeChange={onVolumeChange}
-                    phaseEndsAt={phaseEndsAt}
-                    phaseDurationSeconds={phaseDurationSeconds}
-                    gameMode={gameMode}
-                    isPausePending={isPausePending}
-                    submittedAnswer={submittedAnswer}
-                    onSoloSkip={handleSoloSkip}
-                    soloSkipAlways={timeAttack}
-                    soloSkipLabel={
-                      timeAttack
-                        ? `Passer −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`
-                        : 'Révéler'
-                    }
-                    playersCount={activeRosterCount}
-                    skipVotes={skipVotes}
-                    skipRequired={skipRequired}
-                    onVoteSkip={onVoteSkip}
-                    timeAttackClock={timeAttackClock}
-                  />
-                </StageFeedbackFrame>
-
-                {/* Slot under the video: answer input while guessing; on small screens
-                  the reveal info shows here as a band (the big side card is hidden). */}
-                <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
-                  {phase === 'guessing' || phase === 'ready' ? (
-                    <AnswerInput
-                      responseType={responseType}
-                      inputMode={inputMode}
-                      submittedAnswer={submittedAnswer}
-                      choices={choices}
-                      onAction={onAction}
-                      onSwitchCarre={onSwitchCarre}
-                      onSwitchDuo={onSwitchDuo}
-                      precision={precision}
-                      roundKey={currentRound}
-                      disabled={phase === 'ready' || answerDisabled}
-                      pointsBadge={pointsBadge}
-                      autoFocusEnabled={autofocusAnswer}
-                      submitOnEnter={submitOnEnter}
-                      showShortcutReminder={showShortcutReminder}
+                {laneOver ? (
+                  <>
+                    <RaceLaneDone
+                      foundCount={foundCount ?? 0}
+                      players={players}
+                      board={race?.board ?? null}
+                      currentUserId={currentUserId}
+                      onOpenRoster={handleOpenRoster}
                     />
-                  ) : songInfoProps ? (
-                    <div className="flex w-full flex-col gap-3 lg:hidden">
-                      <SongInfoCard variant="band" isRevealed {...songInfoProps} />
-                      {showSpeedBoard && speedLeaderboard && (
-                        <SpeedLeaderboard
-                          data={speedLeaderboard}
-                          currentUserId={currentUserId}
-                          myAvatar={myProfile.avatar}
-                          compact
+                    <RecentTitlesPills titles={recentTitles} className="mt-3 lg:hidden" />
+                  </>
+                ) : (
+                  <>
+                    <StageFeedbackFrame feedback={stageFeedback} enabled>
+                      <VideoStage
+                        videoRef={videoRef}
+                        phase={phase}
+                        currentSong={currentSong}
+                        videoMode={videoMode}
+                        autoplayBlocked={autoplayBlocked}
+                        onSafePlay={onSafePlay}
+                        isGamePaused={isGamePaused}
+                        resumeCountdown={resumeCountdown}
+                        isMuted={isMuted}
+                        volume={volume}
+                        onToggleMute={onToggleMute}
+                        onVolumeChange={onVolumeChange}
+                        phaseEndsAt={phaseEndsAt}
+                        phaseDurationSeconds={phaseDurationSeconds}
+                        gameMode={gameMode}
+                        isPausePending={isPausePending}
+                        submittedAnswer={submittedAnswer}
+                        onSoloSkip={handleSoloSkip}
+                        soloSkipAlways={timeAttack}
+                        soloSkipLabel={
+                          timeAttack
+                            ? `Passer −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`
+                            : 'Révéler'
+                        }
+                        playersCount={activeRosterCount}
+                        skipVotes={skipVotes}
+                        skipRequired={skipRequired}
+                        onVoteSkip={onVoteSkip}
+                        timeAttackClock={timeAttackClock}
+                        race={race != null}
+                      />
+                    </StageFeedbackFrame>
+
+                    {/* Slot under the video: answer input while guessing; on small screens
+                  the reveal info shows here as a band (the big side card is hidden). */}
+                    <div className="z-50 mb-2 mt-2 flex w-full max-w-[850px] shrink-0 justify-center overflow-visible">
+                      {phase === 'guessing' || phase === 'ready' ? (
+                        <AnswerInput
+                          responseType={responseType}
+                          inputMode={inputMode}
+                          submittedAnswer={submittedAnswer}
+                          choices={choices}
+                          onAction={onAction}
+                          onSwitchCarre={onSwitchCarre}
+                          onSwitchDuo={onSwitchDuo}
+                          precision={precision}
+                          roundKey={currentRound}
+                          disabled={phase === 'ready' || answerDisabled}
+                          pointsBadge={pointsBadge}
+                          autoFocusEnabled={autofocusAnswer}
+                          submitOnEnter={submitOnEnter}
+                          showShortcutReminder={showShortcutReminder}
                         />
+                      ) : songInfoProps ? (
+                        <div className="flex w-full flex-col gap-3 lg:hidden">
+                          <SongInfoCard variant="band" isRevealed {...songInfoProps} />
+                          {showSpeedBoard && speedLeaderboard && (
+                            <SpeedLeaderboard
+                              data={speedLeaderboard}
+                              currentUserId={currentUserId}
+                              myAvatar={myProfile.avatar}
+                              compact
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
+                          Chargement de la réponse…
+                        </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
-                      Chargement de la réponse…
-                    </div>
-                  )}
-                </div>
 
-                {timeAttack && (
-                  <RecentTitlesPills titles={recentTitles} className="mb-2 lg:hidden" />
+                    {timeAttack && (
+                      <RecentTitlesPills titles={recentTitles} className="mb-2 lg:hidden" />
+                    )}
+
+                    {race ? (
+                      <RaceBoard
+                        players={players}
+                        board={race.board}
+                        currentUserId={currentUserId}
+                        onOpenRoster={handleOpenRoster}
+                      />
+                    ) : (
+                      <PlayersFloor
+                        players={players}
+                        currentUserId={currentUserId}
+                        showResult={phase === 'revealed'}
+                        showPointsAnimation={!hideScores && showPointsAnimation}
+                        pointsEarned={hideScores ? null : pointsEarned}
+                        showRank={gameMode !== 'solo'}
+                        onOpenRoster={handleOpenRoster}
+                        hideScore={hideScores}
+                        ratio={
+                          timeAttack && !race ? { found: foundCount ?? 0, heard: soloHeard } : null
+                        }
+                      />
+                    )}
+                  </>
                 )}
-
-                <PlayersFloor
-                  players={players}
-                  currentUserId={currentUserId}
-                  showResult={phase === 'revealed'}
-                  showPointsAnimation={!hideScores && showPointsAnimation}
-                  pointsEarned={hideScores ? null : pointsEarned}
-                  showRank={gameMode !== 'solo'}
-                  onOpenRoster={handleOpenRoster}
-                  hideScore={hideScores}
-                />
               </div>
 
-              {/* Right column: song info card + speed board (aligned with player cards). */}
+              {/* Right column: song info while the lane is live; history only once it is done. */}
               <div className="hidden h-full min-h-0 shrink-0 flex-col overflow-hidden lg:flex lg:w-[440px] xl:w-[520px]">
-                <div className={cn('shrink-0', timeAttack ? 'h-[28vh]' : 'h-[34vh]')}>
-                  <SongInfoCard
-                    variant="card"
-                    isRevealed={phase === 'revealed'}
-                    {...(songInfoProps ?? {
-                      animeName: '',
-                      songTitle: '',
-                      artist: '',
-                      type: '',
-                      difficulty: '',
-                    })}
-                  />
-                </div>
+                {!laneOver && (
+                  <div className={cn('shrink-0', timeAttack ? 'h-[28vh]' : 'h-[34vh]')}>
+                    <SongInfoCard
+                      variant="card"
+                      isRevealed={phase === 'revealed'}
+                      {...(songInfoProps ?? {
+                        animeName: '',
+                        songTitle: '',
+                        artist: '',
+                        type: '',
+                        difficulty: '',
+                      })}
+                    />
+                  </div>
+                )}
                 {showSpeedBoard && speedLeaderboard && (
                   <div className="mt-[calc(8vh+4.25rem)]">
                     <SpeedLeaderboard
@@ -367,7 +415,10 @@ function StandardGameLayoutInner({
                   </div>
                 )}
                 {timeAttack && (
-                  <RecentTitlesStrip titles={recentTitles} className="mt-6 shrink-0" />
+                  <RecentTitlesStrip
+                    titles={recentTitles}
+                    className={laneOver ? 'shrink-0' : 'mt-6 shrink-0'}
+                  />
                 )}
               </div>
             </div>
@@ -395,6 +446,7 @@ function StandardGameLayoutInner({
                 roomId={roomId || ''}
                 currentUserId={currentUserId}
                 attentionSignal={rosterAttention}
+                raceBoard={race?.board ?? null}
               />
             </div>
           </>

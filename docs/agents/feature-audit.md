@@ -13,10 +13,10 @@ pas.
 
 ```
 Audite FEATURE de bout en bout. N’implémente rien tant que je ne demande pas
-explicitement de corriger un finding. Ne démarre pas le pokédex / rework
-Admin ni le travail en parking (HIBP, Chrono **multi**). La phase courante
-est **26.7** (Vitesse livré ; Chrono solo sur `main` pour les tests, encore
-inachevé — voir PLAN.md).
+explicitement de corriger un finding. Ne démarre pas la barre « trouvés »
+du pokédex ni HIBP. La phase courante est **26.7** (Vitesse, Contre-la-montre,
+refonte admin, jingles de réponse et licence propriétaire terminés — voir PLAN.md).
+Les sources entendus / trouvés / likés ne sont plus au plan.
 
 Repo : pnpm + Turborepo. Graphify d’abord (`.cursor/rules/graphify.mdc`).
 Lis CONTEXT-MAP.md et les CONTEXT.md des packages concernés avant de scanner.

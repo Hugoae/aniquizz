@@ -29,6 +29,8 @@ export interface PersistPlayerInput {
   correctSongIds: number[];
   /** Solo medal snapshot (null in multiplayer or no medal earned). */
   soloMedal: MedalTier;
+  /** Versus lanes hear different clips; overrides the match-wide `songIds` for this player. */
+  heardSongIds?: number[];
 }
 
 /** Prior XP state read before a match's XP is computed. */
@@ -273,7 +275,10 @@ export class MatchRepository {
       await recordHeardSongs(
         prisma,
         player.userId,
-        songIds.map((songId) => ({ songId, correct: correctSet.has(songId) })),
+        (player.heardSongIds ?? songIds).map((songId) => ({
+          songId,
+          correct: correctSet.has(songId),
+        })),
       );
     } catch (error) {
       logger.error(

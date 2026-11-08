@@ -110,4 +110,4 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`ARCHITECTURE.md`](./ARCHITECTUR
 
 ## License
 
-[MIT](./LICENSE)
+Copyright (c) 2026 Hugo (Hugoae). All rights reserved. See [`LICENSE`](./LICENSE).

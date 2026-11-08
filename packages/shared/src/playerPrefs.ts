@@ -8,7 +8,10 @@ export interface PlayerPrefs {
   motionMode: MotionMode;
   autofocusAnswer: boolean;
   submitOnEnter: boolean;
+  /** @deprecated Round-tripped for older clients. Instant reveal is a solo Standard room setting. */
   soloAutoReveal: boolean;
+  /** Answer stings (correct, wrong, missed, skip). The global mute still wins. */
+  answerSounds: boolean;
   showShortcutReminder: boolean;
   friendRequestVisual: boolean;
   friendRequestSound: boolean;
@@ -31,6 +34,7 @@ export const PLAYER_PREFS_DEFAULTS: PlayerPrefs = {
   autofocusAnswer: true,
   submitOnEnter: true,
   soloAutoReveal: false,
+  answerSounds: true,
   showShortcutReminder: true,
   friendRequestVisual: true,
   friendRequestSound: false,
@@ -45,6 +49,7 @@ export const PLAYER_PREFS_KEYS = [
   'autofocusAnswer',
   'submitOnEnter',
   'soloAutoReveal',
+  'answerSounds',
   'showShortcutReminder',
   'friendRequestVisual',
   'friendRequestSound',
@@ -97,6 +102,7 @@ export function normalizePlayerPrefs(input: unknown): PlayerPrefs {
     autofocusAnswer: readFlag(rec.autofocusAnswer, PLAYER_PREFS_DEFAULTS.autofocusAnswer),
     submitOnEnter: readFlag(rec.submitOnEnter, PLAYER_PREFS_DEFAULTS.submitOnEnter),
     soloAutoReveal: readFlag(rec.soloAutoReveal, PLAYER_PREFS_DEFAULTS.soloAutoReveal),
+    answerSounds: readFlag(rec.answerSounds, PLAYER_PREFS_DEFAULTS.answerSounds),
     showShortcutReminder: readFlag(
       rec.showShortcutReminder,
       PLAYER_PREFS_DEFAULTS.showShortcutReminder,

@@ -24,8 +24,16 @@ function chipLabel(feedback: StageFeedback): string {
   const copy = GAME_COPY.stageFeedback;
   if (feedback.kind === 'correct') return copy.correct;
   if (feedback.kind === 'missed') return copy.missed;
-  const seconds = Math.round(Math.abs(feedback.deltaMs ?? 0) / 1000);
+  if (feedback.deltaMs == null) return feedback.kind === 'skip' ? copy.missed : copy.wrong;
+  const seconds = Math.round(Math.abs(feedback.deltaMs) / 1000);
   return `−${seconds} s`;
+}
+
+function announceLabel(feedback: StageFeedback): string {
+  const copy = GAME_COPY.stageFeedback.announce;
+  if (feedback.deltaMs == null && feedback.kind === 'wrong') return copy.wrongPlain;
+  if (feedback.deltaMs == null && feedback.kind === 'skip') return copy.skipPlain;
+  return copy[feedback.kind];
 }
 
 interface StageFeedbackFrameProps {
@@ -90,7 +98,7 @@ export function StageFeedbackFrame({ feedback, enabled, children }: StageFeedbac
         </>
       )}
       <span className="sr-only" role="status" aria-live="polite">
-        {active ? GAME_COPY.stageFeedback.announce[active.kind] : ''}
+        {active ? announceLabel(active) : ''}
       </span>
     </div>
   );

@@ -54,10 +54,13 @@ export const GAME_COPY = {
   stageFeedback: {
     correct: 'Trouvé !',
     missed: 'Raté',
+    wrong: 'Faux !',
     announce: {
       correct: 'Bonne réponse',
       wrong: 'Mauvaise réponse, moins 3 secondes',
+      wrongPlain: 'Mauvaise réponse',
       skip: 'Titre passé, moins 5 secondes',
+      skipPlain: 'Titre passé',
       missed: 'Temps du clip écoulé, titre raté',
     },
   },
@@ -74,8 +77,19 @@ export const GAME_COPY = {
     clockAria: (clock: string) => `Temps restant de la partie : ${clock}`,
     found: (n: number) => `${n} trouvé${n === 1 ? '' : 's'}`,
     nextMedal: (needed: number, tier: 'bronze' | 'silver' | 'gold' | 'platinum') =>
-      `encore ${needed} pour ${{ bronze: 'le bronze', silver: "l'argent", gold: "l'or", platinum: 'le platine' }[tier]}`,
-    topMedal: 'médaille maximale !',
+      `Encore ${needed} pour ${{ bronze: 'le bronze', silver: "l'argent", gold: "l'or", platinum: 'le platine' }[tier]}`,
+    topMedal: 'Médaille maximale',
+  },
+  race: {
+    boardTitle: 'Course',
+    boardAria: 'Classement en direct de la course',
+    you: 'Toi',
+    finished: 'Terminé',
+    titles: (n: number) => `${n} titre${n === 1 ? '' : 's'}`,
+    seeRanking: (hidden: number) => `+${hidden} autre${hidden > 1 ? 's' : ''} — voir le classement`,
+    laneDoneNow: "Tu es pour l'instant",
+    laneDoneWaiting: 'En attente des autres joueurs…',
+    tieBreak: 'Égalité : moins de titres écoutés. Le même ratio partage la place.',
   },
 } as const;
 

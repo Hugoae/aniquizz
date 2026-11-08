@@ -973,6 +973,70 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().reveal?.durationSeconds).toBe(3);
     });
 
+    it('reveals the title when the budget runs out, then ends the match', async () => {
+      const { engine, emitted, room } = createTimeAttackHarness({
+        playlist: [
+          makePlaylistItem({
+            id: 1,
+            anime: 'Naruto',
+            guessDuration: 120,
+            clipDurationSeconds: 120,
+          }),
+        ],
+        timeBudgetSeconds: 60,
+      });
+      await advanceToGuessing(engine);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(room.status).not.toBe('finished');
+      expect(engine.getSyncState().phase).toBe('reveal');
+      expect(emitted.find((e) => e.event === 'round_reveal')?.payload).toMatchObject({
+        song: { anime: 'Naruto' },
+      });
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(room.status).toBe('finished');
+    });
+
+    it('reveals the skipped title when that skip spends the last seconds', async () => {
+      const playlist = Array.from({ length: 8 }, (_, i) =>
+        makePlaylistItem({
+          id: i + 1,
+          anime: `Anime ${i + 1}`,
+          validAnswers: [`Anime ${i + 1}`],
+          guessDuration: 30,
+          clipDurationSeconds: 30,
+        }),
+      );
+      const { engine, emitted, room } = createTimeAttackHarness({
+        playlist,
+        timeBudgetSeconds: 60,
+      });
+      await advanceToGuessing(engine);
+
+      // 5+7+9+11+13 = 45 s. The next skip costs 15 s and spends the budget.
+      for (let i = 0; i < 5; i++) {
+        engine.forceEndRound();
+        await vi.advanceTimersByTimeAsync(3_000);
+      }
+      expect(room.status).not.toBe('finished');
+
+      engine.forceEndRound();
+      expect(emitted.filter((e) => e.event === 'round_reveal').at(-1)?.payload).toMatchObject({
+        skipped: true,
+        song: { anime: 'Anime 6' },
+      });
+      expect(room.status).not.toBe('finished');
+
+      await vi.advanceTimersByTimeAsync(3_000);
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(room.status).toBe('finished');
+    });
+
     it('ends the match when the budget reaches 0', async () => {
       const { room, engine, repo } = createTimeAttackHarness();
       await advanceToGuessing(engine);

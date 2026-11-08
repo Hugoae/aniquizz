@@ -41,7 +41,7 @@ export function DailyQuizCard() {
       : DAILY_COPY.playCta;
 
   return (
-    <div className="mx-auto mt-10 w-full max-w-4xl animate-fade-in px-0">
+    <div className="mx-auto mt-6 w-full max-w-4xl animate-fade-in px-0">
       <Link
         to="/daily"
         {...routeIntentHandlers(() => prefetchRoute('daily'))}

@@ -18,6 +18,8 @@ import type {
   MatchSettingsSnapshot,
   VoteUpdatePayload,
   PeekWindow,
+  RaceBoardEntry,
+  RaceBoardPayload,
   VideoMode,
 } from '@aniquizz/shared';
 import {
@@ -57,6 +59,11 @@ export interface RecentTitle {
   outcome: RecentTitleOutcome;
 }
 export const RECENT_TITLES_LIMIT = 5;
+/** Versus board as received; budgets are interpolated from `receivedAt` while a lane runs. */
+export interface RaceBoardState {
+  entries: RaceBoardEntry[];
+  receivedAt: number;
+}
 export interface GameState {
   phase: GamePhase;
   players: GamePlayer[];
@@ -97,6 +104,10 @@ export interface GameState {
   stageFeedback: StageFeedback | null;
   /** Newest first, capped at `RECENT_TITLES_LIMIT`. Includes time-attack skips. */
   recentTitles: RecentTitle[];
+  /** Versus only: live lanes of every player. Null outside a race. */
+  raceBoard: RaceBoardState | null;
+  /** Versus only: my lane is over and I am waiting for the others. */
+  laneDone: boolean;
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
@@ -107,6 +118,8 @@ export type GameAction =
   | { type: 'ANSWERED'; userId: string }
   | { type: 'SPEED_LEADERBOARD'; payload: SpeedLeaderboardPayload }
   | { type: 'TIME_ATTACK_BUDGET'; payload: TimeAttackBudgetPayload }
+  | { type: 'RACE_BOARD'; payload: RaceBoardPayload }
+  | { type: 'RACE_LANE_DONE'; foundCount: number }
   | { type: 'DUO_CHOICES'; choices: string[] }
   | { type: 'ROUND_REVEAL'; payload: RoundRevealPayload; myUserId?: string }
   | { type: 'PLAYERS_UPDATE'; payload: PlayersUpdatePayload }
@@ -176,6 +189,8 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     nextMedal: undefined,
     stageFeedback: null,
     recentTitles: [],
+    raceBoard: null,
+    laneDone: false,
   };
 }
 
@@ -264,6 +279,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         budgetSyncedAt: Date.now(),
         stageFeedback: null,
         recentTitles: [],
+        raceBoard: null,
+        laneDone: false,
       };
     }
     case 'PRELOAD': {
@@ -319,6 +336,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         })),
         ...budgetPatch(p, state),
       };
+    }
+    case 'RACE_BOARD': {
+      return {
+        ...state,
+        raceBoard: { entries: action.payload.entries, receivedAt: Date.now() },
+      };
+    }
+    case 'RACE_LANE_DONE': {
+      return { ...state, laneDone: true, foundCount: action.foundCount };
     }
     case 'DUO_CHOICES': {
       return { ...state, duoChoices: action.choices };
@@ -399,7 +425,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ? {
               stageFeedback: p.skipped
                 ? state.stageFeedback
-                : nextFeedback(state, me.isCorrect === true ? 'correct' : 'missed'),
+                : nextFeedback(
+                    state,
+                    me.isCorrect === true ? 'correct' : me.currentAnswer ? 'wrong' : 'missed',
+                  ),
               recentTitles: pushRecentTitle(
                 state.recentTitles,
                 p.song,
@@ -520,6 +549,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         matchSettings,
         videoMode,
         isGamePaused: s.status === 'paused',
+        raceBoard: s.raceBoard
+          ? { entries: s.raceBoard.entries, receivedAt: Date.now() }
+          : state.raceBoard,
+        laneDone: s.laneDone === true,
         ...budgetPatch(
           {
             remainingMs: s.remainingMs ?? s.round?.remainingMs ?? s.reveal?.remainingMs,

@@ -14,6 +14,8 @@ interface RoomSettingsSectionProps {
   minPlayers?: number;
   /** Sidebar stack above category nav (multi create/edit). */
   variant?: 'panel' | 'sidebar';
+  /** Largest allowed capacity (a Chrono versus race caps at 8). */
+  maxPlayersCap?: number;
 }
 
 export function RoomSettingsSection({
@@ -21,8 +23,9 @@ export function RoomSettingsSection({
   update,
   minPlayers = 0,
   variant = 'panel',
+  maxPlayersCap = 50,
 }: RoomSettingsSectionProps) {
-  const floor = Math.max(2, minPlayers);
+  const floor = Math.min(maxPlayersCap, Math.max(2, minPlayers));
   const isSidebar = variant === 'sidebar';
 
   if (isSidebar) {
@@ -94,9 +97,9 @@ export function RoomSettingsSection({
           <Slider
             id="max-players-sidebar"
             aria-label="Nombre de joueurs maximum"
-            value={[Math.max(config.maxPlayers, floor)]}
+            value={[Math.min(maxPlayersCap, Math.max(config.maxPlayers, floor))]}
             min={floor}
-            max={50}
+            max={maxPlayersCap}
             step={1}
             onValueChange={(v) => update({ maxPlayers: v[0] })}
             className="py-1"
@@ -156,9 +159,9 @@ export function RoomSettingsSection({
           <Label htmlFor="max-players">Joueurs max ({config.maxPlayers})</Label>
           <Slider
             aria-label="Nombre de joueurs maximum"
-            value={[Math.max(config.maxPlayers, floor)]}
+            value={[Math.min(maxPlayersCap, Math.max(config.maxPlayers, floor))]}
             min={floor}
-            max={50}
+            max={maxPlayersCap}
             step={1}
             onValueChange={(v) => update({ maxPlayers: v[0] })}
             className="py-2"

@@ -165,6 +165,7 @@ model Profile {
   autofocusAnswer        Boolean @default(true)
   submitOnEnter          Boolean @default(true)
   soloAutoReveal         Boolean @default(false)
+  answerSounds           Boolean @default(true)
   showShortcutReminder   Boolean @default(true)
   friendRequestVisual    Boolean @default(true)
   friendRequestSound     Boolean @default(false)

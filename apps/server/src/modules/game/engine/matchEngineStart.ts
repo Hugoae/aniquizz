@@ -2,6 +2,7 @@ import { GAME_CONFIG, toClientRoomSettings } from '@aniquizz/shared';
 import { toPlaybackUrl } from '../../../lib/mediaPlaybackUrl';
 import { logger } from '../../../utils/logger';
 import type { MatchEngineHost } from './matchEngineHost';
+import type { BuiltPlaylist, PlaylistAbortReason } from './PlaylistBuilder';
 
 export async function startMatch(host: MatchEngineHost): Promise<boolean> {
   host.resetMatchState();
@@ -37,21 +38,11 @@ export async function startMatch(host: MatchEngineHost): Promise<boolean> {
   }
 
   if (!built.playlist.length) {
-    const settings = host.room.settings;
-    let message = 'Aucun son trouvé pour ces paramètres.';
-    if (built.abortReason === 'watched_empty') {
-      message =
-        settings.watchedMode === 'intersection'
-          ? "Mode Commun impossible : au moins un joueur n'a pas de liste AniList utilisable."
-          : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
-    } else if (built.abortReason === 'playlist_missing' || built.abortReason === 'playlist_empty') {
-      message = "Cette playlist n'est plus disponible ou n'a aucun son jouable.";
-    }
     logger.error(
       `[MatchEngine ${host.room.id}] Empty playlist (${built.abortReason ?? 'unknown'}).`,
       'Game',
     );
-    return abortStart(host, message);
+    return abortStart(host, emptyPlaylistMessage(host.room.settings, built.abortReason));
   }
 
   host.playlist = built.playlist;
@@ -70,27 +61,7 @@ export async function startMatch(host: MatchEngineHost): Promise<boolean> {
     });
   }
 
-  if (built.fallbackUsed) {
-    setTimeout(() => {
-      const message =
-        host.room.settings.soundSelection === 'playlist'
-          ? "Liste insuffisante : des sons du pack complètent la partie (vous l'avez autorisé)."
-          : "Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l'avez autorisé).";
-      host.channel.emit('game:fallback_notification', { message });
-    }, 1000);
-  }
-
-  if (built.difficultyRelaxed) {
-    setTimeout(
-      () => {
-        host.channel.emit('game:fallback_notification', {
-          message:
-            'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
-        });
-      },
-      built.fallbackUsed ? 2500 : 1000,
-    );
-  }
+  scheduleBuildNotices(host, built);
 
   const remaining = Math.max(0, GAME_CONFIG.TIMERS.INTRO_DELAY - (Date.now() - introStartedAt));
   host.introTimer = setTimeout(() => beginRound1Ready(host), remaining);
@@ -135,9 +106,56 @@ export function beginRound1Ready(host: MatchEngineHost): void {
 
 /** Bail out after `game_started` was already sent: send players back to the
  *  lobby (cancel) and reset the room so a retry can start cleanly. */
-export function abortStart(host: MatchEngineHost, message: string): boolean {
+export function abortStart(
+  host: Pick<MatchEngineHost, 'room' | 'channel'>,
+  message: string,
+): boolean {
   host.room.status = 'waiting';
   host.channel.emit('error', { message });
   host.channel.emit('game_cancelled', { reason: message });
   return false;
+}
+
+/** User-facing reason shown when the draw produced no playable song. */
+export function emptyPlaylistMessage(
+  settings: MatchEngineHost['room']['settings'],
+  abortReason: PlaylistAbortReason | undefined,
+): string {
+  if (abortReason === 'watched_empty') {
+    return settings.watchedMode === 'intersection'
+      ? "Mode Commun impossible : au moins un joueur n'a pas de liste AniList utilisable."
+      : 'Aucune liste AniList disponible. Liez votre compte AniList ou changez la source musicale.';
+  }
+  if (abortReason === 'playlist_missing' || abortReason === 'playlist_empty') {
+    return "Cette playlist n'est plus disponible ou n'a aucun son jouable.";
+  }
+  return 'Aucun son trouvé pour ces paramètres.';
+}
+
+/** Delayed toasts when the draw had to relax the player's filters. */
+export function scheduleBuildNotices(
+  host: Pick<MatchEngineHost, 'room' | 'channel'>,
+  built: Pick<BuiltPlaylist, 'fallbackUsed' | 'difficultyRelaxed'>,
+): void {
+  if (built.fallbackUsed) {
+    setTimeout(() => {
+      const message =
+        host.room.settings.soundSelection === 'playlist'
+          ? "Liste insuffisante : des sons du pack complètent la partie (vous l'avez autorisé)."
+          : "Liste AniList insuffisante : des sons aléatoires complètent la partie (vous l'avez autorisé).";
+      host.channel.emit('game:fallback_notification', { message });
+    }, 1000);
+  }
+
+  if (built.difficultyRelaxed) {
+    setTimeout(
+      () => {
+        host.channel.emit('game:fallback_notification', {
+          message:
+            'Pool trop petit sur la difficulté choisie : des sons plus durs complètent la partie.',
+        });
+      },
+      built.fallbackUsed ? 2500 : 1000,
+    );
+  }
 }

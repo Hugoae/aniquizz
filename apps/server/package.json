@@ -2,7 +2,7 @@
   "name": "aniquizz-server",
   "version": "1.0.0",
   "main": "dist/index.js",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "engines": {
     "node": ">=20"
   },

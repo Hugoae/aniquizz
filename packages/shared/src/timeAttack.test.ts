@@ -2,15 +2,23 @@ import { describe, expect, it } from 'vitest';
 import {
   TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
   TIME_ATTACK_MAX_BUDGET_SECONDS,
+  TIME_ATTACK_MAX_CLIP_SECONDS,
   TIME_ATTACK_MIN_BUDGET_SECONDS,
+  TIME_ATTACK_MIN_CLIP_SECONDS,
   TIME_ATTACK_REVEAL_SECONDS,
+  TIME_ATTACK_SKIP_TAX_MS,
+  TIME_ATTACK_START_SAFETY_SECONDS,
   applyTimeAttackTax,
   clipGuessSeconds,
+  isTimeAttackGame,
+  isTimeAttackRace,
   isTimeAttackSettings,
   normalizeTimeBudgetSeconds,
+  timeAttackClipWindow,
   timeAttackMedal,
   timeAttackNextMedalGoal,
   timeAttackPoolSize,
+  timeAttackShortestTitleSeconds,
   timeAttackTaxMs,
   formatTimeAttackClock,
 } from './timeAttack';
@@ -34,6 +42,61 @@ describe('timeAttackPoolSize', () => {
     expect(timeAttackPoolSize(60)).toBe(20);
     expect(timeAttackPoolSize(180)).toBe(60);
     expect(timeAttackPoolSize(300)).toBe(80);
+  });
+
+  it('covers the budget when every title is a late start or a minimum skip', () => {
+    const fastest = timeAttackShortestTitleSeconds();
+    expect(fastest).toBe(Math.min(TIME_ATTACK_MIN_CLIP_SECONDS, TIME_ATTACK_SKIP_TAX_MS / 1000));
+    for (
+      let budget = TIME_ATTACK_MIN_BUDGET_SECONDS;
+      budget <= TIME_ATTACK_MAX_BUDGET_SECONDS;
+      budget += 30
+    ) {
+      const pool = timeAttackPoolSize(budget);
+      expect(pool * fastest).toBeGreaterThanOrEqual(budget);
+      expect(pool * TIME_ATTACK_MIN_CLIP_SECONDS).toBeGreaterThanOrEqual(budget);
+    }
+  });
+});
+
+describe('timeAttackClipWindow', () => {
+  const tail = TIME_ATTACK_REVEAL_SECONDS + TIME_ATTACK_START_SAFETY_SECONDS;
+
+  it('plays the catalogue clip from the beginning', () => {
+    expect(timeAttackClipWindow(90, 'beginning', () => 0.99)).toEqual({
+      videoStartTime: 0,
+      guessDuration: 90,
+    });
+    expect(timeAttackClipWindow(4, 'beginning')).toEqual({ videoStartTime: 0, guessDuration: 8 });
+  });
+
+  it('stays at the beginning when the file cannot fit a late start', () => {
+    expect(timeAttackClipWindow(12, 'random', () => 0.99)).toEqual({
+      videoStartTime: 0,
+      guessDuration: 12,
+    });
+    expect(timeAttackClipWindow(null, 'random', () => 0.99)).toEqual({
+      videoStartTime: 0,
+      guessDuration: TIME_ATTACK_MAX_CLIP_SECONDS,
+    });
+  });
+
+  it('starts near the end and keeps at least the minimum clip plus the reveal tail', () => {
+    const duration = 90;
+    const window = timeAttackClipWindow(duration, 'random', () => 0.999999);
+    expect(window.videoStartTime).toBeGreaterThan(0);
+    expect(window.guessDuration).toBeGreaterThanOrEqual(TIME_ATTACK_MIN_CLIP_SECONDS);
+    expect(window.guessDuration).toBeLessThanOrEqual(TIME_ATTACK_MAX_CLIP_SECONDS);
+    expect(window.videoStartTime + window.guessDuration + tail).toBeLessThanOrEqual(duration);
+  });
+
+  it('caps a late start on a long file at the maximum clip', () => {
+    const window = timeAttackClipWindow(240, 'random', () => 0);
+    expect(window).toEqual({ videoStartTime: 0, guessDuration: 90 });
+    const late = timeAttackClipWindow(240, 'random', () => 0.5);
+    expect(late.videoStartTime).toBeGreaterThan(0);
+    expect(late.guessDuration).toBe(TIME_ATTACK_MAX_CLIP_SECONDS);
+    expect(late.videoStartTime + late.guessDuration + tail).toBeLessThanOrEqual(240);
   });
 });
 
@@ -89,6 +152,28 @@ describe('isTimeAttackSettings', () => {
         maxPlayers: 8,
       }),
     ).toBe(false);
+  });
+});
+
+describe('versus detection', () => {
+  const room = (mode: string, maxPlayers: number, gameType: 'timeAttack' | 'standard') => ({
+    gameType,
+    mode,
+    maxPlayers,
+  });
+
+  it('splits solo runs from versus races', () => {
+    expect(isTimeAttackRace(room('multiplayer', 4, 'timeAttack'))).toBe(true);
+    expect(isTimeAttackSettings(room('multiplayer', 4, 'timeAttack'))).toBe(false);
+    expect(isTimeAttackRace(room('solo', 1, 'timeAttack'))).toBe(false);
+    expect(isTimeAttackRace(room('multiplayer', 4, 'standard'))).toBe(false);
+  });
+
+  it('isTimeAttackGame covers both shapes', () => {
+    expect(isTimeAttackGame(room('solo', 1, 'timeAttack'))).toBe(true);
+    expect(isTimeAttackGame(room('multiplayer', 4, 'timeAttack'))).toBe(true);
+    expect(isTimeAttackGame(room('multiplayer', 4, 'standard'))).toBe(false);
+    expect(isTimeAttackGame(null)).toBe(false);
   });
 });
 

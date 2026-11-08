@@ -4,6 +4,8 @@ import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
+import { TimeAttackMedalCue, type TimeAttackMedalCueState } from './TimeAttackMedalCue';
 import type { MyProfile } from './types';
 
 interface GameTopBarProps {
@@ -22,10 +24,12 @@ interface GameTopBarProps {
   showPause?: boolean;
   /** Hide Round N/M + bar when a custom meter (e.g. daily tracks) is shown below. */
   showRoundProgress?: boolean;
-  /** Solo time-attack: titles found (the run clock lives on the video stage). */
+  /** Time-attack: titles found (the run clock lives on the video stage). */
   foundCount?: number | null;
-  /** Solo time-attack: distance to the next medal, e.g. « encore 4 pour l'or ». */
-  nextMedal?: string | null;
+  /** Titles heard, so the header shows found / heard. */
+  heardCount?: number | null;
+  /** Solo time-attack medal icons. Null outside solo Chrono. */
+  nextMedal?: TimeAttackMedalCueState | null;
 }
 
 export function GameTopBar({
@@ -43,6 +47,7 @@ export function GameTopBar({
   showPause = true,
   showRoundProgress = true,
   foundCount = null,
+  heardCount = null,
   nextMedal = null,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
@@ -102,15 +107,21 @@ export function GameTopBar({
           </span>
         </div>
         {showRoundProgress && timeAttackMeter && (
-          <div className="pointer-events-auto flex items-baseline gap-2 font-mono text-sm tabular-nums">
+          <div className="pointer-events-auto flex items-center gap-3 font-mono text-sm tabular-nums">
             <span
-              key={foundCount}
-              className="animate-scale-in font-bold text-success"
+              key={`${foundCount}-${heardCount ?? ''}`}
+              className="animate-scale-in"
               aria-live="polite"
             >
-              {GAME_COPY.timeAttack.found(foundCount)}
+              {heardCount != null ? (
+                <FoundHeard found={foundCount} heard={heardCount} className="text-sm" />
+              ) : (
+                <span className="font-bold text-success">
+                  {GAME_COPY.timeAttack.found(foundCount)}
+                </span>
+              )}
             </span>
-            {nextMedal && <span className="text-xs font-semibold text-accent">· {nextMedal}</span>}
+            {nextMedal && <TimeAttackMedalCue medal={nextMedal} />}
           </div>
         )}
         {showRoundProgress && !timeAttackMeter && (

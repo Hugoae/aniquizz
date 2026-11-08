@@ -10,6 +10,8 @@ interface PlayerCardProps {
   flash?: boolean;
   onClick?: () => void;
   hideScore?: boolean;
+  /** Time-attack: found / heard in place of the point total. */
+  ratio?: { found: number; heard: number } | null;
 }
 
 export function PlayerCard({
@@ -21,6 +23,7 @@ export function PlayerCard({
   flash,
   onClick,
   hideScore,
+  ratio,
 }: PlayerCardProps) {
   return (
     <StandardPlayerCard
@@ -32,6 +35,7 @@ export function PlayerCard({
       flash={flash}
       onClick={onClick}
       hideScore={hideScore}
+      ratio={ratio}
     />
   );
 }

@@ -1,6 +1,7 @@
 {
   "name": "@aniquizz/shared",
   "version": "1.0.0",
+  "license": "UNLICENSED",
   "description": "Framework-agnostic types, constants and pure game logic shared by the client and server.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

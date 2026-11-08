@@ -1,16 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import {
   adminApi,
   AdminApiError,
@@ -21,23 +11,15 @@ import {
   type SongDifficulty,
   type SongStatus,
 } from '@/lib/adminApi';
-import {
-  AnimeEditDialog,
-  FranchiseEditDialog,
-  SongEditDialog,
-  VideoPreviewDialog,
-} from './catalogue/EditDialogs';
+import { CataloguePanelDialogs, type CatalogueConfirm } from './catalogue/CataloguePanelDialogs';
 import { CatalogueRepairQueue } from './catalogue/CatalogueRepairQueue';
 import { CatalogueToolbar } from './catalogue/CatalogueToolbar';
 import { CatalogueTree } from './catalogue/CatalogueTree';
 
-const errMsg = (e: unknown) => (e instanceof AdminApiError ? e.message : 'Erreur.');
+const errMsg = (e: unknown) =>
+  e instanceof AdminApiError ? e.message : ADMIN_COPY.catalogue.loadError;
 
-type Confirm =
-  | { kind: 'song'; id: number; label: string }
-  | { kind: 'anime'; id: number; label: string }
-  | { kind: 'franchise'; id: number; label: string }
-  | null;
+type Confirm = CatalogueConfirm;
 
 export function CataloguePanel({
   canManage,
@@ -223,7 +205,7 @@ export function CataloguePanel({
     if (!ids.length) return;
     try {
       const { count } = await adminApi.bulkUpdateSongs(ids, data);
-      toast.success(`${count} son(s) mis à jour.`);
+      toast.success(ADMIN_COPY.catalogue.bulkUpdated(count));
       setSelected(new Set());
       await load();
     } catch (e) {
@@ -237,7 +219,7 @@ export function CataloguePanel({
       if (confirm.kind === 'song') await adminApi.deleteSong(confirm.id);
       else if (confirm.kind === 'anime') await adminApi.deleteAnime(confirm.id);
       else await adminApi.deleteFranchise(confirm.id);
-      toast.success('Supprimé.');
+      toast.success(ADMIN_COPY.catalogue.deleted);
       setConfirm(null);
       await load();
     } catch (e) {
@@ -249,15 +231,6 @@ export function CataloguePanel({
   const coverage =
     counts && counts.songs > 0 ? Math.round((counts.completedSongs / counts.songs) * 100) : 0;
   const pagination = tree?.pagination;
-
-  const confirmText = useMemo(() => {
-    if (!confirm) return '';
-    if (confirm.kind === 'franchise')
-      return `Supprimer la franchise « ${confirm.label} » ? Ses animes seront détachés (non supprimés).`;
-    if (confirm.kind === 'anime')
-      return `Supprimer l'anime « ${confirm.label} » ? Tous ses sons seront supprimés.`;
-    return `Supprimer le son « ${confirm.label} » ?`;
-  }, [confirm]);
 
   return (
     <div className="space-y-4">
@@ -306,77 +279,24 @@ export function CataloguePanel({
         handleEditSong={handleEditSong}
         handleDeleteSong={handleDeleteSong}
       />
-      {/* Pagination */}
-      {pagination && pagination.totalPages > 1 && !loading && (
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => goToPage(Math.max(1, page - 1))}
-          >
-            Précédent
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {pagination.page} / {pagination.totalPages}
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={page >= pagination.totalPages}
-            onClick={() => goToPage(page + 1)}
-          >
-            Suivant
-          </Button>
-        </div>
-      )}
-
-      {/* Dialogs */}
-      {songDialog && (
-        <SongEditDialog
-          open
-          onOpenChange={(v) => !v && setSongDialog(null)}
-          song={songDialog.song}
-          animeId={songDialog.animeId}
-          onSaved={load}
-        />
-      )}
-      {animeDialog && (
-        <AnimeEditDialog
-          open
-          onOpenChange={(v) => !v && setAnimeDialog(null)}
-          anime={animeDialog.anime}
-          franchiseId={animeDialog.franchiseId}
-          onSaved={load}
-        />
-      )}
-      {franchiseDialog && (
-        <FranchiseEditDialog
-          open
-          onOpenChange={(v) => !v && setFranchiseDialog(null)}
-          franchise={franchiseDialog.franchise}
-          onSaved={load}
-        />
-      )}
-      <VideoPreviewDialog song={preview} onOpenChange={(v) => !v && setPreview(null)} />
-
-      <AlertDialog open={!!confirm} onOpenChange={(v) => !v && setConfirm(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-            <AlertDialogDescription>{confirmText}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
-              onClick={() => void doDelete()}
-            >
-              Supprimer
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CataloguePanelDialogs
+        songDialog={songDialog}
+        setSongDialog={setSongDialog}
+        animeDialog={animeDialog}
+        setAnimeDialog={setAnimeDialog}
+        franchiseDialog={franchiseDialog}
+        setFranchiseDialog={setFranchiseDialog}
+        preview={preview}
+        setPreview={setPreview}
+        confirm={confirm}
+        setConfirm={setConfirm}
+        onSaved={load}
+        onDelete={doDelete}
+        page={pagination?.page ?? page}
+        totalPages={pagination?.totalPages ?? 1}
+        showPagination={Boolean(pagination && pagination.totalPages > 1 && !loading)}
+        onPage={(next) => goToPage(Math.max(1, next))}
+      />
     </div>
   );
 }

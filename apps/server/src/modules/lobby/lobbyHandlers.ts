@@ -6,10 +6,12 @@ import {
   createLobbyInputSchema,
   evaluateLobbyJoin,
   hasWatchedListLink,
+  isTimeAttackRace,
   joinLobbyInputSchema,
   lobbyTargetInputSchema,
   resolveActiveListProvider,
   roomIdInputSchema,
+  TIME_ATTACK_RACE_MAX_PLAYERS,
   toClientRoomSettings,
   updateRoomSettingsInputSchema,
   type LobbyJoinRejectReason,
@@ -217,6 +219,14 @@ export const registerLobbyHandlers = (
       next = mergeRoomSettings(room.settings, parsed.settings);
     } catch {
       socket.emit('error', { message: 'Paramètres invalides.' });
+      return;
+    }
+
+    // A versus race holds 8 lanes at most; refuse the switch rather than evict anyone.
+    if (isTimeAttackRace(next) && room.players.size > TIME_ATTACK_RACE_MAX_PLAYERS) {
+      socket.emit('error', {
+        message: `Le Contre-la-montre accepte ${TIME_ATTACK_RACE_MAX_PLAYERS} joueurs maximum : ${room.players.size} sont présents.`,
+      });
       return;
     }
 

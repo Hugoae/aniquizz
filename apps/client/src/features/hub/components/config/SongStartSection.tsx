@@ -3,6 +3,7 @@ import type { RoomConfig } from '@aniquizz/shared';
 import {
   SONG_START_MODE_DESCRIPTIONS,
   SONG_START_MODE_LABELS,
+  TIME_ATTACK_MIN_CLIP_SECONDS,
   normalizeSongStartMode,
   type SongStartMode,
 } from '@aniquizz/shared';
@@ -40,6 +41,12 @@ export function SongStartSection({ config, update }: SongStartSectionProps) {
           </OptionButton>
         ))}
       </div>
+      {config.gameType === 'timeAttack' && mode === 'random' ? (
+        <p className="text-[10px] leading-snug text-muted-foreground">
+          Un départ tardif raccourcit l&apos;extrait, jamais sous {TIME_ATTACK_MIN_CLIP_SECONDS}{' '}
+          secondes. Le nombre de titres couvre le chrono même si chaque extrait est au plus court.
+        </p>
+      ) : null}
     </div>
   );
 }

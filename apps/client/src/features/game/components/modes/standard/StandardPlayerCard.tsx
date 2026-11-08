@@ -17,6 +17,8 @@ interface StandardPlayerCardProps {
   flash?: boolean;
   onClick?: () => void;
   hideScore?: boolean;
+  /** Time-attack: found / heard in place of the point total. */
+  ratio?: { found: number; heard: number } | null;
 }
 
 export function StandardPlayerCard({
@@ -28,6 +30,7 @@ export function StandardPlayerCard({
   flash,
   onClick,
   hideScore,
+  ratio,
 }: StandardPlayerCardProps) {
   const isCorrect = player.isCorrect === true;
   const isWrong = showResult && !isCorrect;
@@ -95,6 +98,7 @@ export function StandardPlayerCard({
       isCurrentUser={isCurrentUser}
       onClick={onClick}
       hideScore={hideScore}
+      ratio={ratio}
       bubbleContent={bubble}
       topLeftContent={
         <>

@@ -28,6 +28,8 @@ interface VideoStageProps {
   phaseEndsAt: number;
   phaseDurationSeconds: number;
   gameMode: 'solo' | 'multiplayer';
+  /** Versus time-attack: skip and "Suivant" are individual, never a vote. */
+  race?: boolean;
   submittedAnswer: string | null;
   onSoloSkip: () => void;
   soloSkipAlways?: boolean;
@@ -57,6 +59,7 @@ export const VideoStage = memo(function VideoStage({
   phaseEndsAt,
   phaseDurationSeconds,
   gameMode,
+  race = false,
   submittedAnswer,
   onSoloSkip,
   soloSkipAlways = false,
@@ -216,7 +219,7 @@ export const VideoStage = memo(function VideoStage({
         </div>
       </div>
 
-      {gameMode === 'solo' &&
+      {(gameMode === 'solo' || race) &&
         phase === 'guessing' &&
         !isGamePaused &&
         (soloSkipAlways || submittedAnswer) && (
@@ -243,9 +246,13 @@ export const VideoStage = memo(function VideoStage({
 
       {phase === 'revealed' && (
         <div className="absolute bottom-4 right-4 z-30">
-          <Button variant="default" onClick={onVoteSkip} className="gap-2 shadow-glow">
-            <SkipForward className="h-4 w-4" /> Suivant{' '}
-            {playersCount > 1 && ` (${skipVotes}/${skipRequired})`}
+          <Button
+            variant="default"
+            onClick={race ? onSoloSkip : onVoteSkip}
+            className="gap-2 shadow-glow"
+          >
+            <SkipForward className="h-4 w-4" /> Suivant
+            {!race && playersCount > 1 && ` (${skipVotes}/${skipRequired})`}
           </Button>
         </div>
       )}

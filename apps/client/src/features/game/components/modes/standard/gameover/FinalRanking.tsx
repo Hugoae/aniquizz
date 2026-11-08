@@ -1,6 +1,6 @@
 import { ArrowLeft, Check, ListMusic, Medal } from 'lucide-react';
 
-import type { GamePlayer } from '@aniquizz/shared';
+import type { GamePlayer, RaceStandingEntry } from '@aniquizz/shared';
 
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +11,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { AddFriendButton } from '@/features/friends/AddFriendButton';
 
 import { RankPill } from '@/features/game/components/shared/RankPill';
+import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 
 import { getDistinctRanks, podiumTierForRank } from '@/features/game/utils/podiumGroups';
 
@@ -26,6 +27,9 @@ interface FinalRankingProps {
   onLeave: () => void;
 
   onShowDetail: () => void;
+
+  /** Versus race: found / heard replaces points. Medal tiers stay off this screen. */
+  race?: Map<string, RaceStandingEntry>;
 }
 
 export function FinalRanking({
@@ -34,6 +38,7 @@ export function FinalRanking({
   ranks,
   onLeave,
   onShowDetail,
+  race,
 }: FinalRankingProps) {
   const distinctRanks = getDistinctRanks(sortedPlayers, ranks);
 
@@ -60,6 +65,8 @@ export function FinalRanking({
             const podiumTier = podiumTierForRank(rank, distinctRanks);
 
             const xp = p.xpEarned;
+
+            const standing = race?.get(String(p.id));
 
             return (
               <div
@@ -107,7 +114,8 @@ export function FinalRanking({
                       {isMe && typeof xp === 'number' && xp > 0 && <XpEarnedBadge xp={xp} />}
                     </span>
 
-                    {typeof p.matchCorrectCount === 'number' &&
+                    {!standing &&
+                      typeof p.matchCorrectCount === 'number' &&
                       typeof p.matchTotalCount === 'number' &&
                       p.matchTotalCount > 0 && (
                         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
@@ -127,19 +135,21 @@ export function FinalRanking({
                   />
                 )}
 
-                <div className="shrink-0 text-right">
-                  <span
-                    className={cn(
-                      'font-mono text-xl font-black tabular-nums',
-
-                      podiumTier ? 'text-foreground' : 'text-foreground/70',
-                    )}
-                  >
-                    {p.score}
-                  </span>
-
-                  <span className="ml-1 text-[10px] font-bold text-muted-foreground">pts</span>
-                </div>
+                {standing ? (
+                  <FoundHeard found={standing.found} heard={standing.heard} prominent />
+                ) : (
+                  <div className="shrink-0 text-right">
+                    <span
+                      className={cn(
+                        'font-mono text-xl font-black tabular-nums',
+                        podiumTier ? 'text-foreground' : 'text-foreground/70',
+                      )}
+                    >
+                      {p.score}
+                    </span>
+                    <span className="ml-1 text-[10px] font-bold text-muted-foreground">pts</span>
+                  </div>
+                )}
               </div>
             );
           })}

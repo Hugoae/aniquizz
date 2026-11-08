@@ -4,7 +4,7 @@
   "description": "Prisma schema, shared Prisma client, and the ETL media pipeline (AniList -> AnimeThemes -> Postgres -> R2).",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "scripts": {
     "build": "tsc",

@@ -32,8 +32,23 @@ export function MultiResult({
 }: MultiResultProps) {
   const [showDetail, setShowDetail] = useState(false);
 
-  const sortedPlayers = [...victoryData.rankings].sort((a, b) => b.score - a.score);
-  const ranks = computeRanks(sortedPlayers);
+  // A race arrives already ordered (most found, then fewest heard, then time left);
+  // re-sorting on score would erase that order.
+  const raceStandings = victoryData.race?.standings;
+  const sortedPlayers = raceStandings
+    ? [...victoryData.rankings]
+    : [...victoryData.rankings].sort((a, b) => b.score - a.score);
+  const raceByUser = raceStandings
+    ? new Map(raceStandings.map((standing) => [standing.userId, standing]))
+    : undefined;
+  const ranks = raceByUser
+    ? new Map(
+        sortedPlayers.map((p) => [
+          String(p.id),
+          raceByUser.get(String(p.id))?.rank ?? sortedPlayers.length,
+        ]),
+      )
+    : computeRanks(sortedPlayers);
   const myRank = ranks.get(String(currentUserId)) ?? sortedPlayers.length;
   const isPlayerWinner = victoryData.winnerIds.some((id) => String(id) === String(currentUserId));
 
@@ -58,11 +73,14 @@ export function MultiResult({
             isPlayerWinner={isPlayerWinner}
             myRank={myRank}
             ranks={ranks}
+            scoreUnit={raceByUser ? 'titres' : undefined}
+            race={raceByUser}
           />
           <FinalRanking
             sortedPlayers={sortedPlayers}
             currentUserId={currentUserId}
             ranks={ranks}
+            race={raceByUser}
             onLeave={onLeave}
             onShowDetail={() => setShowDetail(true)}
           />

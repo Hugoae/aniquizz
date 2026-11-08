@@ -7,7 +7,7 @@ export const HOME_COPY = {
   play: 'Jouer',
   library: 'Librairie',
   leaderboard: 'Classement',
-  ideas: 'Idées',
+  ideas: 'Avis & bugs',
   newsTitle: 'Actualités',
   newsSeeAll: 'Voir tout',
 } as const;

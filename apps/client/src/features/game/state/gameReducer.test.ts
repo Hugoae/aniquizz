@@ -247,6 +247,19 @@ describe('gameReducer time-attack feedback', () => {
     expect(state.stageFeedback).toBeNull();
   });
 
+  it('cues a submitted wrong answer without a time-attack tax', () => {
+    const state = gameReducer(createInitialState(20), {
+      type: 'ROUND_REVEAL',
+      payload: {
+        ...reveal(1, song(1, 'Naruto'), false),
+        players: [{ ...player('u1'), isCorrect: false, currentAnswer: 'Bleach' }],
+      },
+      myUserId: 'u1',
+    });
+    expect(state.stageFeedback).toMatchObject({ kind: 'wrong' });
+    expect(state.stageFeedback?.deltaMs).toBeUndefined();
+  });
+
   it('records found, missed and skipped titles newest first, capped at five', () => {
     let state = createInitialState(20);
     state = gameReducer(state, {
@@ -288,5 +301,52 @@ describe('gameReducer time-attack feedback', () => {
     }
     expect(state.recentTitles).toHaveLength(5);
     expect(state.recentTitles[0].anime).toBe('Anime 8');
+  });
+});
+
+describe('gameReducer versus race', () => {
+  const entry = {
+    userId: 'u2',
+    foundCount: 3,
+    heardCount: 5,
+    skips: 1,
+    remainingMs: 90_000,
+    running: true,
+    finished: false,
+    streak: 4,
+  };
+
+  it('stores the live board and stamps when it arrived', () => {
+    const state = gameReducer(createInitialState(10), {
+      type: 'RACE_BOARD',
+      payload: { serverNow: 1, entries: [entry] },
+    });
+    expect(state.raceBoard?.entries).toEqual([entry]);
+    expect(state.raceBoard?.receivedAt).toBeGreaterThan(0);
+  });
+
+  it('flags my lane as done and keeps the final found count', () => {
+    const state = gameReducer(createInitialState(10), { type: 'RACE_LANE_DONE', foundCount: 7 });
+    expect(state.laneDone).toBe(true);
+    expect(state.foundCount).toBe(7);
+  });
+
+  it('restores board and lane-done from a reconnect sync', () => {
+    const state = gameReducer(createInitialState(10), {
+      type: 'SYNC',
+      state: {
+        status: 'playing',
+        currentRound: 4,
+        totalRounds: 12,
+        players: [],
+        phase: null,
+        round: null,
+        reveal: null,
+        laneDone: true,
+        raceBoard: { serverNow: 1, entries: [entry] },
+      },
+    });
+    expect(state.laneDone).toBe(true);
+    expect(state.raceBoard?.entries).toHaveLength(1);
   });
 });

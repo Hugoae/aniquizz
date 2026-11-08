@@ -2,6 +2,7 @@ import React from 'react';
 import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
+import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 
 export interface PlayerCardBaseProps {
   player: {
@@ -23,6 +24,8 @@ export interface PlayerCardBaseProps {
   bubbleContent?: React.ReactNode;
   /** Daily (and similar) — identity only, no running score. */
   hideScore?: boolean;
+  /** Time-attack: found / heard in place of the point total. */
+  ratio?: { found: number; heard: number } | null;
 }
 
 export function PlayerCardBase({
@@ -35,6 +38,7 @@ export function PlayerCardBase({
   topLeftContent,
   bubbleContent,
   hideScore = false,
+  ratio = null,
 }: PlayerCardBaseProps) {
   const displayName = player.name || player.username || 'Joueur';
   const hasChildren = React.Children.count(children) > 0;
@@ -105,12 +109,20 @@ export function PlayerCardBase({
           >
             {displayName}
           </span>
-          {!hideScore && (
-            <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-xl font-black leading-none tracking-tight">
-              {player.score}
-              <span className="text-[10px] font-normal text-muted-foreground">pts</span>
-            </div>
-          )}
+          {!hideScore &&
+            (ratio ? (
+              <FoundHeard
+                found={ratio.found}
+                heard={ratio.heard}
+                prominent
+                className="shrink-0 font-mono leading-none"
+              />
+            ) : (
+              <div className="flex shrink-0 items-baseline gap-1 whitespace-nowrap font-mono text-xl font-black leading-none tracking-tight">
+                {player.score}
+                <span className="text-[10px] font-normal text-muted-foreground">pts</span>
+              </div>
+            ))}
         </div>
 
         {hasChildren && (

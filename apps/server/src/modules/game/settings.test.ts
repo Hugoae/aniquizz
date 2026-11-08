@@ -108,8 +108,8 @@ describe('speedBonusEnabled', () => {
 });
 
 describe('timeAttack', () => {
-  it('forces typing, beginning, and a pool sized from the budget in solo', () => {
-    const settings = normalizeRoomSettings(
+  it('forces typing and a pool sized from the budget, and keeps the song start', () => {
+    const randomStart = normalizeRoomSettings(
       {
         gameType: 'timeAttack',
         mode: 'solo',
@@ -121,22 +121,97 @@ describe('timeAttack', () => {
       },
       meta,
     );
-    expect(settings.gameType).toBe('timeAttack');
-    expect(settings.responseType).toBe('typing');
-    expect(settings.songStartMode).toBe('beginning');
-    expect(settings.speedBonusEnabled).toBe(false);
-    expect(settings.timeBudgetSeconds).toBe(180);
-    expect(settings.soundCount).toBe(60);
-    expect(settings.timeAttackPunitiveSkip).toBe(true);
-  });
+    expect(randomStart.gameType).toBe('timeAttack');
+    expect(randomStart.responseType).toBe('typing');
+    expect(randomStart.songStartMode).toBe('random');
+    expect(randomStart.speedBonusEnabled).toBe(false);
+    expect(randomStart.timeBudgetSeconds).toBe(180);
+    expect(randomStart.soundCount).toBe(60);
+    expect(randomStart.timeAttackPunitiveSkip).toBe(true);
 
-  it('demotes multiplayer timeAttack to standard', () => {
-    const settings = normalizeRoomSettings(
-      { gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 8, timeBudgetSeconds: 180 },
+    const fromTheTop = normalizeRoomSettings(
+      {
+        gameType: 'timeAttack',
+        mode: 'solo',
+        maxPlayers: 1,
+        songStartMode: 'beginning',
+        timeBudgetSeconds: 180,
+      },
       meta,
     );
-    expect(settings.gameType).toBe('standard');
-    expect(settings.timeBudgetSeconds).toBeUndefined();
+    expect(fromTheTop.songStartMode).toBe('beginning');
+    expect(fromTheTop.soundCount).toBe(60);
+  });
+
+  it('keeps multiplayer timeAttack as a versus race with the same forced rules', () => {
+    const settings = normalizeRoomSettings(
+      {
+        gameType: 'timeAttack',
+        mode: 'multiplayer',
+        maxPlayers: 6,
+        responseType: 'qcm',
+        timeBudgetSeconds: 180,
+      },
+      meta,
+    );
+    expect(settings.gameType).toBe('timeAttack');
+    expect(settings.responseType).toBe('typing');
+    expect(settings.maxPlayers).toBe(6);
+    expect(settings.timeBudgetSeconds).toBe(180);
+    expect(settings.soundCount).toBe(60);
+  });
+
+  it('caps a versus race at 8 players', () => {
+    const settings = normalizeRoomSettings(
+      { gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 40 },
+      meta,
+    );
+    expect(settings.maxPlayers).toBe(8);
+  });
+
+  it('forbids Watched in a versus race', () => {
+    const settings = normalizeRoomSettings(
+      {
+        gameType: 'timeAttack',
+        mode: 'multiplayer',
+        maxPlayers: 4,
+        soundSelection: 'watched',
+        playlistWatched: true,
+        watchedAllowFallback: true,
+      },
+      meta,
+    );
+    expect(settings.soundSelection).not.toBe('watched');
+    expect(settings.playlistWatched).toBe(false);
+    expect(settings.watchedAllowFallback).toBe(false);
+  });
+
+  it('keeps instant reveal only for a solo standard room', () => {
+    const on = normalizeRoomSettings(
+      { mode: 'solo', maxPlayers: 1, gameType: 'standard', soloInstantReveal: true },
+      meta,
+    );
+    expect(on.soloInstantReveal).toBe(true);
+
+    const off = normalizeRoomSettings({ mode: 'solo', maxPlayers: 1, gameType: 'standard' }, meta);
+    expect(off.soloInstantReveal).toBe(false);
+
+    const multi = normalizeRoomSettings(
+      { mode: 'multiplayer', maxPlayers: 8, gameType: 'standard', soloInstantReveal: true },
+      meta,
+    );
+    expect(multi.soloInstantReveal).toBe(false);
+
+    const chrono = normalizeRoomSettings(
+      { mode: 'solo', maxPlayers: 1, gameType: 'timeAttack', soloInstantReveal: true },
+      meta,
+    );
+    expect(chrono.soloInstantReveal).toBe(false);
+  });
+
+  it('does not clamp a standard multiplayer room to 8', () => {
+    const settings = normalizeRoomSettings({ mode: 'multiplayer', maxPlayers: 20 }, meta);
+    expect(settings.maxPlayers).toBe(20);
   });
 });
 

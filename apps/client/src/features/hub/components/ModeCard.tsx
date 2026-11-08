@@ -16,6 +16,8 @@ export interface ModeCardData {
   badge?: string;
   /** Dynamic hint shown under the description (e.g. "12 joueurs en ligne"). */
   teaser?: string;
+  /** Accent dot beside the teaser — only when the hint describes live presence. */
+  teaserLive?: boolean;
 }
 
 interface ModeCardProps {
@@ -65,8 +67,13 @@ function ModeCardContent({ mode, interactive }: { mode: ModeCardData; interactiv
 
       <div className="mt-4 min-h-[1.5rem] shrink-0">
         {mode.teaser ? (
-          <span className="inline-flex items-center gap-2 text-sm font-medium text-foreground/80">
-            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
+          <span className="inline-flex items-start gap-2 text-sm font-medium leading-snug text-foreground/80">
+            {mode.teaserLive ? (
+              <span
+                className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                aria-hidden="true"
+              />
+            ) : null}
             {mode.teaser}
           </span>
         ) : null}

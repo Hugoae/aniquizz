@@ -1,7 +1,7 @@
 /** Play landing — mode cards, daily-quiz teaser, and navigation into solo/multi flows. */
 import { useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
-import { ArrowLeft, User, Users, Swords } from 'lucide-react';
+import { ArrowLeft, Swords, User, Users } from 'lucide-react';
 import type { GameMode } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { getPlayBannedMessage, isSanctionActive, useSanctionTicker } from '@/lib/suspension';
@@ -25,16 +25,6 @@ const MODE_CARDS: ModeCardData[] = [
     description: HUB_COPY.modes.multiplayer.description,
     icon: Users,
     gradient: 'from-primary to-primary-glow',
-  },
-  {
-    id: 'competitive',
-    title: HUB_COPY.modes.competitive.title,
-    description: HUB_COPY.modes.competitive.description,
-    icon: Swords,
-    gradient: 'from-destructive/90 to-destructive',
-    iconClassName: 'text-destructive-foreground',
-    disabled: true,
-    badge: HUB_COPY.modes.competitive.badge,
   },
 ];
 
@@ -63,10 +53,14 @@ export function ModeSelectView({
 
   const cards = useMemo<ModeCardData[]>(() => {
     return MODE_CARDS.map((card) => {
+      if (card.id === 'solo') {
+        return { ...card, teaser: HUB_COPY.modes.solo.detail };
+      }
       if (card.id === 'multiplayer') {
         return {
           ...card,
           teaser: multiplayerTeaser(multiplayerCount),
+          teaserLive: multiplayerCount > 0,
         };
       }
       return card;
@@ -103,7 +97,7 @@ export function ModeSelectView({
         {HUB_COPY.modeSubtitle}
       </p>
 
-      <div className="grid grid-cols-1 items-stretch gap-6 sm:grid-cols-2 md:grid-cols-3 md:gap-8">
+      <div className="mx-auto grid max-w-4xl grid-cols-1 items-stretch gap-6 sm:grid-cols-2">
         {cards.map((mode, index) => (
           <ModeCard
             key={mode.id}
@@ -117,6 +111,13 @@ export function ModeSelectView({
       </div>
 
       <DailyQuizCard />
+
+      <p className="mt-6 flex items-center justify-center gap-2 text-center text-sm text-muted-foreground">
+        <Swords className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span>
+          {HUB_COPY.modes.competitive.title} — {HUB_COPY.modes.competitive.note}
+        </span>
+      </p>
     </div>
   );
 }

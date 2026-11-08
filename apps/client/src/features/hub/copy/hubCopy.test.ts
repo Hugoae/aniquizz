@@ -20,7 +20,8 @@ describe('hubCopy', () => {
     expect(HUB_COPY.toasts.missingRoom).toMatch(/Revenez/);
   });
 
-  it('pluralizes the live multiplayer teaser', () => {
+  it('pluralizes the live multiplayer teaser and stays quiet at zero', () => {
+    expect(multiplayerTeaser(0)).toBe('Aucun salon en ce moment');
     expect(multiplayerTeaser(1)).toBe('1 joueur en multijoueur');
     expect(multiplayerTeaser(3)).toBe('3 joueurs en multijoueur');
   });

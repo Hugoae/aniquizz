@@ -44,12 +44,13 @@ New-chat kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md).
 | ------------------------------- | --------------------------------------------------------------- |
 | `GameManager`                   | Orchestrates rooms and matches; imported by all socket handlers |
 | `Room`                          | Live lobby/match state                                          |
-| `MatchEngine`                   | Round-by-round game loop                                        |
+| `MatchEngine`                   | Round-by-round game loop (solo Chrono included)                 |
+| `RaceEngine`                    | Versus Chrono: one lane per player, private rounds              |
 | `PlaylistBuilder`               | Song draw, Watched/AniList filters, QCM choices                 |
 | `TypedServer`                   | Typed Socket.io server                                          |
 | `packages/shared/src/events.ts` | Single source of truth for socket event names and payloads      |
 
-**Realtime path (server):** `SocketManager` → `TypedServer` → `Room` → `MatchEngine`.
+**Realtime path (server):** `SocketManager` → `TypedServer` → `Room` → `MatchEngine` (or `RaceEngine` for versus Chrono).
 
 **Realtime path (client):** `Game.tsx` → `useGameSocket` → `socket.ts` → server handlers.
 

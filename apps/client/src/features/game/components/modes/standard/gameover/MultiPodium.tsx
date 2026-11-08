@@ -1,6 +1,6 @@
 import { Crown } from 'lucide-react';
 
-import type { GamePlayer } from '@aniquizz/shared';
+import type { GamePlayer, RaceStandingEntry } from '@aniquizz/shared';
 
 import { cn } from '@/lib/utils';
 
@@ -142,12 +142,19 @@ function PodiumStep({
   delay,
 
   raised,
+  scoreUnit,
+  ratio,
 }: {
   slot: PodiumSlot;
 
   delay?: string;
 
   raised?: boolean;
+
+  scoreUnit: string;
+
+  /** Versus race: found / heard, shared by everyone on this step. */
+  ratio?: { found: number; heard: number } | null;
 }) {
   const s = PODIUM_STYLES[slot.step];
 
@@ -197,21 +204,32 @@ function PodiumStep({
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
-        <span
-          className={cn(
-            'relative z-10 font-display font-black tabular-nums',
-
-            slot.step === 1 ? 'text-5xl md:text-6xl' : 'text-3xl md:text-4xl',
-
-            s.score,
-          )}
-        >
-          {displayScore}
-        </span>
-
-        <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:text-xs">
-          pts
-        </span>
+        {ratio ? (
+          <span
+            className={cn(
+              'relative z-10 font-display font-black tabular-nums',
+              slot.step === 1 ? 'text-4xl md:text-5xl' : 'text-2xl md:text-3xl',
+            )}
+          >
+            <span className={s.score}>{ratio.found}</span>
+            <span className="text-muted-foreground"> / {ratio.heard}</span>
+          </span>
+        ) : (
+          <>
+            <span
+              className={cn(
+                'relative z-10 font-display font-black tabular-nums',
+                slot.step === 1 ? 'text-5xl md:text-6xl' : 'text-3xl md:text-4xl',
+                s.score,
+              )}
+            >
+              {displayScore}
+            </span>
+            <span className="relative z-10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground md:text-xs">
+              {scoreUnit}
+            </span>
+          </>
+        )}
       </div>
     </div>
   );
@@ -225,10 +243,31 @@ interface MultiPodiumProps {
   myRank: number;
 
   ranks: Map<string, number>;
+
+  /** Label under the big number: points in standard, titles in a versus race. */
+  scoreUnit?: string;
+
+  /** Versus race standings, so every step (bots included) shows found / heard. */
+  race?: Map<string, RaceStandingEntry>;
 }
 
-export function MultiPodium({ sortedPlayers, isPlayerWinner, myRank, ranks }: MultiPodiumProps) {
-  const layout = buildPodiumLayout(sortedPlayers, ranks);
+export function MultiPodium({
+  sortedPlayers,
+  isPlayerWinner,
+  myRank,
+  ranks,
+  scoreUnit = 'pts',
+  race,
+}: MultiPodiumProps) {
+  // Bots stay in the ranking list. The podium is the victory, so only humans stand on it.
+  const layout = buildPodiumLayout(
+    race ? sortedPlayers.filter((player) => !player.isBot) : sortedPlayers,
+    ranks,
+  );
+  const ratioFor = (slot: { players: GamePlayer[] } | null) => {
+    const standing = slot ? race?.get(String(slot.players[0]?.id ?? '')) : undefined;
+    return standing ? { found: standing.found, heard: standing.heard } : null;
+  };
 
   return (
     <div className="relative flex min-h-[420px] flex-col lg:col-span-7 lg:min-h-0">
@@ -251,11 +290,32 @@ export function MultiPodium({ sortedPlayers, isPlayerWinner, myRank, ranks }: Mu
       </div>
 
       <div className="mt-auto flex items-end justify-center gap-3 px-2 pb-6 md:gap-8 md:pb-10">
-        {layout.left && <PodiumStep slot={layout.left} delay="0.2s" />}
+        {layout.left && (
+          <PodiumStep
+            slot={layout.left}
+            delay="0.2s"
+            scoreUnit={scoreUnit}
+            ratio={ratioFor(layout.left)}
+          />
+        )}
 
-        {layout.center && <PodiumStep slot={layout.center} raised />}
+        {layout.center && (
+          <PodiumStep
+            slot={layout.center}
+            raised
+            scoreUnit={scoreUnit}
+            ratio={ratioFor(layout.center)}
+          />
+        )}
 
-        {layout.right && <PodiumStep slot={layout.right} delay="0.4s" />}
+        {layout.right && (
+          <PodiumStep
+            slot={layout.right}
+            delay="0.4s"
+            scoreUnit={scoreUnit}
+            ratio={ratioFor(layout.right)}
+          />
+        )}
       </div>
     </div>
   );

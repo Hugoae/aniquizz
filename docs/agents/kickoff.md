@@ -23,9 +23,12 @@ quelque chose n'est pas clair :
 2. Lis CONTEXT-MAP.md, puis le CONTEXT.md du package concerné (rôle, glossaire,
    pièges). Un seul petit fichier ciblé suffit.
 3. Lis PLAN.md — version/phase courante et roadmap. Identifie la phase COURANTE.
-   N'anticipe pas. N'implémente pas une version parked (HIBP ; pokédex /
-   rework Admin ; Chrono **multi** ; le Chrono solo est sur `main` pour les
-   tests, encore inachevé).
+   N'anticipe pas. N'implémente pas la barre « trouvés » du pokédex ni HIBP
+   tant que ce n'est pas la tâche. Le Contre-la-montre, la refonte admin,
+   les jingles de réponse (aussi en standard, coupables dans les options),
+   la révélation immédiate (réglage solo standard, plus une option globale)
+   et la licence propriétaire sont en place : ne les rouvre pas sans demande.
+   Les sources entendus / trouvés / likés ont été retirées du plan.
 4. Lis PROGRESS.md — dernier livrable, décisions, état, prochaine étape.
 5. Ne survole ARCHITECTURE.md que pour la section utile à la tâche.
 6. Pour un audit de feature, utilise docs/agents/feature-audit.md (10 lentilles,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAdminRoomId, parseAdminTab } from './adminNavigation';
+import { parseAdminRoomId, parseAdminTab, visibleAdminGroups } from './adminNavigation';
 
 describe('parseAdminRoomId', () => {
   it('keeps a room code and drops anything else', () => {
@@ -26,5 +26,25 @@ describe('parseAdminTab', () => {
     expect(parseAdminTab('catalogue', { canManage: false, isDev: false })).toBe('catalogue');
     expect(parseAdminTab('daily', { canManage: true, isDev: false })).toBe('daily');
     expect(parseAdminTab('dev', { canManage: true, isDev: true })).toBe('dev');
+  });
+});
+
+describe('visibleAdminGroups', () => {
+  it('hides admin-only tools from a moderator and dev tools outside local dev', () => {
+    expect(visibleAdminGroups({ canManage: false, isDev: true }).map((group) => group.id)).toEqual([
+      'moderation',
+      'content',
+      'reading',
+    ]);
+    const content = visibleAdminGroups({ canManage: false, isDev: false }).find(
+      (group) => group.id === 'content',
+    );
+    expect(content?.tabs).toEqual(['catalogue', 'suggestions']);
+    expect(
+      visibleAdminGroups({ canManage: true, isDev: true }).some((group) => group.id === 'dev'),
+    ).toBe(true);
+    expect(
+      visibleAdminGroups({ canManage: true, isDev: false }).some((group) => group.id === 'dev'),
+    ).toBe(false);
   });
 });

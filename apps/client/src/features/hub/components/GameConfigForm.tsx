@@ -12,11 +12,13 @@ import {
   hasWatchedListLink,
   hasPlaylistSource,
   TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
+  TIME_ATTACK_RACE_MAX_PLAYERS,
   timeAttackPoolSize,
 } from '@aniquizz/shared';
 import type { Profile } from '@/features/auth/context/AuthContext';
 
 import { RoomSettingsSection } from './config/RoomSettingsSection';
+import { raceRoomPatch } from './config/raceLobby';
 import { RulesSection } from './config/RulesSection';
 import { SourceSection } from './config/SourceSection';
 import { AdvancedSection } from './config/AdvancedSection';
@@ -73,14 +75,19 @@ export function GameConfigForm<T extends GameConfig>({
 }: GameConfigFormProps<T>) {
   const cfg = config as unknown as RoomConfig;
 
+  const raceLobby = isRoom && cfg.gameType === 'timeAttack';
+
   const update = (patch: Partial<RoomConfig>) => setConfig((prev) => ({ ...prev, ...patch }) as T);
 
   const handleGameTypeChange = (gameType: GameType) => {
     if (gameType === 'timeAttack') {
       const timeBudgetSeconds = cfg.timeBudgetSeconds ?? TIME_ATTACK_DEFAULT_BUDGET_SECONDS;
       update({
+        ...(isRoom ? raceRoomPatch(cfg) : {}),
         gameType,
         responseType: 'typing',
+        // Intro is the Chrono default. Random start is the advanced option;
+        // a late offset shortens the clip, and the pool already covers that.
         songStartMode: 'beginning',
         timeBudgetSeconds,
         soundCount: timeAttackPoolSize(timeBudgetSeconds),
@@ -216,6 +223,7 @@ export function GameConfigForm<T extends GameConfig>({
             config={cfg}
             update={update}
             minPlayers={currentPlayersCount}
+            maxPlayersCap={raceLobby ? TIME_ATTACK_RACE_MAX_PLAYERS : undefined}
           />
         )}
 
@@ -251,11 +259,13 @@ export function GameConfigForm<T extends GameConfig>({
       </aside>
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        {(!isRoom || (cfg.maxPlayers ?? 1) <= 1) && (
-          <div className="mb-3">
-            <GameTypeSelector value={cfg.gameType ?? 'standard'} onChange={handleGameTypeChange} />
-          </div>
-        )}
+        <div className="mb-3">
+          <GameTypeSelector
+            value={cfg.gameType ?? 'standard'}
+            onChange={handleGameTypeChange}
+            versus={isRoom}
+          />
+        </div>
         <div className="glass-card custom-scrollbar flex-1 overflow-y-auto px-5 pb-4 pt-3 md:px-6 md:pb-5 md:pt-3 lg:px-8 lg:pb-6">
           {activeSectionLabel && (
             <h2 className="mb-3 border-b border-border/60 pb-1.5 text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
@@ -276,6 +286,7 @@ export function GameConfigForm<T extends GameConfig>({
               config={cfg}
               update={update}
               isRoom={isRoom}
+              watchedForbidden={raceLobby}
               watchedListLinked={hasWatchedListLink(profile ?? {})}
               watchedPoolStats={watchedStats ?? null}
               watchedPoolLoading={watchedLoading}

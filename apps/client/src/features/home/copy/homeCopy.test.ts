@@ -16,6 +16,6 @@ describe('HOME_COPY', () => {
     expect(HOME_COPY.play).toBe('Jouer');
     expect(HOME_COPY.library).toBe('Librairie');
     expect(HOME_COPY.leaderboard).toBe('Classement');
-    expect(HOME_COPY.ideas).toBe('Idées');
+    expect(HOME_COPY.ideas).toBe('Avis & bugs');
   });
 });

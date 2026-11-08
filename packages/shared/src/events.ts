@@ -41,6 +41,8 @@ import type {
   RoundStartPayload,
   SpeedLeaderboardPayload,
   TimeAttackBudgetPayload,
+  RaceBoardPayload,
+  RaceLaneDonePayload,
   GameReadyPayload,
   GameOverPayload,
   DuoChoicesPayload,
@@ -166,6 +168,10 @@ export interface ServerToClientEvents {
   /** Speed bonus — final top-3 correct times + personalized "you" row (reveal). */
   'speed:leaderboard': (payload: SpeedLeaderboardPayload) => void;
   'timeAttack:budget': (payload: TimeAttackBudgetPayload) => void;
+  /** Versus: live lane board (found, budget left) for every player. */
+  'race:board': (payload: RaceBoardPayload) => void;
+  /** Versus: this player's own lane ended; others may still be playing. */
+  'race:lane_done': (payload: RaceLaneDonePayload) => void;
   round_reveal: (payload: RoundRevealPayload) => void;
   /** Warm a clip's buffer ahead of playback (round 1 in intro, next during reveal). */
   'game:preload': (payload: PreloadVideoPayload) => void;

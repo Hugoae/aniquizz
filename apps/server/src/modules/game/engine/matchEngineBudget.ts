@@ -132,12 +132,15 @@ export function applyTimeAttackRoundTax(host: MatchEngineHost, kind: TimeAttackT
 export function skipTimeAttackRound(host: MatchEngineHost): void {
   if (!isTimeAttackHost(host)) return;
   if (host.phase !== 'guessing' || host.isRoundEnded || host.isRoundLoading) return;
-  const remaining = applyTimeAttackRoundTax(host, 'skip');
-  host.endRound(remaining <= 0 ? 'finish' : 'skip');
+  applyTimeAttackRoundTax(host, 'skip');
+  // A skip that spends the budget still reveals; endRound closes after that.
+  host.endRound('skip');
 }
 
 export function onTimeAttackBudgetExpired(host: MatchEngineHost): void {
-  if (host.room.status === 'finished') return;
+  if (host.room.status === 'finished' || host.finishStarted) return;
+  // The title is already on screen. The reveal clock ends the match.
+  if (host.phase === 'reveal') return;
   if (host.phase === 'guessing' && !host.isRoundEnded && !host.isRoundLoading) {
     host.endRound('finish');
     return;

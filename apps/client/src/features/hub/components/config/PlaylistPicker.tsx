@@ -30,6 +30,8 @@ interface PlaylistPickerProps {
   watchedListLinked: boolean;
   /** Humans currently in the salon — fusion modes need 2+ lists. */
   currentPlayersCount?: number;
+  /** Versus race: every lane shares one playlist, so the Watched overlay is unavailable. */
+  watchedForbidden?: boolean;
 }
 
 const packCardClass = (active: boolean) =>
@@ -53,6 +55,7 @@ export function PlaylistPicker({
   isRoom,
   watchedListLinked,
   currentPlayersCount = 0,
+  watchedForbidden = false,
 }: PlaylistPickerProps) {
   const overlayOn = Boolean(config.playlistWatched);
   const showFusion = overlayOn && showWatchedFusionMode(isRoom, currentPlayersCount);
@@ -222,7 +225,7 @@ export function PlaylistPicker({
         </div>
       </div>
 
-      {(selection.playlistId || selection.decadePlaylistId) && (
+      {!watchedForbidden && (selection.playlistId || selection.decadePlaylistId) && (
         <div className="shrink-0 space-y-2 border-t border-border/50 bg-card/80 px-1 pt-2">
           <label className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/20 px-2.5 py-2">
             <Checkbox

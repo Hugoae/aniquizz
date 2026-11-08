@@ -21,10 +21,17 @@ interface GameTypeSelectorProps {
   value: GameType;
   onChange: (gameType: GameType) => void;
   className?: string;
+  /** Multiplayer room: Chrono is a parallel race, so the blurb says so. */
+  versus?: boolean;
 }
 
-/** Solo create and solo lobby edit. Chrono is not offered in multiplayer this slice. */
-export function GameTypeSelector({ value, onChange, className }: GameTypeSelectorProps) {
+/** Standard or Chrono. In a multiplayer room, Chrono runs as a versus race (2 to 8 players). */
+export function GameTypeSelector({
+  value,
+  onChange,
+  className,
+  versus = false,
+}: GameTypeSelectorProps) {
   return (
     <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-stretch', className)}>
       {GAME_TYPES.map(({ id, icon: Icon, description }) => {
@@ -58,7 +65,11 @@ export function GameTypeSelector({ value, onChange, className }: GameTypeSelecto
               />
               {GAME_TYPE_LABELS[id]}
             </span>
-            <span className="text-xs leading-snug text-muted-foreground">{description}</span>
+            <span className="text-xs leading-snug text-muted-foreground">
+              {versus && id === 'timeAttack'
+                ? 'Course en parallèle : chacun sa voie, le plus de titres gagne'
+                : description}
+            </span>
           </button>
         );
       })}

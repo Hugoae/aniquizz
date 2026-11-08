@@ -200,6 +200,47 @@ export interface TimeAttackBudgetPayload {
   roundResult?: { outcome: 'found' | 'missed' | 'skipped'; song: RevealSong };
 }
 
+/** One lane in the versus board. No song data: opponents never see your titles. */
+export interface RaceBoardEntry {
+  userId: string;
+  foundCount: number;
+  /** Titles started, including the clip on screen. Skips and misses count. */
+  heardCount: number;
+  skips: number;
+  /** Budget left at `serverNow` (ms). */
+  remainingMs: number;
+  /** True while this lane's budget is ticking (guessing); frozen during reveals. */
+  running: boolean;
+  /** Budget spent (or pool exhausted): this lane is done. */
+  finished: boolean;
+  /** Correct answers in a row. A miss or a skip resets it. No title is included. */
+  streak: number;
+}
+
+/** Versus-only live board, broadcast to the room when a lane changes. */
+export interface RaceBoardPayload {
+  serverNow: number;
+  entries: RaceBoardEntry[];
+}
+
+/** Sent to one player when their own lane ends while others still play. */
+export interface RaceLaneDonePayload {
+  foundCount: number;
+}
+
+/** Final result row for one versus lane. */
+export interface RaceStandingEntry {
+  userId: string;
+  found: number;
+  /** Titles started. Fewer heard wins a tie on `found` (8/13 beats 8/15). */
+  heard: number;
+  skips: number;
+  remainingMs: number;
+  rank: number;
+  /** Time-attack medal earned on this lane's own heard songs. */
+  medal: MedalTier;
+}
+
 /** Ask the client to warm a clip's buffer ahead of time (round 1 during the
  *  intro, next rounds during the reveal). `videoKey` is a playback locator
  *  (signed Worker URL in production) — never rely on it being a readable filename. */
@@ -241,6 +282,8 @@ export interface VictoryData {
   soloMedal: MedalTier;
   soloDifficulty: string;
   multiWinnerCount: number;
+  /** Versus time-attack only: ordered results with tie-break stats and medals. */
+  race?: { standings: RaceStandingEntry[] };
 }
 
 /** Per-round recap for the game-over screen (authoritative when sent by the server). */
@@ -331,6 +374,10 @@ export interface GameSyncState {
   nextSkipTaxMs?: number;
   /** Solo time-attack: next medal, or null at the top. Absent on Standard. */
   nextMedal?: TimeAttackNextMedal | null;
+  /** Versus: live board at sync time. Absent outside a race. */
+  raceBoard?: RaceBoardPayload;
+  /** Versus: this player's lane already ended (waiting for the others). */
+  laneDone?: boolean;
 }
 
 // --- LOBBY PAYLOADS ---

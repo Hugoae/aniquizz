@@ -6,11 +6,13 @@ import type {
   UserRole,
   WatchedListProvider,
 } from '@aniquizz/shared';
-import { toClientRoomSettings } from '@aniquizz/shared';
+import { isTimeAttackRace, toClientRoomSettings } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
 import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
+import { RaceEngine } from './RaceEngine';
+import type { RoomMatchEngine } from './RoomMatchEngine';
 import { MatchRepository } from './MatchRepository';
 import { PlaylistBuilder } from './PlaylistBuilder';
 import { scoringForSettings } from './ScoringStrategy';
@@ -36,13 +38,13 @@ export class Room {
   public readonly players = new Map<string, RoomPlayer>();
   public readonly returnedPlayers = new Set<string>();
 
-  private engine: MatchEngine | null = null;
+  private engine: RoomMatchEngine | null = null;
 
   /**
    * Bind the live match engine. Production uses `startMatch`; the unit harness
    * attaches a pre-built engine so Room methods (skip, sync, disconnect) work.
    */
-  attachEngine(engine: MatchEngine): void {
+  attachEngine(engine: RoomMatchEngine): void {
     this.engine = engine;
   }
 
@@ -214,6 +216,7 @@ export class Room {
   /** Explicit leave. Returns true if the room is now empty. */
   removePlayer(userId: string): boolean {
     this.engine?.clearPlayerVotes(userId);
+    this.engine?.onPlayerRemoved?.(userId);
     if (!this.players.delete(userId)) return this.humanCount === 0;
     this.returnedPlayers.delete(userId);
 
@@ -373,6 +376,18 @@ export class Room {
     );
   }
 
+  /** Roster for one viewer: only their own round answer may be revealed (versus lanes). */
+  toPublicPlayersFor(viewerId: string, revealOwnAnswer: boolean): GamePlayer[] {
+    return [...this.players.values()].map((p) =>
+      toPublicPlayer(p, {
+        hostId: this.hostId,
+        status: this.status,
+        returned: this.returnedPlayers.has(p.userId),
+        revealAnswers: revealOwnAnswer && p.userId === viewerId,
+      }),
+    );
+  }
+
   /**
    * Broadcast the roster. Deliberately does NOT `touch()`: reconnect loops and
    * role/list refreshes also land here and must not keep an abandoned room alive.
@@ -506,11 +521,14 @@ export class Room {
     this.emitLobbyUpdate();
     onRoomsChanged?.();
 
-    const engine = new MatchEngine(this, {
+    const deps = {
       builder: new PlaylistBuilder(),
       repo: new MatchRepository(),
       scoring: scoringForSettings(this.settings),
-    });
+    };
+    const engine: RoomMatchEngine = isTimeAttackRace(this.settings)
+      ? new RaceEngine(this, deps)
+      : new MatchEngine(this, deps);
     this.engine = engine;
     const started = await engine.start();
 
@@ -550,8 +568,8 @@ export class Room {
 
   forceEndRound(userId: string): void {
     if (!this.players.has(userId)) return;
-    if (!this.isSolo) return;
-    this.engine?.forceEndRound();
+    if (!this.isSolo && !isTimeAttackRace(this.settings)) return;
+    this.engine?.forceEndRound(userId);
   }
 
   cancelMatch(userId: string): void {
@@ -604,7 +622,7 @@ export class Room {
     }
   }
 
-  getSyncState(): GameSyncState {
+  getSyncState(userId?: string): GameSyncState {
     if (
       this.engine &&
       (this.status === 'playing' ||
@@ -612,7 +630,7 @@ export class Room {
         this.status === 'finished' ||
         this.status === 'starting')
     ) {
-      return this.engine.getSyncState();
+      return this.engine.getSyncState(userId);
     }
     return {
       status: this.status,

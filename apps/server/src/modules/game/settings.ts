@@ -4,6 +4,8 @@ import {
   isSpeedBonusEnabled,
   normalizePrecision,
   normalizeTimeBudgetSeconds,
+  TIME_ATTACK_RACE_MAX_PLAYERS,
+  TIME_ATTACK_RACE_MIN_PLAYERS,
   timeAttackPoolSize,
   type RoomSettings,
 } from '@aniquizz/shared';
@@ -36,6 +38,7 @@ const settingsSchema = z
     timeBudgetSeconds: z.coerce.number().int().optional(),
     timeAttackReveal: z.boolean().optional(),
     timeAttackPunitiveSkip: z.boolean().optional(),
+    soloInstantReveal: z.boolean().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
     isPrivate: z.boolean().default(false),
@@ -107,31 +110,53 @@ function applyTimeAttackRules<
     timeBudgetSeconds?: number;
     timeAttackReveal?: boolean;
     timeAttackPunitiveSkip?: boolean;
+    soloInstantReveal?: boolean;
     soundCount: number;
+    soundSelection: 'random' | 'mix' | 'watched' | 'playlist';
+    playlistWatched: boolean;
+    watchedAllowFallback: boolean;
+    watchedMode?: 'union' | 'intersection';
   },
 >(settings: T): T {
-  const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
-  if (settings.gameType !== 'timeAttack' || !solo) {
+  if (settings.gameType !== 'timeAttack') {
+    const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
     return {
       ...settings,
       gameType: 'standard',
       timeBudgetSeconds: undefined,
       timeAttackReveal: undefined,
       timeAttackPunitiveSkip: undefined,
+      soloInstantReveal: solo && settings.soloInstantReveal === true,
     };
   }
 
+  const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
   const timeBudgetSeconds = normalizeTimeBudgetSeconds(settings.timeBudgetSeconds);
-  return {
+  const shared = {
     ...settings,
-    gameType: 'timeAttack',
+    gameType: 'timeAttack' as const,
     responseType: 'typing',
-    songStartMode: 'beginning',
     speedBonusEnabled: false,
     timeBudgetSeconds,
     timeAttackReveal: settings.timeAttackReveal !== false,
     timeAttackPunitiveSkip: settings.timeAttackPunitiveSkip !== false,
+    soloInstantReveal: false,
     soundCount: timeAttackPoolSize(timeBudgetSeconds),
+  };
+  if (solo) return shared;
+
+  // Versus: every lane plays the same playlist, so a per-player Watched pool would
+  // make the draw unfair. The lobby offers neither; the server enforces it too.
+  return {
+    ...shared,
+    maxPlayers: Math.min(
+      TIME_ATTACK_RACE_MAX_PLAYERS,
+      Math.max(TIME_ATTACK_RACE_MIN_PLAYERS, settings.maxPlayers),
+    ),
+    soundSelection: settings.soundSelection === 'watched' ? 'random' : settings.soundSelection,
+    playlistWatched: false,
+    watchedAllowFallback: false,
+    watchedMode: undefined,
   };
 }
 

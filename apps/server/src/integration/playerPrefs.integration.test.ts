@@ -13,6 +13,7 @@ const PREFS_SELECT = {
   autofocusAnswer: true,
   submitOnEnter: true,
   soloAutoReveal: true,
+  answerSounds: true,
   showShortcutReminder: true,
   friendRequestVisual: true,
   friendRequestSound: true,

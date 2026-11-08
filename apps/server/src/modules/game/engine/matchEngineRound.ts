@@ -162,13 +162,11 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
   }
   host.recordedRounds.push(recorded);
 
-  if (
-    kind === 'finish' ||
-    (kind === 'skip' && isTimeAttackHost(host) && timeAttackRemainingMs(host) <= 0)
-  ) {
-    void host.finish();
-    return;
-  }
+  // The budget is gone (it ran out, or this skip spent the last seconds).
+  // Still show this title so it lands in the history, then end the match.
+  const closing =
+    isTimeAttackHost(host) &&
+    (kind === 'finish' || (kind === 'skip' && timeAttackRemainingMs(host) <= 0));
 
   const skipReveal = isTimeAttackHost(host) && !timeAttackRevealEnabled(host);
   if (skipReveal) {
@@ -181,7 +179,13 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
     }
     // No round_reveal, so the roster (streak) must be pushed here.
     host.room.emitLobbyUpdate();
-    host.startRound();
+    if (closing) void host.finish();
+    else host.startRound();
+    return;
+  }
+
+  if (kind === 'finish' && !isTimeAttackHost(host)) {
+    void host.finish();
     return;
   }
 

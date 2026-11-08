@@ -3,7 +3,7 @@ import { SettingsToggleRow } from '@/features/settings/components/SettingsField'
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 
 export function SettingsGameplaySection() {
-  const { autofocusAnswer, submitOnEnter, soloAutoReveal, showShortcutReminder, patchPrefs } =
+  const { autofocusAnswer, submitOnEnter, answerSounds, showShortcutReminder, patchPrefs } =
     usePlayerPrefs();
 
   return (
@@ -27,11 +27,11 @@ export function SettingsGameplaySection() {
           onCheckedChange={(checked) => patchPrefs({ submitOnEnter: checked })}
         />
         <SettingsToggleRow
-          id="settings-solo-reveal"
-          label={SETTINGS_COPY.soloAutoRevealLabel}
-          hint={SETTINGS_COPY.soloAutoRevealHint}
-          checked={soloAutoReveal}
-          onCheckedChange={(checked) => patchPrefs({ soloAutoReveal: checked })}
+          id="settings-answer-sounds"
+          label={SETTINGS_COPY.answerSoundsLabel}
+          hint={SETTINGS_COPY.answerSoundsHint}
+          checked={answerSounds}
+          onCheckedChange={(checked) => patchPrefs({ answerSounds: checked })}
         />
         <SettingsToggleRow
           id="settings-shortcut-reminder"

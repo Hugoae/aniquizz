@@ -40,6 +40,8 @@ interface SourceSectionProps {
   playlistPoolStats?: PlaylistPoolStats | null;
   /** Humans currently in the salon — fusion modes need 2+ lists. */
   currentPlayersCount?: number;
+  /** Versus race: lanes must share one draw, so the Watched source is hidden. */
+  watchedForbidden?: boolean;
 }
 
 export function SourceSection({
@@ -52,6 +54,7 @@ export function SourceSection({
   watchedPoolOffline = false,
   playlistPoolStats = null,
   currentPlayersCount = 0,
+  watchedForbidden = false,
 }: SourceSectionProps) {
   const source = config.soundSelection;
   const [tab, setTab] = useState<SourceTab>(
@@ -139,15 +142,17 @@ export function SourceSection({
         >
           Aléatoire
         </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === 'watched'}
-          onClick={() => setSource('watched')}
-          className={tabClass(tab === 'watched')}
-        >
-          Watched
-        </button>
+        {!watchedForbidden && (
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'watched'}
+            onClick={() => setSource('watched')}
+            className={tabClass(tab === 'watched')}
+          >
+            Watched
+          </button>
+        )}
         <button
           type="button"
           role="tab"
@@ -314,6 +319,7 @@ export function SourceSection({
               isRoom={isRoom}
               currentPlayersCount={currentPlayersCount}
               watchedListLinked={watchedListLinked}
+              watchedForbidden={watchedForbidden}
             />
           </div>
         )}

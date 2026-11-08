@@ -1,3 +1,4 @@
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import { AdminApiError, type AdminRoom } from '@/lib/adminApi';
 
 export const errorMessage = (e: unknown): string =>
@@ -78,17 +79,17 @@ export type FilterKey = 'all' | 'waiting' | 'playing' | 'public' | 'private';
 export type SortKey = 'created' | 'players' | 'status';
 
 export const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'Tous' },
-  { key: 'waiting', label: 'En attente' },
-  { key: 'playing', label: 'En partie' },
-  { key: 'public', label: 'Publics' },
-  { key: 'private', label: 'Privés' },
+  { key: 'all', label: ADMIN_COPY.rooms.filters.all },
+  { key: 'waiting', label: ADMIN_COPY.rooms.filters.waiting },
+  { key: 'playing', label: ADMIN_COPY.rooms.filters.playing },
+  { key: 'public', label: ADMIN_COPY.rooms.filters.public },
+  { key: 'private', label: ADMIN_COPY.rooms.filters.private },
 ];
 
 export const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'created', label: 'Ancienneté' },
-  { key: 'players', label: 'Joueurs' },
-  { key: 'status', label: 'Statut' },
+  { key: 'created', label: ADMIN_COPY.rooms.sorts.created },
+  { key: 'players', label: ADMIN_COPY.rooms.sorts.players },
+  { key: 'status', label: ADMIN_COPY.rooms.sorts.status },
 ];
 
 export const STATUS_ORDER: Record<string, number> = {

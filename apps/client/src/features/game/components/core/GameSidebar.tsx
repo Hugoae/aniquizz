@@ -6,7 +6,6 @@ import {
   MessageSquare,
   Send,
   Check,
-  Flame,
   WifiOff,
 } from 'lucide-react';
 import type { ChatMessage, GamePlayer } from '@aniquizz/shared';
@@ -23,6 +22,13 @@ import {
   activeMatchPlayers,
   hasRankingSpread,
 } from '@/features/game/utils/ranking';
+import { liveRaceRows, useRaceNow } from '@/features/game/components/shared/raceLive';
+import {
+  FoundHeard,
+  RaceClockLabel,
+  StreakFlame,
+} from '@/features/game/components/shared/RaceLaneStats';
+import type { RaceBoardState } from '@/features/game/state/gameReducer';
 import {
   createLocalChatMessage,
   dropLastLocalChatMessage,
@@ -43,6 +49,8 @@ interface GameSidebarProps {
   currentUserId?: string;
   /** Bumped to briefly shake the panel (e.g. when the roster is already open). */
   attentionSignal?: number;
+  /** Versus race: order and stats come from the live board, including each budget. */
+  raceBoard?: RaceBoardState | null;
 }
 
 const formatTime = (timestamp: number) =>
@@ -58,6 +66,7 @@ export function GameSidebar({
   roomId,
   currentUserId,
   attentionSignal,
+  raceBoard = null,
 }: GameSidebarProps) {
   const meId = currentUserId;
   const [activeTab, setActiveTab] = useState<'players' | 'chat'>('players');
@@ -72,9 +81,25 @@ export function GameSidebar({
   const pendingSendAtRef = useRef(0);
 
   const roster = activeMatchPlayers(players);
-  const sortedPlayers = hideScores ? roster : [...roster].sort((a, b) => b.score - a.score);
-  const ranks = hideScores ? null : computeRanks(roster);
-  const rankingEstablished = !hideScores && hasRankingSpread(roster);
+  const now = useRaceNow(raceBoard);
+  const liveRows = raceBoard ? liveRaceRows(raceBoard, now) : null;
+  const liveById = new Map(liveRows?.map((row) => [row.userId, row]) ?? []);
+  const liveOrder = new Map(liveRows?.map((row, index) => [row.userId, index]) ?? []);
+  const sortedPlayers = liveRows
+    ? [...roster].sort(
+        (a, b) =>
+          (liveOrder.get(String(a.id)) ?? Number.MAX_SAFE_INTEGER) -
+          (liveOrder.get(String(b.id)) ?? Number.MAX_SAFE_INTEGER),
+      )
+    : hideScores
+      ? roster
+      : [...roster].sort((a, b) => b.score - a.score);
+  const ranks = liveRows
+    ? new Map(liveRows.map((row) => [row.userId, row.rank]))
+    : hideScores
+      ? null
+      : computeRanks(roster);
+  const rankingEstablished = liveRows != null || (!hideScores && hasRankingSpread(roster));
 
   const scrollToBottom = () => {
     setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
@@ -213,9 +238,10 @@ export function GameSidebar({
             >
               {sortedPlayers.map((player, index) => {
                 const isMe = String(player.id) === String(meId);
-                const rank = ranks?.get(String(player.id)) ?? index + 1;
+                const live = liveById.get(String(player.id));
+                const rank = live?.rank ?? ranks?.get(String(player.id)) ?? index + 1;
                 const hasAnswered = phase === 'guessing' && player.hasAnswered === true;
-                const streak = player.streak ?? 0;
+                const streak = live?.streak ?? player.streak ?? 0;
                 const isDisconnected = player.isConnected === false;
                 const clickable = Boolean(onPlayerClick);
                 return (
@@ -281,25 +307,24 @@ export function GameSidebar({
                           <Check className="h-3 w-3 text-primary" />
                         </span>
                       )}
-                      {!hideScores && streak >= 3 && (
-                        <span
-                          className="flex shrink-0 items-center gap-0.5 rounded-md border border-warning/50 bg-warning/10 px-1.5 py-0.5"
-                          title={`Série de ${streak} bonnes réponses`}
-                          aria-label={`Série de ${streak}`}
-                        >
-                          <Flame
-                            className={cn(
-                              'h-3 w-3 fill-warning text-warning',
-                              streak >= 5 && 'animate-pulse',
-                            )}
+                      {!hideScores && <StreakFlame streak={streak} />}
+                      {live ? (
+                        <div className="shrink-0 text-right leading-tight">
+                          <RaceClockLabel
+                            remainingMs={live.remainingMs}
+                            finished={live.finished}
+                            className="text-sm"
                           />
-                          <span className="text-[10px] font-black italic text-warning">
-                            {streak}
-                          </span>
-                        </span>
-                      )}
-                      {!hideScores && (
-                        <div className="text-lg font-bold text-primary">{player.score}</div>
+                          <FoundHeard
+                            found={live.found}
+                            heard={live.heard}
+                            className="block text-xs"
+                          />
+                        </div>
+                      ) : (
+                        !hideScores && (
+                          <div className="text-lg font-bold text-primary">{player.score}</div>
+                        )
                       )}
                     </div>
                   </div>

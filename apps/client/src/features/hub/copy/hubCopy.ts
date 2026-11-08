@@ -12,6 +12,8 @@ export const HUB_COPY = {
     solo: {
       title: 'Solo',
       description: 'Entraînez-vous seul et améliorez vos scores',
+      detail:
+        'Standard, points et médailles. Contre-la-montre, le plus de titres avant la fin du temps.',
     },
     multiplayer: {
       title: 'Multijoueur',
@@ -21,6 +23,7 @@ export const HUB_COPY = {
       title: 'Compétitif',
       description: 'Mode classé avec rangs et saisons.',
       badge: 'Bientôt',
+      note: 'Le classé arrive',
     },
   },
   joinTitleLead: 'Rejoindre un',
@@ -67,5 +70,6 @@ export const HUB_COPY = {
 } as const;
 
 export function multiplayerTeaser(count: number): string {
+  if (count <= 0) return 'Aucun salon en ce moment';
   return `${count} joueur${count > 1 ? 's' : ''} en multijoueur`;
 }

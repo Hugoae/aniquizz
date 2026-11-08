@@ -1,6 +1,7 @@
-import { Trophy, Check, Target, Flame, Music2, Disc, Zap } from 'lucide-react';
+import { Trophy, Check, Target, Flame, Zap } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { ProfilePokedexSection } from './ProfilePokedexSection';
 import { StatCard } from './StatCard';
 import type { AdminProfileStats, Role } from '@/lib/adminApi';
 
@@ -32,7 +33,7 @@ export function ProfileView({
   anilistUsername,
   malUsername,
   presenceLabel = 'Hors ligne',
-  presenceColor = 'bg-white/30',
+  presenceColor = 'bg-muted-foreground/40',
   presenceOnline = false,
   stats,
   headerExtra,
@@ -41,12 +42,11 @@ export function ProfileView({
   return (
     <div className="space-y-6">
       {/* Hero */}
-      <div className="relative rounded-xl overflow-hidden bg-card border border-white/10 p-6 shadow-2xl">
-        <div className="absolute top-0 right-0 -mt-20 -mr-20 w-64 h-64 bg-primary/20 rounded-full blur-[100px]" />
+      <div className="relative overflow-hidden rounded-xl border border-border bg-card p-6 shadow-elevated">
+        <div className="absolute top-0 right-0 -mt-20 -mr-20 h-64 w-64 rounded-full bg-primary/20 blur-[100px]" />
         <div className="relative z-10 flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
           <div className="relative shrink-0">
-            <div className="absolute -inset-1 bg-gradient-to-br from-primary to-accent rounded-full blur opacity-50" />
-            <Avatar className="h-28 w-28 border-4 border-background relative shadow-xl">
+            <Avatar className="relative h-28 w-28 border-4 border-background">
               <AvatarImage src={getAvatarSrc(avatar)} className="object-cover" />
               <AvatarFallback className="bg-secondary text-3xl font-bold text-secondary-foreground">
                 {username.substring(0, 2).toUpperCase()}
@@ -134,41 +134,11 @@ export function ProfileView({
         </div>
       </div>
 
-      {/* Pokédex */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Disc className="h-5 w-5 text-accent" />
-          <h2 className="text-lg font-bold">Pokédex Musical</h2>
-        </div>
-        <div className="bg-card border border-white/10 rounded-xl p-6 shadow-lg relative overflow-hidden">
-          <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4 mb-4 z-10 relative">
-            <div>
-              <div className="text-4xl font-black gradient-text">{stats.discoveredSongs}</div>
-              <div className="text-sm text-muted-foreground font-medium">
-                Sons uniques découverts
-              </div>
-            </div>
-          </div>
-          <div className="space-y-2 z-10 relative">
-            <div className="h-4 bg-secondary/50 rounded-lg overflow-hidden border border-white/5 relative">
-              <div
-                className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-1000 ease-out"
-                style={{
-                  width: `${Math.min(stats.progressPercent, 100)}%`,
-                  boxShadow: '0 0 15px rgba(168, 85, 247, 0.5)',
-                }}
-              />
-            </div>
-            <div className="flex justify-between text-xs font-mono text-muted-foreground">
-              <span>0</span>
-              <span>Total Disponible: {stats.totalSongs}</span>
-            </div>
-          </div>
-          <div className="absolute top-[-20%] right-[-5%] p-8 opacity-5 pointer-events-none">
-            <Music2 className="h-64 w-64" />
-          </div>
-        </div>
-      </div>
+      <ProfilePokedexSection
+        discoveredSongs={stats.discoveredSongs}
+        progressPercent={stats.progressPercent}
+        totalSongs={stats.totalSongs}
+      />
     </div>
   );
 }

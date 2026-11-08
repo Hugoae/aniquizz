@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { RoomSpectatorDialog } from '@/features/admin/components/RoomSpectatorDialog';
 import { cn } from '@/lib/utils';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import { adminApi, type AdminRoom } from '@/lib/adminApi';
 import { PlayerProfileDialog } from './PlayerProfileDialog';
 import { RoomCard } from './RoomCard';
@@ -217,7 +218,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
       </div>
 
       <Input
-        placeholder="Rechercher un salon par nom ou code…"
+        placeholder={ADMIN_COPY.rooms.search}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
@@ -237,7 +238,7 @@ export function RoomsPanel({ highlightRoomId }: { highlightRoomId?: string | nul
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">Trier :</span>
+        <span className="text-xs text-muted-foreground">{ADMIN_COPY.rooms.sortBy}</span>
         {SORTS.map((s) => {
           const active = sortKey === s.key;
           return (

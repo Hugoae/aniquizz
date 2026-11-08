@@ -8,8 +8,8 @@ import { CircularGameTimer } from './CircularGameTimer';
 import type { GamePhase } from '@/features/game/components/modes/standard/parts/types';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
 
-/** Last stretch of the run where the budget clock turns red. */
-const TIME_ATTACK_URGENT_MS = 10_000;
+/** Last stretch of the run where the budget clock turns red and blinks. */
+const TIME_ATTACK_URGENT_SECONDS = 15;
 
 interface MatchCountdownOverlaysProps {
   phase: GamePhase;
@@ -90,7 +90,7 @@ function useTimeAttackDisplay(clock: TimeAttackClock | null | undefined): StageT
     progress: clock.budgetMs > 0 ? Math.min(100, (live / clock.budgetMs) * 100) : 0,
     label,
     ariaLabel: GAME_COPY.timeAttack.clockAria(label),
-    urgent: live <= TIME_ATTACK_URGENT_MS,
+    urgent: Math.ceil(live / 1000) < TIME_ATTACK_URGENT_SECONDS,
   };
 }
 

@@ -110,7 +110,7 @@ export const registerGameHandlers = (
     void socket.join(room.id);
     gameManager.cancelCleanup(room.id);
     room.reattachMatchSocket(uid(), socket.id);
-    socket.emit('game_state_sync', room.getSyncState());
+    socket.emit('game_state_sync', room.getSyncState(uid()));
     room.replayDuo(uid());
   };
 

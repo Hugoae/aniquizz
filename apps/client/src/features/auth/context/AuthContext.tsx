@@ -46,6 +46,7 @@ export type Profile = {
   autofocusAnswer?: boolean;
   submitOnEnter?: boolean;
   soloAutoReveal?: boolean;
+  answerSounds?: boolean;
   showShortcutReminder?: boolean;
   friendRequestVisual?: boolean;
   friendRequestSound?: boolean;

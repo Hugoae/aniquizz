@@ -25,8 +25,7 @@ export function useDailyPlayRound(input: {
 }) {
   const { initial, onFinished } = input;
   const { profile } = useAuth();
-  const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute, soloAutoReveal } =
-    usePlayerPrefs();
+  const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute } = usePlayerPrefs();
 
   const [round, setRound] = useState(initial);
   const [reveal, setReveal] = useState<DailyRevealDto | null>(initial.reveal);
@@ -221,9 +220,8 @@ export function useDailyPlayRound(input: {
       if (reveal || committing || finishedRef.current) return;
       setSubmittedAnswer(label);
       submittedRef.current = label;
-      if (soloAutoReveal) commitGuess(label);
     },
-    [commitGuess, committing, reveal, soloAutoReveal],
+    [committing, reveal],
   );
 
   const phaseEndsAt = endsAtMs(reveal?.revealEndsAt ?? round.roundEndsAt);

@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Loader2 } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,46 +21,38 @@ import {
 } from '@/lib/adminApi';
 import type { AdminUsersListState } from '@/features/admin/adminNavigation';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { cn } from '@/lib/utils';
+import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
 import { AdminUserRow, type AdminUserRowPending } from '@/features/admin/components/AdminUserRow';
 import { UsersPagination } from '@/features/admin/components/UsersPagination';
+import { UsersPanelToolbar } from '@/features/admin/components/UsersPanelToolbar';
 
 /** UI-facing errors are French; underlying API messages stay as the server sent. */
 const errorMessage = (e: unknown): string =>
-  e instanceof AdminApiError ? e.message : 'Une erreur est survenue.';
+  e instanceof AdminApiError ? e.message : ADMIN_COPY.genericError;
 
 type PendingConfirm = AdminUserRowPending;
 
 type FilterKey = UserListFilter;
 type SortKey = UserListSort;
 
-const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'Tous' },
-  { key: 'players', label: 'Joueurs' },
-  { key: 'online', label: 'En ligne' },
-  { key: 'in_game', label: 'En partie' },
-  { key: 'moderators', label: 'Modérateurs' },
-  { key: 'admins', label: 'Admins' },
-  { key: 'muted', label: 'Mutés' },
-  { key: 'banned', label: 'Bannis' },
-];
-
-const EMPTY_FILTER_MESSAGES: Partial<Record<FilterKey, string>> = {
-  muted: 'Aucun joueur muté actuellement.',
-  banned: 'Aucun joueur banni actuellement.',
-  online: 'Aucun joueur en ligne.',
-  in_game: 'Aucun joueur en partie.',
-  moderators: 'Aucun modérateur.',
-  admins: 'Aucun administrateur.',
-};
-
-const SORTS: { key: SortKey; label: string }[] = [
-  { key: 'username', label: 'Pseudo' },
-  { key: 'xp', label: 'XP' },
-  { key: 'games', label: 'Parties' },
-  { key: 'created', label: 'Inscription' },
-  { key: 'seen', label: 'Activité' },
-];
+function emptyUsersMessage(filter: FilterKey): string {
+  switch (filter) {
+    case 'muted':
+      return ADMIN_COPY.users.empty.muted;
+    case 'banned':
+      return ADMIN_COPY.users.empty.banned;
+    case 'online':
+      return ADMIN_COPY.users.empty.online;
+    case 'in_game':
+      return ADMIN_COPY.users.empty.in_game;
+    case 'moderators':
+      return ADMIN_COPY.users.empty.moderators;
+    case 'admins':
+      return ADMIN_COPY.users.empty.admins;
+    default:
+      return ADMIN_COPY.users.empty.all;
+  }
+}
 
 export function UsersPanel({
   canManage,
@@ -81,8 +70,8 @@ export function UsersPanel({
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [query, setQuery] = useState(lookupUserId ?? initialListState?.query ?? '');
   const [filter, setFilter] = useState<FilterKey>(initialListState?.filter ?? 'all');
-  const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? 'username');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialListState?.sortDir ?? 'asc');
+  const [sortKey, setSortKey] = useState<SortKey>(initialListState?.sortKey ?? 'seen');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>(initialListState?.sortDir ?? 'desc');
   const [page, setPage] = useState(initialListState?.page ?? 1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
@@ -122,8 +111,8 @@ export function UsersPanel({
           query: opts?.search,
           page: opts?.page ?? 1,
           filter: opts?.filter ?? 'all',
-          sort: opts?.sort ?? 'username',
-          sortDir: opts?.sortDir ?? 'asc',
+          sort: opts?.sort ?? 'seen',
+          sortDir: opts?.sortDir ?? 'desc',
         });
         setUsers(res.users);
         setPage(res.page);
@@ -227,97 +216,45 @@ export function UsersPanel({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Counters */}
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-success" /> {counts.online} en ligne
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-primary" /> {counts.inGame} en partie
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-destructive" /> {counts.banned} banni(s)
-        </span>
-        <span className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-warning" /> {counts.muted} muté(s)
-        </span>
-      </div>
-
-      <Input
-        placeholder="Rechercher par pseudo, email ou identifiant…"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
+    <div className="space-y-3">
+      <UsersPanelToolbar
+        counts={counts}
+        query={query}
+        onQuery={setQuery}
+        filter={filter}
+        onFilter={(next) => {
+          setFilter(next);
+          setPage(1);
+        }}
+        sortKey={sortKey}
+        sortDir={sortDir}
+        onToggleSort={toggleSort}
       />
 
-      <div className="flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <Button
-            key={f.key}
-            size="sm"
-            variant={filter === f.key ? 'default' : 'outline'}
-            onClick={() => {
-              setFilter(f.key);
-              setPage(1);
-            }}
-            className={cn('rounded-full', filter !== f.key && 'border-border')}
-          >
-            {f.label}
-          </Button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-muted-foreground">Trier :</span>
-        {SORTS.map((s) => {
-          const active = sortKey === s.key;
-          return (
-            <Button
-              key={s.key}
-              size="sm"
-              variant="ghost"
-              onClick={() => toggleSort(s.key)}
-              className={cn(
-                'h-7 gap-1 px-2 text-xs',
-                active ? 'text-primary' : 'text-muted-foreground',
-              )}
-            >
-              {s.label}
-              {active &&
-                (sortDir === 'asc' ? (
-                  <ArrowUp className="h-3 w-3" />
-                ) : (
-                  <ArrowDown className="h-3 w-3" />
-                ))}
-            </Button>
-          );
-        })}
-      </div>
-
-      <div className="glass-card overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card">
         <table className="w-full text-sm">
-          <caption className="sr-only">Liste des utilisateurs</caption>
-          <thead className="text-left text-muted-foreground border-b border-border">
+          <caption className="sr-only">{ADMIN_COPY.users.listCaption}</caption>
+          <thead className="text-left text-xs text-muted-foreground border-b border-border">
             <tr>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 Joueur
               </th>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 Rôle
               </th>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 Parties
               </th>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 Salon
               </th>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 Vu
               </th>
-              <th scope="col" className="p-3">
+              <th scope="col" className="px-3 py-2">
                 État
               </th>
-              <th scope="col" className="p-3 text-right">
+              <th scope="col" className="px-3 py-2 text-right">
                 Actions
               </th>
             </tr>
@@ -337,9 +274,7 @@ export function UsersPanel({
             {!users.length && !loading && (
               <tr>
                 <td colSpan={7} className="p-6 text-center text-muted-foreground">
-                  {debouncedQuery
-                    ? 'Aucun utilisateur ne correspond à cette recherche.'
-                    : (EMPTY_FILTER_MESSAGES[filter] ?? 'Aucun utilisateur.')}
+                  {debouncedQuery ? ADMIN_COPY.users.empty.search : emptyUsersMessage(filter)}
                 </td>
               </tr>
             )}
@@ -356,8 +291,7 @@ export function UsersPanel({
 
       <div className="flex flex-col items-center gap-2">
         <p className="text-xs text-muted-foreground">
-          {total} joueur(s) — page {page} sur {totalPages} — {users.length} affiché(s) (max 50 par
-          page)
+          {ADMIN_COPY.users.pageSummary(total, page, totalPages, users.length)}
         </p>
         <UsersPagination page={page} totalPages={totalPages} onPageChange={setPage} />
       </div>
@@ -369,7 +303,7 @@ export function UsersPanel({
             <AlertDialogDescription>{pending?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{ADMIN_COPY.users.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => void confirmPending()}
               className={pending?.destructive ? 'bg-destructive hover:bg-destructive/90' : ''}

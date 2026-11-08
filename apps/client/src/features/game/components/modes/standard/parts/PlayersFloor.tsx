@@ -22,6 +22,8 @@ interface PlayersFloorProps {
   /** Opens the side roster (full ranking) when players overflow the cap. */
   onOpenRoster?: () => void;
   hideScore?: boolean;
+  /** Solo time-attack: every card shows this found / heard instead of points. */
+  ratio?: { found: number; heard: number } | null;
 }
 
 export function PlayersFloor({
@@ -33,6 +35,7 @@ export function PlayersFloor({
   showRank = true,
   onOpenRoster,
   hideScore = false,
+  ratio = null,
 }: PlayersFloorProps) {
   const reduceMotion = useMotionReduced();
   const roster = useMemo(() => activeMatchPlayers(players), [players]);
@@ -114,8 +117,9 @@ export function PlayersFloor({
                 rankPending={showRank && !rankingEstablished}
                 flash={showRank && rankingEstablished && climbers.has(String(p.id))}
                 hideScore={hideScore}
+                ratio={ratio}
               />
-              {isMe && !hideScore && showPointsAnimation && pointsEarned && (
+              {isMe && !hideScore && !ratio && showPointsAnimation && pointsEarned && (
                 <div className="absolute -right-2 -top-4 z-20 animate-fade-in">
                   <PointsBadge points={pointsEarned} />
                 </div>

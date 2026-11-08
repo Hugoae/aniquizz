@@ -26,9 +26,8 @@ export const SUGGESTION_CORRECTION_LABELS: Record<SuggestionCorrectionField, str
 };
 
 export const SUGGESTIONS_COPY = {
-  title: 'La boîte à idées',
-  subtitle:
-    'Proposez un son, signalez une erreur ou imaginez la prochaine amélioration d’AniQuizz.',
+  title: 'Avis & bugs',
+  subtitle: 'Un avis, un bug, un son manquant ou une idée pour AniQuizz.',
   create: 'Proposer une idée',
   duplicateHint:
     'Avant de publier, recherchez quelques mots-clés sur le board pour vérifier que l’idée n’existe pas déjà.',

@@ -13,7 +13,7 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                   |
 | **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                             |
 | **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                  |
-| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono solo** 🚧 (on `main` for playtest) · pokédex + Admin rework remaining                       |
+| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 + footer `v26.7` ✅ · pokédex found bar remaining |
 | **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                               |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
@@ -416,20 +416,24 @@ GitHub-only. The Home footer stays `v26.6`.
 
 ## Update 26.7 — Vitesse, Chrono solo, then pokédex & Admin rework
 
-Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, add
-solo **Contre-la-montre** (in progress), then make collection progress readable, let players replay
-what they already know, and rebuild the staff console so the tools shipped in the
+Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, ship
+**Contre-la-montre** (solo and versus), show found songs beside heard songs on the
+profile pokédex, and rebuild the staff console so the tools shipped in the
 post-26.6 audit (journal, repair queue, spectator, bounded MODERATOR) sit in a
 coherent panel.
 
-**26.6.2** is closed. **Vitesse** is the shipped 26.7 slice. **Chrono solo** is
-unfinished and is on `main` (commit `9245d8e`, 2026-11-07) so it can be playtested
-on aniquizz.com. It is not a finished release. Pokédex + Admin remain in 26.7 — do
-not start them in the same pass. Do not start HIBP or Chrono **multi**.
+**26.6.2** is closed. **Vitesse**, **Chrono** (solo + versus), and the admin console
+rework are done. Chrono solo is on `main` (`9245d8e`); the versus race, the later
+playtest fixes, and the admin rework are in the working tree and not committed. The
+pokédex found bar was started, then reverted on 2026-11-08 — it is the remaining
+26.7 slice. Do not start it in the same pass as something else. Do not start HIBP.
+Do not reopen Chrono or the admin shell. Heard / found / liked music sources were
+removed from this update. Answer cues, the solo reveal move, the public section
+rename, and the proprietary licence shipped on 2026-11-08 (working tree, not committed).
 
 ### 1. Vitesse — Standard multi typing modifier ✅
 
-Sprint is no longer a `GameType`. Live `gameType` values on `main` are `'standard'` and `'timeAttack'` (Chrono still unfinished).
+Sprint is no longer a `GameType`. Live `gameType` values are `'standard'` and `'timeAttack'`.
 
 - Flag `speedBonusEnabled` (not `speedBonus`, which is podium **points** on the player).
 - Switch in Général after response type; multi create/edit only; disabled unless typing;
@@ -437,89 +441,63 @@ Sprint is no longer a `GameType`. Live `gameType` values on `main` are `'standar
 - Badge: STD + trophy, accent lightning overlay when on. Prisma `GameMode.SPRINT` stays
   the persisted value for speed-bonus matches (`docs/game/speed-bonus.md`).
 - Socket event `speed:leaderboard`. One-release lift of legacy `gameType: 'sprint'`.
-- No `SITE_VERSION` bump (footer stays `v26.6`). Short news article (id 9).
+- News id 9 is published and the Home footer is `v26.7`. No roadmap card.
 
-### 1b. Contre-la-montre — solo time-attack 🚧 (in progress, NOT shipped)
+### 1b. Contre-la-montre — solo and versus ✅ (playtest closed 2026-11-08)
 
-Second 26.7 slice. Merged to `main` on 2026-11-07 (`9245d8e`) so solo playtests can run
-on aniquizz.com. Spec: `docs/game/time-attack.md`. Still unfinished: playtest, then fixes.
-Branch `feat/time-attack` points at the same commit.
+Spec: `docs/game/time-attack.md`. Solo is on `main` (`9245d8e`). The versus race and the
+playtest fixes after that commit are in the working tree, not committed.
 
-**Intended design (what was built so far):**
+Do not reopen these decisions:
 
-- **Rules:** solo only, typing only, clips start at the beginning. One global **budget**
-  (1 to 5 min, step 30 s, default 3). The clock ticks **only while guessing**.
-- **Scoring:** correct title **+1** then a **3 s** reveal (clock frozen) · **Skip** −5 s,
-  then −7 / −9 … capped at −15 s unless punitive skip is off (flat −5 s), and the same 3 s reveal unless `timeAttackReveal` is off
-  · validated **wrong** answer −3 s, stay on the same title (typing stays open; empty /
-  too-short submits ignored) · clip reaches its end → 0 pt, 3 s reveal, next title ·
-  budget 0 or pool exhausted → game over (no point on the title in progress).
-- **Pool:** `min(80, max(20, ceil(budget / 3)))` titles (3 min → 60). Watched / playlist
-  gates require `playable >= poolSize` (no silent catalogue fill).
-- **Medals:** found titles per minute (**4 / 5 / 7 / 9** on medium + franchise → 12 / 15 /
-  21 / 27 in 3 min), same difficulty / precision malus as Standard. The live « encore N »
-  cue is server-side (`nextMedal`), from songs actually heard. Victory = at least Bronze.
-- **Server authority:** `MatchBudgetClock` beside `RoundClock`; `remainingMs` / `foundCount`
-  in round payloads, sync and `timeAttack:budget`. The client interpolates, no client
-  `ended` event. Solo pause freezes budget **and** clip, including a skip / reveal that
-  starts mid-pause. Prisma `GameMode.TIME_ATTACK`.
-- **UI:** selector only on solo create (`!isRoom`), duration chips, top-bar clock +
-  « N trouvés », badge **CLM** + Timer (`aqua`), game-over in titles + medals, history CLM.
-  Multi + `timeAttack` normalizes back to Standard.
-
-**Left before release:** playtest rounds 1–5 are in the working tree (not committed).
-Still open: history on small screens (the right column is `hidden` below `lg`), then a
-commit. No news article or roadmap card for Chrono or Vitesse until 26.7 is finished (removed
-on purpose). Do not start Chrono multi. No `SITE_VERSION`
-bump until the slice is called shipped.
+- Typing only. Vitesse stays off. Song start defaults to the beginning; random is optional
+  and can shorten the clip (never under 8 s). The pool (`budget / 3`, clamp 20–80) already
+  covers a run of those tails and of 5 s skips.
+- Solo uses `MatchEngine` + `MatchBudgetClock`. Medals are 4/5/7/9 found per minute.
+  Header and the player card show found/heard. A zero budget still reveals the title.
+- Versus uses `RaceEngine`: 2–8 players, one shared playlist, Watched forbidden. Round
+  events are per socket. The board shows found, heard, budget, and streak, never titles.
+  Rank is most found, then fewest heard. The same pair shares a rank; time left does not
+  split it. Bots stay in the list and do not take the win, the podium, or placement XP.
+  Disconnect keeps the lane; an explicit leave removes it. No pause, no skip vote.
+- News id 9 covers Chrono and Vitesse. No roadmap card. Home footer is `v26.7`.
 
 ### 2. Profile pokédex — found bar
 
-- Keep the existing discovery bar (unique songs heard / playable catalogue).
-- Add a second bar: unique songs **found correctly** at least once (`SongHistory.correctCount > 0`) vs the same catalogue denominator.
-- French copy isolated; medals stay on the discovery % unless product revisits thresholds.
+Postponed. A first pass was reverted on 2026-11-08. Do not start it until this is the task.
 
-### 3. Heard playlist
+- The discovery bar stays unique songs heard / playable catalogue. Medals stay on that percent.
+- Second bar, same denominator: unique songs with `SongHistory.correctCount > 0`. Shown on the profile and in the admin player preview.
 
-- New music source in game config: **Déjà entendus** — draw only from the player's `SongHistory` rows (clip started in a match or daily).
-- Same pool gates as Watched: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
+### 3. Rework Admin panel ✅ (2026-11-08)
 
-### 4. Found playlist
+Staff shell on `/admin`. No new sanctions, no role change.
 
-- Sibling source: **Déjà trouvés** — `correctCount ≥ 1` only.
-- Same solo/multi rules as Heard (host list in multi unless a later pass adds union/intersection).
+- Nav groups: Modération (users, rooms, journal), Contenu (catalogue, playlists, daily, suggestions), Lecture (stats), Dev only for an admin in local dev. `?tab=` values are unchanged.
+- Desk line: live matches (playing or paused), repair-queue size, open suggestions. The catalogue tab shows the repair count.
+- Denser user list. It opens sorted by activity, newest visit first. A missing `lastSeenAt` stays last in both directions (`userListOrderBy`): Postgres otherwise treats that empty date as the newest.
+- Filter and row copy lives in `adminCopy`. User actions and catalogue dialogs are split out.
+- Admin player preview uses the profile pokédex card and `border-border` (the purple glow is gone).
+- Each tab sits in `AdminPanelBoundary`, so one panel crash leaves the nav up.
+- MODERATOR stays bounded. No mute / ban / reset / seed in the smoke.
 
-### 5. Liked playlist
+### 4. Answer cues, solo reveal, public name, licence ✅ (2026-11-08)
 
-- Sibling source: **Titres likés** — draw only from the player's `SongLike` rows (hearts from reveal / library), not from the 5 pinned profile showcase.
-- Same pool gates as Heard/Found: block start when the pool is smaller than the requested round count; no silent fill from the global catalogue.
-- Solo/multi: host likes in multi unless a later pass adds union/intersection. Distinct from staff thematic packs (26.5) and from player-created playlists (26.x+ backlog).
-
-### 6. Rework Admin panel
-
-UX / IA pass on `/admin` (`Admin.tsx` + `features/admin/`), not a dump of new operator
-features. The audit already added Journal, catalogue « À réparer », salon spectateur,
-UUID lookup, and MODERATOR write bounds — this pass should make that set **usable as one
-console**.
-
-- Restyle and restructure the staff shell (nav, density, hierarchy of Users / Rooms /
-  Catalogue / Stats / Suggestions / Playlists / Daily / Journal / Dev). Tokens only;
-  French `adminCopy`; `jsx-a11y` error; `prefers-reduced-motion`.
-- Keep server authority and role split: MODERATOR stays bounded (no catalogue writes,
-  no Reset / playlists / daily / dev). Do not weaken `guardProtectedTarget` / owner
-  emails / `ALLOW_DEV_CLAIM_ADMIN`.
-- Relocate or group existing tools (repair queue, spectator dialog, audit journal) so
-  they are not a pile of extra tabs. Split panels that blow the ~300–400 line cap.
-- Logged-in staff smoke (`admin_dev`) on the reworked tabs. No mute / ban / reset / seed
-  unless the task explicitly asks.
+- Standard uses the same answer sting and stage cue as Chrono. A submitted wrong answer is `wrong` (no time chip). A timeout stays `missed`. Chrono still shows `−N s` when there is a tax.
+- Site setting `answerSounds` (default on) mutes those stings. The global mute still wins. Column `Profile.answerSounds`.
+- « Révéler tout de suite » left the global settings. Solo Standard advanced config owns `soloInstantReveal` (default off). Multi and Chrono force it off. The daily quiz no longer reads the old preference.
+- Public home link and suggestions page title are **Avis & bugs**. The route stays `/suggestions`. Old news articles keep their original wording.
+- `LICENSE` is all rights reserved, Hugo (Hugoae), 2026. Package `license` fields are `UNLICENSED`. Copies already received under MIT keep that grant.
 
 ### 26.7 checklist (at boundary)
 
-- [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`; news + roadmap card deferred to the end of 26.7 (no `SITE_VERSION` bump).
-- [ ] Chrono solo: playtest on aniquizz.com, then fixes (`gameType: 'timeAttack'`, `TIME_ATTACK`, budget clock, CLM badge; news + roadmap card deferred to the end of 26.7, no `SITE_VERSION` bump). Code is on `main` (`9245d8e`).
-- [ ] Profile found bar + tests.
-- [ ] Heard + found + liked playlist sources, lobby copy, pool stats.
-- [ ] Admin panel rework (shell + existing tools, role bounds unchanged).
+- [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`. Covered by news id 9. No roadmap card.
+- [x] Chrono solo + versus: `timeAttack`, `TIME_ATTACK`, budget clock, CLM badge, `RaceEngine`. Covered by news id 9. No roadmap card. Playtest closed 2026-11-08. Versus and the later fixes are uncommitted.
+- [ ] Profile found bar: heard bar unchanged (medals stay on it); found bar is `correctCount > 0` over the same catalogue. Heard / found / liked playlist sources were dropped from 26.7. A first pass was reverted.
+- [x] Admin panel rework (grouped nav, desk line, denser users, activity sort with never-seen last, copy, file splits, per-tab error boundary, role bounds unchanged).
+- [x] Standard answer cues + `answerSounds` mute. Solo instant reveal is a Standard room setting. Public section renamed Avis & bugs. Proprietary licence (not MIT).
+- [x] Mode select is Solo + Multi, with Chrono named on Solo and Compétitif as a quiet line. Home facts and the Nouveau card were tried and dropped.
+- [x] Release copy: news id 9 (2026-11-08). No roadmap card. Home + app-shell `v26.7`.
 - [ ] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
 
 ---
@@ -542,7 +520,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | **Compétitif + ladder saisonnier**          | Ranked mode; strict anti-cheat (must clamp Mix honor-system claims); seasons reuse leaderboard infra.                          |
 | **Mode AMQ / speed (Quick Draw)**           | **Shipped in 26.3** as Sprint. Demoted in **26.7** to Standard **Vitesse** (`speedBonusEnabled`).                              |
-| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre solo** is on `main` for playtest (**26.7**, unfinished). Chrono **multi** stays parked. |
+| **Challenger / Time Trial / Battle Royale** | Removed in Phase 4. **Contre-la-montre** solo and versus shipped in **26.7** (spec `docs/game/time-attack.md`). |
 | **Song-title precision**                    | Deferred from 26.6 (Artiste shipped instead). Same plumbing: `validAnswers`, autocomplete, QCM pool, medals, lobby copy.       |
 | **OP/ED sequence as answer**                | Deferred from 26.6.                                                                                                            |
 
@@ -553,7 +531,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | **Traduction EN**                    | Wire i18n; UI strings already isolated (French default).                                                                                                                                                         |
 | **Light mode**                       | Removed Phase 8 (dark-only); re-add requires token audit + `UserAvatar`/game surfaces.                                                                                                                           |
 | **Franchise catalogue cleanup**      | Data pass: DBZ, Naruto, AOT spin-offs → canonical franchises.                                                                                                                                                    |
-| **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources are **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                                           |
+| **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources were dropped from **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                              |
 | **Graphiques statistiques (profil)** | Visual breakdown on profile · period filter · Recharts lazy on `/profile`. DB snapshots already persist (`Match.responseType`, `Match.precision`, `MatchPlayer.soloMedal`); UI + aggregation API still deferred. |
 
 ### Infra & quality (as needed)
@@ -577,7 +555,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse; Chrono solo is on `main` for playtest (`9245d8e`); pokédex + Admin remain.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse, Chrono (solo + versus), the admin console rework, Standard answer cues, and a proprietary licence. The pokédex found bar was reverted and remains. Heard / found / liked sources were dropped.
 
 ---
 

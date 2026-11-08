@@ -76,3 +76,24 @@ export function parseAdminTab(
   if (raw === 'dev' && !(opts.canManage && opts.isDev)) return 'users';
   return raw;
 }
+
+/** Staff console sections. Tab ids stay the `?tab=` allowlist. */
+export const ADMIN_TAB_GROUPS = [
+  { id: 'moderation', tabs: ['users', 'rooms', 'audit'] },
+  { id: 'content', tabs: ['catalogue', 'playlists', 'daily', 'suggestions'] },
+  { id: 'reading', tabs: ['stats'] },
+  { id: 'dev', tabs: ['dev'] },
+] as const satisfies readonly { id: string; tabs: readonly AdminTab[] }[];
+
+export type AdminTabGroupId = (typeof ADMIN_TAB_GROUPS)[number]['id'];
+
+/** Drops tabs the role cannot open, then drops empty groups (dev in production). */
+export function visibleAdminGroups(opts: { canManage: boolean; isDev: boolean }): {
+  id: AdminTabGroupId;
+  tabs: AdminTab[];
+}[] {
+  return ADMIN_TAB_GROUPS.map((group) => ({
+    id: group.id,
+    tabs: group.tabs.filter((tab) => parseAdminTab(tab, opts) === tab),
+  })).filter((group) => group.tabs.length > 0);
+}

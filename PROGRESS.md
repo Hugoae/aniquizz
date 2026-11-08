@@ -3,7 +3,62 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7** · Vitesse shipped · Chrono solo on `main` for playtest · pokédex + Admin remaining (2026-11-07)
+## Current phase: **26.7** · Vitesse ✅ · Chrono ✅ · Admin rework ✅ · answer cues + licence ✅ (working tree) · pokédex found bar remaining (2026-11-08)
+
+### Chrono — solo and versus closed (2026-11-08, dev server, not committed)
+
+Playtest closed. Spec: `docs/game/time-attack.md`. Solo is on `main` (`9245d8e`). Versus and the fixes below are uncommitted. Do not reopen the mode.
+
+| Piece        | Decision                                                                                                                                                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Solo**     | Found/heard instead of points. Header medal cue is four icons. A zero budget still reveals the title, then the end screen. Heard is the round index, not the 5-title window.                                                              |
+| **Versus**   | `RaceEngine`, 2–8, shared playlist, Watched forbidden. Private round events. Board: found, heard, budget, streak, no titles. Rank = most found, then fewest heard. Humans only for the win, podium, and placement XP. Bots stay in the list. |
+| **Playback** | Video mode stays the room setting. Song start defaults to the beginning; random may shorten the clip (8 s floor, reveal + 2 s margin). Pool stays `budget / 3` (20–80): that already covers an 8 s tail and a 5 s skip.                    |
+| **Release**  | News id 9 (2026-11-08) and Home footer `v26.7`. No roadmap card. The found bar is not in that note.                                                                                                                                         |
+
+### Admin console (2026-11-08, dev server, not committed)
+
+Staff shell only. No new tool, no new sanction, no role change. Same working tree as the Chrono race: not committed.
+
+| Piece        | Decision                                                                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Nav**      | Modération (users, rooms, journal), Contenu (catalogue, playlists, daily, suggestions), Lecture (stats), Dev (admin and local only). `?tab=` values are unchanged.                                                                |
+| **Desk**     | One line: matches in progress (playing or paused), repair-queue size, open suggestions. Catalogue shows the repair count. Polls every 15 s and pauses while the tab is hidden.                                                   |
+| **Users**    | Denser list. Opens sorted by activity, newest visit first. A missing `lastSeenAt` stays last in both directions (`userListOrderBy`): Postgres otherwise treats that empty date as the newest, which put « jamais vu » on top. |
+| **Copy**     | User filters, room filters, and row confirmations live in `adminCopy`. Actions, the user toolbar, and catalogue dialogs are split out.                                                                                          |
+| **Preview**  | The player preview uses `ProfilePokedexSection` and `border-border`. The white border and the purple bar glow are gone.                                                                                                          |
+| **Crash**    | `AdminPanelBoundary` wraps the active tab, so one panel crash leaves the nav up.                                                                                                                                                 |
+| **Roles**    | MODERATOR stays bounded: no catalogue writes, no playlists, no daily, no dev tools.                                                                                                                                              |
+| **Checked**  | Client typecheck, admin eslint, nav / desk / role-confirm tests, server order test. A full logged-in pass of every tab was not done. The users tab was opened and the activity sort was corrected from that.                    |
+
+### Pokédex — found bar (reverted 2026-11-08)
+
+A second bar (`foundSongs` / `foundPercent`, `SongHistory.correctCount > 0`, same playable catalogue) was implemented on the profile and the admin preview, then removed the same day. Medals stay on the heard percent. It is back on the plan as the remaining 26.7 slice. Do not start it until that is the task.
+
+### Answer cues, solo reveal, public name, licence (2026-11-08, dev server, not committed)
+
+| Piece | Decision |
+| ----- | -------- |
+| **Cues** | Standard plays the Chrono sting and stage animation. A submitted wrong answer is `wrong` with the chip « Faux ! » (no second tax). A timeout stays « Raté ». Chrono still shows `−N s` when a tax exists. |
+| **Mute** | Site option `answerSounds`, default on. The global mute still cuts the stings. New `Profile.answerSounds` column, applied on the AniQuizz database. |
+| **Reveal** | « Révéler tout de suite » left the global settings. Solo Standard advanced config owns `soloInstantReveal` (default off). Multi and Chrono force it off. The daily quiz no longer uses the old preference. |
+| **Name** | The public section is **Avis & bugs** (home, page title, first-paint shell). Route stays `/suggestions`. Shipped news articles keep their old wording. |
+| **Licence** | `LICENSE` is all rights reserved, Hugo (Hugoae), 2026. Package fields are `UNLICENSED`. Copies already received under MIT keep that grant. GitHub shows the new file only after it is on the default branch. |
+
+### Mode select (2026-11-08, dev server, not committed)
+
+The home visual pass (live facts, live catalogue, « Nouveau » card, one news teaser) was reverted the same day. The landing stays the eyebrow « + de 3 000 sons », the two newest articles, and **Avis & bugs**.
+
+| Piece | Decision |
+| ----- | -------- |
+| **Modes** | Solo and Multijoueur are the two cards. Solo names Standard and Chrono. Compétitif is one quiet line. The daily quiz sits with that choice. |
+| **Home** | Dropped. Do not put the facts or the Nouveau card back unless that is the task. Footer is `v26.7`. |
+
+### Release note (2026-11-08)
+
+News id 9 is the public 26.7 note: Contre-la-montre, Vitesse, answer cues, the solo reveal move, Avis & bugs, and the mode page. No roadmap card. The found bar is not announced.
+
+**Next:** Profile pokédex found bar. Heard / found / liked music sources were dropped from 26.7. HIBP stays parked. Do not reopen Chrono, the admin shell, the answer cues, the licence, the dropped home pass, or this news note.
 
 ### 26.7 — Release split: push without Chrono (2026-11-07)
 
@@ -12,14 +67,14 @@ Everything uncommitted since 26.6.2 was split in two on 2026-11-07:
 | Where                       | What                                                                                                                                                                                                                                |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `main` (pushed)             | Vitesse commit · ghost-rooms fix · Oct. 17 reviews (security, database, client) · P1/P2 hardening · C9 file splits (admin API / panels, lobby hooks) · migration `20261017193000_client_catalogue_grants`. **No time-attack code.** |
-| `feat/time-attack` (pushed) | Solo **Contre-la-montre**, unfinished: shared helpers, `MatchBudgetClock`, `matchEngineBudget`, selector / clock / badge UI, migration `20260916200000_match_game_mode_time_attack`, spec `docs/game/time-attack.md`.               |
+| `feat/time-attack` (pushed) | Solo **Contre-la-montre** as of the split (closed later): shared helpers, `MatchBudgetClock`, `matchEngineBudget`, selector / clock / badge UI, migration `20260916200000_match_game_mode_time_attack`, spec `docs/game/time-attack.md`. |
 | `5c0f777` (branch history)  | Raw snapshot of the whole working tree before the split (safety net).                                                                                                                                                               |
 
 Also fixed while splitting (they were already red in the tree): 8 client typecheck errors from the admin split (`CatalogueTree` name clash, `BOT_PRESETS`, `UserListFilter` / `UserListSort` imports, `RefObject` typing).
 
-Chrono was fast-forwarded onto `main` the same evening (`9245d8e`) so solo playtests can run on aniquizz.com. Client and server both deploy from `main`. The mode is still unfinished.
+Chrono was fast-forwarded onto `main` the same evening (`9245d8e`) so solo playtests could run on aniquizz.com. Client and server both deploy from `main`. The mode was unfinished at this point; it closed on 2026-11-08 (top of this file).
 
-**Next:** playtest Chrono on aniquizz.com and fix what comes back. Then pokédex found bar, heard/found/liked sources, Admin rework.
+**Next (historical):** playtest Chrono, then pokédex. Current next is at the top of this file.
 
 ### 26.7 — Ghost rooms fix (2026-11-07)
 
@@ -80,11 +135,11 @@ Review: effects, re-renders, duplicated state, XSS. No `dangerouslySetInnerHTML`
 | Admin room | Highlight lives in `?room=` (`^[A-Za-z0-9]+$`, max 16). `goToSong` / `goToUser` delete `room`. Profile-return `location.state` seeds the query once. `RoomsPanel` still receives `highlightRoomId`.                              |
 | Play hub   | Lobby, password, and home stats are three memoized contexts. `GameHubRoutes` is memoized. A 20 s `home_stats` tick does not redraw the room list or the closed password dialog. Typing a password does not redraw the room list. |
 
-Left: Admin’s lazy panels have no local error boundary (nit). `VirtualScroll`, `ResetPassword`, `NotFound`, and `DelayedRouteFallback` were reviewed and not rewritten.
+Left at the time: Admin lazy panels had no local error boundary. Closed by `AdminPanelBoundary` in the 2026-11-08 rework. `VirtualScroll`, `ResetPassword`, `NotFound`, and `DelayedRouteFallback` were reviewed and not rewritten.
 
-**Next:** pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi. HIBP stays parked.
+**Next:** Profile pokédex found bar. Chrono is closed. The admin shell is in. Heard / found / liked sources were dropped. HIBP stays parked.
 
-> **State:** **Vitesse** is the shipped **26.7** slice. **Contre-la-montre solo** is on `main` (`9245d8e`) for playtest on aniquizz.com and is still unfinished. Live `gameType` values are `'standard'` and `'timeAttack'`. No `SITE_VERSION` bump — the Home footer stays `v26.6`. News articles and roadmap cards for Vitesse and Chrono were **removed on purpose** (they were on `main`); they are written once, when the whole 26.7 update is done (see PLAN § 26.7 release content). Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar + heard/found/liked sources + Admin panel rework. **Parked:** HIBP (Supabase Pro+) · Chrono **multi** · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **Vitesse**, **Contre-la-montre** (solo + versus), and the admin console rework (including the activity sort) are done. Solo Chrono is on `main` (`9245d8e`); versus, the later playtest fixes, and the admin rework are uncommitted. The pokédex found bar was reverted and is the remaining slice. Live `gameType` values are `'standard'` and `'timeAttack'`. News id 9 is published and the Home footer is `v26.7`. No roadmap card. Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar. **Dropped from 26.7:** heard / found / liked music sources. **Parked:** HIBP (Supabase Pro+) · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
 
@@ -103,9 +158,9 @@ Left: Admin’s lazy panels have no local error boundary (nit). `VirtualScroll`,
 
 **C9 file splits (2026-10-17):** behaviour-neutral. `adminApi` is a folder (HTTP, types, endpoints). Rooms, catalogue, stats, and dev tools are split into section components. Edit dialogs are one file each. `useLobbyController` keeps socket state; emit actions live in `useLobbyActions`. No admin-panel rework in this pass.
 
-### 26.7 — Contre-la-montre solo (2026-09-16) — 🚧 on `main` for playtest (`9245d8e`)
+### 26.7 — Contre-la-montre solo playtest log (2026-09-16 → 2026-11-08)
 
-Second slice of **26.7**, on `main` for playtest, **not finished**. Spec: `docs/game/time-attack.md`. The rows below describe what is implemented, pending playtest.
+Historical log. The mode is closed; current state is at the top of this file. Spec: `docs/game/time-attack.md`.
 
 | Item            | What changed                                                                                                                                                                            |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -138,11 +193,11 @@ Second slice of **26.7**, on `main` for playtest, **not finished**. Spec: `docs/
 
 **Playtest round 5 (2026-11-08, not committed):** solo lobby uses the Timer icon. The reveal badge counts the 3 s reveal, not the run budget. A skip uses that reveal when the option is on. `nextMedal` and `nextSkipTaxMs` are server-authoritative (heard-song difficulties, same as game over) and the skip button shows « Passer · −N s ». Medal bars eased from 4/6/8/10 to **4/5/7/9** per minute (3 min, medium, franchise → 12/15/21/27). Mid-game refresh keeps the room (15 s disconnect grace). Explicit « Quitter le salon » emits `leave_room`: the last human cancels the engine (clocks cleared, no persist) and `removeRoom` drops it.
 
-**Round 7 (2026-11-08, `cd2daf7` + news cleanup):** small screens get `RecentTitlesPills` (last 5 titles, below `lg`). `ErrorBoundary` always logs to the console and reloads once per 30 s on a stale lazy chunk (`Failed to fetch dynamically imported module`, which was the admin "Une erreur est survenue"). Chrono and Vitesse news articles and roadmap cards were removed on purpose and will be written at the end of 26.7. **Versus (parallel race, one budget per player, same seeded playlist) is designed, not coded.** Open decisions: disconnect behaviour (clock keeps running recommended), tie-break (remaining budget, then time of last find), Watched forbidden in versus, 2–8 players, leaderboard exclusion at first.
+**Round 7 (2026-11-08, `cd2daf7` + news cleanup):** small screens get `RecentTitlesPills` (last 5 titles, below `lg`). `ErrorBoundary` always logs to the console and reloads once per 30 s on a stale lazy chunk (`Failed to fetch dynamically imported module`, which was the admin "Une erreur est survenue"). Chrono and Vitesse news articles and roadmap cards were removed on purpose and will be written at the end of 26.7. Versus was still a design note here; it shipped later the same day (top of this file): disconnect keeps the clock, ties are found then heard (time left does not split them), Watched forbidden, 2–8 players, bots ranked but not winners.
 
 **Playtest round 6 (2026-11-08):** solo lobby edit keeps the Standard / Contre-la-montre selector. Budget is a full-width slider, 1–5 min step 30 s. General-tab option `timeAttackPunitiveSkip` (default on) can freeze the skip tax at 5 s. Skip button reads `Passer −N s`.
 
-**Next:** small-screen history, then commit this playtest tree. After that, pokédex found bar, heard/found/liked sources, Admin panel rework. Do not start Chrono multi.
+**Next (historical):** this log's open items were closed the same day. Current next is at the top of this file.
 
 ### 26.7 — Vitesse (Standard typing modifier) (2026-09-16)
 
@@ -156,7 +211,7 @@ First slice of **26.7**. Not a 26.6.3 patch. Sprint lives on as Prisma `GameMode
 | **In-game**     | `SpeedLeaderboard`, round history breakdown, game-over + profile history use the same badge.                                                                     |
 | **Copy / news** | Lobby rules podium lines when the flag is on. News + roadmap card removed (deferred to the end of 26.7). Spec: `docs/game/speed-bonus.md`.                       |
 
-**Next:** playtest Chrono on aniquizz.com (section above), then pokédex found bar, heard/found/liked sources, Admin panel rework.
+**Next (historical):** Chrono playtest. Current next is at the top of this file.
 
 ### 26.6.2 — volume persist + header XP (2026-09-16)
 
@@ -1330,7 +1385,7 @@ Full 26.1 write-ups: [`docs/progress-archive/v26.1.md`](./docs/progress-archive/
 | **26.6**   | Quiz du jour ✅ · player settings ✅ · Artiste precision ✅ · Ko-fi ✅ · news/roadmap/Home ✅ · close: commit, CI, tag                                                     |
 | **26.6.1** | Reveal answer-type icon ✅ · reveal = min(guess, 15s) ✅ · Home/menu life dropped · `52ce827`                                                                              |
 | **26.6.2** | Volume persist across reload ✅ · header XP ring after matches ✅ · no `SITE_VERSION` bump                                                                                 |
-| **26.7**   | **Vitesse** ✅ · **Chrono solo** 🚧 (on `main` for playtest) · pokédex found bar · heard / found / liked playlists · Admin panel rework — remaining                        |
+| **26.7**   | **Vitesse** ✅ · **Chrono** solo + versus ✅ · pokédex found bar ✅ · Admin panel rework remaining · heard / found / liked sources dropped |
 | **26.x+**  | Period/friends leaderboard filters, saviez-vous, achievements, competitive, user playlists, EN i18n, light mode, …                                                         |
 
 ## Conventions

@@ -2,24 +2,25 @@ import { vi } from 'vitest';
 import { GAME_CONFIG, type RoomSettings } from '@aniquizz/shared';
 import type { TypedServer } from '../../../core/socketTypes';
 import { MatchEngine } from './MatchEngine';
+import { RaceEngine } from './RaceEngine';
 import { Room } from './Room';
 import { scoringForSettings, type ScoringStrategy } from './ScoringStrategy';
 import type { MatchRepository } from './MatchRepository';
 import type { PlaylistBuilder } from './PlaylistBuilder';
 import type { PlaylistItem } from './types';
 
-export type EmittedEvent = { event: string; payload: unknown };
+/** `target` is the room id or socket id the emit was addressed to. */
+export type EmittedEvent = { event: string; payload: unknown; target?: string };
 
 /** Minimal TypedServer mock — records every room-channel emit. */
 export function createMockIo(): { io: TypedServer; emitted: EmittedEvent[] } {
   const emitted: EmittedEvent[] = [];
-  const channel = {
-    emit: vi.fn((event: string, payload: unknown) => {
-      emitted.push({ event, payload });
-    }),
-  };
   const io = {
-    to: vi.fn(() => channel),
+    to: vi.fn((target: string) => ({
+      emit: vi.fn((event: string, payload: unknown) => {
+        emitted.push({ event, payload, target });
+      }),
+    })),
   } as unknown as TypedServer;
   return { io, emitted };
 }
@@ -140,4 +141,45 @@ export function getPlayer(room: Room, userId: string) {
   const player = room.players.get(userId);
   if (!player) throw new Error(`Missing player ${userId}`);
   return player;
+}
+
+export interface RaceHarness extends Omit<EngineHarness, 'engine'> {
+  engine: RaceEngine;
+}
+
+/** Versus time-attack room: one lane per player, same playlist for everyone. */
+export function createRaceHarness(
+  opts: {
+    settings?: Partial<RoomSettings>;
+    playlist?: PlaylistItem[];
+    playerIds?: string[];
+  } = {},
+): RaceHarness {
+  const settings = makeSettings({
+    gameType: 'timeAttack',
+    responseType: 'typing',
+    timeBudgetSeconds: 60,
+    timeAttackReveal: true,
+    maxPlayers: 4,
+    ...opts.settings,
+  });
+  const base = createEngineHarness({
+    settings,
+    playlist: opts.playlist,
+    playerIds: opts.playerIds,
+  });
+  const engine = new RaceEngine(base.room, {
+    builder: base.builder,
+    repo: base.repo,
+    scoring: scoringForSettings(settings),
+  });
+  base.room.attachEngine(engine);
+  return { ...base, engine };
+}
+
+/** Intro + ready beats elapsed: every lane is guessing its first title. */
+export async function advanceRaceToGuessing(engine: RaceEngine): Promise<void> {
+  await engine.start();
+  await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.INTRO_DELAY);
+  await vi.advanceTimersByTimeAsync(GAME_CONFIG.TIMERS.ROUND1_READY_DELAY);
 }

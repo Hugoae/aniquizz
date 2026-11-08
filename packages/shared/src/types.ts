@@ -62,6 +62,11 @@ export interface GameConfig {
    * False jumps straight to the next clip; the recent-titles list still shows the answer.
    */
   timeAttackReveal?: boolean;
+  /**
+   * Solo Standard: after a submitted answer, reveal the clip immediately.
+   * Ignored in multiplayer and in time attack. Default off.
+   */
+  soloInstantReveal?: boolean;
   /** Guessing-phase clip presentation (reveal is always full video). */
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */

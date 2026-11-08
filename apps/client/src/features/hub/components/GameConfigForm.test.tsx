@@ -172,7 +172,7 @@ describe('GameConfigForm', () => {
     expect(screen.getByRole('button', { name: /contre-la-montre/i })).toBeInTheDocument();
   });
 
-  it('hides Contre-la-montre in multiplayer create', () => {
+  it('offers Contre-la-montre as a versus race in multiplayer create', () => {
     render(
       <GameConfigForm
         config={{ ...baseConfig, mode: 'multiplayer', maxPlayers: 8 }}
@@ -186,7 +186,64 @@ describe('GameConfigForm', () => {
       />,
     );
 
-    expect(screen.queryByRole('button', { name: /contre-la-montre/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /contre-la-montre/i })).toBeInTheDocument();
+    expect(screen.getByText(/course en parallèle/i)).toBeInTheDocument();
+  });
+
+  it('caps the room at 8 and drops Watched when switching a lobby to Chrono', async () => {
+    const setConfig = vi.fn();
+    const config: RoomConfig = {
+      ...baseConfig,
+      mode: 'multiplayer',
+      maxPlayers: 30,
+      soundSelection: 'watched',
+      playlistWatched: true,
+    };
+    render(
+      <GameConfigForm
+        config={config}
+        setConfig={setConfig}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /contre-la-montre/i }));
+
+    const updater = setConfig.mock.calls[0]![0] as (prev: RoomConfig) => RoomConfig;
+    const next = updater(config);
+    expect(next.gameType).toBe('timeAttack');
+    expect(next.maxPlayers).toBe(8);
+    expect(next.soundSelection).toBe('random');
+    expect(next.playlistWatched).toBe(false);
+  });
+
+  it('hides the Watched source tab in a Chrono multiplayer lobby', async () => {
+    render(
+      <GameConfigForm
+        config={{
+          ...baseConfig,
+          gameType: 'timeAttack',
+          mode: 'multiplayer',
+          maxPlayers: 4,
+        }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /source/i }));
+    expect(screen.queryByRole('tab', { name: 'Watched' })).toBeNull();
+    expect(screen.getByRole('tab', { name: 'Aléatoire' })).toBeInTheDocument();
   });
 
   it('keeps the mode selector when editing a solo room', () => {

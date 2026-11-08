@@ -9,6 +9,7 @@ import {
   VIDEO_MODE_LABELS,
   normalizeVideoMode,
   SONG_START_MODE_LABELS,
+  TIME_ATTACK_MIN_CLIP_SECONDS,
   normalizeSongStartMode,
   isSpeedBonusEnabled,
 } from '@aniquizz/shared';
@@ -54,6 +55,9 @@ const STANDARD_MODE_INTRO =
 
 const TIME_ATTACK_INTRO =
   'Trouvez le plus de titres avant la fin du temps. Un skip retire 5 secondes, puis 7, 9… Une erreur retire 3 secondes.';
+
+const TIME_ATTACK_RACE_INTRO =
+  "Course en parallèle : chacun joue sa voie sur la même playlist, sans voir les titres des autres. Le plus de titres trouvés l'emporte. Un skip retire 5 secondes, puis 7, 9… Une erreur retire 3 secondes.";
 
 const MIX_CHOICE_LINE =
   'En mode Mix, tu choisis ton type de réponse en début de manche : une fois choisi, tu ne peux plus changer avant la révélation.';
@@ -149,6 +153,12 @@ const songStartFlowLine = (songStartMode: GameConfig['songStartMode']): string =
     default:
       return "Départ de l'extrait : à un moment aléatoire du clip (nouveau à chaque manche, sauf si le clip est trop court).";
   }
+};
+
+const timeAttackLateStartLine = (config: GameConfig): string | null => {
+  if (config.gameType !== 'timeAttack') return null;
+  if (normalizeSongStartMode(config.songStartMode) !== 'random') return null;
+  return `Un départ tardif raccourcit l'extrait (${TIME_ATTACK_MIN_CLIP_SECONDS} s minimum). Le nombre de titres couvre le chrono même si chaque extrait est au plus court.`;
 };
 
 const REVEAL_FLOW_LINE =
@@ -288,12 +298,30 @@ const victoryLines = (context: LobbyRulesContext, config: GameConfig): string[] 
 
   const podiumThreshold = GAME_CONFIG.VICTORY_CONDITIONS.MULTI.PODIUM_THRESHOLD;
 
+  if (config.gameType === 'timeAttack') {
+    return [
+      'Victoire : le plus de titres trouvés remporte la course.',
+      'Égalité : à trouvés égaux, moins de titres écoutés (8/13 bat 8/15). Le même ratio partage la place.',
+      'Les bots apparaissent au classement. La victoire se joue entre les joueurs.',
+      `Avec ${podiumThreshold} joueurs ou plus, bots non comptés, le podium gagne la partie (égalités incluses).`,
+      'Chaque joueur reçoit sa propre médaille selon ses titres, ses difficultés et la durée du chrono.',
+    ];
+  }
+
   return [
     'Victoire multijoueur : le plus haut score remporte la partie.',
     `Avec ${podiumThreshold} joueurs ou plus, le podium gagne la partie (égalités incluses).`,
     'Pas de médailles solo en multijoueur — le classement final fait foi.',
   ];
 };
+
+const raceLobbyLines = (): string[] => [
+  "L'hôte lance la course quand au moins 2 joueurs sont présents ; les invités doivent se mettre « Prêt ». De 2 à 8 joueurs.",
+  'Départ commun après un compte à rebours : chaque joueur a son propre chrono, qui continue même en cas de déconnexion.',
+  "Pas de pause ni de vote : « Passer » est individuel et ne coûte du temps qu'à celui qui l'utilise.",
+  'Le mode Watched est indisponible : tout le monde joue les mêmes titres.',
+  "L'hôte peut exclure un joueur ou transférer le rôle d'hôte depuis le lobby.",
+];
 
 const multiLobbyLines = (): string[] => [
   "L'hôte lance la partie quand au moins 2 joueurs sont présents ; les invités doivent se mettre « Prêt ».",
@@ -332,11 +360,17 @@ export function buildLobbyRulesSections(
   config: GameConfig,
   context: LobbyRulesContext,
 ): LobbyRulesSection[] {
+  const lateStartLine = timeAttackLateStartLine(config);
   const sections: LobbyRulesSection[] = [
     {
       id: 'summary',
       title: 'Résumé de la partie',
-      intro: config.gameType === 'timeAttack' ? TIME_ATTACK_INTRO : STANDARD_MODE_INTRO,
+      intro:
+        config.gameType !== 'timeAttack'
+          ? STANDARD_MODE_INTRO
+          : context.lobbyMode === 'multi'
+            ? TIME_ATTACK_RACE_INTRO
+            : TIME_ATTACK_INTRO,
       chips: buildLobbyRulesSummaryChips(config, context.playlistName),
     },
     {
@@ -345,6 +379,7 @@ export function buildLobbyRulesSections(
       lines: [
         videoFlowLine(config.videoMode),
         songStartFlowLine(config.songStartMode),
+        ...(lateStartLine ? [lateStartLine] : []),
         precisionFlowLine(config.precision),
         REVEAL_FLOW_LINE,
       ],
@@ -370,7 +405,7 @@ export function buildLobbyRulesSections(
     sections.push({
       id: 'lobby',
       title: 'Salon multijoueur',
-      lines: multiLobbyLines(),
+      lines: config.gameType === 'timeAttack' ? raceLobbyLines() : multiLobbyLines(),
     });
   }
 

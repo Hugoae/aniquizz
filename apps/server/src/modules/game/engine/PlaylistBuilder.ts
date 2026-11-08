@@ -2,11 +2,11 @@ import {
   buildArtistChoices,
   buildChoices,
   buildDuo,
-  clipGuessSeconds,
   formatSongTypeLabel,
-  isTimeAttackSettings,
+  isTimeAttackGame,
   normalizePrecision,
   normalizeSongStartMode,
+  timeAttackClipWindow,
   playlistSourceIds,
   resolveRoundAnswerSet,
   revealDurationSeconds,
@@ -140,9 +140,9 @@ export class PlaylistBuilder {
       return { playlist: [], fallbackUsed, difficultyRelaxed, abortReason: 'no_songs' };
     }
 
-    const timeAttack = isTimeAttackSettings(settings);
-    const guessDuration = timeAttack ? clipGuessSeconds(null) : settings.guessDuration || 20;
-    const songStartMode = timeAttack ? 'beginning' : normalizeSongStartMode(settings.songStartMode);
+    const timeAttack = isTimeAttackGame(settings);
+    const guessDuration = settings.guessDuration || 20;
+    const songStartMode = normalizeSongStartMode(settings.songStartMode);
     const playlist = songs
       .map((song) =>
         this.toPlaylistItem(
@@ -218,7 +218,8 @@ export class PlaylistBuilder {
     // the pair through `game:duo` after spending the lifeline.
     const duo = buildDuoPair && choices.length > 0 ? buildDuo(answers.correctTarget, choices) : [];
     const clipDurationSeconds = song.duration ?? null;
-    const roundGuessDuration = timeAttack ? clipGuessSeconds(clipDurationSeconds) : guessDuration;
+    const clipWindow = timeAttack ? timeAttackClipWindow(clipDurationSeconds, songStartMode) : null;
+    const roundGuessDuration = clipWindow?.guessDuration ?? guessDuration;
 
     return {
       id: song.id,
@@ -230,7 +231,9 @@ export class PlaylistBuilder {
       typeLabel: formatSongTypeLabel(song.songType, song.sequence),
       difficulty: song.difficulty.toLowerCase(),
       videoKey: song.videoKey,
-      videoStartTime: this.pickStartTime(song.duration, roundGuessDuration, songStartMode),
+      videoStartTime:
+        clipWindow?.videoStartTime ??
+        this.pickStartTime(song.duration, roundGuessDuration, songStartMode),
       guessDuration: roundGuessDuration,
       clipDurationSeconds,
       cover: song.anime.coverImage,

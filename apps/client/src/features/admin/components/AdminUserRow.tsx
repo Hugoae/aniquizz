@@ -1,23 +1,14 @@
 import { memo } from 'react';
-import { MicOff, Ban, Power, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu';
-import type { AdminUser, Presence, Role } from '@/lib/adminApi';
-import { adminApi } from '@/lib/adminApi';
-import { invalidateDailyToday } from '@/lib/dailyApi';
-import { cn } from '@/lib/utils';
+  AdminUserRowActions,
+  type AdminUserRowPending,
+} from '@/features/admin/components/AdminUserRowActions';
 import { ADMIN_COPY } from '@/features/admin/copy/adminCopy';
+import { adminApi, type AdminUser, type Presence, type Role } from '@/lib/adminApi';
+import { cn } from '@/lib/utils';
 import {
-  DURATION_OPTIONS,
   formatRelativeFromNow,
   formatRemaining,
   isSanctionActive,
@@ -45,15 +36,7 @@ const PRESENCE_META: Record<Presence, { label: string; dot: string; text: string
 const formatDate = (iso: string): string =>
   new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-export type AdminUserRowPending = {
-  title: string;
-  description: string;
-  confirmLabel: string;
-  destructive?: boolean;
-  action: () => Promise<unknown>;
-  successMsg: string;
-  targetUserId?: string;
-};
+export type { AdminUserRowPending };
 
 type AdminUserRowProps = {
   user: AdminUser;
@@ -63,60 +46,6 @@ type AdminUserRowProps = {
   onGoToRoom?: (roomId: string) => void;
   onSetPending: (pending: AdminUserRowPending) => void;
 };
-
-function SanctionMenu({
-  kind,
-  active,
-  onApply,
-  onLift,
-  disabled,
-}: {
-  kind: 'mute' | 'ban';
-  active: boolean;
-  onApply: (minutes: number, label: string) => void;
-  onLift: () => void;
-  disabled?: boolean;
-}) {
-  const isMute = kind === 'mute';
-  const Icon = isMute ? MicOff : Ban;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={disabled}
-          className={
-            active
-              ? isMute
-                ? 'border-warning/40 text-warning'
-                : 'border-destructive/40 text-destructive'
-              : ''
-          }
-        >
-          <Icon className="h-3.5 w-3.5 mr-1" />
-          {isMute ? ADMIN_COPY.mute : ADMIN_COPY.ban}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuLabel>{isMute ? 'Réduire au silence' : 'Bannir'} pour…</DropdownMenuLabel>
-        {DURATION_OPTIONS.map((opt) => (
-          <DropdownMenuItem key={opt.minutes} onClick={() => onApply(opt.minutes, opt.label)}>
-            {opt.label}
-          </DropdownMenuItem>
-        ))}
-        {active && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onLift} className="text-success focus:text-success">
-              {isMute ? 'Lever le mute' : 'Lever le ban'}
-            </DropdownMenuItem>
-          </>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 function adminUserRowEqual(prev: AdminUserRowProps, next: AdminUserRowProps): boolean {
   const a = prev.user;
@@ -178,38 +107,38 @@ export const AdminUserRow = memo(function AdminUserRow({
             }
       }
       tabIndex={isSelf ? undefined : 0}
-      aria-label={isSelf ? undefined : `Voir le profil de ${u.username}`}
+      aria-label={isSelf ? undefined : ADMIN_COPY.users.openProfile(u.username)}
     >
-      <td className="p-3">
-        <div className="flex items-start gap-3">
-          <UserAvatar avatar={u.avatar} username={u.username} className="h-10 w-10 shrink-0" />
+      <td className="px-3 py-2">
+        <div className="flex items-start gap-2">
+          <UserAvatar avatar={u.avatar} username={u.username} className="h-8 w-8 shrink-0" />
           <div className="min-w-0">
             <div className="font-semibold flex items-center gap-2 transition-colors hover:text-primary">
               {u.username}
             </div>
             <div className="text-xs text-muted-foreground truncate">{u.email}</div>
             <div className="text-[11px] text-muted-foreground/70">
-              Inscrit le {formatDate(u.createdAt)}
+              {ADMIN_COPY.users.registeredOn(formatDate(u.createdAt))}
             </div>
           </div>
         </div>
       </td>
 
-      <td className="p-3" onClick={(e) => e.stopPropagation()}>
+      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
         {canManage && !isSelf ? (
           <select
             className="bg-background border border-border rounded px-2 py-1"
             value={u.role}
-            aria-label={`Rôle de ${u.username}`}
+            aria-label={ADMIN_COPY.users.roleLabel(u.username)}
             onChange={(e) => {
               const nextRole = e.target.value as Role;
               if (nextRole === u.role) return;
               onSetPending({
-                title: `Changer le rôle de ${u.username} ?`,
-                description: `${u.username} passera de ${u.role} à ${nextRole}.`,
-                confirmLabel: 'Confirmer',
+                title: ADMIN_COPY.users.roleChangeTitle(u.username),
+                description: ADMIN_COPY.users.roleChangeBody(u.username, u.role, nextRole),
+                confirmLabel: ADMIN_COPY.users.confirm,
                 action: () => adminApi.setRole(u.id, nextRole),
-                successMsg: 'Rôle mis à jour.',
+                successMsg: ADMIN_COPY.users.roleUpdated,
                 targetUserId: u.id,
               });
             }}
@@ -225,11 +154,9 @@ export const AdminUserRow = memo(function AdminUserRow({
         )}
       </td>
 
-      <td className="p-3">
-        {u.gamesPlayed} parties — Niv {u.level}
-      </td>
+      <td className="px-3 py-2">{ADMIN_COPY.users.gamesLevel(u.gamesPlayed, u.level)}</td>
 
-      <td className="p-3" onClick={(e) => e.stopPropagation()}>
+      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
         {u.currentRoom ? (
           <button
             className="text-primary hover:underline"
@@ -242,7 +169,7 @@ export const AdminUserRow = memo(function AdminUserRow({
         )}
       </td>
 
-      <td className="p-3">
+      <td className="px-3 py-2">
         {u.presence !== 'offline' ? (
           <span className="text-muted-foreground">—</span>
         ) : (
@@ -252,8 +179,8 @@ export const AdminUserRow = memo(function AdminUserRow({
         )}
       </td>
 
-      <td className="p-3">
-        <div className="flex flex-col gap-1.5">
+      <td className="px-3 py-2">
+        <div className="flex flex-col gap-1">
           <span
             className={cn(
               'flex items-center gap-2 text-xs font-medium',
@@ -264,138 +191,28 @@ export const AdminUserRow = memo(function AdminUserRow({
             {PRESENCE_META[u.presence].label}
           </span>
           {banned && (
-            <Badge className="bg-destructive/20 text-destructive w-fit">
-              Banni — {formatRemaining(u.bannedUntil)}
+            <Badge className="w-fit bg-destructive/20 text-destructive">
+              {ADMIN_COPY.users.bannedFor(formatRemaining(u.bannedUntil))}
             </Badge>
           )}
           {muted && (
-            <Badge className="bg-warning/20 text-warning w-fit">
-              Muet — {formatRemaining(u.mutedUntil)}
+            <Badge className="w-fit bg-warning/20 text-warning">
+              {ADMIN_COPY.users.mutedFor(formatRemaining(u.mutedUntil))}
             </Badge>
           )}
         </div>
       </td>
 
-      <td className="p-3" onClick={(e) => e.stopPropagation()}>
-        <div className="flex flex-wrap justify-end gap-1">
-          <SanctionMenu
-            kind="mute"
-            active={muted}
-            disabled={isSelf}
-            onApply={(minutes, label) =>
-              onSetPending({
-                title: `Réduire ${u.username} au silence ?`,
-                description: `Le joueur ne pourra plus écrire dans le chat pendant : ${label}.`,
-                confirmLabel: ADMIN_COPY.mute,
-                action: () => adminApi.mute(u.id, minutes),
-                successMsg: `Joueur réduit au silence (${label}).`,
-                targetUserId: u.id,
-              })
-            }
-            onLift={() =>
-              onSetPending({
-                title: `Lever le mute de ${u.username} ?`,
-                description: 'Le joueur pourra de nouveau écrire dans le chat.',
-                confirmLabel: 'Lever le mute',
-                action: () => adminApi.mute(u.id, null),
-                successMsg: 'Mute levé.',
-                targetUserId: u.id,
-              })
-            }
-          />
-          <SanctionMenu
-            kind="ban"
-            active={banned}
-            disabled={isSelf}
-            onApply={(minutes, label) =>
-              onSetPending({
-                title: `Bannir ${u.username} ?`,
-                description: `Le joueur sera déconnecté et ne pourra plus se connecter pendant : ${label}.`,
-                confirmLabel: 'Bannir',
-                destructive: true,
-                action: () => adminApi.ban(u.id, minutes),
-                successMsg: `Joueur banni (${label}).`,
-                targetUserId: u.id,
-              })
-            }
-            onLift={() =>
-              onSetPending({
-                title: `Lever le ban de ${u.username} ?`,
-                description: 'Le joueur pourra de nouveau se connecter.',
-                confirmLabel: 'Lever le ban',
-                action: () => adminApi.ban(u.id, null),
-                successMsg: 'Ban levé.',
-                targetUserId: u.id,
-              })
-            }
-          />
-          {canManage && (
-            <>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={isSelf || u.presence === 'offline'}
-                title="Déconnecter le compte (sans bannir)"
-                onClick={() =>
-                  onSetPending({
-                    title: `Déconnecter ${u.username} ?`,
-                    description:
-                      "Le joueur sera déconnecté de son compte et devra se reconnecter. Aucune sanction n'est appliquée.",
-                    confirmLabel: 'Déconnecter',
-                    action: () => adminApi.disconnectUser(u.id),
-                    successMsg: 'Joueur déconnecté.',
-                    targetUserId: u.id,
-                  })
-                }
-              >
-                <Power className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  onSetPending({
-                    title: `Réinitialiser le quiz du jour de ${u.username} ?`,
-                    description:
-                      "La tentative du jour est supprimée. L'XP du quiz du jour est retirée, le niveau est recalculé, et la série quotidienne est reculée d'un jour. Le joueur peut relancer le défi.",
-                    confirmLabel: 'Réinitialiser',
-                    destructive: true,
-                    action: async () => {
-                      const result = await adminApi.resetDaily(u.id);
-                      if (isSelf) invalidateDailyToday();
-                      return result;
-                    },
-                    successMsg: 'Quiz du jour réinitialisé.',
-                    targetUserId: u.id,
-                  })
-                }
-              >
-                <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                Reset quiz du jour
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() =>
-                  onSetPending({
-                    title: `Réinitialiser les statistiques de ${u.username} ?`,
-                    description:
-                      'Parties, victoires, XP, niveau, Pokédex musical, historique de parties, records de score et temps de réponse seront remis à zéro. Les parties multi des autres joueurs sont conservées. Cette action est irréversible.',
-                    confirmLabel: 'Réinitialiser',
-                    destructive: true,
-                    action: () => adminApi.resetStats(u.id),
-                    successMsg: 'Statistiques réinitialisées.',
-                  })
-                }
-              >
-                Reset statistiques
-              </Button>
-            </>
-          )}
-        </div>
+      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+        <AdminUserRowActions
+          user={u}
+          canManage={canManage}
+          isSelf={isSelf}
+          muted={muted}
+          banned={banned}
+          onSetPending={onSetPending}
+        />
       </td>
     </tr>
   );
 }, adminUserRowEqual);
-
-export { SanctionMenu, PRESENCE_META, formatDate };
