@@ -1,8 +1,9 @@
-import { Flame, Check } from 'lucide-react';
+import { Check } from 'lucide-react';
 import type { GamePlayer } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { rankAccent, rankNeutralAccent } from '../../../utils/ranking';
 import { PlayerCardBase } from '../../shared/PlayerCardBase';
+import { StreakFlame } from '../../shared/RaceLaneStats';
 import { RevealAnswerTypeIcon } from './RevealAnswerTypeIcon';
 
 interface StandardPlayerCardProps {
@@ -86,9 +87,8 @@ export function StandardPlayerCard({
 
   // Reveal focuses on answers; streak stays visible in the sidebar roster.
   const streakBadge = !showResult && streak >= 3 && (
-    <div className="absolute -right-2 -top-2 z-10 flex animate-in zoom-in items-center gap-0.5 rounded-md border border-warning/50 bg-warning/10 px-1.5 py-0.5 shadow-sm duration-300">
-      <Flame className={cn('h-3 w-3 fill-warning text-warning', streak >= 5 && 'animate-pulse')} />
-      <span className="text-[10px] font-black italic text-warning">{streak}</span>
+    <div className="absolute -right-2 -top-2 z-10">
+      <StreakFlame streak={streak} />
     </div>
   );
 

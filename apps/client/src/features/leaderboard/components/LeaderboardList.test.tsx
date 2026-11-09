@@ -73,6 +73,10 @@ describe('LeaderboardPodium', () => {
     expect(screen.getByText('+3 ex-aequo')).toBeInTheDocument();
     expect(screen.queryByText('Voir le profil')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ada/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Bea/i })).toBeInTheDocument();
+    expect(screen.getByText('Ada')).toBeInTheDocument();
+    expect(screen.getByText('Bea')).toBeInTheDocument();
+    expect(screen.getAllByText('400 XP')).toHaveLength(1);
   });
 });
 

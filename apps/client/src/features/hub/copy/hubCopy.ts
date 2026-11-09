@@ -12,8 +12,6 @@ export const HUB_COPY = {
     solo: {
       title: 'Solo',
       description: 'Entraînez-vous seul et améliorez vos scores',
-      detail:
-        'Standard, points et médailles. Contre-la-montre, le plus de titres avant la fin du temps.',
     },
     multiplayer: {
       title: 'Multijoueur',

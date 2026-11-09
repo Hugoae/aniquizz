@@ -102,6 +102,7 @@ function PlayLobby() {
     addBots,
     goBack,
     openLobbySettings,
+    returnSoloToConfig,
   } = useLobbyControllerContext();
 
   const isSoloLobby = roomConfig.maxPlayers === 1;
@@ -131,7 +132,7 @@ function PlayLobby() {
           roomId={currentRoomId}
           isLaunchStarting={isLaunchStarting}
           onStart={startLobbyGame}
-          onLeave={goBack}
+          onLeave={returnSoloToConfig}
           onOpenSettings={openLobbySettings}
         />
       ) : (

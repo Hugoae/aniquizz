@@ -20,6 +20,7 @@ import {
 } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { buildRoundHistoryByUser } from './matchEngineReveal';
+import { takeActivityMatchId } from './matchActivityLedger';
 import type { MatchEngineHost } from './matchEngineHost';
 
 export function normalizeSongDifficulty(raw: string): SongDifficulty {
@@ -281,11 +282,13 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
       return;
     }
 
+    const activityMatchId = await takeActivityMatchId(host);
     void host.deps.repo
       .persistMatch({
         speedBonusEnabled: isSpeedBonusEnabled(settings),
         timeAttack: isTimeAttackSettings(settings),
         totalRounds: recordedRounds.length,
+        activityMatchId,
         startedAt: host.startedAt,
         endedAt: new Date(),
         responseType: (settings.responseType ?? 'mix') as 'typing' | 'qcm' | 'mix',

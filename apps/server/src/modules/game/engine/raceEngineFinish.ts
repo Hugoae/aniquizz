@@ -19,6 +19,7 @@ import {
   type MatchXpOutcome,
 } from './matchEngineFinish';
 import { buildRoundHistoryByUser } from './matchEngineReveal';
+import { takeActivityMatchId } from './matchActivityLedger';
 import type { RaceEngine } from './RaceEngine';
 import type { RaceLane } from './RaceLane';
 import type { RecordedRound } from './types';
@@ -170,11 +171,13 @@ export async function finishRace(engine: RaceEngine): Promise<void> {
 
     const rounds = mergeLaneRounds(engine);
     const allHeard = new Set<number>();
+    const activityMatchId = await takeActivityMatchId(engine);
     void engine.deps.repo
       .persistMatch({
         speedBonusEnabled: false,
         timeAttack: true,
         totalRounds: rounds.length,
+        activityMatchId,
         startedAt: engine.startedAt,
         endedAt: new Date(),
         responseType: 'typing',

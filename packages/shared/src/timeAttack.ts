@@ -33,6 +33,19 @@ export const TIME_ATTACK_START_SAFETY_SECONDS = 2;
 const TIME_ATTACK_POOL_HEADROOM_DIVISOR = 3;
 const TIME_ATTACK_MIN_POOL = 20;
 const TIME_ATTACK_MAX_POOL = 80;
+/**
+ * The streak prime can add one full starting budget. The draw then has to cover
+ * that longer clock (5 min + 5 min → 200 titles at one song per 3 s).
+ */
+export const TIME_ATTACK_STREAK_MAX_POOL = 200;
+/** Consecutive found titles required before a prime. Slider step 1. */
+export const TIME_ATTACK_STREAK_MIN = 3;
+export const TIME_ATTACK_STREAK_MAX = 10;
+export const TIME_ATTACK_STREAK_DEFAULT = 5;
+/** Seconds added each time the streak hits a multiple of the required length. */
+export const TIME_ATTACK_STREAK_BONUS_MIN_SECONDS = 3;
+export const TIME_ATTACK_STREAK_BONUS_MAX_SECONDS = 10;
+export const TIME_ATTACK_STREAK_BONUS_DEFAULT_SECONDS = 5;
 
 /**
  * Found titles per minute required for each medal on medium + franchise.
@@ -77,11 +90,59 @@ export function timeAttackShortestTitleSeconds(): number {
   return Math.min(TIME_ATTACK_MIN_CLIP_SECONDS, TIME_ATTACK_SKIP_TAX_MS / 1000);
 }
 
-export function timeAttackPoolSize(budgetSeconds: number): number {
+/** Extra time the prime may add in one run: one full starting budget. */
+export function timeAttackStreakBonusCapSeconds(budgetSeconds: number | null | undefined): number {
+  return normalizeTimeBudgetSeconds(budgetSeconds);
+}
+
+export function normalizeTimeAttackStreakLength(value: number | null | undefined): number {
+  if (value == null || !Number.isFinite(value)) return TIME_ATTACK_STREAK_DEFAULT;
+  return Math.min(TIME_ATTACK_STREAK_MAX, Math.max(TIME_ATTACK_STREAK_MIN, Math.round(value)));
+}
+
+export function normalizeTimeAttackStreakBonusSeconds(value: number | null | undefined): number {
+  if (value == null || !Number.isFinite(value)) return TIME_ATTACK_STREAK_BONUS_DEFAULT_SECONDS;
+  return Math.min(
+    TIME_ATTACK_STREAK_BONUS_MAX_SECONDS,
+    Math.max(TIME_ATTACK_STREAK_BONUS_MIN_SECONDS, Math.round(value)),
+  );
+}
+
+/**
+ * Milliseconds to add when `streak` lands on a multiple of the required length.
+ * Streak 0 never pays (a miss just reset it). Two ceilings apply: the live
+ * clock cannot pass the chosen duration, and the running total cannot pass
+ * one extra starting budget. The last prime may be shorter than the slider.
+ */
+export function timeAttackStreakGrantMs(input: {
+  enabled: boolean;
+  streak: number;
+  required: number | null | undefined;
+  bonusSeconds: number | null | undefined;
+  grantedMs: number;
+  /** Current clock. The prime cannot push it above the chosen duration. */
+  remainingMs: number;
+  budgetSeconds: number | null | undefined;
+}): number {
+  if (!input.enabled || input.streak <= 0) return 0;
+  const required = normalizeTimeAttackStreakLength(input.required);
+  if (input.streak % required !== 0) return 0;
+  const bonusMs = normalizeTimeAttackStreakBonusSeconds(input.bonusSeconds) * 1000;
+  const budgetMs = timeAttackStreakBonusCapSeconds(input.budgetSeconds) * 1000;
+  const grantRoom = budgetMs - Math.max(0, input.grantedMs);
+  const displayRoom = budgetMs - Math.max(0, input.remainingMs);
+  const room = Math.min(grantRoom, displayRoom);
+  if (room <= 0) return 0;
+  return Math.min(bonusMs, room);
+}
+
+export function timeAttackPoolSize(budgetSeconds: number, streakBonus = false): number {
   const budget = normalizeTimeBudgetSeconds(budgetSeconds);
-  const cover = Math.ceil(budget / timeAttackShortestTitleSeconds());
-  const headroom = Math.ceil(budget / TIME_ATTACK_POOL_HEADROOM_DIVISOR);
-  return Math.min(TIME_ATTACK_MAX_POOL, Math.max(TIME_ATTACK_MIN_POOL, cover, headroom));
+  const seconds = streakBonus ? budget + timeAttackStreakBonusCapSeconds(budget) : budget;
+  const cover = Math.ceil(seconds / timeAttackShortestTitleSeconds());
+  const headroom = Math.ceil(seconds / TIME_ATTACK_POOL_HEADROOM_DIVISOR);
+  const maxPool = streakBonus ? TIME_ATTACK_STREAK_MAX_POOL : TIME_ATTACK_MAX_POOL;
+  return Math.min(maxPool, Math.max(TIME_ATTACK_MIN_POOL, cover, headroom));
 }
 
 export interface TimeAttackClipWindow {

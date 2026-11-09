@@ -88,11 +88,11 @@ export function GameConfigForm<T extends GameConfig>({
         ...(isRoom ? raceRoomPatch(cfg) : {}),
         gameType,
         responseType: 'typing',
-        // Intro is the Chrono default. Random start is the advanced option;
-        // a late offset shortens the clip, and the pool already covers that.
-        songStartMode: 'beginning',
+        // Random is the Chrono default. The advanced tab can still pin the
+        // excerpt to the beginning; a late offset shortens the clip.
+        songStartMode: 'random',
         timeBudgetSeconds,
-        soundCount: timeAttackPoolSize(timeBudgetSeconds),
+        soundCount: timeAttackPoolSize(timeBudgetSeconds, cfg.timeAttackStreakBonus === true),
         speedBonusEnabled: false,
       });
       return;

@@ -8,7 +8,7 @@ import {
   VIDEO_MODE_LABELS,
 } from '@aniquizz/shared';
 import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
-import { getDifficultyBadge } from '@/features/hub/components/roomSettings';
+import { getDifficultyBadge, streakPrimeChip } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { SOUND_TYPES } from '@/features/hub/components/config/formOptions';
 import type { SettingChipSpec } from '@/features/hub/components/roomSettings';
@@ -68,33 +68,36 @@ export function buildSoloLobbyRecapGroups(
   const responseLabel =
     config.responseType === 'typing' ? 'Typing' : RESPONSE_LABELS[config.responseType];
   const precisionLabel = getPrecisionChipLabel(config.precision);
+  const partieChips: SettingChipSpec[] = [
+    {
+      key: 'sound-count',
+      icon: ListMusic,
+      label: '',
+      value:
+        config.gameType === 'timeAttack'
+          ? formatTimeAttackBudget(config.timeBudgetSeconds)
+          : `${config.soundCount} sons`,
+      className: SETTING_CHIP_NEUTRAL,
+    },
+    {
+      key: 'guess-duration',
+      icon: Clock,
+      label: '',
+      value:
+        config.gameType === 'timeAttack'
+          ? `${config.soundCount} titres`
+          : `${config.guessDuration}s`,
+      className: SETTING_CHIP_NEUTRAL,
+    },
+  ];
+  const prime = streakPrimeChip(config);
+  if (prime) partieChips.push(prime);
 
   return [
     {
       id: 'partie',
       label: 'Partie',
-      chips: [
-        {
-          key: 'sound-count',
-          icon: ListMusic,
-          label: '',
-          value:
-            config.gameType === 'timeAttack'
-              ? formatTimeAttackBudget(config.timeBudgetSeconds)
-              : `${config.soundCount} sons`,
-          className: SETTING_CHIP_NEUTRAL,
-        },
-        {
-          key: 'guess-duration',
-          icon: Clock,
-          label: '',
-          value:
-            config.gameType === 'timeAttack'
-              ? `${config.soundCount} titres`
-              : `${config.guessDuration}s`,
-          className: SETTING_CHIP_NEUTRAL,
-        },
-      ],
+      chips: partieChips,
     },
     {
       id: 'reponse',

@@ -302,6 +302,35 @@ describe('gameReducer time-attack feedback', () => {
     expect(state.recentTitles).toHaveLength(5);
     expect(state.recentTitles[0].anime).toBe('Anime 8');
   });
+
+  it('cues a streak prime as added time and still records the title as found', () => {
+    const fromBudget = gameReducer(createInitialState(20), {
+      type: 'TIME_ATTACK_BUDGET',
+      payload: {
+        remainingMs: 65_000,
+        foundCount: 3,
+        bonusMs: 5000,
+        roundResult: { outcome: 'found', song: song(1, 'Naruto') },
+      },
+    });
+    expect(fromBudget.stageFeedback).toMatchObject({ kind: 'bonus', deltaMs: 5000 });
+    expect(fromBudget.recentTitles[0]).toMatchObject({ outcome: 'found', bonusMs: 5000 });
+    expect(fromBudget.remainingMs).toBe(65_000);
+
+    const fromReveal = gameReducer(createInitialState(20), {
+      type: 'ROUND_REVEAL',
+      payload: {
+        ...reveal(1, song(1, 'Naruto'), true),
+        bonusMs: 8000,
+        remainingMs: 68_000,
+        foundCount: 3,
+      },
+      myUserId: 'u1',
+    });
+    expect(fromReveal.stageFeedback).toMatchObject({ kind: 'bonus', deltaMs: 8000 });
+    expect(fromReveal.recentTitles[0]).toMatchObject({ outcome: 'found', bonusMs: 8000 });
+    expect(fromReveal.remainingMs).toBe(68_000);
+  });
 });
 
 describe('gameReducer versus race', () => {

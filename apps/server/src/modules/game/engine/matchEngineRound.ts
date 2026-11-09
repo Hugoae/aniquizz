@@ -25,6 +25,8 @@ import {
   timeAttackRemainingMs,
   timeAttackRevealSeconds,
 } from './matchEngineBudget';
+import { grantSharedTimeAttackStreak } from './timeAttackStreakGrant';
+import { noteActivityRound } from './matchActivityLedger';
 
 export function startRound(host: MatchEngineHost): void {
   host.readyStartsAt = null;
@@ -47,6 +49,7 @@ export function startRound(host: MatchEngineHost): void {
   }
 
   const item = host.playlist[host.currentRoundIndex];
+  noteActivityRound(host, host.currentRoundIndex + 1, item.id);
   host.phase = 'guessing';
   host.isRoundEnded = false;
   host.skipVotes.clear();
@@ -162,6 +165,9 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
   }
   host.recordedRounds.push(recorded);
 
+  // After the streak moves. A miss stores 0, so the prime does not pay.
+  const streakBonusMs = isTimeAttackHost(host) ? grantSharedTimeAttackStreak(host) : 0;
+
   // The budget is gone (it ran out, or this skip spent the last seconds).
   // Still show this title so it lands in the history, then end the match.
   const closing =
@@ -175,6 +181,7 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
       const found = [...host.room.players.values()].some((p) => p.isCorrect === true);
       emitTimeAttackBudget(host, {
         roundResult: { outcome: found ? 'found' : 'missed', song: toRevealSong(item) },
+        ...(streakBonusMs > 0 ? { bonusMs: streakBonusMs } : {}),
       });
     }
     // No round_reveal, so the roster (streak) must be pushed here.
@@ -227,6 +234,7 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
     endsAt: host.clock.endsAt,
     durationSeconds: revealSeconds,
     ...timeAttackFields(host),
+    ...(streakBonusMs > 0 ? { bonusMs: streakBonusMs } : {}),
   };
   host.channel.emit('round_reveal', payload);
 }

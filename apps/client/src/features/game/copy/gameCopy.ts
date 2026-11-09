@@ -62,6 +62,7 @@ export const GAME_COPY = {
       skip: 'Titre passé, moins 5 secondes',
       skipPlain: 'Titre passé',
       missed: 'Temps du clip écoulé, titre raté',
+      bonus: (seconds: number) => `Série réussie, plus ${seconds} secondes`,
     },
   },
   recentTitles: {
@@ -72,6 +73,8 @@ export const GAME_COPY = {
       missed: 'Raté',
       skipped: 'Passé',
     },
+    bonus: (seconds: number) => `+${seconds} s`,
+    bonusSpoken: (seconds: number) => `plus ${seconds} secondes`,
   },
   timeAttack: {
     clockAria: (clock: string) => `Temps restant de la partie : ${clock}`,

@@ -826,6 +826,11 @@ describe('MatchEngine', () => {
         playlist?: ReturnType<typeof makePlaylistItem>[];
         timeBudgetSeconds?: number;
         reveal?: boolean;
+        settings?: Partial<typeof timeAttackSettings> & {
+          timeAttackStreakBonus?: boolean;
+          timeAttackStreakLength?: number;
+          timeAttackStreakBonusSeconds?: number;
+        };
       } = {},
     ) {
       return createEngineHarness({
@@ -833,6 +838,7 @@ describe('MatchEngine', () => {
           ...timeAttackSettings,
           timeBudgetSeconds: opts.timeBudgetSeconds ?? 60,
           timeAttackReveal: opts.reveal ?? true,
+          ...opts.settings,
         },
         playerIds: ['player-1'],
         playlist: opts.playlist ?? [
@@ -854,6 +860,85 @@ describe('MatchEngine', () => {
         ],
       });
     }
+
+    it('adds time on each streak multiple and does not reset the streak', async () => {
+      const playlist = ['Naruto', 'Bleach', 'One Piece', 'Dragon Ball'].map((anime, index) =>
+        makePlaylistItem({
+          id: index + 1,
+          anime,
+          validAnswers: [anime],
+          guessDuration: 30,
+          clipDurationSeconds: 30,
+        }),
+      );
+      const { room, engine, emitted } = createTimeAttackHarness({
+        playlist,
+        reveal: false,
+        settings: {
+          timeAttackStreakBonus: true,
+          timeAttackStreakLength: 3,
+          timeAttackStreakBonusSeconds: 5,
+        },
+      });
+      await advanceToGuessing(engine);
+      const before = engine.getSyncState().remainingMs ?? 0;
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      engine.handleAnswer('player-1', 'Wrong', 'typing');
+      expect(getPlayer(room, 'player-1').streak).toBe(1);
+      expect(engine.getSyncState().remainingMs).toBe(before - 3000);
+
+      engine.handleAnswer('player-1', 'Bleach', 'typing');
+      engine.handleAnswer('player-1', 'One Piece', 'typing');
+
+      expect(getPlayer(room, 'player-1').streak).toBe(3);
+      expect(getPlayer(room, 'player-1').score).toBe(3);
+      // The wrong answer opened 3 s under the chosen duration, so the +5 s prime stops there.
+      expect(engine.getSyncState().remainingMs).toBe(before);
+      const bonus = emitted.find(
+        (e) => e.event === 'timeAttack:budget' && (e.payload as { bonusMs?: number }).bonusMs,
+      );
+      expect(bonus?.payload).toMatchObject({ bonusMs: 3000, foundCount: 3 });
+
+      engine.forceEndRound();
+      expect(getPlayer(room, 'player-1').streak).toBe(0);
+    });
+
+    it('puts the prime on the reveal when the 3 s card is on', async () => {
+      const playlist = ['Naruto', 'Bleach', 'One Piece', 'Dragon Ball'].map((anime, index) =>
+        makePlaylistItem({
+          id: index + 1,
+          anime,
+          validAnswers: [anime],
+          guessDuration: 30,
+          clipDurationSeconds: 30,
+        }),
+      );
+      const { engine, emitted } = createTimeAttackHarness({
+        playlist,
+        settings: {
+          timeAttackStreakBonus: true,
+          timeAttackStreakLength: 3,
+          timeAttackStreakBonusSeconds: 8,
+        },
+      });
+      await advanceToGuessing(engine);
+
+      engine.handleAnswer('player-1', 'Naruto', 'typing');
+      await vi.advanceTimersByTimeAsync(3000);
+      engine.handleAnswer('player-1', 'Bleach', 'typing');
+      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(8000);
+      engine.handleAnswer('player-1', 'One Piece', 'typing');
+
+      const reveal = emitted.filter((e) => e.event === 'round_reveal').at(-1);
+      expect(reveal?.payload).toMatchObject({ bonusMs: 8000, foundCount: 3 });
+      expect(
+        emitted.some(
+          (e) => e.event === 'timeAttack:budget' && (e.payload as { bonusMs?: number }).bonusMs,
+        ),
+      ).toBe(false);
+    });
 
     it('awards +1 on a correct answer and reveals for 3s', async () => {
       const { room, engine, emitted } = createTimeAttackHarness();

@@ -6,6 +6,9 @@ import {
   normalizeTimeBudgetSeconds,
   TIME_ATTACK_RACE_MAX_PLAYERS,
   TIME_ATTACK_RACE_MIN_PLAYERS,
+  TIME_ATTACK_STREAK_MAX_POOL,
+  normalizeTimeAttackStreakBonusSeconds,
+  normalizeTimeAttackStreakLength,
   timeAttackPoolSize,
   type RoomSettings,
 } from '@aniquizz/shared';
@@ -20,7 +23,7 @@ const settingsSchema = z
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
     gameType: z.enum(['standard', 'timeAttack']).default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
-    soundCount: z.coerce.number().int().min(5).max(100).default(20),
+    soundCount: z.coerce.number().int().min(5).max(TIME_ATTACK_STREAK_MAX_POOL).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
     difficulty: z.array(z.string()).default(['medium']),
     guessDuration: z.coerce.number().int().min(5).max(120).default(20),
@@ -38,6 +41,9 @@ const settingsSchema = z
     timeBudgetSeconds: z.coerce.number().int().optional(),
     timeAttackReveal: z.boolean().optional(),
     timeAttackPunitiveSkip: z.boolean().optional(),
+    timeAttackStreakBonus: z.boolean().optional(),
+    timeAttackStreakLength: z.coerce.number().int().optional(),
+    timeAttackStreakBonusSeconds: z.coerce.number().int().optional(),
     soloInstantReveal: z.boolean().optional(),
     testMatch: z.boolean().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
@@ -111,6 +117,9 @@ function applyTimeAttackRules<
     timeBudgetSeconds?: number;
     timeAttackReveal?: boolean;
     timeAttackPunitiveSkip?: boolean;
+    timeAttackStreakBonus?: boolean;
+    timeAttackStreakLength?: number;
+    timeAttackStreakBonusSeconds?: number;
     soloInstantReveal?: boolean;
     soundCount: number;
     soundSelection: 'random' | 'mix' | 'watched' | 'playlist';
@@ -127,12 +136,18 @@ function applyTimeAttackRules<
       timeBudgetSeconds: undefined,
       timeAttackReveal: undefined,
       timeAttackPunitiveSkip: undefined,
+      timeAttackStreakBonus: undefined,
+      timeAttackStreakLength: undefined,
+      timeAttackStreakBonusSeconds: undefined,
       soloInstantReveal: solo && settings.soloInstantReveal === true,
+      // The schema allows the Chrono pool ceiling. Standard stays on its own slider.
+      soundCount: Math.min(100, Math.max(5, settings.soundCount)),
     };
   }
 
   const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
   const timeBudgetSeconds = normalizeTimeBudgetSeconds(settings.timeBudgetSeconds);
+  const timeAttackStreakBonus = settings.timeAttackStreakBonus === true;
   const shared = {
     ...settings,
     gameType: 'timeAttack' as const,
@@ -141,8 +156,13 @@ function applyTimeAttackRules<
     timeBudgetSeconds,
     timeAttackReveal: settings.timeAttackReveal !== false,
     timeAttackPunitiveSkip: settings.timeAttackPunitiveSkip !== false,
+    timeAttackStreakBonus,
+    timeAttackStreakLength: normalizeTimeAttackStreakLength(settings.timeAttackStreakLength),
+    timeAttackStreakBonusSeconds: normalizeTimeAttackStreakBonusSeconds(
+      settings.timeAttackStreakBonusSeconds,
+    ),
     soloInstantReveal: false,
-    soundCount: timeAttackPoolSize(timeBudgetSeconds),
+    soundCount: timeAttackPoolSize(timeBudgetSeconds, timeAttackStreakBonus),
   };
   if (solo) return shared;
 

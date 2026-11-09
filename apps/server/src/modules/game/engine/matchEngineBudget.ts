@@ -59,7 +59,7 @@ export function timeAttackRunCue(host: MatchEngineHost): {
 
 export function emitTimeAttackBudget(
   host: MatchEngineHost,
-  extra: Pick<TimeAttackBudgetPayload, 'tax' | 'taxMs' | 'roundResult'> = {},
+  extra: Pick<TimeAttackBudgetPayload, 'tax' | 'taxMs' | 'roundResult' | 'bonusMs'> = {},
 ): void {
   if (!isTimeAttackHost(host)) return;
   host.channel.emit('timeAttack:budget', {

@@ -104,7 +104,7 @@ export interface AdminMatchProgress {
   endsAt: number | null;
 }
 
-/** An answer recorded in memory during the match, flushed to DB at finalize. */
+/** An answer kept in memory until the match is saved. The title row itself is written when the clip starts. */
 export interface RecordedAnswer {
   userId: string;
   answer: string | null;

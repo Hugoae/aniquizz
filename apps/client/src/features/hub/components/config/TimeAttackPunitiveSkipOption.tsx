@@ -1,4 +1,4 @@
-import { TrendingUp } from 'lucide-react';
+import { Minus, TrendingUp } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 
@@ -7,39 +7,39 @@ interface TimeAttackPunitiveSkipOptionProps {
   update: (patch: Partial<RoomConfig>) => void;
 }
 
-/** Contre-la-montre only: escalating skip tax, on by default. */
+/** Contre-la-montre only: escalating skip tax, on by default. Same height as a Standard option row. */
 export function TimeAttackPunitiveSkipOption({
   config,
   update,
 }: TimeAttackPunitiveSkipOptionProps) {
   const punitive = config.timeAttackPunitiveSkip !== false;
   return (
-    <div className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3">
+    <div className="space-y-2">
       <SectionHeader
         icon={TrendingUp}
         title="Skip punitif"
         tooltip="Activé, chaque skip coûte 2 secondes de plus (5, puis 7, 9… jusqu’à 15). Désactivé, chaque skip retire 5 secondes."
       />
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-2">
         <OptionButton
           active={punitive}
+          aria-label="Skip punitif activé"
           onClick={() => update({ timeAttackPunitiveSkip: true })}
-          className="flex flex-col items-start gap-1 p-3 text-left"
+          className="flex flex-col items-center gap-1 p-2 text-center"
         >
+          <TrendingUp className="h-4 w-4" aria-hidden="true" />
           <span className="text-[11px] font-bold uppercase">Activé</span>
-          <span className="text-[10px] leading-snug text-muted-foreground">
-            5 s, puis 7, 9… jusqu’à 15 s.
-          </span>
+          <span className="text-[9px] leading-tight text-muted-foreground">5, 7, 9… s</span>
         </OptionButton>
         <OptionButton
           active={!punitive}
+          aria-label="Skip punitif désactivé"
           onClick={() => update({ timeAttackPunitiveSkip: false })}
-          className="flex flex-col items-start gap-1 p-3 text-left"
+          className="flex flex-col items-center gap-1 p-2 text-center"
         >
+          <Minus className="h-4 w-4" aria-hidden="true" />
           <span className="text-[11px] font-bold uppercase">Désactivé</span>
-          <span className="text-[10px] leading-snug text-muted-foreground">
-            Chaque skip retire 5 secondes.
-          </span>
+          <span className="text-[9px] leading-tight text-muted-foreground">5 s fixes</span>
         </OptionButton>
       </div>
     </div>

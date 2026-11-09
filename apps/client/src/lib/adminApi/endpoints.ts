@@ -225,7 +225,7 @@ export const adminApi = {
 
   // Stats
   stats: () => request<AdminStats>('/stats'),
-  statsOverview: (period: StatsPeriod = '7d') =>
+  statsOverview: (period: StatsPeriod = 'all') =>
     request<StatsOverview>(`/stats/overview?period=${period}`),
   resetActivityStats: () =>
     request<{

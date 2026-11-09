@@ -93,4 +93,23 @@ describe('time-attack recap', () => {
     });
     expect(groups[0]?.chips.map((c) => c.value)).toEqual(['3 min', '60 titres']);
   });
+
+  it('shows the streak prime on the Partie row when it is on', () => {
+    const groups = buildSoloLobbyRecapGroups({
+      ...baseConfig,
+      gameType: 'timeAttack',
+      responseType: 'typing',
+      timeBudgetSeconds: 120,
+      soundCount: 80,
+      timeAttackStreakBonus: true,
+      timeAttackStreakLength: 5,
+      timeAttackStreakBonusSeconds: 5,
+    });
+    expect(groups[0]?.chips.map((c) => c.value)).toEqual([
+      '2 min',
+      '80 titres',
+      'tous les 5, +5 s',
+    ]);
+    expect(groups[0]?.chips[2]?.key).toBe('streak-prime');
+  });
 });

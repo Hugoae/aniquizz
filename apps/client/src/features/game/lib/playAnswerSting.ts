@@ -1,6 +1,6 @@
 import type { StageFeedbackKind } from '@/features/game/state/gameReducer';
 
-/** Procedural stings (no assets): rising pair = found, low buzz = wrong, soft drop = skip / missed. */
+/** Procedural stings (no assets): rising pair = found, arpeggio = streak prime, low buzz = wrong, soft drop = skip / missed. */
 interface Note {
   freq: number;
   start: number;
@@ -12,6 +12,11 @@ const STINGS: Record<StageFeedbackKind, Note[]> = {
   correct: [
     { freq: 659, start: 0, duration: 0.09, type: 'sine' },
     { freq: 988, start: 0.07, duration: 0.14, type: 'sine' },
+  ],
+  bonus: [
+    { freq: 523, start: 0, duration: 0.08, type: 'sine' },
+    { freq: 659, start: 0.07, duration: 0.08, type: 'sine' },
+    { freq: 1046, start: 0.14, duration: 0.2, type: 'triangle' },
   ],
   wrong: [{ freq: 150, start: 0, duration: 0.18, type: 'sawtooth' }],
   skip: [{ freq: 440, start: 0, duration: 0.12, type: 'triangle' }],

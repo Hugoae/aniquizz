@@ -173,6 +173,8 @@ export interface RoundRevealPayload extends PhaseTiming {
   foundCount?: number;
   nextSkipTaxMs?: number;
   nextMedal?: TimeAttackNextMedal | null;
+  /** Set when this reveal includes a streak prime. The streak counter is not reset. */
+  bonusMs?: number;
 }
 
 /** Distance to the next time-attack medal, from songs actually heard. */
@@ -194,6 +196,11 @@ export interface TimeAttackBudgetPayload {
   /** Time removed by `tax` (ms); skips escalate within a run. */
   taxMs?: number;
   /**
+   * Time added by a streak prime (ms). The streak counter is not reset.
+   * Opponents never receive this: a versus lane emits it on its own socket only.
+   */
+  bonusMs?: number;
+  /**
    * How a title ended when no `round_reveal` follows (skip, or reveal disabled):
    * drives the recent-titles list and the found / missed cues.
    */
@@ -213,7 +220,7 @@ export interface RaceBoardEntry {
   running: boolean;
   /** Budget spent (or pool exhausted): this lane is done. */
   finished: boolean;
-  /** Correct answers in a row. A miss or a skip resets it. No title is included. */
+  /** Correct answers in a row. A miss or a skip resets it. A time prime does not. */
   streak: number;
 }
 

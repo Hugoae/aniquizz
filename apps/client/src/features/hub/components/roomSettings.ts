@@ -1,7 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
-import { Clock, Eye, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
+import { Clock, Eye, Flame, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
-import { getPrecisionChipLabel, normalizeVideoMode, VIDEO_MODE_LABELS } from '@aniquizz/shared';
+import {
+  getPrecisionChipLabel,
+  normalizeTimeAttackStreakBonusSeconds,
+  normalizeTimeAttackStreakLength,
+  normalizeVideoMode,
+  VIDEO_MODE_LABELS,
+} from '@aniquizz/shared';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
 /**
@@ -145,18 +151,53 @@ export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[]
   ];
 }
 
+type StreakPrimeChipSettings = Partial<
+  Pick<
+    GameConfig,
+    'gameType' | 'timeAttackStreakBonus' | 'timeAttackStreakLength' | 'timeAttackStreakBonusSeconds'
+  >
+>;
+
+/** Visible only while the streak prime is on. Value is the cycle and the bonus. */
+export function streakPrimeChip(config: StreakPrimeChipSettings): SettingChipSpec | null {
+  if (config.gameType !== 'timeAttack' || config.timeAttackStreakBonus !== true) return null;
+  const every = normalizeTimeAttackStreakLength(config.timeAttackStreakLength);
+  const seconds = normalizeTimeAttackStreakBonusSeconds(config.timeAttackStreakBonusSeconds);
+  return {
+    key: 'streak-prime',
+    icon: Flame,
+    label: 'Prime',
+    value: `tous les ${every}, +${seconds} s`,
+    className: 'border-primary/40 bg-primary/15 text-primary',
+  };
+}
+
 /** Full lobby / room-list chip row — difficulty first, then shared settings + video. */
 export function buildLobbySettingChips(
   config: Pick<
     GameConfig,
     'soundCount' | 'guessDuration' | 'precision' | 'responseType' | 'soundSelection' | 'difficulty'
   > &
-    Partial<Pick<GameConfig, 'gameType' | 'timeBudgetSeconds' | 'videoMode'>> & {
+    Partial<
+      Pick<
+        GameConfig,
+        | 'gameType'
+        | 'timeBudgetSeconds'
+        | 'videoMode'
+        | 'timeAttackStreakBonus'
+        | 'timeAttackStreakLength'
+        | 'timeAttackStreakBonusSeconds'
+      >
+    > & {
       playlistName?: string | null;
     },
 ): SettingChipSpec[] {
   const difficulty = getDifficultyBadge(config.difficulty ?? []);
   const videoMode = normalizeVideoMode(config.videoMode);
+  const prime = streakPrimeChip(config);
+  const badges = buildRoomSettingBadges(config);
+  const timeIndex = badges.findIndex((chip) => chip.key === 'time');
+  if (prime && timeIndex >= 0) badges.splice(timeIndex + 1, 0, prime);
 
   return [
     {
@@ -166,7 +207,7 @@ export function buildLobbySettingChips(
       value: difficulty.label,
       className: difficulty.className,
     },
-    ...buildRoomSettingBadges(config),
+    ...badges,
     {
       key: 'video',
       icon: Eye,

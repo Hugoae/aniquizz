@@ -13,7 +13,8 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                                           |
 | **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                                                     |
 | **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                                          |
-| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 + footer `v26.7` ✅ · pokédex found bar remaining |
+| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 + footer `v26.7` ✅. Pokédex found bar dropped.   |
+| **26.7.1** | 🔄 In progress | **Prime de série** on Contre-la-montre (solo + versus). Admin play tops persist per title. Podium ties overlap. News id 10, footer `v26.7.1`. |
 | **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                                                       |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
@@ -425,11 +426,11 @@ coherent panel.
 **26.6.2** is closed. **Vitesse**, **Chrono** (solo + versus), and the admin console
 rework are done. Chrono solo is on `main` (`9245d8e`); the versus race, the later
 playtest fixes, and the admin rework are in the working tree and not committed. The
-pokédex found bar was started, then reverted on 2026-11-08 — it is the remaining
-26.7 slice. Do not start it in the same pass as something else. Do not start HIBP.
-Do not reopen Chrono or the admin shell. Heard / found / liked music sources were
-removed from this update. Answer cues, the solo reveal move, the public section
-rename, and the proprietary licence shipped on 2026-11-08 (working tree, not committed).
+pokédex found bar was started, then reverted on 2026-11-08, and **dropped** from
+26.7. Do not start it. Do not start HIBP. Do not reopen the admin shell. Heard /
+found / liked music sources were removed from this update. Answer cues, the solo
+reveal move, the public section rename, and the proprietary licence shipped on
+2026-11-08 (working tree, not committed). **Prime de série** is 26.7.1 (below).
 
 ### 1. Vitesse — Standard multi typing modifier ✅
 
@@ -464,10 +465,9 @@ Do not reopen these decisions:
 
 ### 2. Profile pokédex — found bar
 
-Postponed. A first pass was reverted on 2026-11-08. Do not start it until this is the task.
+Dropped from 26.7 on 2026-11-09. A first pass was reverted on 2026-11-08. Do not start it.
 
 - The discovery bar stays unique songs heard / playable catalogue. Medals stay on that percent.
-- Second bar, same denominator: unique songs with `SongHistory.correctCount > 0`. Shown on the profile and in the admin player preview.
 
 ### 3. Rework Admin panel ✅ (2026-11-08)
 
@@ -493,12 +493,37 @@ Staff shell on `/admin`. No new sanctions, no role change.
 
 - [x] Vitesse: `speedBonusEnabled`, STD+lightning badge, `speed:leaderboard`, persist `SPRINT`. Covered by news id 9. No roadmap card.
 - [x] Chrono solo + versus: `timeAttack`, `TIME_ATTACK`, budget clock, CLM badge, `RaceEngine`. Covered by news id 9. No roadmap card. Playtest closed 2026-11-08. Versus and the later fixes are uncommitted.
-- [ ] Profile found bar: heard bar unchanged (medals stay on it); found bar is `correctCount > 0` over the same catalogue. Heard / found / liked playlist sources were dropped from 26.7. A first pass was reverted.
 - [x] Admin panel rework (grouped nav, desk line, denser users, activity sort with never-seen last, copy, file splits, per-tab error boundary, role bounds unchanged).
 - [x] Standard answer cues + `answerSounds` mute. Solo instant reveal is a Standard room setting. Public section renamed Avis & bugs. Proprietary licence (not MIT).
 - [x] Mode select is Solo + Multi, with Chrono named on Solo and Compétitif as a quiet line. Home facts and the Nouveau card were tried and dropped.
 - [x] Release copy: news id 9 (2026-11-08). No roadmap card. Home + app-shell `v26.7`.
-- [ ] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
+- [x] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
+
+---
+
+## Update 26.7.1 — Prime de série
+
+Optional Contre-la-montre modifier, solo and versus. Off by default. Medals stay on the chosen duration. News id 10 (2026-11-09) and Home footer `v26.7.1`. No roadmap card. The public note skips the admin tops.
+
+- Général: **Skip punitif** and **Prime de série** sit side by side, at the same height as Standard.
+- Sliders: streak **3–10** (step 1, default 5), time **+3 to +10 s** (step 1, default +5).
+- The prime pays on every multiple. The flame is not reset. Skip and clip-end reset it. A wrong guess on the current title still costs 3 s and does not.
+- Cap: at most one extra starting budget, and the live clock never reads higher than the chosen duration. The draw grows with that cap (max **200** titles).
+- Stage cue `+N s`, primary ring and chip, lift, and a distinct sting. Versus: the cue stays on the lane; the board shows the clock and the streak only.
+- Lobby recap shows the prime (`tous les N, +N s`) on the solo Partie row and in the multi chip row.
+- Switching to Contre-la-montre sets the excerpt start to random. Avancé can still choose the beginning.
+- The stage `+N s` and the history chip both use the primary color.
+- No extra XP.
+- Admin tops: each title is stored when its clip starts, so a restart or a quit keeps the count. Anime rows show the cover. Song rows show the type and the difficulty. Dev and production each persist in their own database.
+- Podium ties overlap on one row, like the end-of-match faces. One score per step. Level chips sit by the names.
+- Solo ready Retour opens the config. Config Retour from that path leaves for mode select.
+
+### 26.7.1 checklist
+
+- [x] Prime playable in solo and versus, server-authoritative, tests on the grant, the cap, and the cue.
+- [x] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
+- [x] Admin tops count a title when it starts, including a match that does not finish.
+- [x] Release copy: news id 10 (2026-11-09). No roadmap card. Home + app-shell `v26.7.1`.
 
 ---
 
@@ -555,7 +580,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 **Quality gates — wave 2.6 (SPA strict + lint, in tree):** client `tsconfig.app.json` `strict: true` (global — per-folder was unnecessary after measuring 10 errors). ESLint `eqeqeq` + `no-explicit-any` on the SPA. `no-unused-vars` stays off.
 
-**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse, Chrono (solo + versus), the admin console rework, Standard answer cues, and a proprietary licence. The pokédex found bar was reverted and remains. Heard / found / liked sources were dropped.
+**Quality gates — leftover pass (in tree, `ceec1bf`):** jsx-a11y error · drop Prisma `PlayerAnimeList` · MatchEngine / `Game.tsx` under the file cap · in-match chat echo · Watched pool notify on `set_active` / `unlink`. Post-26.6 SPA feature-audit queue is empty. **26.6.1** shipped (`52ce827`). **26.6.2** shipped (volume persist + header XP). **26.7** shipped Vitesse, Chrono (solo + versus), the admin console rework, Standard answer cues, and a proprietary licence. The pokédex found bar was reverted and dropped from 26.7. Heard / found / liked sources were dropped. **26.7.1** adds the Chrono streak prime.
 
 ---
 

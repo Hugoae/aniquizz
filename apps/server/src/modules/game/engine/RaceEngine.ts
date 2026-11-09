@@ -38,6 +38,8 @@ import {
   laneCue,
 } from './raceEnginePayloads';
 import { RaceLane } from './RaceLane';
+import { grantTimeAttackStreak } from './timeAttackStreakGrant';
+import { abandonScheduledActivity, noteActivityRound } from './matchActivityLedger';
 import type { Room } from './Room';
 import type { RoomMatchEngine } from './RoomMatchEngine';
 import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
@@ -64,6 +66,9 @@ export class RaceEngine implements RoomMatchEngine {
   finishing = false;
   finishStarted = false;
   finishedPayload: GameOverPayload | null = null;
+  /** See `matchActivityLedger`. Tests leave both null because the repo mock has no opener. */
+  activityMatchId: string | null = null;
+  activityOpen: Promise<string | null> | null = null;
 
   private introTimer: NodeJS.Timeout | null = null;
   private readyTimer: NodeJS.Timeout | null = null;
@@ -209,6 +214,7 @@ export class RaceEngine implements RoomMatchEngine {
       this.finishLane(lane);
       return;
     }
+    noteActivityRound(this, lane.index + 1, item.id);
 
     lane.phase = 'guessing';
     lane.isRoundEnded = false;
@@ -314,6 +320,7 @@ export class RaceEngine implements RoomMatchEngine {
       songId: item.id,
       answers: [],
     };
+    let streakBonusMs = 0;
     if (player) {
       player.score += player.roundPoints || 0;
       if (player.isCorrect === true) {
@@ -321,6 +328,7 @@ export class RaceEngine implements RoomMatchEngine {
         player.matchCorrectCount += 1;
         player.correctSongIds.add(item.id);
         lane.found += 1;
+        streakBonusMs = grantTimeAttackStreak(lane.budget, this.room.settings, player.streak);
       } else {
         player.streak = 0;
       }
@@ -350,6 +358,7 @@ export class RaceEngine implements RoomMatchEngine {
             outcome: player?.isCorrect === true ? 'found' : 'missed',
             song: toRevealSong(item),
           },
+          ...(streakBonusMs > 0 ? { bonusMs: streakBonusMs } : {}),
         });
       }
       this.emitBoard();
@@ -363,7 +372,11 @@ export class RaceEngine implements RoomMatchEngine {
       if (closing || lane.budget.getRemainingMs() <= 0) this.finishLane(lane);
       else this.startLaneRound(lane);
     });
-    this.emitToLane(lane, 'round_reveal', buildReveal(this, lane, item, kind === 'skip'));
+    this.emitToLane(
+      lane,
+      'round_reveal',
+      buildReveal(this, lane, item, kind === 'skip', streakBonusMs),
+    );
     this.emitBoard();
   }
 
@@ -413,6 +426,7 @@ export class RaceEngine implements RoomMatchEngine {
   }
 
   cancel(): void {
+    abandonScheduledActivity(this);
     this.cancelled = true;
     for (const lane of this.lanes.values()) lane.dispose();
     if (this.introTimer) clearTimeout(this.introTimer);
@@ -447,7 +461,7 @@ export class RaceEngine implements RoomMatchEngine {
 
   private emitBudget(
     lane: RaceLane,
-    extra: Pick<TimeAttackBudgetPayload, 'tax' | 'taxMs' | 'roundResult'> = {},
+    extra: Pick<TimeAttackBudgetPayload, 'tax' | 'taxMs' | 'roundResult' | 'bonusMs'> = {},
   ): void {
     this.emitToLane(lane, 'timeAttack:budget', {
       remainingMs: lane.remainingMs(),

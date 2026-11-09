@@ -11,6 +11,8 @@ import {
   SONG_START_MODE_LABELS,
   TIME_ATTACK_MIN_CLIP_SECONDS,
   normalizeSongStartMode,
+  normalizeTimeAttackStreakBonusSeconds,
+  normalizeTimeAttackStreakLength,
   isSpeedBonusEnabled,
 } from '@aniquizz/shared';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
@@ -73,7 +75,7 @@ const speedScoringLines = (): string[] => {
 
 const scoringLinesForConfig = (config: GameConfig): string[] => {
   if (config.gameType === 'timeAttack') {
-    return [
+    const lines = [
       'Chaque titre trouvé vaut 1 point.',
       config.timeAttackPunitiveSkip === false
         ? 'Un skip illimité retire 5 secondes.'
@@ -83,6 +85,14 @@ const scoringLinesForConfig = (config: GameConfig): string[] => {
         ? 'Sans révélation : trouvé, raté ou passé, le titre suivant démarre tout de suite (réponse dans l’historique).'
         : 'Trouvé, raté ou passé : révélation de 3 secondes, hors chrono.',
     ];
+    if (config.timeAttackStreakBonus === true) {
+      const every = normalizeTimeAttackStreakLength(config.timeAttackStreakLength);
+      const seconds = normalizeTimeAttackStreakBonusSeconds(config.timeAttackStreakBonusSeconds);
+      lines.push(
+        `Prime de série : tous les ${every} titres trouvés d'affilée, +${seconds} s. Plafond : l'équivalent de la durée choisie, en plus. Passer et un titre raté remettent la série à zéro. Une erreur sur le titre en cours retire 3 secondes sans la casser.`,
+      );
+    }
+    return lines;
   }
   return isSpeedBonusEnabled(config)
     ? speedScoringLines()

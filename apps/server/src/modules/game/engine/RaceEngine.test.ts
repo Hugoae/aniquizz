@@ -71,6 +71,40 @@ describe('RaceEngine', () => {
     expect(p2Starts).toHaveLength(1);
   });
 
+  it('adds the streak prime to that lane only', async () => {
+    const { engine, emitted } = createRaceHarness({
+      playlist,
+      settings: {
+        timeAttackReveal: false,
+        timeAttackStreakBonus: true,
+        timeAttackStreakLength: 3,
+        timeAttackStreakBonusSeconds: 5,
+      },
+    });
+    await advanceRaceToGuessing(engine);
+    const start = engine.getSyncState('player-1').remainingMs ?? 0;
+    await vi.advanceTimersByTimeAsync(5000);
+
+    engine.handleAnswer('player-1', 'Anime 1', 'typing');
+    engine.handleAnswer('player-1', 'Anime 2', 'typing');
+    engine.handleAnswer('player-1', 'Anime 3', 'typing');
+
+    const bonuses = named(emitted, 'timeAttack:budget').filter(
+      (event) => (event.payload as { bonusMs?: number }).bonusMs != null,
+    );
+    expect(bonuses).toHaveLength(1);
+    expect(bonuses[0]!.target).toBe(SOCKET['player-1']);
+    expect(bonuses[0]!.payload).toMatchObject({ bonusMs: 5000 });
+
+    const board = lastBoard(emitted);
+    const mine = board.entries.find((entry) => entry.userId === 'player-1')!;
+    const other = board.entries.find((entry) => entry.userId === 'player-2')!;
+    expect(mine.streak).toBe(3);
+    expect(mine.foundCount).toBe(3);
+    expect(mine.remainingMs).toBe(other.remainingMs + 5000);
+    expect(mine.remainingMs).toBeLessThanOrEqual(start);
+  });
+
   it('lets a player cut their own reveal short and start the next title', async () => {
     const { engine, emitted } = createRaceHarness({ playlist });
     await advanceRaceToGuessing(engine);

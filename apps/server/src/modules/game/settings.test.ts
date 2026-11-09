@@ -161,6 +161,45 @@ describe('timeAttack', () => {
     expect(settings.soundCount).toBe(60);
   });
 
+  it('grows the pool when the streak prime can double the clock', () => {
+    const settings = normalizeRoomSettings(
+      {
+        gameType: 'timeAttack',
+        mode: 'solo',
+        maxPlayers: 1,
+        timeBudgetSeconds: 180,
+        timeAttackStreakBonus: true,
+        timeAttackStreakLength: 99,
+        timeAttackStreakBonusSeconds: 1,
+      },
+      meta,
+    );
+    expect(settings.timeAttackStreakBonus).toBe(true);
+    expect(settings.timeAttackStreakLength).toBe(10);
+    expect(settings.timeAttackStreakBonusSeconds).toBe(3);
+    expect(settings.soundCount).toBe(120);
+
+    const off = normalizeRoomSettings(
+      { gameType: 'timeAttack', mode: 'solo', maxPlayers: 1, timeBudgetSeconds: 180 },
+      meta,
+    );
+    expect(off.timeAttackStreakBonus).toBe(false);
+    expect(off.soundCount).toBe(60);
+
+    const standard = normalizeRoomSettings(
+      {
+        mode: 'solo',
+        maxPlayers: 1,
+        gameType: 'standard',
+        soundCount: 180,
+        timeAttackStreakBonus: true,
+      },
+      meta,
+    );
+    expect(standard.timeAttackStreakBonus).toBeUndefined();
+    expect(standard.soundCount).toBe(100);
+  });
+
   it('caps a versus race at 8 players', () => {
     const settings = normalizeRoomSettings(
       { gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 40 },

@@ -53,9 +53,6 @@ export function ModeSelectView({
 
   const cards = useMemo<ModeCardData[]>(() => {
     return MODE_CARDS.map((card) => {
-      if (card.id === 'solo') {
-        return { ...card, teaser: HUB_COPY.modes.solo.detail };
-      }
       if (card.id === 'multiplayer') {
         return {
           ...card,

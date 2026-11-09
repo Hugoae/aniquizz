@@ -98,6 +98,17 @@ export function useLobbyActions(input: {
     });
   }, [navigate, currentRoomIdRef, roomConfigRef]);
 
+  /** Solo ready Retour: one step back to the config, not the mode list. */
+  const returnSoloToConfig = useCallback(() => {
+    navigate(playCreatePath('edit', currentRoomIdRef.current), {
+      state: {
+        intent: 'edit',
+        draft: roomConfigRef.current,
+        leaveOnBack: true,
+      },
+    });
+  }, [navigate, currentRoomIdRef, roomConfigRef]);
+
   const emitSolo = useCallback(
     (soloConfig: GameConfig) => {
       const pseudo = profile?.username || HUB_COPY.player;
@@ -234,6 +245,7 @@ export function useLobbyActions(input: {
     selectMode,
     openCreateRoom,
     openLobbySettings,
+    returnSoloToConfig,
     startSolo,
     createOrUpdateRoom,
     patchRoomSettings,

@@ -23,6 +23,11 @@ export interface PlayConfigLocationState {
   draft?: RoomConfig;
   /** Where Retour navigates (e.g. lobby at /play when editing from openLobbySettings). */
   returnTo?: string;
+  /**
+   * Ready-screen Retour. Cancel leaves the prepared solo room for mode select.
+   * Submit still returns to the ready screen.
+   */
+  leaveOnBack?: boolean;
 }
 
 function intentCopy(intent: PlayConfigIntent) {
@@ -67,6 +72,7 @@ export function PlayConfigPage() {
     startSolo,
     currentRoomId,
     lobbyPlayers,
+    goBack,
   } = useLobbyControllerContext();
 
   const isSolo = intent === 'solo';
@@ -111,7 +117,13 @@ export function PlayConfigPage() {
     [lobbyPlayers],
   );
 
-  const handleBack = () => navigate(locationState?.returnTo ?? copy.backTo);
+  const handleBack = () => {
+    if (locationState?.leaveOnBack) {
+      goBack();
+      return;
+    }
+    navigate(locationState?.returnTo ?? copy.backTo);
+  };
   const handleReset = () => {
     if (isSolo) setConfig(defaultConfig);
     else if (isEdit) setEditDraft({ ...roomConfig });

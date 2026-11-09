@@ -16,13 +16,15 @@ export function SectionHeader({
   icon: Icon,
   title,
   tooltip,
+  className,
 }: {
   icon: LucideIcon;
   title: string;
   tooltip?: string;
+  className?: string;
 }) {
   return (
-    <div className="flex items-center gap-2 mb-2">
+    <div className={cn('mb-2 flex items-center gap-2', className)}>
       <Icon className="w-4 h-4 text-primary" aria-hidden="true" />
       <h3 className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
         {title}

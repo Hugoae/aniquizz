@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RecentTitle } from '@/features/game/state/gameReducer';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
@@ -44,8 +45,21 @@ export const RecentTitlesPills = memo(function RecentTitlesPills({
               <span className={cn('font-mono text-[10px] font-bold tabular-nums', style.number)}>
                 #{t.round}
               </span>
-              <span className="truncate text-xs font-semibold text-foreground">{t.anime}</span>
-              <span className="sr-only">{GAME_COPY.recentTitles.outcome[t.outcome]}</span>
+              <span className="min-w-0 truncate text-xs font-semibold text-foreground">
+                {t.anime}
+              </span>
+              {t.bonusMs != null && t.bonusMs > 0 && (
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded border border-primary/40 bg-primary/15 px-1 py-0.5 font-mono text-[10px] font-bold tabular-nums leading-none text-primary">
+                  <Flame className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+                  {GAME_COPY.recentTitles.bonus(Math.round(t.bonusMs / 1000))}
+                </span>
+              )}
+              <span className="sr-only">
+                {GAME_COPY.recentTitles.outcome[t.outcome]}
+                {t.bonusMs != null && t.bonusMs > 0
+                  ? `, ${GAME_COPY.recentTitles.bonusSpoken(Math.round(t.bonusMs / 1000))}`
+                  : ''}
+              </span>
             </li>
           );
         })}

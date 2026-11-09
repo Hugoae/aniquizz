@@ -17,6 +17,32 @@ const mergeWhere = (...parts: Prisma.ProfileWhereInput[]): Prisma.ProfileWhereIn
 const pct = (part: number, whole: number): number =>
   whole > 0 ? Math.round((part / whole) * 100) : 0;
 
+interface TopSongRow {
+  title: string;
+  artist: string;
+  songType: string;
+  sequence: number;
+  difficulty: string;
+  anime: string;
+  franchise: string | null;
+  cover: string | null;
+  count: number;
+}
+
+interface TopAnimeRow {
+  name: string;
+  cover: string | null;
+  year: number | null;
+  format: string | null;
+  studio: string | null;
+  count: number;
+}
+
+interface TopDifficultyRow {
+  difficulty: string;
+  count: number;
+}
+
 export interface StatsOverview {
   community: {
     totalPlayers: number;
@@ -53,8 +79,25 @@ export interface StatsOverview {
     discoveredSongs: number;
     playableSongs: number;
     coveragePercent: number;
-    topAnimes: { name: string; count: number }[];
-    topSongs: { title: string; artist: string; anime: string; count: number }[];
+    topAnimes: {
+      name: string;
+      count: number;
+      cover: string | null;
+      year: number | null;
+      format: string | null;
+      studio: string | null;
+    }[];
+    topSongs: {
+      title: string;
+      artist: string;
+      anime: string;
+      franchise: string | null;
+      count: number;
+      cover: string | null;
+      songType: string;
+      sequence: number;
+      difficulty: string;
+    }[];
     topDifficulty: { difficulty: string; count: number } | null;
     modes: { mode: string; count: number }[];
     perDay: { date: string; count: number }[];
@@ -75,9 +118,6 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
   // Reusable "started within the selected period" clauses (empty = all-time).
   const matchPeriodWhere: Prisma.MatchWhereInput = periodStart
     ? { startedAt: { gte: periodStart } }
-    : {};
-  const roundPeriodWhere: Prisma.MatchRoundWhereInput = periodStart
-    ? { match: { startedAt: { gte: periodStart } } }
     : {};
   const answerPeriodWhere: Prisma.RoundAnswerWhereInput = periodStart
     ? { round: { match: { startedAt: { gte: periodStart } } } }
@@ -165,8 +205,9 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
 
   // Matches in the selected period (drives per-day chart, avg duration, modes).
   // All-time: sample the most recent 5000 matches to stay bounded.
+  // Finished matches only. A quit still leaves rounds for the tops, but it is not a played match.
   const periodMatches = await prisma.match.findMany({
-    where: matchPeriodWhere,
+    where: { status: 'FINISHED', ...matchPeriodWhere },
     select: { mode: true, startedAt: true, endedAt: true, status: true },
     orderBy: { startedAt: 'desc' },
     take: 5000,
@@ -197,56 +238,83 @@ export const getStatsOverview = async (periodDays: number | null): Promise<Stats
     .map(([mode, count]) => ({ mode, count }))
     .sort((a, b) => b.count - a.count);
 
-  // Top songs / animes / difficulty for the period (by rounds played).
-  const topRounds = await prisma.matchRound.groupBy({
-    by: ['songId'],
-    where: { songId: { not: null }, ...roundPeriodWhere },
-    _count: { songId: true },
-    orderBy: { _count: { songId: 'desc' } },
-    take: 30,
-  });
-  const topSongIds = topRounds.map((r) => r.songId).filter((id): id is number => id !== null);
-  const songRows = topSongIds.length
-    ? await prisma.song.findMany({
-        where: { id: { in: topSongIds } },
-        select: {
-          id: true,
-          title: true,
-          artist: true,
-          difficulty: true,
-          anime: { select: { name: true } },
-        },
-      })
-    : [];
-  const songById = new Map(songRows.map((s) => [s.id, s]));
-
-  const topSongs: StatsOverview['activity']['topSongs'] = [];
-  const animeCounts = new Map<string, number>();
-  const diffCounts = new Map<string, number>();
-  for (const r of topRounds) {
-    if (r.songId === null) continue;
-    const song = songById.get(r.songId);
-    if (!song) continue;
-    const count = r._count.songId;
-    if (topSongs.length < 5) {
-      topSongs.push({
-        title: song.title,
-        artist: song.artist,
-        anime: song.anime?.name ?? '—',
-        count,
-      });
-    }
-    const animeName = song.anime?.name ?? '—';
-    animeCounts.set(animeName, (animeCounts.get(animeName) ?? 0) + count);
-    diffCounts.set(song.difficulty, (diffCounts.get(song.difficulty) ?? 0) + count);
-  }
-  const topAnimes = [...animeCounts.entries()]
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-  const topDifficultyEntry = [...diffCounts.entries()].sort((a, b) => b[1] - a[1])[0];
-  const topDifficulty = topDifficultyEntry
-    ? { difficulty: topDifficultyEntry[0], count: topDifficultyEntry[1] }
+  // Every started title counts, including a match that was quit or still open.
+  // Animes are grouped on their own: deriving them from the top songs hid
+  // a show whose plays were spread across many tracks.
+  const startedAfter = periodStart ? Prisma.sql`AND m."startedAt" >= ${periodStart}` : Prisma.empty;
+  const [topSongRows, topAnimeRows, topDifficultyRows] = await Promise.all([
+    prisma.$queryRaw<TopSongRow[]>`
+      SELECT s.title,
+             s.artist,
+             s."songType"::text AS "songType",
+             s.sequence,
+             s.difficulty::text AS difficulty,
+             a.name AS anime,
+             f.name AS franchise,
+             a."coverImage" AS cover,
+             COUNT(*)::int AS count
+      FROM "MatchRound" r
+      INNER JOIN "Song" s ON s.id = r."songId"
+      INNER JOIN "Anime" a ON a.id = s."animeId"
+      LEFT JOIN "Franchise" f ON f.id = a."franchiseId"
+      INNER JOIN "Match" m ON m.id = r."matchId"
+      WHERE r."songId" IS NOT NULL
+      ${startedAfter}
+      GROUP BY s.id, s.title, s.artist, s."songType", s.sequence, s.difficulty, a.name, a."coverImage", f.name
+      ORDER BY count DESC, s.title ASC
+      LIMIT 5
+    `,
+    prisma.$queryRaw<TopAnimeRow[]>`
+      SELECT a.name,
+             a."coverImage" AS cover,
+             a."seasonYear" AS year,
+             a.format,
+             a.studio,
+             COUNT(*)::int AS count
+      FROM "MatchRound" r
+      INNER JOIN "Song" s ON s.id = r."songId"
+      INNER JOIN "Anime" a ON a.id = s."animeId"
+      INNER JOIN "Match" m ON m.id = r."matchId"
+      WHERE r."songId" IS NOT NULL
+      ${startedAfter}
+      GROUP BY a.id, a.name, a."coverImage", a."seasonYear", a.format, a.studio
+      ORDER BY count DESC, a.name ASC
+      LIMIT 5
+    `,
+    prisma.$queryRaw<TopDifficultyRow[]>`
+      SELECT s.difficulty::text AS difficulty,
+             COUNT(*)::int AS count
+      FROM "MatchRound" r
+      INNER JOIN "Song" s ON s.id = r."songId"
+      INNER JOIN "Match" m ON m.id = r."matchId"
+      WHERE r."songId" IS NOT NULL
+      ${startedAfter}
+      GROUP BY s.difficulty
+      ORDER BY count DESC
+      LIMIT 1
+    `,
+  ]);
+  const topSongs = topSongRows.map((row) => ({
+    title: row.title,
+    artist: row.artist,
+    anime: row.anime,
+    franchise: row.franchise,
+    count: Number(row.count),
+    cover: row.cover,
+    songType: row.songType,
+    sequence: Number(row.sequence),
+    difficulty: row.difficulty,
+  }));
+  const topAnimes = topAnimeRows.map((row) => ({
+    name: row.name,
+    count: Number(row.count),
+    cover: row.cover,
+    year: row.year === null ? null : Number(row.year),
+    format: row.format,
+    studio: row.studio,
+  }));
+  const topDifficulty = topDifficultyRows[0]
+    ? { difficulty: topDifficultyRows[0].difficulty, count: Number(topDifficultyRows[0].count) }
     : null;
 
   // Correct-answer rate for the period (humans only).

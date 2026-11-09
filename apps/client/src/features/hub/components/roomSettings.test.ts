@@ -54,5 +54,30 @@ describe('buildLobbySettingChips', () => {
       label: 'Chrono',
       value: '3 min',
     });
+    expect(chips.find((c) => c.key === 'streak-prime')).toBeUndefined();
+  });
+
+  it('shows the streak prime next to the chrono when it is on', () => {
+    const chips = buildLobbySettingChips({
+      soundCount: 80,
+      guessDuration: 15,
+      gameType: 'timeAttack',
+      timeBudgetSeconds: 120,
+      timeAttackStreakBonus: true,
+      timeAttackStreakLength: 5,
+      timeAttackStreakBonusSeconds: 5,
+      difficulty: ['medium'],
+      precision: 'franchise',
+      responseType: 'typing',
+      soundSelection: 'random',
+      videoMode: 'hidden',
+    });
+
+    const time = chips.findIndex((c) => c.key === 'time');
+    expect(chips[time + 1]).toMatchObject({
+      key: 'streak-prime',
+      label: 'Prime',
+      value: 'tous les 5, +5 s',
+    });
   });
 });

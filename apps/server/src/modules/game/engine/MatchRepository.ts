@@ -11,6 +11,14 @@ import type { AnswerType, Precision } from '@aniquizz/shared';
 import type { MedalTier } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import { recordHeardSongs } from '../../catalogue/songHistoryService';
+import {
+  abandonActivityMatch,
+  finishOpenedActivityMatch,
+  openActivityMatch,
+  recordPlayedRound,
+  type ActivityMappers,
+  type ActivityOpenInput,
+} from './matchActivityStore';
 import type { RecordedRound } from './types';
 
 export interface PersistPlayerInput {
@@ -53,6 +61,11 @@ export interface PersistMatchInput {
   songIds: number[];
   playlistId?: string | null;
   decadePlaylistId?: string | null;
+  /**
+   * Set when the match row was opened at the first title. Finish updates that
+   * row instead of inserting a second one (which would double-count the tops).
+   */
+  activityMatchId?: string | null;
 }
 
 const toPrismaGameMode = (input: { speedBonusEnabled: boolean; timeAttack?: boolean }) => {
@@ -111,6 +124,13 @@ const toPrismaAnswerType = (t: AnswerType): PrismaAnswerType => {
   }
 };
 
+const activityMappers: ActivityMappers = {
+  responseType: toStoredResponseType,
+  precision: toStoredPrecision,
+  soloMedal: toStoredSoloMedal,
+  answerType: toPrismaAnswerType,
+};
+
 /**
  * Persists a finished match: Match / MatchPlayer / MatchRound / RoundAnswer are
  * written atomically; Profile aggregate stats and SongHistory are updated
@@ -137,9 +157,25 @@ export class MatchRepository {
     }
   }
 
+  /** Creates the row the tops read from, before any title starts. */
+  openActivityMatch(input: ActivityOpenInput): Promise<string | null> {
+    return openActivityMatch(input, activityMappers);
+  }
+
+  /** Inserts the title that just started. Unique per match and round index. */
+  recordPlayedRound(matchId: string, roundNumber: number, songId: number): Promise<void> {
+    return recordPlayedRound(matchId, roundNumber, songId);
+  }
+
+  /** Marks a quit. Rounds already stored stay, so the tops keep them. */
+  abandonActivityMatch(matchId: string): Promise<void> {
+    return abandonActivityMatch(matchId);
+  }
+
   async persistMatch(input: PersistMatchInput): Promise<void> {
     const humanPlayers = input.players.filter((p) => !isBotId(p.userId));
     if (!humanPlayers.length) {
+      if (input.activityMatchId) await this.abandonActivityMatch(input.activityMatchId);
       logger.warn(
         '[MatchRepository] No human players to persist; skipping match persistence.',
         'Scoring',
@@ -156,11 +192,30 @@ export class MatchRepository {
     const players = humanPlayers.filter((p) => profileById.has(p.userId));
 
     if (!players.length) {
+      if (input.activityMatchId) await this.abandonActivityMatch(input.activityMatchId);
       logger.warn(
         '[MatchRepository] No persistable players; skipping match persistence.',
         'Scoring',
       );
       return;
+    }
+
+    if (input.activityMatchId) {
+      const closed = await finishOpenedActivityMatch(
+        input.activityMatchId,
+        input,
+        players,
+        activityMappers,
+      );
+      if (closed === 'closed') {
+        await this.updateAggregates(players, input.songIds, profileById);
+        logger.info(
+          `[MatchRepository] Match ${input.activityMatchId} persisted (${players.length} players).`,
+          'Scoring',
+        );
+      }
+      // `failed` must not insert a second match: the rounds are already stored.
+      if (closed !== 'missing') return;
     }
 
     const matchId = randomUUID();

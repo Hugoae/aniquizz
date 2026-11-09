@@ -19,7 +19,10 @@ import {
   timeAttackNextMedalGoal,
   timeAttackPoolSize,
   timeAttackShortestTitleSeconds,
+  timeAttackStreakGrantMs,
   timeAttackTaxMs,
+  normalizeTimeAttackStreakBonusSeconds,
+  normalizeTimeAttackStreakLength,
   formatTimeAttackClock,
 } from './timeAttack';
 
@@ -56,6 +59,99 @@ describe('timeAttackPoolSize', () => {
       expect(pool * fastest).toBeGreaterThanOrEqual(budget);
       expect(pool * TIME_ATTACK_MIN_CLIP_SECONDS).toBeGreaterThanOrEqual(budget);
     }
+  });
+
+  it('draws enough titles to cover one extra budget when the prime is on', () => {
+    const fastest = timeAttackShortestTitleSeconds();
+    expect(timeAttackPoolSize(60, true)).toBe(40);
+    expect(timeAttackPoolSize(180, true)).toBe(120);
+    expect(timeAttackPoolSize(300, true)).toBe(200);
+    for (
+      let budget = TIME_ATTACK_MIN_BUDGET_SECONDS;
+      budget <= TIME_ATTACK_MAX_BUDGET_SECONDS;
+      budget += 30
+    ) {
+      const pool = timeAttackPoolSize(budget, true);
+      expect(pool * fastest).toBeGreaterThanOrEqual(budget * 2);
+    }
+  });
+});
+
+describe('timeAttackStreakGrantMs', () => {
+  it('pays on each multiple of the required streak and keeps a zero streak unpaid', () => {
+    const base = {
+      enabled: true,
+      required: 5,
+      bonusSeconds: 5,
+      grantedMs: 0,
+      remainingMs: 0,
+      budgetSeconds: 180,
+    };
+    expect(timeAttackStreakGrantMs({ ...base, enabled: false, streak: 5 })).toBe(0);
+    expect(timeAttackStreakGrantMs({ ...base, streak: 0 })).toBe(0);
+    expect(timeAttackStreakGrantMs({ ...base, streak: 4 })).toBe(0);
+    expect(timeAttackStreakGrantMs({ ...base, streak: 5 })).toBe(5_000);
+    expect(timeAttackStreakGrantMs({ ...base, streak: 10, bonusSeconds: 10 })).toBe(10_000);
+  });
+
+  it('stops at one extra starting budget, shortening the last prime', () => {
+    expect(
+      timeAttackStreakGrantMs({
+        enabled: true,
+        streak: 3,
+        required: 3,
+        bonusSeconds: 5,
+        grantedMs: 58_000,
+        remainingMs: 0,
+        budgetSeconds: 60,
+      }),
+    ).toBe(2_000);
+    expect(
+      timeAttackStreakGrantMs({
+        enabled: true,
+        streak: 6,
+        required: 3,
+        bonusSeconds: 5,
+        grantedMs: 60_000,
+        remainingMs: 0,
+        budgetSeconds: 60,
+      }),
+    ).toBe(0);
+  });
+
+  it('stops at the chosen duration, shortening a prime that would cross it', () => {
+    expect(
+      timeAttackStreakGrantMs({
+        enabled: true,
+        streak: 5,
+        required: 5,
+        bonusSeconds: 5,
+        grantedMs: 0,
+        remainingMs: 178_000,
+        budgetSeconds: 180,
+      }),
+    ).toBe(2_000);
+    expect(
+      timeAttackStreakGrantMs({
+        enabled: true,
+        streak: 5,
+        required: 5,
+        bonusSeconds: 5,
+        grantedMs: 0,
+        remainingMs: 180_000,
+        budgetSeconds: 180,
+      }),
+    ).toBe(0);
+  });
+
+  it('clamps the sliders into 3–10 and defaults an empty value to 5', () => {
+    expect(normalizeTimeAttackStreakLength(undefined)).toBe(5);
+    expect(normalizeTimeAttackStreakLength(2)).toBe(3);
+    expect(normalizeTimeAttackStreakLength(10)).toBe(10);
+    expect(normalizeTimeAttackStreakLength(11)).toBe(10);
+    expect(normalizeTimeAttackStreakBonusSeconds(undefined)).toBe(5);
+    expect(normalizeTimeAttackStreakBonusSeconds(1)).toBe(3);
+    expect(normalizeTimeAttackStreakBonusSeconds(15)).toBe(10);
   });
 });
 

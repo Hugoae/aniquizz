@@ -48,7 +48,7 @@ export function StatsPanel() {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'ADMIN';
   const [data, setData] = useState<StatsOverview | null>(null);
-  const [period, setPeriod] = useState<StatsPeriod>('7d');
+  const [period, setPeriod] = useState<StatsPeriod>('all');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<number>(Date.now());
   const [confirmReset, setConfirmReset] = useState(false);
@@ -111,41 +111,23 @@ export function StatsPanel() {
 
   return (
     <div className="space-y-5">
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex gap-1">
-          {PERIODS.map((p) => (
-            <Button
-              key={p.key}
-              size="sm"
-              variant={period === p.key ? 'default' : 'outline'}
-              className={cn('rounded-full', period !== p.key && 'border-border')}
-              onClick={() => setPeriod(p.key)}
-            >
-              {p.label}
-            </Button>
-          ))}
-        </div>
-        <span className="text-xs text-muted-foreground">Période des métriques historiques</span>
-
-        <div className="ml-auto flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            <LiveClock
-              render={(now) => `Rafraîchi il y a ${Math.floor((now - lastUpdated) / 1000)}s`}
-            />
-          </span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => setAutoRefresh((v) => !v)}
-            title={autoRefresh ? "Mettre en pause l'auto-refresh" : "Reprendre l'auto-refresh"}
-          >
-            {autoRefresh ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => void load()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="text-xs text-muted-foreground">
+          <LiveClock
+            render={(now) => `Rafraîchi il y a ${Math.floor((now - lastUpdated) / 1000)}s`}
+          />
+        </span>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setAutoRefresh((v) => !v)}
+          title={autoRefresh ? "Mettre en pause l'auto-refresh" : "Reprendre l'auto-refresh"}
+        >
+          {autoRefresh ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => void load()}>
+          <RefreshCw className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       {/* --- Temps réel --- */}
@@ -307,6 +289,23 @@ export function StatsPanel() {
           },
         ]}
       />
+
+      <div className="flex flex-wrap items-center gap-3 pt-2">
+        <div className="flex gap-1" role="group" aria-label="Période des métriques historiques">
+          {PERIODS.map((p) => (
+            <Button
+              key={p.key}
+              size="sm"
+              variant={period === p.key ? 'default' : 'outline'}
+              className={cn('rounded-full', period !== p.key && 'border-border')}
+              onClick={() => setPeriod(p.key)}
+            >
+              {p.label}
+            </Button>
+          ))}
+        </div>
+        <span className="text-xs text-muted-foreground">Période des métriques historiques</span>
+      </div>
 
       <StatsActivitySection
         activity={activity}

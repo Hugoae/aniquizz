@@ -1,6 +1,6 @@
 # Time-attack (Contre-la-montre)
 
-Playtest closed 2026-11-08. Solo and the versus race are the finished Chrono slice of 26.7 (working tree, not committed). News, the roadmap card, and `SITE_VERSION` wait until the rest of 26.7 ships.
+Playtest closed 2026-11-08. Solo and the versus race are the finished Chrono slice of 26.7 (working tree, not committed). News id 9 covers that slice. The streak prime ships in 26.7.1 (news id 10, footer `v26.7.1`). No roadmap card.
 
 `GameType` with a solo run and a multiplayer **versus race** (see the end of this doc). Player-facing name: **Contre-la-montre**. Compact badge: **CLM**.
 
@@ -10,7 +10,7 @@ Live `gameType: 'timeAttack'`. Prisma `Match.mode = TIME_ATTACK`. Solo uses `Mat
 
 `isTimeAttackGame` is any `gameType === 'timeAttack'`. `isTimeAttackSettings` is the solo shape (`mode === 'solo'` or `maxPlayers <= 1`). `isTimeAttackRace` is the versus shape.
 
-The selector is on solo create and in a multi room. Switching to Chrono forces typing, `speedBonusEnabled: false`, and `soundCount = timeAttackPoolSize(budget)`. The form defaults the song start to the beginning; Avancé can switch it to random. The server keeps that choice. Video mode (audio only, blurred, peek) stays the room setting.
+The selector is on solo create and in a multi room. Switching to Chrono forces typing, `speedBonusEnabled: false`, and `soundCount = timeAttackPoolSize(budget)`. The form defaults the song start to random; Avancé can switch it to the beginning. The server keeps that choice. Video mode (audio only, blurred, peek) stays the room setting.
 
 ## Budget
 
@@ -21,6 +21,7 @@ The match budget clock (`MatchBudgetClock`) ticks **only during guessing**. Intr
 ## Scoring
 
 - Correct title: **+1**, then a **3 s** reveal with the budget frozen.
+- **Prime de série** (Général, off by default, solo and versus): every N found titles in a row (slider 3–10, default 5) adds seconds (slider +3 to +10, default +5). The streak counter is not reset when the prime pays. Skip and clip-end (Raté) reset it. A wrong guess on the current title still costs 3 s and does not reset the streak. The prime can add at most **one extra starting budget**, and the live clock never reads higher than the chosen duration. A prime that would cross either ceiling is shortened or skipped. No extra XP. The stage shows `+N s` in primary for about 3 s, with its own sting. The history row uses the same color. Other answer cues stay at about 1 s. In a race the cue stays on that lane's socket; the board only shows the clock and the streak.
 - Skip (`game:skip_round`): **−5 s, then −7 s, −9 s … capped at −15 s** within a run (`timeAttackTaxMs`) when `timeAttackPunitiveSkip` is on (default). Off keeps every skip at **−5 s**. The next cost is `nextSkipTaxMs` on `timeAttack:budget` and on the skip button (`Passer −N s`). With the reveal on (default), the skipped title still gets the 3 s reveal; the tax is applied immediately and the budget stays frozen during that reveal.
 - Validated wrong answer: **−3 s**, stay on the same title (typing stays unlocked). Empty / too-short submits are ignored.
 - Clip EOF (`clipGuessSeconds`, catalogue `Song.duration`, clamp 8–90 s, default 90): 0 points, 3 s reveal, next title.
@@ -31,7 +32,7 @@ Vitesse (`speedBonusEnabled`) stays off.
 
 ## Pool
 
-`timeAttackPoolSize(budget)` draws at least one title per 3 s of budget, clamped to 20–80 (3 min → 60 titles). That headroom is stricter than the two ways a title can end early: a late random start leaves only the 8 s minimum clip, and the cheapest skip costs 5 s. `pool × 5 s` and `pool × 8 s` both cover the budget, including the 80-title cap at 5 min. Watched / playlist launch gates require `playable >= poolSize` (no silent catalogue fill).
+`timeAttackPoolSize(budget)` draws at least one title per 3 s of budget, clamped to 20–80 (3 min → 60 titles). That headroom is stricter than the two ways a title can end early: a late random start leaves only the 8 s minimum clip, and the cheapest skip costs 5 s. `pool × 5 s` and `pool × 8 s` both cover the budget, including the 80-title cap at 5 min. With **Prime de série** on, the draw uses budget + cap (one extra budget) and the ceiling rises to **200** (5 min → 200 titles) so the longer clock still has a song. Watched / playlist launch gates require `playable >= poolSize` (no silent catalogue fill).
 
 **Song start.** Beginning plays the catalogue clip from 0 (`clipGuessSeconds`, 8–90 s). Random (`timeAttackClipWindow`) may start later, but only where 8 s of guess, the 3 s reveal, and a 2 s safety margin still fit. The guess clock becomes the audio that remains, capped at 90 s. A file too short to move stays at the beginning. The same offset is stored on the shared playlist, so every versus lane hears the same excerpt.
 

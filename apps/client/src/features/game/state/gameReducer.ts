@@ -37,12 +37,12 @@ export interface GuessingSong {
   peekWindow?: PeekWindow;
 }
 export type CurrentSong = GuessingSong | RevealSong | null;
-export type StageFeedbackKind = 'correct' | 'wrong' | 'skip' | 'missed';
+export type StageFeedbackKind = 'correct' | 'wrong' | 'skip' | 'missed' | 'bonus';
 /** One-shot stage cue; `seq` changes on every event so repeats replay the animation. */
 export interface StageFeedback {
   kind: StageFeedbackKind;
   seq: number;
-  /** Budget delta in ms for tax cues (negative). */
+  /** Budget delta in ms. Negative for a tax, positive for a streak prime. */
   deltaMs?: number;
 }
 export type RecentTitleOutcome = 'found' | 'missed' | 'skipped';
@@ -57,6 +57,8 @@ export interface RecentTitle {
   difficulty: string;
   cover: string | null;
   outcome: RecentTitleOutcome;
+  /** Set when this title paid the streak prime. */
+  bonusMs?: number;
 }
 export const RECENT_TITLES_LIMIT = 5;
 /** Versus board as received; budgets are interpolated from `receivedAt` while a lane runs. */
@@ -194,6 +196,16 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
   };
 }
 
+function revealFeedbackKind(
+  me: { isCorrect?: boolean | null; currentAnswer?: string | null },
+  bonusMs: number,
+): StageFeedbackKind {
+  if (bonusMs > 0) return 'bonus';
+  if (me.isCorrect === true) return 'correct';
+  if (me.currentAnswer) return 'wrong';
+  return 'missed';
+}
+
 function nextFeedback(state: GameState, kind: StageFeedbackKind, deltaMs?: number): StageFeedback {
   return { kind, seq: (state.stageFeedback?.seq ?? 0) + 1, deltaMs };
 }
@@ -203,6 +215,7 @@ function pushRecentTitle(
   song: RevealSong,
   outcome: RecentTitleOutcome,
   round: number,
+  bonusMs?: number,
 ): RecentTitle[] {
   const entry: RecentTitle = {
     key: `${round}-${song.id}`,
@@ -213,6 +226,7 @@ function pushRecentTitle(
     difficulty: song.difficulty,
     cover: song.cover ?? null,
     outcome,
+    ...(bonusMs != null && bonusMs > 0 ? { bonusMs } : {}),
   };
   return [entry, ...list.filter((t) => t.key !== entry.key)].slice(0, RECENT_TITLES_LIMIT);
 }
@@ -363,17 +377,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'TIME_ATTACK_BUDGET': {
       const p = action.payload;
       const next = { ...state, ...budgetPatch(p, state) };
-      if (!p.tax && !p.roundResult) return next;
+      const bonusMs = p.bonusMs ?? 0;
+      if (!p.tax && !p.roundResult && bonusMs <= 0) return next;
       const result = p.roundResult;
-      const kind: StageFeedbackKind = p.tax
-        ? p.tax
-        : result?.outcome === 'found'
-          ? 'correct'
-          : 'missed';
+      const kind: StageFeedbackKind =
+        bonusMs > 0 ? 'bonus' : p.tax ? p.tax : result?.outcome === 'found' ? 'correct' : 'missed';
       const fallbackTax = p.tax === 'skip' ? -TIME_ATTACK_SKIP_TAX_MS : -TIME_ATTACK_WRONG_TAX_MS;
+      const deltaMs = bonusMs > 0 ? bonusMs : p.tax ? -(p.taxMs ?? -fallbackTax) : undefined;
       return {
         ...next,
-        stageFeedback: nextFeedback(state, kind, p.tax ? -(p.taxMs ?? -fallbackTax) : undefined),
+        stageFeedback: nextFeedback(state, kind, deltaMs),
         recentTitles: result
           ? pushRecentTitle(
               state.recentTitles,
@@ -384,6 +397,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                   ? 'skipped'
                   : 'missed',
               state.currentRound,
+              bonusMs,
             )
           : state.recentTitles,
       };
@@ -427,13 +441,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 ? state.stageFeedback
                 : nextFeedback(
                     state,
-                    me.isCorrect === true ? 'correct' : me.currentAnswer ? 'wrong' : 'missed',
+                    revealFeedbackKind(me, p.bonusMs ?? 0),
+                    (p.bonusMs ?? 0) > 0 ? p.bonusMs : undefined,
                   ),
               recentTitles: pushRecentTitle(
                 state.recentTitles,
                 p.song,
                 p.skipped ? 'skipped' : me.isCorrect === true ? 'found' : 'missed',
                 p.round,
+                p.bonusMs,
               ),
             }
           : {}),

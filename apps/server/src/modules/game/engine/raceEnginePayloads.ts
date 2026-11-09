@@ -110,6 +110,7 @@ export function buildReveal(
   lane: RaceLane,
   item: PlaylistItem,
   skipped: boolean,
+  bonusMs = 0,
 ): RoundRevealPayload {
   const next = engine.playlist[lane.index + 1];
   return {
@@ -126,6 +127,7 @@ export function buildReveal(
     remainingMs: lane.remainingMs(),
     foundCount: lane.found,
     ...laneCue(engine, lane),
+    ...(bonusMs > 0 ? { bonusMs } : {}),
   };
 }
 

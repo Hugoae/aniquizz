@@ -38,6 +38,7 @@ import {
   resumeFrozenTimeAttack,
   skipTimeAttackRound,
 } from './matchEngineBudget';
+import { abandonScheduledActivity } from './matchActivityLedger';
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
 export class MatchEngine {
@@ -77,6 +78,9 @@ export class MatchEngine {
   finishing = false;
   /** Stays set so a second finish on this engine cannot persist the match twice. */
   private finishStarted = false;
+  /** See `matchActivityLedger`. Tests leave both null because the repo mock has no opener. */
+  activityMatchId: string | null = null;
+  activityOpen: Promise<string | null> | null = null;
 
   constructor(room: Room, deps: EngineDeps) {
     this.room = room;
@@ -340,6 +344,7 @@ export class MatchEngine {
   }
 
   cancel(): void {
+    abandonScheduledActivity(this.asHost());
     this.clock.clear();
     this.budget.clear();
     this.pausedDuringPhase = false;

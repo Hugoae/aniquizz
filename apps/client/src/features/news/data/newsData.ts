@@ -5,6 +5,30 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
+    id: 10,
+    title: 'Mise à jour v26.7.1 - Prime de série',
+    description:
+      'En Contre-la-montre, une série de titres trouvés peut rendre du temps. Le son part au hasard, et les égalités du podium tiennent sur une ligne.',
+    content:
+      '**Prime de série**\n' +
+      '• Nouvelle option du Contre-la-montre, en solo et à plusieurs. Elle est coupée par défaut.\n' +
+      '• Dans Général, à côté de Skip punitif. Vous réglez la série (de 3 à 10, 5 par défaut) et le temps rendu (de +3 à +10 s, +5 par défaut).\n' +
+      '• Tous les N titres trouvés d’affilée, le chrono gagne ce temps.\n' +
+      '• Passer, ou laisser l’extrait se terminer sans trouver, remet la série à zéro. Une mauvaise réponse sur le titre en cours retire toujours 3 s, et ne casse pas la série.\n' +
+      '• Le chrono ne dépasse jamais la durée choisie. À 2:58 sur une partie de 3 min, une prime de +5 s n’ajoute que +2 s, et l’animation affiche +2 s. Au total, une partie ne peut pas recevoir plus d’un budget entier en prime.\n' +
+      '• Quand la prime tombe, « +N s » s’affiche sur votre scène, avec un son. La manche concernée le reprend dans l’historique.\n' +
+      '• Le salon rappelle la prime tant qu’elle est activée.\n\n' +
+      '**Départ du son**\n' +
+      '• En Contre-la-montre, l’extrait part maintenant au hasard. Le début reste disponible dans les options avancées.\n\n' +
+      '**Classement**\n' +
+      '• Sur le podium, une égalité aligne les portraits sur une ligne, un peu superposés, comme en fin de partie. La marche ne s’étire plus.\n\n' +
+      '**Confort**\n' +
+      '• En solo, Retour depuis l’écran prêt ramène à la configuration. Un second Retour quitte vers le choix du mode.\n\n' +
+      'Bon jeu !',
+    date: '2026-11-09T21:00:00Z',
+    type: 'update',
+  },
+  {
     id: 9,
     title: 'Mise à jour v26.7 - Contre-la-montre, Vitesse & retours en partie',
     description:

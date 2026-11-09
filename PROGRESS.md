@@ -3,7 +3,48 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7** · Vitesse ✅ · Chrono ✅ · Admin rework ✅ · answer cues + licence ✅ (working tree) · pokédex found bar remaining (2026-11-08)
+## Current phase: **26.7.1** · Prime de série + admin tops + podium ties · 2026-11-09
+
+### Prime de série (2026-11-09)
+
+Optional Contre-la-montre modifier, off by default. Solo and versus. Medals stay on the chosen duration. No extra XP. The in-match countdown was removed on purpose. Do not put it back. Public note: news id 10 (2026-11-09), Home footer `v26.7.1`. No roadmap card. The note covers the prime, the random Chrono start, the podium ties, and the solo Retour. It does not mention the admin tops.
+
+| Piece        | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Place**    | Général, same height as Standard. Skip punitif stays two buttons. The prime is a switch with both sliders on that row. Sliders stay dimmed and disabled while the prime is off.                                                                                                                                                                                                                                                                                                                                                |
+| **Sliders**  | Streak 3–10, step 1, default 5. Time +3 to +10 s, step 1, default +5.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| **Payout**   | Every multiple of the streak. The flame is not reset when it pays (shown from 3, pulse at 5). The streak moves only when the title ends. Skip and a clip-end miss reset it. A wrong guess still costs 3 s and does not.                                                                                                                                                                                                                                                                                                        |
+| **Ceilings** | Two, both enforced. The sum of prime granted in a run is at most one extra starting budget (the last grant may be shorter). The live clock never reads higher than the chosen duration. A 3 min game at 2:58 with a +5 s prime adds +2 s, and the cue shows +2 s. At 3:00 it pays nothing. The total cap still stops a later refill once one extra budget has been granted, even if the clock is low. The clock cannot show 3:03. `timeAttackStreakGrantMs` takes the remaining time; `MatchBudgetClock.grant` clamps the add. |
+| **Pool**     | The draw grows with the budget plus that cap, max 200 (`TIME_ATTACK_STREAK_MAX_POOL`). Prime off stays 20–80. A 3 min game draws 120, a 5 min game draws 200. Zod `soundCount` max is 200. Standard is clamped back to 5–100.                                                                                                                                                                                                                                                                                                  |
+| **Cue**      | `+N s` on that player's stage only. Primary ring and solid primary chip, lift, flame chip, distinct sting. It holds about 3 s. The other answer cues stay about 1.1 s. No animation fill-forwards, so reduced motion does not snap the chip back. Versus: the cue stays on the lane. The board shows the clock and the streak, never the title. The history row that paid shows `+N s` in primary (strip and pills). `N` is the time actually added. A zero grant shows no cue.                                                |
+| **Lobby**    | Chip only while the prime is on, solo and multi. Value `tous les N, +N s`, flame icon, primary chip. Solo: the Partie row hides its label, so the value stands alone. Multi: the chip sits after the Chrono chip.                                                                                                                                                                                                                                                                                                              |
+| **Back**     | Solo ready Retour opens the config (one step). Config Retour from that path leaves the room for mode select. Modifier les paramètres still returns to the ready screen. Multi lobby Retour still leaves the room.                                                                                                                                                                                                                                                                                                              |
+| **Start**    | Switching to Contre-la-montre sets the excerpt start to random. The server default was already random. Avancé can still pin the beginning. A room that already chose the beginning stays until the game type changes.                                                                                                                                                                                                                                                                                                          |
+| **Card**     | The solo teaser under the mode card was removed. The card keeps « Entraînez-vous seul et améliorez vos scores ». The multi card keeps its live teaser.                                                                                                                                                                                                                                                                                                                                                                         |
+| **Release**  | News id 10, « Mise à jour v26.7.1 - Prime de série », date 2026-11-09. `SITE_VERSION` is `26.7.1`. `sync:news` refreshes the home shell and `newsPreview.ts`. No roadmap card.                                                                                                                                                                                                                                                                                                                                                 |
+| **Checked**  | English check, lint, typecheck, `pnpm test`, and `pnpm build` were green on the prime pass. Dev client: solo and salon Général, prime off then on, both sliders, pools 60 / 120 / 40 / 200, Aléatoire selected, lobby chips, solo card without the extra sentence. The 3 s cue and the display ceiling were covered by the grant tests (22) and the engine tests, not replayed in a live match.                                                                                                                                |
+
+### Admin tops (2026-11-09)
+
+The suspicion was half right. The numbers are a count of `MatchRound` rows, not a memory cache. Those rows were inserted only when a match reached **finished**. Until then the titles lived in memory, so a restart, a cancel, or a player leaving dropped the current match. A restart does not wipe the database. The dev server reads the AniQuizz database, and the finished history is still there. Render writes to whatever database its `DATABASE_URL` points at. Its disk is not used.
+
+Animes and the popular difficulty were also derived from the top 30 songs only. A show spread across many tracks could be missing from the anime list.
+
+**Now.** The first clip opens the match row. Each title that starts inserts one round (one row per match and index, so a versus lane does not count the shared title twice). A quit marks the match abandoned and keeps the rounds. A finish updates that same row and adds the players and the answers, without inserting the rounds a second time. If the opener never landed, finish still saves the match the old way. Test matches and bot-only rooms are not written. Cancelling during the intro writes nothing.
+
+The two tops, and the popular difficulty, read every round in the selected period, including a quit or a match still open. Parties jouées, the per-day chart, the popular mode, and the average duration stay on finished matches only. Song discovery is still written at the end of a finished match. **Réinitialiser l'activité** remains the explicit wipe.
+
+**Design.** The period filter sits directly above Activité de jeu and defaults to all-time. Anime rows show the cover, the name, the year, the format, and the studio. Song rows follow the reveal card: franchise with a star, anime, a music icon on the title, a person icon on the artist, then the type and the difficulty. Rows alternate shade. The count is a number with the word « écoutes », with no bar.
+
+**Checked.** Server and client typecheck, eslint on the touched files, English check, MatchEngine and RaceEngine tests (80). The stats page was opened on the dev client (admin_dev). On 7 days the songs stay at 5 and the animes are no longer a copy of those songs. On all-time the covers, the year, the studio, the type, and the difficulty render, and the counts match the database.
+
+**Next:** none until asked. News id 10 and footer `v26.7.1` ship with this commit. Do not start the dropped pokédex found bar. HIBP stays parked. Do not reopen the admin shell.
+
+### Classement — ties on the podium (2026-11-09)
+
+A tie stacked each player as a full block, so the step grew taller than first place. Tied faces now overlap on one row, the same way the end-of-match podium does. The step keeps one score. Names and level chips sit under the faces, because a chip on the portrait covered the next one. Each face still opens the profile. Players past the sample stay « +N ex-aequo ». A step with one player is unchanged.
+
+**Checked.** Dev client, Parties (Kirikou and Falk at 13, Radenty at 17), desktop and a 390px width. Kirikou's face opens his profile. XP still shows three single steps. Victories, Pokédex, and accuracy have no tie on this database. Client eslint and the leaderboard test are green.
 
 ### Chrono — solo and versus closed (2026-11-08, dev server, not committed)
 
@@ -31,9 +72,9 @@ Staff shell only. No new tool, no new sanction, no role change. Same working tre
 | **Roles**   | MODERATOR stays bounded: no catalogue writes, no playlists, no daily, no dev tools.                                                                                                                                           |
 | **Checked** | Client typecheck, admin eslint, nav / desk / role-confirm tests, server order test. A full logged-in pass of every tab was not done. The users tab was opened and the activity sort was corrected from that.                  |
 
-### Pokédex — found bar (reverted 2026-11-08)
+### Pokédex — found bar (dropped 2026-11-09)
 
-A second bar (`foundSongs` / `foundPercent`, `SongHistory.correctCount > 0`, same playable catalogue) was implemented on the profile and the admin preview, then removed the same day. Medals stay on the heard percent. It is back on the plan as the remaining 26.7 slice. Do not start it until that is the task.
+A second bar (`foundSongs` / `foundPercent`, `SongHistory.correctCount > 0`, same playable catalogue) was implemented on the profile and the admin preview, then removed on 2026-11-08. It was dropped from 26.7 on 2026-11-09. Medals stay on the heard percent. Do not start it.
 
 ### Answer cues, solo reveal, public name, licence (2026-11-08, dev server, not committed)
 
@@ -58,7 +99,7 @@ The home visual pass (live facts, live catalogue, « Nouveau » card, one news t
 
 News id 9 is the public 26.7 note: Contre-la-montre, Vitesse, answer cues, the solo reveal move, Avis & bugs, and the mode page. No roadmap card. The found bar is not announced.
 
-**Next:** Profile pokédex found bar. Heard / found / liked music sources were dropped from 26.7. HIBP stays parked. Do not reopen Chrono, the admin shell, the answer cues, the licence, the dropped home pass, or this news note.
+**Next (historical, 2026-11-08):** the found bar was the open slice then. It was dropped on 2026-11-09. Current next is at the top of this file. Do not reopen the admin shell, the answer cues, the licence, the dropped home pass, or this news note.
 
 ### 26.7 — Release split: push without Chrono (2026-11-07)
 
@@ -137,9 +178,9 @@ Review: effects, re-renders, duplicated state, XSS. No `dangerouslySetInnerHTML`
 
 Left at the time: Admin lazy panels had no local error boundary. Closed by `AdminPanelBoundary` in the 2026-11-08 rework. `VirtualScroll`, `ResetPassword`, `NotFound`, and `DelayedRouteFallback` were reviewed and not rewritten.
 
-**Next:** Profile pokédex found bar. Chrono is closed. The admin shell is in. Heard / found / liked sources were dropped. HIBP stays parked.
+**Next (historical):** this block was written while the found bar was still open. Current next is at the top of this file.
 
-> **State:** **Vitesse**, **Contre-la-montre** (solo + versus), and the admin console rework (including the activity sort) are done. Solo Chrono is on `main` (`9245d8e`); versus, the later playtest fixes, and the admin rework are uncommitted. The pokédex found bar was reverted and is the remaining slice. Live `gameType` values are `'standard'` and `'timeAttack'`. News id 9 is published and the Home footer is `v26.7`. No roadmap card. Reviews of 2026-10-17 (security, database, client) are closed. **Next:** pokédex found bar. **Dropped from 26.7:** heard / found / liked music sources. **Parked:** HIBP (Supabase Pro+) · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
+> **State:** **Vitesse**, **Contre-la-montre** (solo + versus), and the admin console rework (including the activity sort) are done. Solo Chrono is on `main` (`9245d8e`). Versus Chrono and the v26.7 note are on `main` (`0345c36`). **26.7.1** ships with this commit. The pokédex found bar was dropped from 26.7. **26.7.1** (top of this file) adds the streak prime, persistent admin play tops, and overlapping podium ties. Live `gameType` values are `'standard'` and `'timeAttack'`. News id 9 is the 26.7 note. News id 10 and the Home footer `v26.7.1` are in the tree. No roadmap card. Reviews of 2026-10-17 (security, database, client) are closed. **Dropped from 26.7:** heard / found / liked music sources, pokédex found bar. **Parked:** HIBP (Supabase Pro+) · Mix clamp · playback `nbf` · avatar bucket listing · unused-index drops · `FORCE ROW LEVEL SECURITY` · trigram indexes. Kickoff paste: [`docs/agents/kickoff.md`](./docs/agents/kickoff.md). Feature-audit prompt **requires** an end-to-end logged-in smoke (lens 10). `jsx-a11y` recommended is **error**.
 
 **26.1** shipped · **26.2** shipped · **26.3** shipped · **26.4** shipped · **26.5** shipped · **26.6** shipped · **26.6.1** shipped · **26.6.2** shipped
 

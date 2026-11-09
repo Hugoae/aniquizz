@@ -12,8 +12,9 @@ import {
 import { Button } from '@/components/ui/button';
 import type { StatsOverview } from '@/lib/adminApi';
 import { StatsMatchesChart } from '@/features/admin/components/StatsMatchesChart';
+import { StatsTopPlays } from '@/features/admin/components/StatsTopPlays';
 import { DIFFICULTY_LABELS, formatDuration, MODE_LABELS } from './statsPanelFormat';
-import { SegmentBar, StatCard, TopList } from './statsPanelParts';
+import { SegmentBar, StatCard } from './statsPanelParts';
 
 export function StatsActivitySection({
   activity,
@@ -150,24 +151,7 @@ export function StatsActivitySection({
         ]}
       />
 
-      <div className="grid gap-3 md:grid-cols-2">
-        <TopList
-          icon={Trophy}
-          title="Top animes joués"
-          empty="Aucune partie sur la période."
-          items={activity.topAnimes.map((a) => ({ primary: a.name, count: a.count }))}
-        />
-        <TopList
-          icon={Music2}
-          title="Top sons joués"
-          empty="Aucune partie sur la période."
-          items={activity.topSongs.map((s) => ({
-            primary: s.title,
-            secondary: `${s.artist} — ${s.anime}`,
-            count: s.count,
-          }))}
-        />
-      </div>
+      <StatsTopPlays activity={activity} />
 
       <StatsMatchesChart data={activity.perDay} />
     </>

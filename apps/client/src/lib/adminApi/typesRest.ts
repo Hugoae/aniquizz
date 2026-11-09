@@ -63,8 +63,25 @@ export interface StatsOverview {
     discoveredSongs: number;
     playableSongs: number;
     coveragePercent: number;
-    topAnimes: { name: string; count: number }[];
-    topSongs: { title: string; artist: string; anime: string; count: number }[];
+    topAnimes: {
+      name: string;
+      count: number;
+      cover: string | null;
+      year: number | null;
+      format: string | null;
+      studio: string | null;
+    }[];
+    topSongs: {
+      title: string;
+      artist: string;
+      anime: string;
+      franchise: string | null;
+      count: number;
+      cover: string | null;
+      songType: string;
+      sequence: number;
+      difficulty: string;
+    }[];
     topDifficulty: { difficulty: string; count: number } | null;
     modes: { mode: string; count: number }[];
     perDay: { date: string; count: number }[];

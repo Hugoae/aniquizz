@@ -63,6 +63,15 @@ export interface GameConfig {
    */
   timeAttackReveal?: boolean;
   /**
+   * Time-attack prime: every N found titles in a row add seconds to the clock.
+   * Off by default. The streak counter is not reset when the prime pays.
+   */
+  timeAttackStreakBonus?: boolean;
+  /** Found titles in a row required for each prime (3–10). Ignored while the prime is off. */
+  timeAttackStreakLength?: number;
+  /** Seconds added each time the streak hits a multiple of `timeAttackStreakLength` (3–10). */
+  timeAttackStreakBonusSeconds?: number;
+  /**
    * Solo Standard: after a submitted answer, reveal the clip immediately.
    * Ignored in multiplayer and in time attack. Default off.
    */

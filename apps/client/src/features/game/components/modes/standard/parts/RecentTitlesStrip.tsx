@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef, useState } from 'react';
-import { Disc3 } from 'lucide-react';
+import { Disc3, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RecentTitle } from '@/features/game/state/gameReducer';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
@@ -64,6 +64,12 @@ function TitleRow({ title, leaving = false }: { title: RecentTitle; leaving?: bo
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {title.bonusMs != null && title.bonusMs > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded border border-primary/40 bg-primary/15 px-1 py-0.5 font-mono text-[10px] font-bold tabular-nums leading-none text-primary">
+              <Flame className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+              {GAME_COPY.recentTitles.bonus(Math.round(title.bonusMs / 1000))}
+            </span>
+          )}
           {title.type && (
             <span className="rounded border border-border bg-secondary px-1 py-0.5 text-[10px] font-semibold leading-none text-muted-foreground">
               {type}
@@ -80,7 +86,12 @@ function TitleRow({ title, leaving = false }: { title: RecentTitle; leaving?: bo
             </span>
           )}
         </div>
-        <span className="sr-only">{GAME_COPY.recentTitles.outcome[title.outcome]}</span>
+        <span className="sr-only">
+          {GAME_COPY.recentTitles.outcome[title.outcome]}
+          {title.bonusMs != null && title.bonusMs > 0
+            ? `, ${GAME_COPY.recentTitles.bonusSpoken(Math.round(title.bonusMs / 1000))}`
+            : ''}
+        </span>
       </div>
     </li>
   );

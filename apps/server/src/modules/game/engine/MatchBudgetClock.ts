@@ -13,6 +13,10 @@ export class MatchBudgetClock {
   private armed = false;
   private skipCount = 0;
   private lastTaxMs = 0;
+  /** Milliseconds already added by streak primes this run. */
+  private grantedStoredMs = 0;
+  /** Chosen duration. A prime cannot push the live clock above this. */
+  private budgetMs = 0;
 
   /** Amount removed by the latest `tax()` call (ms). */
   get lastTax(): number {
@@ -22,6 +26,11 @@ export class MatchBudgetClock {
   /** Skips already taken this run. The next skip costs `timeAttackTaxMs('skip', skips)`. */
   get skips(): number {
     return this.skipCount;
+  }
+
+  /** Streak-prime time already added this run (ms). The cap is enforced by the caller. */
+  get grantedMs(): number {
+    return this.grantedStoredMs;
   }
 
   get isArmed(): boolean {
@@ -34,13 +43,15 @@ export class MatchBudgetClock {
 
   arm(budgetMs: number, onExpire: () => void): void {
     this.clearTimer();
-    this.remainingStoredMs = Math.max(0, budgetMs);
+    this.budgetMs = Math.max(0, Math.floor(budgetMs));
+    this.remainingStoredMs = this.budgetMs;
     this.onExpire = onExpire;
     this.armed = true;
     this.running = false;
     this.startedAt = 0;
     this.skipCount = 0;
     this.lastTaxMs = 0;
+    this.grantedStoredMs = 0;
   }
 
   /** Start or resume ticking. No-op when unarmed or already running. */
@@ -89,6 +100,26 @@ export class MatchBudgetClock {
     return next;
   }
 
+  /**
+   * Add streak-prime time. Restarts the live timer when ticking.
+   * Does not fire `onExpire`. No-op while the clock is not armed.
+   */
+  grant(ms: number): number {
+    if (!this.armed) return 0;
+    const room = this.budgetMs - this.getRemainingMs();
+    const add = Math.min(Math.max(0, Math.floor(ms)), Math.max(0, room));
+    if (add === 0) return this.getRemainingMs();
+    const next = this.getRemainingMs() + add;
+    this.grantedStoredMs += add;
+    this.remainingStoredMs = next;
+    if (this.running) {
+      this.clearTimer();
+      this.running = false;
+      this.start();
+    }
+    return next;
+  }
+
   getRemainingMs(): number {
     if (!this.armed) return 0;
     if (!this.running) return Math.max(0, this.remainingStoredMs);
@@ -104,6 +135,8 @@ export class MatchBudgetClock {
     this.startedAt = 0;
     this.skipCount = 0;
     this.lastTaxMs = 0;
+    this.grantedStoredMs = 0;
+    this.budgetMs = 0;
   }
 
   private clearTimer(): void {

@@ -54,6 +54,10 @@ export interface MatchEngineHost {
   finishing: boolean;
   /** Latched on the first finish so a later call cannot persist again. */
   finishStarted: boolean;
+  /** Postgres match opened when the playlist is ready. Null in tests and unsaved matches. */
+  activityMatchId: string | null;
+  /** In flight until the opener resolves. Rounds wait on it so the first title is not lost. */
+  activityOpen: Promise<string | null> | null;
 
   resetMatchState(): void;
   resetRoundState(p: RoomPlayer): void;
