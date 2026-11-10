@@ -282,6 +282,49 @@ export function applyTimeAttackTax(
 export const TIME_ATTACK_RACE_MIN_PLAYERS = 2;
 export const TIME_ATTACK_RACE_MAX_PLAYERS = 8;
 
+/**
+ * A room already fuller than a race cannot switch to Contre-la-montre.
+ * Null when the headcount fits. The message is shown to the host.
+ */
+export function timeAttackRaceOccupancyBlock(playerCount: number): string | null {
+  if (playerCount <= TIME_ATTACK_RACE_MAX_PLAYERS) return null;
+  return `Le Contre-la-montre accepte ${TIME_ATTACK_RACE_MAX_PLAYERS} joueurs maximum : ${playerCount} sont présents.`;
+}
+
+/** Seats a room may actually fill. A race never grows past 8, even if maxPlayers was left higher. */
+export function seatCapForSettings(settings: {
+  gameType?: string | null;
+  mode?: string | null;
+  maxPlayers?: number | null;
+}): number {
+  const requested = settings.maxPlayers ?? 1;
+  if (settings.gameType === 'evolving') return Math.min(requested, 1);
+  if (settings.gameType === 'timeAttack') {
+    const solo = settings.mode === 'solo' || requested <= 1;
+    if (solo) return Math.min(requested, 1);
+    return Math.min(requested, TIME_ATTACK_RACE_MAX_PLAYERS);
+  }
+  return requested;
+}
+
+/**
+ * Why a time-attack room with this headcount must not start.
+ * A multiplayer Chrono is a race: solo-shaped settings with several players are refused too.
+ */
+export function timeAttackLaunchBlock(
+  playerCount: number,
+  settings: { gameType?: string | null; mode?: string | null; maxPlayers?: number | null },
+): string | null {
+  if (settings.gameType !== 'timeAttack' || playerCount <= 1) return null;
+  const over = timeAttackRaceOccupancyBlock(playerCount);
+  if (over) return over;
+  const solo = settings.mode === 'solo' || (settings.maxPlayers ?? 1) <= 1;
+  if (solo) {
+    return 'Le Contre-la-montre à plusieurs se joue en course : repassez par les règles.';
+  }
+  return null;
+}
+
 function isSoloShape(settings: TimeAttackSettings): boolean {
   if (settings.mode === 'solo') return true;
   return (settings.maxPlayers ?? 1) <= 1;

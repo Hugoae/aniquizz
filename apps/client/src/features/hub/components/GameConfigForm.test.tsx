@@ -5,6 +5,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RoomConfig } from '@aniquizz/shared';
 import { GameConfigForm } from './GameConfigForm';
 import { WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
 
 vi.mock('@/lib/socket', () => ({
   socket: { on: vi.fn(), off: vi.fn(), emit: vi.fn() },
@@ -321,6 +326,49 @@ describe('GameConfigForm', () => {
     expect(next.maxPlayers).toBe(8);
     expect(next.soundSelection).toBe('random');
     expect(next.playlistWatched).toBe(false);
+  });
+
+  it('refuses Chrono when the lobby already has more than 8 players', async () => {
+    const setConfig = vi.fn();
+    const onSubmit = vi.fn();
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, mode: 'multiplayer', maxPlayers: 16 }}
+        setConfig={setConfig}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={onSubmit}
+        isRoom
+        currentPlayersCount={16}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /contre-la-montre/i }));
+
+    expect(setConfig).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/8 joueurs maximum/i));
+    expect(screen.getByRole('button', { name: /mettre à jour/i })).toBeEnabled();
+  });
+
+  it('keeps update disabled when the draft is already Chrono above 8 players', () => {
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, mode: 'multiplayer', gameType: 'timeAttack', maxPlayers: 16 }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        currentPlayersCount={16}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent(/8 joueurs maximum/i);
+    expect(screen.getByRole('button', { name: /mettre à jour/i })).toBeDisabled();
   });
 
   it('hides the Watched source tab in a Chrono multiplayer lobby', async () => {

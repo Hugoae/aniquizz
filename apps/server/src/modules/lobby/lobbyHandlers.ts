@@ -7,12 +7,14 @@ import {
   evaluateLobbyJoin,
   hasWatchedListLink,
   isAdmin,
-  isTimeAttackRace,
   joinLobbyInputSchema,
   lobbyTargetInputSchema,
   resolveActiveListProvider,
   roomIdInputSchema,
-  TIME_ATTACK_RACE_MAX_PLAYERS,
+  seatCapForSettings,
+  timeAttackLaunchBlock,
+  timeAttackRaceOccupancyBlock,
+  evolvingOccupancyBlock,
   toClientRoomSettings,
   updateRoomSettingsInputSchema,
   type LobbyJoinRejectReason,
@@ -164,7 +166,7 @@ export const registerLobbyHandlers = (
         storedPassword: room?.settings.password ?? '',
         providedPassword: password,
         playerCount: room?.players.size ?? 0,
-        maxPlayers: room?.settings.maxPlayers ?? 0,
+        maxPlayers: room ? seatCapForSettings(room.settings) : 0,
         status: room?.status ?? 'waiting',
       });
       if (!decision.ok) {
@@ -216,6 +218,26 @@ export const registerLobbyHandlers = (
     if (!parsed) return;
     const room = gameManager.getRoom(parsed.roomId);
     if (!room || uid() !== room.hostId) return;
+
+    // Refuse on the requested mode, before normalize can rewrite Evolving back
+    // to Standard or raise a race cap up to the current headcount.
+    const requestedType =
+      typeof parsed.settings.gameType === 'string' ? parsed.settings.gameType : undefined;
+    if (requestedType === 'timeAttack') {
+      const block = timeAttackRaceOccupancyBlock(room.players.size);
+      if (block) {
+        socket.emit('error', { message: block });
+        return;
+      }
+    }
+    if (requestedType === 'evolving') {
+      const block = evolvingOccupancyBlock(room.players.size);
+      if (block) {
+        socket.emit('error', { message: block });
+        return;
+      }
+    }
+
     let next: RoomSettings;
     try {
       next = mergeRoomSettings(room.settings, parsed.settings, {
@@ -226,12 +248,17 @@ export const registerLobbyHandlers = (
       return;
     }
 
-    // A versus race holds 8 lanes at most; refuse the switch rather than evict anyone.
-    if (isTimeAttackRace(next) && room.players.size > TIME_ATTACK_RACE_MAX_PLAYERS) {
-      socket.emit('error', {
-        message: `Le Contre-la-montre accepte ${TIME_ATTACK_RACE_MAX_PLAYERS} joueurs maximum : ${room.players.size} sont présents.`,
-      });
+    const chronoBlock = timeAttackLaunchBlock(room.players.size, next);
+    if (chronoBlock) {
+      socket.emit('error', { message: chronoBlock });
       return;
+    }
+    if (next.gameType === 'evolving') {
+      const block = evolvingOccupancyBlock(room.players.size);
+      if (block) {
+        socket.emit('error', { message: block });
+        return;
+      }
     }
 
     // Never shrink capacity below the players already in the room. Clamp up to

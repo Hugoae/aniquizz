@@ -98,6 +98,7 @@ export function DailyPlay({ initial, onFinished }: DailyPlayProps) {
           difficultyLabel: 'QCM',
           precisionLabel: getPrecisionChipLabel(DAILY_PRECISION),
           modeLabel: DAILY_COPY.title,
+          daily: true,
         }}
         autofocusAnswer={false}
         submitOnEnter={false}

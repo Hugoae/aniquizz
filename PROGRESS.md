@@ -74,6 +74,8 @@ In the match they sit under the player card, centered on the video column. The h
 
 Chrono thresholds come from the server (`medalTargets`), from the songs actually heard, same inputs as the end medal. Standard and Évolutif are computed on the client from the round count, the best score per title (6 on Évolutif), the configured difficulties, and precision.
 
+Only the next locked tier shows its number. Tiers further away show « ? ». An earned medal keeps its threshold, in the medal color. The end screen still lists every threshold: the hide is for the live rail only.
+
 The end screen has no bar. The old bar put the thresholds on the fill, and close numbers overlapped. `SoloMasteryBar` is the same four columns, plus the existing hint sentence.
 
 **Checked.** Played in solo: the rail under the card, and the result columns without the bar.
@@ -84,7 +86,25 @@ The first frame is no longer a fake Home. `#app-shell` is the site background an
 
 **Checked.** Dev client: the mark and the halo, then the home underneath.
 
-**Next:** news id 11 and footer `v26.8` ship with this note. Do not start the dropped found bar. HIBP stays parked.
+### 8. In-match corner
+
+Bottom right of the stage, one column, not a tall stack. The mode tag is the large pill (full name, mode color, Vitesse bolt when it applies). Under it, small chips: difficulty in its color (Facile, Moyen, Difficile, including mixes), then Openings and Endings when those song types are on, then the source and the precision. The daily quiz uses the gold daily pill.
+
+The volume percent sits in the player pill. It shows only while the pointer or the keyboard is on that control, with a small gap between the slider and the number. Mute stays the icon. The number is the stored volume.
+
+**Checked.** Corner on the dev client. Volume gap is the hover state of the player pill.
+
+### 9. Room size follows the mode
+
+Contre-la-montre versus holds 8 players. Évolutif holds one. The limit is the people already in the room, not the slider.
+
+A Standard lobby of 16 cannot switch to Contre-la-montre. The host sees the notice, the form does not take the change, and **Mettre à jour** does not send it. The same refusal applies to Évolutif as soon as a second player is seated. The server rejects the update before it can clamp the cap back up to the headcount and apply the mode anyway. `canStartMatch` repeats the check, so a room already in that shape cannot launch. Joining and dev bots stop at the same cap, even if `maxPlayers` was left higher. A Chrono with several players that is still shaped as solo is refused too: a multiplayer Chrono is a race.
+
+Switching back to Standard stays allowed.
+
+**Checked.** Shared occupancy tests, the config form (16 players does not select Chrono; an already-Chrono draft cannot be saved), and `Room.canStartMatch` plus the bot cap.
+
+**Next:** do not start the dropped found bar. HIBP stays parked.
 
 ### Quiz du jour — same engine as a match (2026-11-10)
 

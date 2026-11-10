@@ -8,7 +8,7 @@ export const allNews: NewsItem[] = [
     id: 11,
     title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',
     description:
-      'Nouveau mode Évolutif en solo, médailles sous la carte, historique retravaillé, et un accueil plus vivant.',
+      'Nouveau mode Évolutif en solo, médailles sous la carte, historique repris, et des repères plus clairs en partie comme à l’accueil.',
     content:
       '**Évolutif**\n' +
       '• Nouveau mode, en solo et en saisie. L’extrait repart du même point et s’allonge : 0,25 s, 0,5 s, 1 s, 3 s, 10 s, puis 15 s.\n' +
@@ -20,14 +20,18 @@ export const allNews: NewsItem[] = [
       '• Une nouvelle partie se prépare en trois temps : Général, Source, puis Avancée. Lancer n’apparaît qu’à la fin.\n' +
       '• Dans Paramètres, rubrique En partie, **Parcours de configuration** est activé par défaut. Le couper ouvre tout de suite.\n\n' +
       '**Médailles**\n' +
-      '• En solo, Bronze, Argent, Or et Platine s’affichent sous votre carte, avec le score qui les débloque.\n' +
-      '• Elles restent grises, puis prennent leur couleur une fois le seuil atteint.\n' +
+      '• En solo, Bronze, Argent, Or et Platine s’affichent sous votre carte.\n' +
+      '• Le nombre est le score qui débloque la médaille. Il reste gris, puis prend sa couleur une fois le seuil atteint.\n' +
+      '• Seul le prochain palier montre son score. Les suivants restent un « ? » tant qu’ils ne sont pas à portée.\n' +
       '• L’écran de fin reprend ces quatre paliers. La barre a été retirée.\n\n' +
       '**Historique**\n' +
-      "• La catégorie historique de partie dans le profil à été retravaillée et est maintenant plus agréable, affiche plus d'informations et montre les cinq dernières parties.\n" +
-      '• Grâce au nouveau bouton **Rejouer** vous pouvez relancer une partie avec les mêmes règles.\n\n' +
+      '• L’historique du profil a été repris : les cinq dernières parties, plus d’informations, et une lecture plus claire.\n' +
+      '• Le bouton **Rejouer** relance une partie solo avec les mêmes règles.\n\n' +
       '**Couleurs des modes**\n' +
       '• Standard en violet, Contre-la-montre en cyan, Évolutif en vert, Quiz du jour en doré.\n\n' +
+      '**En partie**\n' +
+      '• Le mode est rappelé en bas à droite, plus lisible, avec la difficulté en couleur, Openings ou Endings, la source et la précision.\n' +
+      '• Le pourcentage du volume apparaît au survol de la barre.\n\n' +
       '**Accueil**\n' +
       '• Le fond est parsemé de points blancs qui clignotent.\n' +
       '• À l’ouverture, le logo pulse au centre, puis le site apparaît.\n\n' +

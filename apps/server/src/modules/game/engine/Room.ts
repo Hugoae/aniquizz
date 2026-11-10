@@ -6,7 +6,13 @@ import type {
   UserRole,
   WatchedListProvider,
 } from '@aniquizz/shared';
-import { isTimeAttackRace, toClientRoomSettings } from '@aniquizz/shared';
+import {
+  evolvingOccupancyBlock,
+  isTimeAttackRace,
+  seatCapForSettings,
+  timeAttackLaunchBlock,
+  toClientRoomSettings,
+} from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
 import type { TypedServer } from '../../../core/socketTypes';
@@ -157,7 +163,7 @@ export class Room {
    * profile is available.
    */
   addBot(config: BotConfig): RoomPlayer | null {
-    if (this.players.size >= this.settings.maxPlayers) return null;
+    if (this.players.size >= seatCapForSettings(this.settings)) return null;
     const used = new Set(this.players.keys());
     const profile = BOT_PROFILES.find((b) => !used.has(b.id));
     if (!profile) return null;
@@ -488,6 +494,12 @@ export class Room {
       if (unready.length > 0) {
         return { ok: false, reason: 'Tous les joueurs doivent être prêts.' };
       }
+    }
+    const chronoBlock = timeAttackLaunchBlock(this.players.size, this.settings);
+    if (chronoBlock) return { ok: false, reason: chronoBlock };
+    if (this.settings.gameType === 'evolving') {
+      const block = evolvingOccupancyBlock(this.players.size);
+      if (block) return { ok: false, reason: block };
     }
     return { ok: true };
   }

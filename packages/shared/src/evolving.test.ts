@@ -4,6 +4,7 @@ import {
   evolvingCanAdvance,
   evolvingCue,
   evolvingExcerptStart,
+  evolvingOccupancyBlock,
   evolvingPlaySeconds,
   evolvingPointsForStep,
   formatEvolvingSeconds,
@@ -19,6 +20,11 @@ describe('evolving ladder', () => {
     expect(evolvingPointsForStep(0)).toBe(6);
     expect(evolvingPointsForStep(1)).toBe(5);
     expect(evolvingPointsForStep(5)).toBe(1);
+  });
+
+  it('stays solo once a second player is in the room', () => {
+    expect(evolvingOccupancyBlock(1)).toBeNull();
+    expect(evolvingOccupancyBlock(2)).toMatch(/solo/);
   });
 
   it('formats the notch labels', () => {

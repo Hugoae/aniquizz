@@ -1,5 +1,6 @@
 import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
 import { RotateCcw } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -13,6 +14,8 @@ import {
   hasPlaylistSource,
   TIME_ATTACK_DEFAULT_BUDGET_SECONDS,
   TIME_ATTACK_RACE_MAX_PLAYERS,
+  evolvingOccupancyBlock,
+  timeAttackRaceOccupancyBlock,
   isAdmin,
   timeAttackPoolSize,
 } from '@aniquizz/shared';
@@ -85,6 +88,20 @@ export function GameConfigForm<T extends GameConfig>({
   const update = (patch: Partial<RoomConfig>) => setConfig((prev) => ({ ...prev, ...patch }) as T);
 
   const handleGameTypeChange = (gameType: GameType) => {
+    if (isRoom && gameType === 'timeAttack') {
+      const block = timeAttackRaceOccupancyBlock(currentPlayersCount);
+      if (block) {
+        toast.error(block);
+        return;
+      }
+    }
+    if (isRoom && gameType === 'evolving') {
+      const block = evolvingOccupancyBlock(currentPlayersCount);
+      if (block) {
+        toast.error(block);
+        return;
+      }
+    }
     if (gameType === 'timeAttack') {
       const timeBudgetSeconds = cfg.timeBudgetSeconds ?? TIME_ATTACK_DEFAULT_BUDGET_SECONDS;
       update({
@@ -236,6 +253,13 @@ export function GameConfigForm<T extends GameConfig>({
     playlist: playlistStats,
     playlistLoading,
   });
+  const modeBlock = !isRoom
+    ? null
+    : cfg.gameType === 'timeAttack'
+      ? timeAttackRaceOccupancyBlock(currentPlayersCount)
+      : cfg.gameType === 'evolving'
+        ? evolvingOccupancyBlock(currentPlayersCount)
+        : null;
   const submitDisabled =
     noTypes ||
     missingPassword ||
@@ -243,7 +267,8 @@ export function GameConfigForm<T extends GameConfig>({
     playlistBlocked ||
     watchedPoolCheck.blocked ||
     playlistPoolCheck.blocked ||
-    (cfg.soundSelection === 'watched' && watchedOffline);
+    (cfg.soundSelection === 'watched' && watchedOffline) ||
+    Boolean(modeBlock);
 
   const submitLabel = isRoom
     ? currentPlayersCount > 0
@@ -360,6 +385,11 @@ export function GameConfigForm<T extends GameConfig>({
               {upcomingSection ? HUB_COPY.configNext : submitLabel}
             </Button>
           </div>
+          {modeBlock && (
+            <p className="text-center text-sm font-medium text-destructive" role="alert">
+              {modeBlock}
+            </p>
+          )}
           {watchedBlocked && (
             <p className="text-center text-sm font-medium text-destructive" role="alert">
               {WATCHED_SOURCE_BLOCK_MESSAGE}

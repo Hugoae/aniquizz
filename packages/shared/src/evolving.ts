@@ -42,6 +42,12 @@ export function isEvolvingSettings(
   return settings?.gameType === 'evolving';
 }
 
+/** Evolving is solo. A room with anyone else cannot enter that mode. */
+export function evolvingOccupancyBlock(playerCount: number): string | null {
+  if (playerCount <= 1) return null;
+  return "L'Évolutif se joue en solo : un salon à plusieurs ne peut pas passer dans ce mode.";
+}
+
 /** French duration for the in-match notches and the skip label. */
 export function formatEvolvingSeconds(seconds: number): string {
   const rounded = Math.round(seconds * 100) / 100;

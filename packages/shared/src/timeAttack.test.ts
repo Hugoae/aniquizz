@@ -26,6 +26,9 @@ import {
   normalizeTimeAttackStreakBonusSeconds,
   normalizeTimeAttackStreakLength,
   formatTimeAttackClock,
+  seatCapForSettings,
+  timeAttackLaunchBlock,
+  timeAttackRaceOccupancyBlock,
 } from './timeAttack';
 
 describe('normalizeTimeBudgetSeconds', () => {
@@ -336,5 +339,35 @@ describe('formatTimeAttackClock', () => {
     expect(formatTimeAttackClock(180_000)).toBe('3:00');
     expect(formatTimeAttackClock(3_001)).toBe('0:04');
     expect(formatTimeAttackClock(0)).toBe('0:00');
+  });
+});
+
+describe('time-attack occupancy', () => {
+  it('refuses a race once more than 8 players are seated', () => {
+    expect(timeAttackRaceOccupancyBlock(8)).toBeNull();
+    expect(timeAttackRaceOccupancyBlock(16)).toMatch(/8 joueurs maximum/);
+    expect(
+      timeAttackLaunchBlock(16, { gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 16 }),
+    ).toMatch(/8 joueurs maximum/);
+  });
+
+  it('refuses a solo-shaped Chrono when several players are already in the room', () => {
+    expect(
+      timeAttackLaunchBlock(4, { gameType: 'timeAttack', mode: 'solo', maxPlayers: 1 }),
+    ).toMatch(/en course/);
+    expect(
+      timeAttackLaunchBlock(1, { gameType: 'timeAttack', mode: 'solo', maxPlayers: 1 }),
+    ).toBeNull();
+  });
+
+  it('caps seats for a race and for Evolving', () => {
+    expect(
+      seatCapForSettings({ gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 16 }),
+    ).toBe(8);
+    expect(seatCapForSettings({ gameType: 'timeAttack', mode: 'solo', maxPlayers: 1 })).toBe(1);
+    expect(seatCapForSettings({ gameType: 'evolving', mode: 'solo', maxPlayers: 8 })).toBe(1);
+    expect(seatCapForSettings({ gameType: 'standard', mode: 'multiplayer', maxPlayers: 16 })).toBe(
+      16,
+    );
   });
 });

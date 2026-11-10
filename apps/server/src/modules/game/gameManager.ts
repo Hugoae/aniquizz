@@ -7,6 +7,7 @@ import type {
   WatchedListProvider,
 } from '@aniquizz/shared';
 import { BOT_PROFILES } from '@aniquizz/database';
+import { seatCapForSettings } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import type { TypedServer } from '../../core/socketTypes';
 import { LOBBY_LIST_ROOM } from '../lobby/lobbyRooms';
@@ -238,7 +239,7 @@ export class GameManager {
 
   getRoomList(): RoomListItem[] {
     return [...this.rooms.values()]
-      .filter((room) => room.settings.maxPlayers > 1)
+      .filter((room) => seatCapForSettings(room.settings) > 1)
       .map((room) => ({
         id: room.id,
         name: room.settings.name,
@@ -246,7 +247,7 @@ export class GameManager {
         hostAvatar: room.settings.hostAvatar ?? 'player1',
         mode: room.settings.gameType,
         players: room.players.size,
-        maxPlayers: room.settings.maxPlayers,
+        maxPlayers: seatCapForSettings(room.settings),
         isPrivate: room.settings.isPrivate,
         status: room.status,
         settings: toRoomListSettings(room.settings),

@@ -13,25 +13,32 @@ export interface SoloMedalRailModel {
 }
 
 /**
- * Solo medal ladder under the player card. Each tier shows the score that
- * unlocks it. The icon colors in once the current score reaches that bar.
+ * Solo medal ladder under the player card. Only the next locked tier shows its
+ * threshold. Later tiers stay a question mark until the one before them is earned.
  */
 export function SoloMedalRail({ rail }: { rail: SoloMedalRailModel }) {
+  const nextIndex = MEDAL_ORDER.findIndex((tier) => rail.current < rail.targets[tier]);
+
   return (
     <div
       className="mt-3 flex w-full max-w-[850px] items-start justify-center gap-4 sm:gap-6"
       aria-label={GAME_COPY.soloMedals.rail}
     >
-      {MEDAL_ORDER.map((tier) => {
+      {MEDAL_ORDER.map((tier, index) => {
         const meta = getMedalMeta(tier);
         const target = rail.targets[tier];
         const name = meta?.label ?? tier;
         const earned = rail.current >= target;
+        const revealed = nextIndex === -1 || index <= nextIndex;
         const at =
           rail.unit === 'found'
             ? GAME_COPY.soloMedals.atFound(target, name)
             : GAME_COPY.soloMedals.atPoints(target, name);
-        const label = earned ? `${GAME_COPY.soloMedals.earned(name)}, ${at}` : at;
+        const label = !revealed
+          ? GAME_COPY.soloMedals.hidden(name)
+          : earned
+            ? `${GAME_COPY.soloMedals.earned(name)}, ${at}`
+            : at;
         return (
           <span
             key={tier}
@@ -50,7 +57,7 @@ export function SoloMedalRail({ rail }: { rail: SoloMedalRailModel }) {
                 earned ? meta?.textClass : 'text-muted-foreground',
               )}
             >
-              {target}
+              {revealed ? target : '?'}
             </span>
           </span>
         );

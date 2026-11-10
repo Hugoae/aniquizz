@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Eye, Pause, Play, Repeat, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
@@ -324,7 +325,7 @@ export const VideoStage = memo(function VideoStage({
       )}
 
       <div className="absolute right-4 top-4 z-50 flex items-center gap-2 opacity-60 transition-opacity duration-300 focus-within:opacity-100 group-hover:opacity-100">
-        <div className="flex items-center rounded-lg border border-border/60 bg-background/95 p-1">
+        <div className="group/vol flex items-center rounded-lg border border-border/60 bg-background/95 p-1">
           <Button
             variant="ghost"
             size="icon"
@@ -338,9 +339,12 @@ export const VideoStage = memo(function VideoStage({
             value={[volume]}
             onValueChange={([v]) => onVolumeChange(v)}
             max={100}
-            aria-label="Volume"
-            className="mr-3 w-20"
+            aria-label={`Volume, ${SETTINGS_COPY.volumeValue(volume)}`}
+            className="w-20"
           />
+          <span className="max-w-0 overflow-hidden whitespace-nowrap text-right font-mono text-[11px] font-semibold tabular-nums text-muted-foreground opacity-0 transition-all duration-200 group-hover/vol:ml-2 group-hover/vol:mr-2 group-hover/vol:max-w-14 group-hover/vol:opacity-100 group-focus-within/vol:ml-2 group-focus-within/vol:mr-2 group-focus-within/vol:max-w-14 group-focus-within/vol:opacity-100">
+            {SETTINGS_COPY.volumeValue(volume)}
+          </span>
         </div>
       </div>
 

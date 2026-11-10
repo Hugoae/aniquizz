@@ -89,6 +89,7 @@ export const GAME_COPY = {
       target === 1 ? `${label} à 1 titre` : `${label} à ${target} titres`,
     atPoints: (target: number, label: string) =>
       target === 1 ? `${label} à 1 point` : `${label} à ${target} points`,
+    hidden: (label: string) => `${label}, seuil masqué`,
     earned: (label: string) => `${label} débloquée`,
   },
   race: {

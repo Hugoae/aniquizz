@@ -8,7 +8,7 @@ export const latestNewsPreview: NewsPreviewItem[] = [
     id: 11,
     title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',
     description:
-      'Nouveau mode Évolutif en solo, médailles sous la carte, historique retravaillé, et un accueil plus vivant.',
+      'Nouveau mode Évolutif en solo, médailles sous la carte, historique repris, et des repères plus clairs en partie comme à l’accueil.',
     date: '2026-11-10T21:00:00Z',
     type: 'update',
   },

@@ -32,7 +32,7 @@ import { parseGameNavState, gamePath } from '@/features/game/gameNavState';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
 import { suppressFloatingSettings } from '@/features/settings/lib/openSettings';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
-import { sourceChipValue } from '@/features/hub/components/roomSettings';
+import { getDifficultyBadge, sourceChipValue } from '@/features/hub/components/roomSettings';
 
 export type InputMode = 'typing' | 'carre' | 'duo';
 export type GameMode = 'solo' | 'multiplayer';
@@ -352,24 +352,29 @@ export function useGamePage() {
   const { playlists } = usePublishedPlaylists(settings.soundSelection === 'playlist');
   const playlistName = playlistSourceDisplayName(playlists, settings);
 
-  const configBadges = useMemo(
-    () => ({
+  const configBadges = useMemo(() => {
+    const difficulty = getDifficultyBadge(
+      Array.isArray(settings.difficulty) ? settings.difficulty : [],
+    );
+    return {
       sourceLabel: sourceChipValue(settings.soundSelection, playlistName),
-      difficultyLabel:
-        Array.isArray(settings.difficulty) && settings.difficulty.length === 1
-          ? settings.difficulty[0]
-          : GAME_COPY.config.varied,
+      difficultyLabel: difficulty.label,
+      difficultyClassName: difficulty.className,
+      soundTypes: settings.soundTypes,
       precisionLabel: getPrecisionChipLabel(settings.precision),
       modeLabel: GAME_TYPE_LABELS[activeSettings.gameType ?? 'standard'],
-    }),
-    [
-      settings.soundSelection,
-      settings.difficulty,
-      settings.precision,
-      playlistName,
-      activeSettings.gameType,
-    ],
-  );
+      gameType: activeSettings.gameType ?? 'standard',
+      speedBonusEnabled: speedBonusOn,
+    };
+  }, [
+    settings.soundSelection,
+    settings.difficulty,
+    settings.soundTypes,
+    settings.precision,
+    playlistName,
+    activeSettings.gameType,
+    speedBonusOn,
+  ]);
 
   const gameOverSettings = {
     ...settings,

@@ -31,6 +31,59 @@ describe('Room.canStartMatch', () => {
 
     expect(room.canStartMatch('host').ok).toBe(true);
   });
+
+  it('blocks a Chrono start once more than 8 players are seated', () => {
+    const { io } = createMockIo();
+    const room = new Room(
+      'room-1',
+      io,
+      'host',
+      makeSettings({ gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 16 }),
+    );
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+    for (let i = 1; i <= 8; i++) {
+      room.addOrReconnect(`guest-${i}`, `Guest ${i}`, 'guest', `s-${i}`);
+      room.toggleReady(`guest-${i}`);
+    }
+
+    const check = room.canStartMatch('host');
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/8 joueurs maximum/);
+  });
+
+  it('blocks an Evolving start when the room is not solo', () => {
+    const { io } = createMockIo();
+    const room = new Room(
+      'room-1',
+      io,
+      'host',
+      makeSettings({ gameType: 'evolving', mode: 'multiplayer', maxPlayers: 4 }),
+    );
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+    room.addOrReconnect('guest', 'Guest', 'guest', 's-guest');
+    room.toggleReady('guest');
+
+    const check = room.canStartMatch('host');
+    expect(check.ok).toBe(false);
+    expect(check.reason).toMatch(/solo/);
+  });
+
+  it('stops seating bots past the Chrono cap', () => {
+    const { io } = createMockIo();
+    const room = new Room(
+      'room-1',
+      io,
+      'host',
+      makeSettings({ gameType: 'timeAttack', mode: 'multiplayer', maxPlayers: 16 }),
+    );
+    room.addOrReconnect('host', 'Host', 'host', 's-host', { asHost: true });
+    const bot = { accuracy: 0, minDelayMs: 60_000, maxDelayMs: 60_000 };
+    while (room.addBot(bot)) {
+      // fill until the race cap
+    }
+    expect(room.players.size).toBe(8);
+    expect(room.addBot(bot)).toBeNull();
+  });
 });
 
 describe('Room.playerReturnToLobby', () => {
