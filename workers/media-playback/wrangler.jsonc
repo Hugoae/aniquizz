@@ -18,4 +18,7 @@
   "vars": {
     "CORS_ORIGIN": "https://aniquizz.com,https://www.aniquizz.com,http://localhost:8080,http://localhost:8083",
   },
+  "secrets": {
+    "required": ["MEDIA_PLAYBACK_SECRET"],
+  },
 }
