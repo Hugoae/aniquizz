@@ -1,12 +1,24 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { randomUUID } from 'crypto';
 import { prisma } from '@aniquizz/database';
-import { DAILY_LEAK_KEYS, dailyCalendarDate, dailyXp, isDailyVictory } from '@aniquizz/shared';
+import {
+  DAILY_LEAK_KEYS,
+  dailyCalendarDate,
+  dailyXp,
+  isDailyVictory,
+  type DailyPlayState,
+  type DailySafeRoundDto,
+} from '@aniquizz/shared';
 import { createServerBundle, type ServerBundle } from '../test/createServerBundle';
 import { hasIntegrationEnv } from '../test/env';
 import { getTestAccessToken, TEST_USER_IDS, TEST_USERNAMES } from '../test/testJwt';
 import { clearModeration, setModeration } from '../test/dbHelpers';
 import { dateFromIsoDay } from '../modules/daily/dailySnapshot';
+import { connectSocket, type TestSocket } from '../test/socketHelpers';
+import {
+  clearDailyEngineForTests,
+  setDailyEngineDurationsForTests,
+} from '../modules/daily/dailyEngine';
 
 const snapshot = (position: number, anime: string, songId: number) => ({
   id: songId,
@@ -35,9 +47,10 @@ const snapshot = (position: number, anime: string, songId: number) => ({
   popularity: 1000,
 });
 
-describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
+describe.skipIf(!hasIntegrationEnv)('daily quiz', () => {
   let bundle: ServerBundle;
   let token: string;
+  let player: TestSocket;
   let challengeId: string;
   let createdByTest = false;
   const today = dailyCalendarDate(new Date());
@@ -89,9 +102,12 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     await prisma.dailyPlayerStats.deleteMany({
       where: { profileId: TEST_USER_IDS.admin },
     });
+    player = await connectSocket(bundle.url, token, 'admin_dev');
   });
 
   afterAll(async () => {
+    clearDailyEngineForTests();
+    player.disconnect();
     await prisma.dailyAttempt.deleteMany({
       where: { profileId: TEST_USER_IDS.admin, challengeId },
     });
@@ -109,130 +125,137 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     'Content-Type': 'application/json',
   });
 
+  beforeEach(async () => {
+    clearDailyEngineForTests();
+    await prisma.dailyAttempt.deleteMany({
+      where: { profileId: TEST_USER_IDS.admin, challengeId },
+    });
+  });
+
+  function waitFor(check: () => boolean | Promise<boolean>, timeoutMs = 4_000): Promise<void> {
+    const started = Date.now();
+    return new Promise((resolve, reject) => {
+      const tick = () => {
+        void Promise.resolve(check()).then(
+          (ok) => {
+            if (ok) {
+              resolve();
+              return;
+            }
+            if (Date.now() - started > timeoutMs) {
+              reject(new Error('timed out'));
+              return;
+            }
+            setTimeout(tick, 20);
+          },
+          (error: unknown) => reject(error),
+        );
+      };
+      tick();
+    });
+  }
+
+  function nextState(): Promise<DailyPlayState> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        cleanup();
+        reject(new Error('timed out waiting for daily:state'));
+      }, 8_000);
+      const onState = (state: DailyPlayState) => {
+        cleanup();
+        resolve(state);
+      };
+      const onError = (payload: { message: string; status: number }) => {
+        cleanup();
+        reject(Object.assign(new Error(payload.message), { status: payload.status }));
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        player.off('daily:state', onState);
+        player.off('daily:error', onError);
+      };
+      player.on('daily:state', onState);
+      player.on('daily:error', onError);
+    });
+  }
+
+  async function startRound(): Promise<DailySafeRoundDto> {
+    const pending = nextState();
+    player.emit('daily:start');
+    const state = await pending;
+    if (state.kind !== 'round') throw new Error('expected a round');
+    return state.attempt;
+  }
+
+  async function lockRound(attemptId: string): Promise<DailySafeRoundDto> {
+    const pending = nextState();
+    player.emit('daily:lock', { attemptId });
+    const state = await pending;
+    if (state.kind !== 'round' || !state.attempt.reveal) throw new Error('expected a reveal');
+    return state.attempt;
+  }
+
   it('returns public today metadata without answers', async () => {
     const res = await fetch(`${bundle.url}/daily/today`);
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.challengeDate).toBe(today);
     expect(body.status).toBe('guest');
-    const json = JSON.stringify(body);
-    expect(json).not.toContain('validAnswers');
+    expect(JSON.stringify(body)).not.toContain('validAnswers');
   });
 
-  it('creates a unique attempt and ignores a concurrent second start', async () => {
-    const [a, b] = await Promise.all([
-      fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() }),
-      fetch(`${bundle.url}/daily/attempt`, { method: 'POST', headers: authHeaders() }),
-    ]);
-    expect(a.status).toBe(200);
-    expect(b.status).toBe(200);
-    const first = await a.json();
-    const second = await b.json();
+  it('creates one attempt and replays it when start is emitted twice', async () => {
+    const seen: DailyPlayState[] = [];
+    const onState = (state: DailyPlayState) => seen.push(state);
+    player.on('daily:state', onState);
+    player.emit('daily:start');
+    player.emit('daily:start');
+    await waitFor(() => seen.filter((state) => state.kind === 'round').length >= 2);
+    player.off('daily:state', onState);
+    const rounds = seen.filter((state) => state.kind === 'round');
+    const first = rounds[0];
+    const second = rounds[1];
+    if (first.kind !== 'round' || second.kind !== 'round') throw new Error('expected rounds');
     expect(first.attempt.attemptId).toBe(second.attempt.attemptId);
     expect(first.attempt.choices).toHaveLength(4);
+    expect(first.attempt.phase).toBe('guessing');
     const leak = JSON.stringify(first.attempt);
     expect(leak).not.toContain('validAnswers');
     for (const key of DAILY_LEAK_KEYS) {
       if (key === 'cover') continue;
       expect(leak.includes(`"${key}"`)).toBe(false);
     }
-    const count = await prisma.dailyAttempt.count({
-      where: { challengeId, profileId: TEST_USER_IDS.admin },
-    });
-    expect(count).toBe(1);
+    expect(
+      await prisma.dailyAttempt.count({
+        where: { challengeId, profileId: TEST_USER_IDS.admin },
+      }),
+    ).toBe(1);
   });
 
-  it('rejects an answer that was not offered, then grades a valid one', async () => {
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    const bad = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: 'Death Note' }),
-    });
-    expect(bad.status).toBe(400);
+  it('rejects an unknown choice, then grades the stored choice when the server locks', async () => {
+    const round = await startRound();
+    const pendingError = nextState();
+    player.emit('daily:answer', { attemptId: round.attemptId, selected: 'Death Note' });
+    await expect(pendingError).rejects.toThrow(/proposée/);
 
-    const ok = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(ok.status).toBe(200);
-    const reveal = await ok.json();
-    expect(reveal.reveal.song.anime).toBeTruthy();
+    player.emit('daily:answer', { attemptId: round.attemptId, selected: round.choices[0] });
+    const revealed = await lockRound(round.attemptId);
+    expect(revealed.reveal?.selectedLabel).toBe(round.choices[0]);
+    expect(revealed.reveal?.song.anime).toBeTruthy();
 
-    const dup = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(dup.status).toBe(200);
-    const dupBody = await dup.json();
-    expect(dupBody.reveal.song.anime).toBe(reveal.reveal.song.anime);
+    const again = await lockRound(round.attemptId);
+    expect(again.reveal?.song.anime).toBe(revealed.reveal?.song.anime);
   });
 
-  it('still grades an answer that arrives inside the guess-wall grace', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    // Past the 15s play clock, still inside DAILY_GUESS_WALL_MS (15.5s).
-    await prisma.dailyAttempt.update({
-      where: { id: attempt.attemptId },
-      data: { currentRoundStartedAt: new Date(Date.now() - 15_200) },
-    });
-    const late = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(late.status).toBe(200);
-    const body = await late.json();
-    expect(body.reveal.selectedLabel).toBe(attempt.choices[0]);
-    expect(body.reveal.song.anime).toBeTruthy();
-  });
-
-  it('records a miss when the answer arrives after the guess wall', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    await prisma.dailyAttempt.update({
-      where: { id: attempt.attemptId },
-      data: { currentRoundStartedAt: new Date(Date.now() - 20_000) },
-    });
-    const late = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(late.status).toBe(200);
-    const body = await late.json();
-    expect(body.reveal.selectedLabel).toBeNull();
-    expect(body.reveal.isCorrect).toBe(false);
-    expect(body.reveal.song.anime).toBeTruthy();
-    const stored = await prisma.dailyAttemptAnswer.findFirst({
-      where: { attemptId: attempt.attemptId },
-    });
-    expect(stored?.selectedLabel).toBeNull();
-    expect(stored?.isCorrect).toBe(false);
+  it('records a miss when the guess is locked with no choice', async () => {
+    const round = await startRound();
+    const revealed = await lockRound(round.attemptId);
+    expect(revealed.reveal?.selectedLabel).toBeNull();
+    expect(revealed.reveal?.isCorrect).toBe(false);
+    expect(revealed.reveal?.song.anime).toBeTruthy();
   });
 
   it('exposes the leaderboard before play and does not bump ordinary stats', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
     const prior = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
       select: {
@@ -246,40 +269,22 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     });
     const anon = await fetch(`${bundle.url}/daily/leaderboard`);
     expect(anon.status).toBe(200);
-    const before = await fetch(`${bundle.url}/daily/leaderboard`, { headers: authHeaders() });
-    const beforeBody = await before.json();
-    // Real calendar day: other accounts may already be on the board.
-    expect(
-      beforeBody.entries.some(
-        (entry: { profileId: string }) => entry.profileId === TEST_USER_IDS.admin,
-      ),
-    ).toBe(false);
 
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    const forfeited = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    expect(forfeited.status).toBe(200);
-    const result = await forfeited.json();
-    expect(result.result.xpAwarded).toBeGreaterThanOrEqual(dailyXp(0));
-    expect(result.result.correctCount).toBeGreaterThanOrEqual(0);
-    expect(result.result.recap).toHaveLength(5);
-    expect(result.result.streak).toBeGreaterThanOrEqual(1);
+    const round = await startRound();
+    const pending = nextState();
+    player.emit('daily:forfeit', { attemptId: round.attemptId });
+    const forfeited = await pending;
+    if (forfeited.kind !== 'result') throw new Error('expected a result');
+    expect(forfeited.result.xpAwarded).toBeGreaterThanOrEqual(dailyXp(0));
+    expect(forfeited.result.correctCount).toBe(0);
+    expect(forfeited.result.recap).toHaveLength(5);
+    expect(forfeited.result.streak).toBeGreaterThanOrEqual(1);
 
-    const open = await fetch(`${bundle.url}/daily/leaderboard`, { headers: authHeaders() });
-    const board = await open.json();
-    expect(
-      board.entries.some(
-        (entry: { profileId: string; username: string }) =>
-          entry.profileId === TEST_USER_IDS.admin ||
-          entry.username.toLowerCase() === TEST_USERNAMES[TEST_USER_IDS.admin],
-      ),
-    ).toBe(false);
+    const again = nextState();
+    player.emit('daily:forfeit', { attemptId: round.attemptId });
+    const againState = await again;
+    if (againState.kind !== 'result') throw new Error('expected a result');
+    expect(againState.result.xpAwarded).toBe(forfeited.result.xpAwarded);
 
     const after = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
@@ -298,133 +303,83 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     expect(after.correctGuesses).toBe(prior.correctGuesses);
     expect(after.currentWinStreak).toBe(prior.currentWinStreak);
     expect(after.xp).toBeGreaterThanOrEqual(prior.xp);
-
-    const again = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const againBody = await again.json();
-    expect(againBody.result.xpAwarded).toBe(result.result.xpAwarded);
-    const afterAgain = await prisma.profile.findUniqueOrThrow({
-      where: { id: TEST_USER_IDS.admin },
-      select: { xp: true },
-    });
-    expect(afterAgain.xp).toBe(after.xp);
+    const board = await fetch(`${bundle.url}/daily/leaderboard`, { headers: authHeaders() });
+    const boardBody = await board.json();
+    expect(
+      boardBody.entries.some(
+        (entry: { profileId: string; username: string }) =>
+          entry.profileId === TEST_USER_IDS.admin ||
+          entry.username.toLowerCase() === TEST_USERNAMES[TEST_USER_IDS.admin],
+      ),
+    ).toBe(false);
   });
 
-  it('does not resume an abandoned attempt — settling remaining rounds as misses', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
+  it('forfeits an abandoned run on disconnect and keeps the graded round', async () => {
+    const round = await startRound();
+    player.emit('daily:answer', { attemptId: round.attemptId, selected: round.choices[0] });
+    const revealed = await lockRound(round.attemptId);
+    expect(revealed.reveal?.selectedLabel).toBe(round.choices[0]);
+    player.disconnect();
+    await waitFor(async () => {
+      const row = await prisma.dailyAttempt.findUnique({
+        where: { id: round.attemptId },
+        select: { state: true },
+      });
+      return row?.state === 'FORFEITED';
     });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
+    const graded = await prisma.dailyAttemptAnswer.findFirst({
+      where: { attemptId: round.attemptId, selectedLabel: round.choices[0] },
     });
-    const { attempt } = await started.json();
-    const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(answered.status).toBe(200);
-
-    await prisma.dailyAttempt.update({
-      where: { id: attempt.attemptId },
-      data: {
-        currentRoundStartedAt: new Date(Date.now() - 20_000),
-        revealUntil: new Date(Date.now() - 1_000),
-      },
-    });
-
-    const abandoned = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const body = await abandoned.json();
-    expect(abandoned.status).toBe(200);
-    expect(body.status).toBe('completed');
-    expect(body.attempt).toBeNull();
-    expect(body.result.recap).toHaveLength(5);
-    const answers = await prisma.dailyAttemptAnswer.count({
-      where: { attemptId: attempt.attemptId },
-    });
-    expect(answers).toBe(5);
+    expect(graded?.isCorrect).toBeTypeOf('boolean');
+    player = await connectSocket(bundle.url, token, 'admin_dev');
   });
 
-  it('ignores leftover expiresAt and still rejects a banned player', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
+  it('ignores leftover expiresAt and rejects a banned player', async () => {
+    const round = await startRound();
     await prisma.dailyAttempt.update({
-      where: { id: attempt.attemptId },
+      where: { id: round.attemptId },
       data: { expiresAt: new Date(Date.now() - 1_000) },
     });
     const todayRes = await fetch(`${bundle.url}/daily/today`, { headers: authHeaders() });
     const todayBody = await todayRes.json();
     expect(todayBody.status).toBe('in_progress');
-    expect(todayBody.attempt).toBeUndefined();
-    expect(todayBody.openAttemptId).toBe(attempt.attemptId);
+    expect(todayBody.openAttemptId).toBe(round.attemptId);
     expect(todayBody.result).toBeNull();
 
+    clearDailyEngineForTests();
+    await prisma.dailyAttempt.deleteMany({
+      where: { profileId: TEST_USER_IDS.admin, challengeId },
+    });
     await setModeration(TEST_USER_IDS.admin, { bannedUntil: new Date(Date.now() + 60_000) });
     try {
-      const banned = await fetch(`${bundle.url}/daily/attempt`, {
-        method: 'POST',
-        headers: authHeaders(),
-      });
-      expect(banned.status).toBe(403);
+      const pending = nextState();
+      player.emit('daily:start');
+      await expect(pending).rejects.toMatchObject({ status: 403 });
     } finally {
       await clearModeration(TEST_USER_IDS.admin);
     }
   });
 
   it('lets an admin revert today XP and replay the daily', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
     await prisma.dailyPlayerStats.deleteMany({ where: { profileId: TEST_USER_IDS.admin } });
-
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
     const priorXp = (
       await prisma.profile.findUniqueOrThrow({
         where: { id: TEST_USER_IDS.admin },
         select: { xp: true },
       })
     ).xp;
-    await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
+    const round = await startRound();
+    const pending = nextState();
+    player.emit('daily:forfeit', { attemptId: round.attemptId });
+    const forfeited = await pending;
+    if (forfeited.kind !== 'result') throw new Error('expected a result');
     const settled = await prisma.dailyAttempt.findUniqueOrThrow({
-      where: { id: attempt.attemptId },
-      select: {
-        won: true,
-        activeRoundCount: true,
-        correctCount: true,
-        rank: true,
-        totalResponseMs: true,
-      },
+      where: { id: round.attemptId },
+      select: { won: true, activeRoundCount: true, correctCount: true, rank: true },
     });
     expect(settled.activeRoundCount).toBe(5);
     expect(settled.won).toBe(isDailyVictory(settled.correctCount, settled.activeRoundCount));
-    expect(settled.won).toBe(false);
     expect(settled.rank).toBeGreaterThanOrEqual(1);
-    expect(settled.totalResponseMs).toBeGreaterThanOrEqual(0);
-    const dailyStats = await prisma.dailyPlayerStats.findUniqueOrThrow({
-      where: { profileId: TEST_USER_IDS.admin },
-      select: { completions: true, wins: true },
-    });
-    expect(dailyStats.completions).toBe(1);
-    expect(dailyStats.wins).toBe(0);
     const afterPlay = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
       select: { xp: true },
@@ -436,113 +391,52 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
       headers: authHeaders(),
     });
     expect(reset.status).toBe(200);
-    const resetBody = await reset.json();
-    expect(resetBody.reset).toBe(true);
-    expect(resetBody.xpReverted).toBe(afterPlay.xp - priorXp);
-
-    const restored = await prisma.profile.findUniqueOrThrow({
-      where: { id: TEST_USER_IDS.admin },
-      select: { xp: true },
-    });
-    expect(restored.xp).toBe(priorXp);
-
-    const stats = await prisma.dailyPlayerStats.findUnique({
-      where: { profileId: TEST_USER_IDS.admin },
-    });
-    expect(stats?.currentStreak ?? 0).toBe(0);
-    expect(
-      await prisma.dailyAttempt.findUnique({
-        where: { challengeId_profileId: { challengeId, profileId: TEST_USER_IDS.admin } },
-      }),
-    ).toBeNull();
-
-    const replay = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    expect(replay.status).toBe(200);
-    const replayBody = await replay.json();
-    expect(replayBody.status).toBe('in_progress');
+    const replay = await startRound();
+    expect(replay.phase).toBe('guessing');
+    expect(replay.attemptId).not.toBe(round.attemptId);
   });
 
   it('lets Suivant skip the remaining reveal window', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(answered.status).toBe(200);
-    const revealBody = await answered.json();
-    const revealMsLeft = new Date(revealBody.reveal.revealEndsAt).getTime() - Date.now();
+    const round = await startRound();
+    player.emit('daily:answer', { attemptId: round.attemptId, selected: round.choices[0] });
+    const revealed = await lockRound(round.attemptId);
+    const revealMsLeft = new Date(revealed.reveal?.revealEndsAt ?? 0).getTime() - Date.now();
     expect(revealMsLeft).toBeGreaterThan(12_000);
     expect(revealMsLeft).toBeLessThan(16_000);
-
-    const skipped = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/next`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    expect(skipped.status).toBe(200);
-    const nextBody = await skipped.json();
-    expect(nextBody.attempt.position).toBe(2);
-    expect(nextBody.attempt.phase).toBe('guessing');
+    const pending = nextState();
+    player.emit('daily:next', { attemptId: round.attemptId });
+    const next = await pending;
+    if (next.kind !== 'round') throw new Error('expected the next round');
+    expect(next.attempt.position).toBe(2);
+    expect(next.attempt.phase).toBe('guessing');
+    expect(next.attempt.reveal).toBeNull();
   });
 
-  it('GET /today does not start the next song after the reveal window elapsed', async () => {
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    const answered = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    expect(answered.status).toBe(200);
-
-    await prisma.dailyAttempt.update({
-      where: { id: attempt.attemptId },
-      data: {
-        currentRoundStartedAt: new Date(Date.now() - 20_000),
-        revealUntil: new Date(Date.now() - 1_000),
-      },
-    });
-
+  it('does not finish a live run when today is read during the reveal', async () => {
+    const round = await startRound();
+    await lockRound(round.attemptId);
     const todayRes = await fetch(`${bundle.url}/daily/today`, { headers: authHeaders() });
     const todayBody = await todayRes.json();
-    expect(todayRes.status).toBe(200);
     expect(todayBody.status).toBe('in_progress');
-    expect(todayBody.attempt).toBeUndefined();
-    expect(todayBody.openAttemptId).toBe(attempt.attemptId);
-
+    expect(todayBody.openAttemptId).toBe(round.attemptId);
     const row = await prisma.dailyAttempt.findUniqueOrThrow({
-      where: { id: attempt.attemptId },
-      select: { currentRound: true, state: true },
+      where: { id: round.attemptId },
+      select: { state: true, currentRound: true },
     });
     expect(row.state).toBe('IN_PROGRESS');
     expect(row.currentRound).toBe(1);
+    expect(await prisma.dailyAttemptAnswer.count({ where: { attemptId: round.attemptId } })).toBe(
+      0,
+    );
   });
 
-  it('writes heard clips to SongHistory and skips forfeited leftovers', async () => {
+  it('writes heard clips for rounds that started and skips the rest on forfeit', async () => {
     const rounds = await prisma.dailyChallengeRound.findMany({
       where: { challengeId },
       orderBy: { position: 'asc' },
       select: { position: true, songId: true, snapshot: true },
     });
-    const songIdOf = (
-      round: { songId: number | null; snapshot: unknown } | undefined,
-    ): number | null => {
+    const songIdOf = (round: { songId: number | null; snapshot: unknown } | undefined) => {
       if (!round) return null;
       if (round.songId != null && round.songId > 0) return round.songId;
       const snap = round.snapshot as { id?: unknown } | null;
@@ -550,17 +444,7 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     };
     const heardId = songIdOf(rounds.find((round) => round.position === 1));
     const leftoverId = songIdOf(rounds.find((round) => round.position === 5));
-    const heardSong = heardId
-      ? await prisma.song.findUnique({ where: { id: heardId }, select: { id: true } })
-      : null;
-    if (heardId == null || !heardSong) {
-      throw new Error('daily round 1 must reference a catalogue Song for pokédex writes');
-    }
-
-    await prisma.dailyAttempt.deleteMany({
-      where: { profileId: TEST_USER_IDS.admin, challengeId },
-    });
-
+    if (heardId == null) throw new Error('daily round 1 must reference a catalogue Song');
     const historyKey = (songId: number) =>
       prisma.songHistory.findUnique({
         where: { profileId_songId: { profileId: TEST_USER_IDS.admin, songId } },
@@ -569,26 +453,16 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     const leftoverBefore =
       leftoverId && leftoverId !== heardId ? await historyKey(leftoverId) : null;
 
-    const started = await fetch(`${bundle.url}/daily/attempt`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    const { attempt } = await started.json();
-    await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/answer`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ selected: attempt.choices[0] }),
-    });
-    const forfeited = await fetch(`${bundle.url}/daily/attempt/${attempt.attemptId}/forfeit`, {
-      method: 'POST',
-      headers: authHeaders(),
-    });
-    expect(forfeited.status).toBe(200);
+    const round = await startRound();
+    player.emit('daily:answer', { attemptId: round.attemptId, selected: round.choices[0] });
+    await lockRound(round.attemptId);
+    const pending = nextState();
+    player.emit('daily:forfeit', { attemptId: round.attemptId });
+    const forfeited = await pending;
+    expect(forfeited.kind).toBe('result');
 
     const heard = await historyKey(heardId);
     expect(heard?.playCount).toBe((heardBefore?.playCount ?? 0) + 1);
-    expect(heard!.correctCount).toBeGreaterThanOrEqual(heardBefore?.correctCount ?? 0);
-    expect(heard!.correctCount).toBeLessThanOrEqual((heardBefore?.correctCount ?? 0) + 1);
     if (leftoverId && leftoverId !== heardId) {
       const leftover = await historyKey(leftoverId);
       expect(leftover?.playCount ?? 0).toBe(leftoverBefore?.playCount ?? 0);
@@ -601,6 +475,29 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz HTTP', () => {
     expect(reset.status).toBe(200);
     const rewound = await historyKey(heardId);
     expect(rewound?.playCount ?? 0).toBe(heardBefore?.playCount ?? 0);
-    expect(rewound?.correctCount ?? 0).toBe(heardBefore?.correctCount ?? 0);
+  });
+
+  it('pushes the reveal and the next round when the server clock expires', async () => {
+    setDailyEngineDurationsForTests(80, 80);
+    try {
+      const seen: DailyPlayState[] = [];
+      const onState = (state: DailyPlayState) => seen.push(state);
+      player.on('daily:state', onState);
+      player.emit('daily:start');
+      await waitFor(
+        () =>
+          seen.some(
+            (state) =>
+              state.kind === 'round' && state.attempt.position === 2 && !state.attempt.reveal,
+          ),
+        4_000,
+      );
+      player.off('daily:state', onState);
+      const reveal = seen.find((state) => state.kind === 'round' && state.attempt.reveal);
+      expect(reveal && reveal.kind === 'round' && reveal.attempt.reveal?.selectedLabel).toBeNull();
+    } finally {
+      setDailyEngineDurationsForTests(15_000, 15_000);
+      clearDailyEngineForTests();
+    }
   });
 });

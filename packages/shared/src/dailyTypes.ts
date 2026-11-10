@@ -105,6 +105,23 @@ export interface DailySafeRoundDto {
   revealEndsAt: string | null;
   phase: 'guessing' | 'reveal';
   reveal: DailyRevealDto | null;
+  /**
+   * Next excerpt, already a playback URL. Present during the guess and the
+   * reveal so the client can buffer it the way a match preloads `nextVideo`.
+   * Null on the last playable round. No title, no answer.
+   */
+  nextVideo: string | null;
+  nextVideoStartTime: number | null;
+}
+
+/** One step of the quiz-du-jour socket loop. The server pushes these. */
+export type DailyPlayState =
+  | { kind: 'round'; attempt: DailySafeRoundDto }
+  | { kind: 'result'; result: DailyResultDto };
+
+export interface DailyPlayErrorPayload {
+  message: string;
+  status: number;
 }
 
 export interface DailyTodayResponse extends DailyTodayPublic {

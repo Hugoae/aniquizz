@@ -16,6 +16,8 @@ import {
   updatePrivacyInputSchema,
   updateProfileDataInputSchema,
   updateRoomSettingsInputSchema,
+  dailyAnswerInputSchema,
+  dailyAttemptInputSchema,
 } from './socketPayloads';
 
 describe('roomIdInputSchema', () => {
@@ -375,6 +377,28 @@ describe('listLinkInputSchema', () => {
         username: 'A',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('daily play socket payloads', () => {
+  const attemptId = '6b1b3c3e-2c1a-4c3e-9f0a-1b2c3d4e5f60';
+
+  it('accepts an attempt id and strips unknown keys', () => {
+    expect(dailyAttemptInputSchema.parse({ attemptId, extra: true })).toEqual({ attemptId });
+  });
+
+  it('accepts a choice or an explicit timeout', () => {
+    expect(dailyAnswerInputSchema.parse({ attemptId, selected: 'Naruto' })).toEqual({
+      attemptId,
+      selected: 'Naruto',
+    });
+    expect(dailyAnswerInputSchema.parse({ attemptId, selected: null }).selected).toBeNull();
+  });
+
+  it('rejects a non-uuid attempt and an empty choice', () => {
+    expect(dailyAttemptInputSchema.safeParse({ attemptId: 'A3K9ZQ' }).success).toBe(false);
+    expect(dailyAnswerInputSchema.safeParse({ attemptId, selected: '   ' }).success).toBe(false);
+    expect(dailyAnswerInputSchema.safeParse({ attemptId }).success).toBe(false);
   });
 });
 

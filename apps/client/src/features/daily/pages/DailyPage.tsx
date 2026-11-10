@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { PAGE_TITLES } from '@/lib/site';
 import { dailyApi, DailyApiError, invalidateDailyToday } from '@/lib/dailyApi';
+import { dailySocket } from '../lib/dailySocket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { toast } from 'sonner';
@@ -37,7 +38,7 @@ export default function DailyPage() {
       // Refresh / reopen after leaving mid-run: settle as forfeit, never offer resume.
       if (payload.status === 'in_progress' && payload.openAttemptId) {
         try {
-          const forfeited = await dailyApi.forfeit(payload.openAttemptId);
+          const forfeited = await dailySocket.forfeit(payload.openAttemptId);
           if (playingRef.current) return;
           payload = await dailyApi.today({ refresh: true });
           const nextResult = forfeited.result ?? payload.result;
@@ -67,7 +68,7 @@ export default function DailyPage() {
   const start = async () => {
     playingRef.current = true;
     try {
-      const payload = await dailyApi.start();
+      const payload = await dailySocket.start();
       if (payload.result) {
         playingRef.current = false;
         setResult(payload.result);

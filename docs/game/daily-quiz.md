@@ -91,21 +91,23 @@ voided (today only). There is no “cancel the whole quiz” control.
 
 ## Play loop
 
-HTTP only (no Socket.io room). `GET /daily/today` is public metadata; authenticated
-calls also receive personal status. It may **complete** a run that already has every
-playable song answered. It does **not** time out the current guess, start the next
-song, or return a playable round (`openAttemptId` only — play payloads come from
-POST start/next/answer). Reopening `/daily` while `IN_PROGRESS` forfeits remaining
-rounds. Guessing payloads never include anime/title/artist
-or valid answers. Guessing mirrors solo QCM: the player may change their choice until
-the guess timer ends (or they press Révéler); only then does the server lock the
-answer and open the reveal window (`DAILY_REVEAL_MS`, same length as the guess).
-The guess wall clock includes the same soft margins as Standard matches
-(`GUESS_START_BUFFER` + `GUESS_END_GRACE`). The client commits at the visual 15s
-mark (same as Standard’s timer). A late `/answer` after the wall still records the
-choice and returns reveal — it must not 409. Leaving the play surface forfeits the
-attempt. There is no 15-minute attempt TTL: a long gap only times out the current
-guess window on a **play** request (`/answer`, `/next`), not on `GET /today`.
+The play loop uses the same authenticated socket as a match. `daily:start`,
+`daily:answer`, `daily:lock`, `daily:next`, and `daily:forfeit` are the only
+player actions. The server holds the run in memory, owns the 15s guess clock
+and the 15s reveal clock, and pushes one `daily:state` snapshot per phase.
+Choosing an option only stores the draft. The guess locks when the clock
+fires or the player presses Révéler. Suivant, or the reveal clock, opens the
+next clip. Postgres is written when the attempt is created, when a clip
+starts, and when the run closes (answers, XP, streak, rank, heard songs).
+
+`GET /daily/today` stays HTTP. It may return personal status. It does not
+time out the current guess, start the next song, or return a playable round.
+Reopening `/daily` while a run is still open forfeits it (`daily:forfeit`).
+Closing the tab or dropping the socket does the same. There is no resume.
+Guessing payloads never include anime, title, artist, or valid answers.
+
+A late choice that arrives after the server has already locked is ignored.
+The reveal the clock already pushed stands.
 
 ## Selection
 

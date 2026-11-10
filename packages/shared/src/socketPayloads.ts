@@ -170,6 +170,21 @@ export const addBotsInputSchema = z
   })
   .strip();
 
+const dailyAttemptIdSchema = z.string().uuid();
+
+export const dailyAttemptInputSchema = z
+  .object({
+    attemptId: dailyAttemptIdSchema,
+  })
+  .strip();
+
+export const dailyAnswerInputSchema = z
+  .object({
+    attemptId: dailyAttemptIdSchema,
+    selected: z.string().trim().min(1).max(120).nullable(),
+  })
+  .strip();
+
 export type RoomIdInputParsed = z.infer<typeof roomIdInputSchema>;
 export type AnswerInputParsed = z.infer<typeof answerInputSchema>;
 export type UpdateRoomSettingsInputParsed = z.infer<typeof updateRoomSettingsInputSchema>;

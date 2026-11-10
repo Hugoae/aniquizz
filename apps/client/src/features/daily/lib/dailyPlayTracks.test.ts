@@ -15,6 +15,8 @@ const baseRound = (overrides: Partial<DailySafeRoundDto> = {}): DailySafeRoundDt
   revealEndsAt: null,
   phase: 'guessing',
   reveal: null,
+  nextVideo: null,
+  nextVideoStartTime: null,
   ...overrides,
 });
 

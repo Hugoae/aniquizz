@@ -189,4 +189,6 @@ export const RATE_LIMITS = {
   profileRead: { points: 15, durationMs: 10_000 },
   /** Account deletion: strict cap to slow abuse / accidental double-submit. */
   deleteAccount: { points: 3, durationMs: 60 * 60_000 },
+  /** Quiz du jour clicks. A round is two events; this only stops a tight loop. */
+  dailyPlay: { points: 30, durationMs: 10_000 },
 } as const;

@@ -1,10 +1,4 @@
-import type {
-  DailyLeaderboardResponse,
-  DailyRevealDto,
-  DailyResultDto,
-  DailySafeRoundDto,
-  DailyTodayResponse,
-} from '@aniquizz/shared';
+import type { DailyLeaderboardResponse, DailyTodayResponse } from '@aniquizz/shared';
 import { dailyCalendarDate } from '@aniquizz/shared';
 import { supabase } from './supabase';
 import { serverApiBase } from './env';
@@ -109,45 +103,5 @@ const loadToday = (refresh = false): Promise<DailyTodayResponse> => {
 export const dailyApi = {
   peekToday: (): DailyTodayResponse | null => (cacheIsFresh(todayCache) ? todayCache : null),
   today: (opts?: { refresh?: boolean }) => loadToday(opts?.refresh === true),
-  start: () => {
-    invalidateDailyToday();
-    return request<{
-      attempt: DailySafeRoundDto | null;
-      result: DailyResultDto | null;
-      status: string;
-    }>('/daily/attempt', { method: 'POST' });
-  },
-  answer: (attemptId: string, selected: string | null) =>
-    request<{ reveal: DailyRevealDto | null; result: DailyResultDto | null; finished: boolean }>(
-      `/daily/attempt/${attemptId}/answer`,
-      { method: 'POST', body: JSON.stringify({ selected }) },
-    ),
-  next: (attemptId: string) =>
-    request<{ attempt: DailySafeRoundDto | null; result: DailyResultDto | null; status: string }>(
-      `/daily/attempt/${attemptId}/next`,
-      { method: 'POST' },
-    ),
-  forfeit: (attemptId: string) => {
-    invalidateDailyToday();
-    return request<{ result: DailyResultDto }>(`/daily/attempt/${attemptId}/forfeit`, {
-      method: 'POST',
-    });
-  },
-  /** Best-effort abandon on tab close — keepalive so the request survives unload. */
-  forfeitKeepalive: (attemptId: string) => {
-    invalidateDailyToday();
-    void supabase.auth.getSession().then(({ data }) => {
-      const token = data.session?.access_token;
-      if (!token) return;
-      void fetch(`${API_BASE}/daily/attempt/${attemptId}/forfeit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        keepalive: true,
-      });
-    });
-  },
   leaderboard: () => request<DailyLeaderboardResponse>('/daily/leaderboard'),
 };

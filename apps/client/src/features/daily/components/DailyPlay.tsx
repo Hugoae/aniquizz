@@ -69,7 +69,7 @@ export function DailyPlay({ initial, onFinished }: DailyPlayProps) {
         skipVotes={0}
         skipRequired={1}
         onVoteSkip={play.goNext}
-        onSoloSkip={() => play.commitGuess(play.submittedRef.current)}
+        onSoloSkip={play.lockGuess}
         currentSong={play.currentSong}
         videoMode="hidden"
         myWatchedIds={[]}
@@ -104,7 +104,8 @@ export function DailyPlay({ initial, onFinished }: DailyPlayProps) {
         showShortcutReminder={false}
         showPause={false}
         showRoundProgress={false}
-        answerDisabled={play.committing || Boolean(play.reveal)}
+        answerDisabled={Boolean(play.reveal)}
+        stageFeedback={play.stageFeedback}
         roundMeter={<DailyTracks tracks={play.tracks} />}
       />
 

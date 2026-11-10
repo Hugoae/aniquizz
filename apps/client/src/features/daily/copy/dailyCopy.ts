@@ -28,4 +28,6 @@ export const DAILY_COPY = {
   leaderboardEmpty: 'Personne n’a encore terminé aujourd’hui.',
   participants: 'participants',
   resetsIn: 'Réinitialisation dans',
+  socketDown: 'Connexion au serveur impossible.',
+  socketSlow: 'Le serveur met trop de temps à répondre.',
 } as const;

@@ -49,6 +49,7 @@ describe('dailyPayloads opaque playback URLs', () => {
     const dto = toSafeRound({
       attemptId: 'attempt-1',
       round: round(1, 1535),
+      rounds: [round(1, 1535), round(2, 99)],
       total: 5,
       roundStartedAt: startedAt,
       revealUntil: null,
@@ -58,6 +59,23 @@ describe('dailyPayloads opaque playback URLs', () => {
     expect(dto.videoKey).toMatch(/^https:\/\/media\.test\/v\/[0-9a-f]+$/);
     expect(dto.videoKey).not.toMatch(/OP2\.mp4/i);
     expect(dto.videoKey).not.toContain('DEATHNOTE');
+    expect(dto.nextVideo).toMatch(/^https:\/\/media\.test\/v\/[0-9a-f]+$/);
+    expect(dto.nextVideo).not.toBe(dto.videoKey);
+    expect(dto.nextVideo).not.toMatch(/OP2\.mp4/i);
+    expect(dto.nextVideoStartTime).toBe(8);
+
+    const last = toSafeRound({
+      attemptId: 'attempt-1',
+      round: round(2, 99),
+      rounds: [round(1, 1535), round(2, 99)],
+      total: 5,
+      roundStartedAt: startedAt,
+      revealUntil: null,
+      phase: 'guessing',
+      reveal: null,
+    });
+    expect(last.nextVideo).toBeNull();
+    expect(last.nextVideoStartTime).toBeNull();
 
     const song = toRevealSong(snapshot(1535, 'Death Note'));
     expect(song.videoKey).toMatch(/^https:\/\/media\.test\/v\/[0-9a-f]+$/);

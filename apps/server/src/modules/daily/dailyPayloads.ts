@@ -163,9 +163,15 @@ export const toResultDto = (input: {
   };
 };
 
+const upcomingRound = (rounds: DailyRoundRow[], afterPosition: number): DailyRoundRow | null =>
+  rounds
+    .filter((row) => !row.voided && row.position > afterPosition)
+    .sort((a, b) => a.position - b.position)[0] ?? null;
+
 export const toSafeRound = (input: {
   attemptId: string;
   round: DailyRoundRow;
+  rounds: DailyRoundRow[];
   total: number;
   roundStartedAt: Date;
   revealUntil: Date | null;
@@ -173,6 +179,8 @@ export const toSafeRound = (input: {
   reveal: DailyRevealDto | null;
 }): DailySafeRoundDto => {
   const snapshot = snapshotOf(input.round);
+  const upcoming = upcomingRound(input.rounds, input.round.position);
+  const upcomingSnapshot = upcoming ? snapshotOf(upcoming) : null;
   return {
     attemptId: input.attemptId,
     roundId: input.round.id,
@@ -186,6 +194,8 @@ export const toSafeRound = (input: {
     revealEndsAt: input.revealUntil?.toISOString() ?? null,
     phase: input.phase,
     reveal: input.reveal,
+    nextVideo: upcomingSnapshot ? toPlaybackUrl(upcomingSnapshot.videoKey) : null,
+    nextVideoStartTime: upcomingSnapshot ? upcomingSnapshot.videoStartTime : null,
   };
 };
 

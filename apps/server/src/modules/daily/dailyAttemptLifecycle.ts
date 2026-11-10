@@ -19,6 +19,7 @@ import {
   type DailyRoundRow,
 } from './dailyPayloads';
 import { recordHeardSongs } from '../catalogue/songHistoryService';
+import { noteDailyAnswer, noteDailyClock } from './dailyAttemptMemory';
 import { syncChallengeRanks } from './dailyRanks';
 
 export type AttemptRecord = Prisma.DailyAttemptGetPayload<{
@@ -201,7 +202,12 @@ const startUnanswered = async (attempt: AttemptRecord, now: Date): Promise<Attem
       revealUntil: null,
     },
   });
-  return (await loadAttempt(attempt.id, attempt.profileId)) ?? attempt;
+  noteDailyClock(attempt, {
+    currentRound: next.position,
+    currentRoundStartedAt: now,
+    revealUntil: null,
+  });
+  return attempt;
 };
 
 export const settleAttempt = async (
@@ -235,19 +241,27 @@ export const settleAttempt = async (
     // Incoming /answer still owns this round — do not write a miss and 409 the player.
     if (options?.keepOpenGuess) return attempt;
     await writeUnanswered(attempt.id, pending.id, DAILY_GUESS_MS, now);
+    noteDailyAnswer(attempt, {
+      roundId: pending.id,
+      selectedLabel: null,
+      isCorrect: false,
+      responseMs: DAILY_GUESS_MS,
+      answeredAt: now,
+    });
     if (decision.enterReveal) {
       const startedAt = attempt.currentRoundStartedAt ?? now;
+      const revealUntil = new Date(startedAt.getTime() + DAILY_GUESS_WALL_MS + DAILY_REVEAL_MS);
       await prisma.dailyAttempt.update({
         where: { id: attempt.id },
         data: {
-          revealUntil: new Date(startedAt.getTime() + DAILY_GUESS_WALL_MS + DAILY_REVEAL_MS),
+          revealUntil,
           currentRound: pending.position,
         },
       });
-      return (await loadAttempt(attempt.id, attempt.profileId)) ?? attempt;
+      noteDailyClock(attempt, { revealUntil, currentRound: pending.position });
+      return attempt;
     }
-    const fresh = (await loadAttempt(attempt.id, attempt.profileId)) ?? attempt;
-    return startUnanswered(fresh, now);
+    return startUnanswered(attempt, now);
   }
 
   return attempt;

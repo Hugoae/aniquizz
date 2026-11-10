@@ -9,6 +9,7 @@ import type { AnimeSuggestion } from './utils';
 import type { WatchedPoolStats } from './watchedPool';
 import type { CataloguePoolStats, PlaylistPoolStats } from './playlist';
 import type { Precision } from './game';
+import type { DailyPlayErrorPayload, DailyPlayState } from './dailyTypes';
 import type { PlayerPrefs, PlayerPrefsInput } from './playerPrefs';
 import type { AccountPrivacy, AccountPrivacyInput } from './privacyAudience';
 import type {
@@ -101,6 +102,15 @@ export interface AnswerInput {
   answerType: AnswerType;
   /** Solo-only: reveal the round immediately after this answer is recorded. */
   revealAfterAnswer?: boolean;
+}
+
+export interface DailyAttemptCommand {
+  attemptId: string;
+}
+
+export interface DailyAnswerCommand {
+  attemptId: string;
+  selected: string | null;
 }
 
 // --- FRIENDS (Phase 7) ---
@@ -249,6 +259,10 @@ export interface ServerToClientEvents {
   // Public profile (Phase 7)
   'profile:public': (payload: PublicProfile) => void;
 
+  // Quiz du jour (same connection as a match; one snapshot per step)
+  'daily:state': (payload: DailyPlayState) => void;
+  'daily:error': (payload: DailyPlayErrorPayload) => void;
+
   // Misc
   error: (payload: ErrorPayload) => void;
 }
@@ -288,6 +302,13 @@ export interface ClientToServerEvents {
   'game:return_to_lobby': (payload: RoomIdInput) => void;
   'game:cancel': (payload: RoomIdInput) => void;
   get_game_state: (payload: RoomIdInput) => void;
+
+  // Quiz du jour
+  'daily:start': () => void;
+  'daily:answer': (payload: DailyAnswerCommand) => void;
+  'daily:lock': (payload: DailyAttemptCommand) => void;
+  'daily:next': (payload: DailyAttemptCommand) => void;
+  'daily:forfeit': (payload: DailyAttemptCommand) => void;
   /** Fetches the caller's AniList watched ids (server resolves username from profile). */
   get_my_watched: () => void;
   /** Asks how many playable songs the caller's AniList list yields (lobby hint). */

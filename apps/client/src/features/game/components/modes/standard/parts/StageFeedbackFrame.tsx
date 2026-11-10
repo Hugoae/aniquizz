@@ -63,7 +63,10 @@ export function StageFeedbackFrame({ feedback, enabled, children }: StageFeedbac
   const seq = feedback?.seq;
 
   useEffect(() => {
-    if (!enabled || !feedback) return;
+    if (!enabled || !feedback) {
+      setActive(null);
+      return;
+    }
     // Drop the cue for one frame so back-to-back events restart the CSS animations.
     setActive(null);
     const raf = window.requestAnimationFrame(() => setActive(feedback));

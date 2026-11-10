@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   DAILY_GUESS_MS,
   DAILY_REVEAL_MS,
@@ -9,38 +9,54 @@ import {
   type GamePlayer,
 } from '@aniquizz/shared';
 import { useVideoPlayback } from '@/features/game/hooks/useVideoPlayback';
-import type { CurrentSong } from '@/features/game/state/gameReducer';
+import { playAnswerSting } from '@/features/game/lib/playAnswerSting';
+import type {
+  CurrentSong,
+  StageFeedback,
+  StageFeedbackKind,
+} from '@/features/game/state/gameReducer';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
-import { dailyApi, DailyApiError } from '@/lib/dailyApi';
+import { socket } from '@/lib/socket';
+import { DailyApiError } from '@/lib/dailyApi';
+import { dailySocket, subscribeDailyPlay } from '../lib/dailySocket';
 import { toast } from 'sonner';
 import { DAILY_COPY } from '../copy/dailyCopy';
 import { endsAtMs, tracksFromPrior } from '../lib/dailyPlayTracks';
-import { useDailyPhaseClock } from './useDailyPhaseClock';
 import { useDailyPlayLeave } from './useDailyPlayLeave';
 
+/**
+ * The server owns the clock and pushes one snapshot per phase, the same way a
+ * match pushes round_start and round_reveal. A click only stores the choice.
+ */
 export function useDailyPlayRound(input: {
   initial: DailySafeRoundDto;
   onFinished: (result: DailyResultDto) => void;
 }) {
   const { initial, onFinished } = input;
   const { profile } = useAuth();
-  const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute } = usePlayerPrefs();
+  const { audioVolume, audioMuted, setAudioVolume, setAudioMuted, toggleMute, answerSounds } =
+    usePlayerPrefs();
 
   const [round, setRound] = useState(initial);
   const [reveal, setReveal] = useState<DailyRevealDto | null>(initial.reveal);
   const [submittedAnswer, setSubmittedAnswer] = useState<string | null>(null);
-  const [committing, setCommitting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [tracks, setTracks] = useState<DailyTrackState[]>(() => tracksFromPrior([], initial));
-  const lockRef = useRef(false);
+  const [stageFeedback, setStageFeedback] = useState<StageFeedback | null>(null);
   const finishedRef = useRef(false);
-  const submittedRef = useRef<string | null>(null);
   const attemptIdRef = useRef(initial.attemptId);
   const revealRef = useRef<DailyRevealDto | null>(initial.reveal);
   const lastErrorAtRef = useRef(0);
+  const feedbackSeq = useRef(0);
+  const lastStingSeq = useRef(0);
+  /** URL already buffering in the hidden player. The next payload re-signs it. */
+  const warmedClipRef = useRef<{ videoKey: string; videoStartTime: number } | null>(null);
   revealRef.current = reveal;
+  warmedClipRef.current = round.nextVideo
+    ? { videoKey: round.nextVideo, videoStartTime: round.nextVideoStartTime ?? 0 }
+    : null;
 
   const phase: 'guessing' | 'revealed' = reveal ? 'revealed' : 'guessing';
   const currentUserId = profile?.id ?? '';
@@ -54,7 +70,7 @@ export function useDailyPlayRound(input: {
     ? reveal.song
     : { videoKey: round.videoKey, videoStartTime: round.videoStartTime };
 
-  const { videoRef, preloadRef, autoplayBlocked, resumeCurrent } = useVideoPlayback({
+  const { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent } = useVideoPlayback({
     currentSong,
     phase,
     isGamePaused: false,
@@ -70,30 +86,15 @@ export function useDailyPlayRound(input: {
     [audioMuted, setAudioMuted, setAudioVolume],
   );
 
-  const withLock = useCallback(async (fn: () => Promise<void>) => {
-    if (lockRef.current) return;
-    lockRef.current = true;
-    try {
-      await fn();
-    } finally {
-      lockRef.current = false;
-    }
-  }, []);
+  useEffect(() => {
+    if (!round.nextVideo) return;
+    warmVideo(round.nextVideo, round.nextVideoStartTime ?? 0);
+  }, [round.nextVideo, round.nextVideoStartTime, warmVideo]);
 
   const notifyError = useCallback((error: unknown) => {
     if (Date.now() - lastErrorAtRef.current < 4_000) return;
     lastErrorAtRef.current = Date.now();
     toast.error(error instanceof DailyApiError ? error.message : DAILY_COPY.unavailable);
-  }, []);
-
-  const applyPlayPayload = useCallback((next: DailySafeRoundDto) => {
-    attemptIdRef.current = next.attemptId;
-    setRound(next);
-    setReveal(next.reveal);
-    setSubmittedAnswer(null);
-    submittedRef.current = null;
-    setCommitting(false);
-    setTracks((previous) => tracksFromPrior(previous, next));
   }, []);
 
   const finish = useCallback(
@@ -111,126 +112,96 @@ export function useDailyPlayRound(input: {
     onResult: finish,
   });
 
-  const applyAnswerPayload = useCallback(
-    (payload: { result: DailyResultDto | null; reveal: DailyRevealDto | null }) => {
-      if (payload.result) {
-        finish(payload.result);
-        return true;
+  const cueReveal = useCallback((graded: DailyRevealDto) => {
+    const kind: StageFeedbackKind =
+      graded.selectedLabel == null ? 'missed' : graded.isCorrect ? 'correct' : 'wrong';
+    feedbackSeq.current += 1;
+    setStageFeedback({ kind, seq: feedbackSeq.current });
+  }, []);
+
+  const applyGuessRound = useCallback((next: DailySafeRoundDto) => {
+    const warmed = warmedClipRef.current;
+    const pinned =
+      warmed != null
+        ? { ...next, videoKey: warmed.videoKey, videoStartTime: warmed.videoStartTime }
+        : next;
+    attemptIdRef.current = pinned.attemptId;
+    setRound(pinned);
+    setReveal(null);
+    revealRef.current = null;
+    setSubmittedAnswer(null);
+    setStageFeedback(null);
+    setTracks((previous) => tracksFromPrior(previous, pinned));
+  }, []);
+
+  const applyReveal = useCallback(
+    (graded: DailyRevealDto, nextRound?: DailySafeRoundDto) => {
+      if (nextRound) {
+        attemptIdRef.current = nextRound.attemptId;
+        setRound(nextRound);
+        setTracks((previous) => tracksFromPrior(previous, nextRound));
+      } else if (graded.tracks.length) {
+        setTracks(graded.tracks);
       }
-      if (payload.reveal) {
-        setReveal(payload.reveal);
-        if (payload.reveal.tracks.length) setTracks(payload.reveal.tracks);
-        return true;
-      }
-      return false;
+      revealRef.current = graded;
+      setReveal(graded);
+      cueReveal(graded);
     },
-    [finish],
+    [cueReveal],
   );
 
-  const applyNextPayload = useCallback(
-    (payload: { result: DailyResultDto | null; attempt: DailySafeRoundDto | null }) => {
-      if (payload.result) {
-        finish(payload.result);
-        return true;
+  useEffect(() => {
+    return subscribeDailyPlay((state) => {
+      if (finishedRef.current) return;
+      if (state.kind === 'result') {
+        finish(state.result);
+        return;
       }
-      if (payload.attempt?.reveal) {
-        setRound(payload.attempt);
-        setReveal(payload.attempt.reveal);
-        if (payload.attempt.reveal.tracks.length) setTracks(payload.attempt.reveal.tracks);
-        return true;
+      if (state.attempt.reveal) {
+        applyReveal(state.attempt.reveal, state.attempt);
+        return;
       }
-      if (payload.attempt) {
-        applyPlayPayload(payload.attempt);
-        return true;
-      }
-      return false;
-    },
-    [applyPlayPayload, finish],
-  );
+      applyGuessRound(state.attempt);
+    });
+  }, [applyGuessRound, applyReveal, finish]);
 
-  const syncFromServer = useCallback(async (): Promise<boolean> => {
-    const today = await dailyApi.today({ refresh: true });
-    if (today.result) {
-      finish(today.result);
-      return true;
-    }
-    return false;
-  }, [finish]);
+  useEffect(() => {
+    const onFail = (payload: { message?: string }) => {
+      notifyError(new DailyApiError(400, payload.message || DAILY_COPY.unavailable));
+    };
+    socket.on('daily:error', onFail);
+    return () => {
+      socket.off('daily:error', onFail);
+    };
+  }, [notifyError]);
 
-  /** Commit the current draft (or null) and enter the reveal phase — same as solo end of guess. */
-  const commitGuess = useCallback(
-    (label: string | null) => {
-      if (revealRef.current || finishedRef.current || lockRef.current) return;
-      setCommitting(true);
-      void withLock(async () => {
-        try {
-          const payload = await dailyApi.answer(attemptIdRef.current, label);
-          if (applyAnswerPayload(payload)) return;
-          await syncFromServer();
-        } catch (error) {
-          setCommitting(false);
-          if (error instanceof DailyApiError && error.status === 409) {
-            try {
-              if (applyAnswerPayload(await dailyApi.answer(attemptIdRef.current, label))) return;
-            } catch {
-              /* fall through to today-result sync */
-            }
-          }
-          if (error instanceof DailyApiError && (error.status === 409 || error.status === 429)) {
-            try {
-              if (await syncFromServer()) return;
-            } catch {
-              /* keep original error */
-            }
-          }
-          notifyError(error);
-        }
-      });
-    },
-    [applyAnswerPayload, notifyError, syncFromServer, withLock],
-  );
+  const lockGuess = useCallback(() => {
+    if (revealRef.current || finishedRef.current) return;
+    dailySocket.lock(attemptIdRef.current);
+  }, []);
 
   const goNext = useCallback(() => {
-    if (!revealRef.current || finishedRef.current || lockRef.current) return;
-    void withLock(async () => {
-      try {
-        if (applyNextPayload(await dailyApi.next(attemptIdRef.current))) return;
-      } catch (error) {
-        if (error instanceof DailyApiError && error.status === 409) {
-          try {
-            if (applyNextPayload(await dailyApi.next(attemptIdRef.current))) return;
-          } catch {
-            /* fall through to today-result sync */
-          }
-        }
-        if (error instanceof DailyApiError && (error.status === 409 || error.status === 429)) {
-          try {
-            if (await syncFromServer()) return;
-          } catch {
-            /* keep original error */
-          }
-        }
-        notifyError(error);
-      }
-    });
-  }, [applyNextPayload, notifyError, syncFromServer, withLock]);
+    if (!revealRef.current || finishedRef.current) return;
+    dailySocket.next(attemptIdRef.current);
+  }, []);
 
   const pickChoice = useCallback(
     (label: string) => {
-      if (reveal || committing || finishedRef.current) return;
+      if (reveal || finishedRef.current) return;
       setSubmittedAnswer(label);
-      submittedRef.current = label;
+      dailySocket.answer(attemptIdRef.current, label);
     },
-    [committing, reveal],
+    [reveal],
   );
 
   const phaseEndsAt = endsAtMs(reveal?.revealEndsAt ?? round.roundEndsAt);
-  useDailyPhaseClock({
-    phase,
-    phaseEndsAt,
-    onGuessEnd: () => commitGuess(submittedRef.current),
-    onRevealEnd: goNext,
-  });
+
+  useEffect(() => {
+    const feedback = stageFeedback;
+    if (!feedback || feedback.seq === lastStingSeq.current) return;
+    lastStingSeq.current = feedback.seq;
+    if (answerSounds && !audioMuted) playAnswerSting(feedback.kind, audioVolume);
+  }, [stageFeedback, answerSounds, audioMuted, audioVolume]);
 
   const players: GamePlayer[] = useMemo(
     () => [
@@ -260,8 +231,8 @@ export function useDailyPlayRound(input: {
   return {
     round,
     reveal,
+    stageFeedback,
     submittedAnswer,
-    committing,
     tracks,
     phase,
     phaseEndsAt,
@@ -280,8 +251,7 @@ export function useDailyPlayRound(input: {
     toggleMute,
     pickChoice,
     goNext,
-    commitGuess,
-    submittedRef,
+    lockGuess,
     showSettings,
     setShowSettings,
     sidebarCollapsed,

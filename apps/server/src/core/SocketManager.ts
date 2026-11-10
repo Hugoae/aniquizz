@@ -14,6 +14,7 @@ import { registerProfileHandlers } from '../modules/profile/profileHandlers';
 import { registerGeneralHandlers } from '../modules/generalHandlers';
 import { registerFriendsHandlers } from '../modules/friends/friendsHandlers';
 import { registerListHandlers } from '../modules/lists/listHandlers';
+import { registerDailyHandlers } from '../modules/daily/dailyHandlers';
 import {
   schedulePresenceBroadcast,
   isUserOnline,
@@ -103,6 +104,7 @@ export class SocketManager {
       registerGeneralHandlers(this.io, socket, this.gameManager);
       registerFriendsHandlers(this.io, socket, this.gameManager);
       registerListHandlers(this.io, socket, this.gameManager);
+      registerDailyHandlers(socket);
 
       // Tell online friends this user just came online (best-effort).
       if (userId) {

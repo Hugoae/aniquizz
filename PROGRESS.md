@@ -5,6 +5,14 @@
 
 ## Current phase: **26.7.1** · Prime de série + admin tops + podium ties · 2026-11-09
 
+### Quiz du jour — same engine as a match (2026-11-10)
+
+The quiz now runs like a match. One authenticated socket. The server holds the run in memory, owns both clocks, and pushes each snapshot. A click only stores the choice. Postgres is written when the attempt opens, when a clip starts, and when the run closes. The old play routes (`POST /daily/attempt`, answer, next, forfeit) are gone. Today and the leaderboard stay HTTP. Reopening the page, leaving, or dropping the socket still forfeits. There is no resume.
+
+**Checked.** Socket integration 12, server and client typecheck, eslint on the touched files, English check. Played on 2026-11-10: the lag and the phase delay are gone. The feeling matches Standard.
+
+**Next:** no release note until asked. Do not start the dropped found bar. HIBP stays parked.
+
 ### Prime de série (2026-11-09)
 
 Optional Contre-la-montre modifier, off by default. Solo and versus. Medals stay on the chosen duration. No extra XP. The in-match countdown was removed on purpose. Do not put it back. Public note: news id 10 (2026-11-09), Home footer `v26.7.1`. No roadmap card. The note covers the prime, the random Chrono start, the podium ties, and the solo Retour. It does not mention the admin tops.

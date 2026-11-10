@@ -319,7 +319,7 @@ function AnswerInputInner({
               variant="outline"
               aria-pressed={submittedAnswer === choice}
               className={cn(
-                'h-14 whitespace-normal rounded-lg border-2 px-2 text-md font-semibold leading-tight transition-all',
+                'h-14 whitespace-normal rounded-lg border-2 px-2 text-md font-semibold leading-tight',
                 submittedAnswer === choice
                   ? 'border-primary bg-primary text-primary-foreground shadow-lg'
                   : 'hover:border-primary/50 hover:bg-primary/10',

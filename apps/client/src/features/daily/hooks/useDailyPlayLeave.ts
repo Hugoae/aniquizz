@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { DailyResultDto } from '@aniquizz/shared';
-import { dailyApi, DailyApiError } from '@/lib/dailyApi';
+import { socket } from '@/lib/socket';
+import { DailyApiError } from '@/lib/dailyApi';
+import { dailySocket } from '../lib/dailySocket';
 import { toast } from 'sonner';
 import { DAILY_COPY } from '../copy/dailyCopy';
 
@@ -26,7 +28,7 @@ export function useDailyPlayLeave(input: {
       forfeitingRef.current = true;
       setLeaveMode(null);
       try {
-        const payload = await dailyApi.forfeit(attemptIdRef.current);
+        const payload = await dailySocket.forfeit(attemptIdRef.current);
         if (destination === 'profile') {
           finishedRef.current = true;
           navigate('/profile', { replace: true });
@@ -50,7 +52,7 @@ export function useDailyPlayLeave(input: {
     const abandon = () => {
       if (finishedRef.current || forfeitingRef.current) return;
       if (dailyPlayGeneration !== gen) return;
-      void dailyApi.forfeitKeepalive(attemptIdRef.current);
+      socket.emit('daily:forfeit', { attemptId: attemptIdRef.current });
     };
     window.addEventListener('pagehide', abandon);
     return () => {
