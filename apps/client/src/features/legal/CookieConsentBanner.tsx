@@ -20,8 +20,7 @@ export function CookieConsentBanner() {
       </h2>
       <p id="cookie-banner-desc" className="mt-2 text-xs leading-relaxed text-muted-foreground">
         Nous utilisons des cookies strictement nécessaires à la connexion et au jeu. Les cookies
-        d&apos;analyse (s&apos;ils sont activés plus tard) ne seront chargés qu&apos;avec votre
-        accord.{' '}
+        d&apos;analyse ne sont chargés qu&apos;avec votre accord.{' '}
         <Link
           to="/legal/confidentialite"
           className="text-primary underline-offset-2 hover:underline"

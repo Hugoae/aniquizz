@@ -132,8 +132,8 @@ export default function PrivacyPolicyPage() {
         fonctionnement du jeu — toujours actifs.
       </p>
       <p>
-        <strong>Analyse (optionnels) :</strong> mesure d&apos;audience — uniquement si vous les
-        acceptez via le bandeau ou les paramètres. Aucun script d&apos;analyse tiers n&apos;est
+        <strong>Analyse (optionnels) :</strong> statistiques de visite via Vercel Web Analytics,
+        uniquement si vous les acceptez via le bandeau ou les paramètres. Le script n&apos;est pas
         chargé avant votre consentement.
       </p>
       <p>

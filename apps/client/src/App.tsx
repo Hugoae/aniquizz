@@ -15,6 +15,7 @@ import { consumeAuthReturnTo } from '@/features/auth/lib/authReturnTo';
 import { notifyModerationBan } from '@/lib/suspension';
 import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
+import { VercelAnalytics } from '@/features/legal/VercelAnalytics';
 import { SongLikesProvider } from '@/features/likes/context/SongLikesContext';
 import { PlayerPrefsProvider } from '@/features/settings/context/PlayerPrefsContext';
 import { ListsProvider } from '@/features/settings/integrations/ListsContext';
@@ -238,6 +239,7 @@ const AppContent = () => {
       <FloatingSettingsButton />
 
       <CookieConsentBanner />
+      <VercelAnalytics />
       <Toaster
         position="bottom-right"
         richColors

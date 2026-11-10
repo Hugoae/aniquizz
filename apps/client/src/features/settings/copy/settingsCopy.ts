@@ -20,7 +20,7 @@ export const SETTINGS_COPY = {
   cookiesBody:
     "Les cookies nécessaires (session) sont toujours actifs. Les cookies d'analyse ne sont chargés qu'avec votre accord.",
   analyticsLabel: "Cookies d'analyse",
-  analyticsHint: "Mesure d'audience (aucun script tiers pour l'instant)",
+  analyticsHint: 'Statistiques de visite Vercel. Chargées seulement si vous acceptez.',
   analyticsAria: "Active ou désactive les cookies d'analyse optionnels.",
   reopenBanner: 'Rouvrir le bandeau cookies',
   audioHeading: 'Audio',
