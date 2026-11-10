@@ -270,6 +270,11 @@
     animation: pulse-glow 2.6s ease-in-out infinite;
   }
 
+  /* Top-center pill: the transform keeps it astride the card while it breathes. */
+  .animate-new-pill {
+    animation: new-pill 2.2s ease-in-out infinite;
+  }
+
   .animate-breathe {
     animation: breathe 2.4s ease-in-out infinite;
   }
@@ -317,6 +322,18 @@
   }
   50% {
     box-shadow: 0 0 26px hsl(265 68% 54% / 0.28);
+  }
+}
+
+@keyframes new-pill {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 8px hsl(var(--primary) / 0.35);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 0 16px hsl(var(--primary-glow) / 0.75);
   }
 }
 

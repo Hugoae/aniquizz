@@ -42,7 +42,12 @@ export function GameTypeSelector({
   versus = false,
 }: GameTypeSelectorProps) {
   return (
-    <div className={cn('flex flex-col gap-2 sm:flex-row sm:items-stretch', className)}>
+    <div
+      className={cn(
+        'flex flex-col gap-3 overflow-visible pt-2 sm:flex-row sm:items-stretch',
+        className,
+      )}
+    >
       {GAME_TYPES.filter((type) => !versus || !type.soloOnly).map(
         ({ id, icon: Icon, description }) => {
           const active = value === id;
@@ -54,13 +59,21 @@ export function GameTypeSelector({
               aria-pressed={active}
               onClick={() => onChange(id)}
               className={cn(
-                'flex flex-1 flex-col items-start gap-1 rounded-xl border px-4 py-3 text-left transition-colors',
+                'relative flex flex-1 flex-col items-start gap-1 overflow-visible rounded-xl border px-4 py-3 text-left transition-colors',
                 active
                   ? cn(chrome.selected, 'shadow-sm')
                   : 'border-border/60 bg-card/40 hover:border-border hover:bg-card/70',
                 FOCUS_RING,
               )}
             >
+              {id === 'evolving' ? (
+                <span
+                  aria-hidden="true"
+                  className="animate-new-pill pointer-events-none absolute left-1/2 top-0 z-10 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-black uppercase leading-none tracking-wide text-primary-foreground"
+                >
+                  New
+                </span>
+              ) : null}
               <span className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <Icon
                   className={cn(
