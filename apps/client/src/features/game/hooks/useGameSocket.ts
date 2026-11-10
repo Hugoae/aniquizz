@@ -38,6 +38,7 @@ import type {
 } from '@aniquizz/shared';
 import { normalizeVideoMode, GAME_CONFIG } from '@aniquizz/shared';
 import { createInitialState, gameReducer, type GameState } from '../state/gameReducer';
+import { shouldRecoverStaleGuess } from './staleGuessRecovery';
 import { playerDisplayName } from '../utils/ranking';
 import { GAME_COPY, playerDisconnectedToast, playerLeftMatchToast } from '../copy/gameCopy';
 
@@ -324,8 +325,19 @@ export function useGameSocket({
   }, [roomId]);
 
   // Recover from dropped round_reveal (reconnect, Render restart, etc.).
+  // Evolving is excluded: its endsAt is "now", so this would skip the step on a loop.
   useEffect(() => {
-    if (!roomId || state.phase !== 'guessing' || state.isGamePaused || state.laneDone) return;
+    if (!roomId) return;
+    if (
+      !shouldRecoverStaleGuess({
+        phase: state.phase,
+        evolving: state.evolving != null,
+        paused: state.isGamePaused,
+        laneDone: state.laneDone,
+      })
+    ) {
+      return;
+    }
 
     const tailMs = GAME_CONFIG.TIMERS.GUESS_START_BUFFER + GAME_CONFIG.TIMERS.GUESS_END_GRACE;
     const staleAt = state.phaseEndsAt - tailMs + 1500;
@@ -354,7 +366,7 @@ export function useGameSocket({
       window.clearTimeout(recoveryTimer);
       if (skipTimer) window.clearTimeout(skipTimer);
     };
-  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, state.laneDone]);
+  }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, state.laneDone, state.evolving]);
 
   const answer = useCallback(
     (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => {
