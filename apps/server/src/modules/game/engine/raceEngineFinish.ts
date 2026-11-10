@@ -6,6 +6,7 @@ import {
   pickMatchSettings,
   rankRaceStandings,
   timeAttackMedal,
+  timeAttackMedalRules,
   type GameOverPayload,
   type RaceStandingEntry,
   type RoundHistoryEntry,
@@ -95,7 +96,13 @@ export async function finishRace(engine: RaceEngine): Promise<void> {
         skips: lane.skips(),
         remainingMs: entry.remainingMs,
         rank: entry.rank,
-        medal: timeAttackMedal(entry.found, budget, difficulties, precision),
+        medal: timeAttackMedal(
+          entry.found,
+          budget,
+          difficulties,
+          precision,
+          timeAttackMedalRules(room.settings),
+        ),
       };
     });
 

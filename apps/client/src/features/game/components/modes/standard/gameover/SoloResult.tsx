@@ -3,6 +3,7 @@ import { ChevronDown, ListMusic } from 'lucide-react';
 import {
   isSpeedBonusEnabled,
   isTimeAttackSettings,
+  timeAttackMedalRules,
   type RoomSettings,
   type RoundHistoryEntry,
   type VictoryData,
@@ -108,6 +109,7 @@ export function SoloResult({
               xpEarned={me?.xpEarned}
               timeAttack={isTimeAttackSettings(settings)}
               timeBudgetSeconds={settings.timeBudgetSeconds}
+              medalRules={isTimeAttackSettings(settings) ? timeAttackMedalRules(settings) : null}
             />
 
             <button

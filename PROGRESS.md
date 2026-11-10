@@ -11,6 +11,8 @@ The quiz now runs like a match. One authenticated socket. The server holds the r
 
 **Checked.** Socket integration 12, server and client typecheck, eslint on the touched files, English check. Played on 2026-11-10: the lag and the phase delay are gone. The feeling matches Standard.
 
+Reveal on every mode keeps Suivant for 0.5 s after the countdown shows 0, so a late click does not land on the next round's Passer. Chrono medal bars move with the options: punitive skip asks for a little less, Prime de série asks for a little more, and a short streak with a large bonus asks for more still.
+
 **Next:** no release note until asked. Do not start the dropped found bar. HIBP stays parked.
 
 ### Prime de série (2026-11-09)

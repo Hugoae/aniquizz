@@ -31,7 +31,9 @@ export function computeMatchCountdown({
   const tailMs =
     phase === 'guessing'
       ? GAME_CONFIG.TIMERS.GUESS_START_BUFFER + GAME_CONFIG.TIMERS.GUESS_END_GRACE
-      : 0;
+      : phase === 'revealed'
+        ? GAME_CONFIG.TIMERS.REVEAL_END_GRACE
+        : 0;
   const remainingMs = Math.max(0, phaseEndsAt - Date.now());
   const playableMs = Math.max(0, remainingMs - tailMs);
   const totalMs = phaseDurationSeconds * 1000;

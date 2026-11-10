@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAME_CONFIG, revealDurationMs, type GameOverPayload } from '@aniquizz/shared';
+import {
+  GAME_CONFIG,
+  revealClockMs,
+  TIME_ATTACK_REVEAL_SECONDS,
+  type GameOverPayload,
+} from '@aniquizz/shared';
 import { speedBonusScoring } from './ScoringStrategy';
 import {
   advanceToGuessing,
@@ -356,7 +361,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
 
       engine.handleAnswer('player-1', 'Bleach', 'typing');
       engine.forceEndRound();
@@ -377,7 +382,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
 
       engine.handleAnswer('player-1', 'Wrong Anime', 'typing');
       engine.forceEndRound();
@@ -506,7 +511,7 @@ describe('MatchEngine', () => {
       expect(engine.getSyncState().phase).toBe('reveal');
       expect(engine.getSyncState().currentRound).toBe(1);
 
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
 
       expect(engine.getSyncState().phase).toBe('guessing');
       expect(engine.getSyncState().currentRound).toBe(2);
@@ -531,7 +536,7 @@ describe('MatchEngine', () => {
       await vi.advanceTimersByTimeAsync(4000);
       expect(engine.getSyncState().phase).toBe('reveal');
 
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       expect(engine.getSyncState().phase).toBe('guessing');
       expect(engine.getSyncState().currentRound).toBe(2);
     });
@@ -555,7 +560,7 @@ describe('MatchEngine', () => {
       await vi.advanceTimersByTimeAsync(14000);
       expect(engine.getSyncState().phase).toBe('reveal');
 
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(1500);
       expect(engine.getSyncState().phase).toBe('guessing');
     });
   });
@@ -695,7 +700,7 @@ describe('MatchEngine', () => {
 
       engine.handleAnswer('player-1', 'Naruto', 'qcm');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
       await Promise.resolve();
       await Promise.resolve();
 
@@ -716,9 +721,9 @@ describe('MatchEngine', () => {
       });
       await advanceToGuessing(engine);
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
       await Promise.resolve();
       await Promise.resolve();
 
@@ -736,7 +741,7 @@ describe('MatchEngine', () => {
       await advanceToGuessing(engine);
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
       await Promise.resolve();
       await Promise.resolve();
 
@@ -771,7 +776,7 @@ describe('MatchEngine', () => {
       await advanceToGuessing(engine);
       engine.handleAnswer('player-1', 'Naruto', 'typing');
       engine.forceEndRound();
-      await vi.advanceTimersByTimeAsync(revealDurationMs(10));
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
       for (let i = 0; i < 8; i++) await Promise.resolve();
 
       expect(vi.mocked(repo.persistMatch)).toHaveBeenCalledTimes(1);
@@ -925,9 +930,9 @@ describe('MatchEngine', () => {
       await advanceToGuessing(engine);
 
       engine.handleAnswer('player-1', 'Naruto', 'typing');
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       engine.handleAnswer('player-1', 'Bleach', 'typing');
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       await vi.advanceTimersByTimeAsync(8000);
       engine.handleAnswer('player-1', 'One Piece', 'typing');
 
@@ -989,7 +994,7 @@ describe('MatchEngine', () => {
       const reveal = emitted.find((e) => e.event === 'round_reveal');
       expect(reveal?.payload).toMatchObject({ skipped: true });
 
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       expect(engine.getSyncState().currentRound).toBe(2);
       expect(engine.getSyncState().remainingMs).toBe(before - 5000);
     });
@@ -1064,9 +1069,9 @@ describe('MatchEngine', () => {
       const budget = emitted.find((e) => e.event === 'timeAttack:budget');
       expect(budget?.payload).toMatchObject({
         nextSkipTaxMs: 5000,
-        nextMedal: { tier: 'bronze', pointsNeeded: 12 },
+        nextMedal: { tier: 'bronze', pointsNeeded: 11 },
       });
-      expect(engine.getSyncState().nextMedal).toEqual({ tier: 'bronze', pointsNeeded: 12 });
+      expect(engine.getSyncState().nextMedal).toEqual({ tier: 'bronze', pointsNeeded: 11 });
     });
 
     it('reveals 3s with 0 points on clip EOF', async () => {
@@ -1102,7 +1107,7 @@ describe('MatchEngine', () => {
         song: { anime: 'Naruto' },
       });
 
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       await Promise.resolve();
       await Promise.resolve();
       expect(room.status).toBe('finished');
@@ -1127,7 +1132,7 @@ describe('MatchEngine', () => {
       // 5+7+9+11+13 = 45 s. The next skip costs 15 s and spends the budget.
       for (let i = 0; i < 5; i++) {
         engine.forceEndRound();
-        await vi.advanceTimersByTimeAsync(3_000);
+        await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       }
       expect(room.status).not.toBe('finished');
 
@@ -1138,7 +1143,7 @@ describe('MatchEngine', () => {
       });
       expect(room.status).not.toBe('finished');
 
-      await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       await Promise.resolve();
       await Promise.resolve();
       expect(room.status).toBe('finished');
@@ -1235,7 +1240,7 @@ describe('MatchEngine', () => {
       });
       await advanceToGuessing(engine);
       engine.handleAnswer('player-1', 'Naruto', 'typing');
-      await vi.advanceTimersByTimeAsync(3000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
       await Promise.resolve();
       await Promise.resolve();
 

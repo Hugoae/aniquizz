@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameOverPayload, RaceBoardPayload } from '@aniquizz/shared';
-import { TIME_ATTACK_REVEAL_SECONDS } from '@aniquizz/shared';
+import { revealClockMs, TIME_ATTACK_REVEAL_SECONDS } from '@aniquizz/shared';
 import {
   advanceRaceToGuessing,
   createRaceHarness,
@@ -64,7 +64,7 @@ describe('RaceEngine', () => {
     expect(board.entries.find((e) => e.userId === 'player-2')!.foundCount).toBe(0);
     expect(board.entries.find((e) => e.userId === 'player-2')!.streak).toBe(0);
 
-    await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     const starts = named(emitted, 'round_start').filter((e) => e.target === 'socket-0');
     expect((starts.at(-1)!.payload as { round: number }).round).toBe(2);
     const p2Starts = named(emitted, 'round_start').filter((e) => e.target === 'socket-1');
@@ -138,7 +138,7 @@ describe('RaceEngine', () => {
     expect((reveal!.payload as { song: { anime: string } }).song.anime).toBe('Naruto');
     expect(named(emitted, 'race:lane_done')).toHaveLength(0);
 
-    await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     expect(
       named(emitted, 'race:lane_done')
         .map((e) => e.target)
@@ -156,7 +156,7 @@ describe('RaceEngine', () => {
     // 5+7+9+11+13 = 45 s. The next skip costs 15 s and spends the budget.
     for (let i = 0; i < 5; i++) {
       engine.forceEndRound('player-1');
-      await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     }
     expect(named(emitted, 'race:lane_done')).toHaveLength(0);
 
@@ -167,7 +167,7 @@ describe('RaceEngine', () => {
     expect((reveal!.payload as { skipped?: boolean }).skipped).toBe(true);
     expect(named(emitted, 'race:lane_done')).toHaveLength(0);
 
-    await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     expect(named(emitted, 'race:lane_done').map((e) => e.target)).toEqual(['socket-0']);
   });
 
@@ -237,7 +237,7 @@ describe('RaceEngine', () => {
     // Player 1 burns their budget with skips while player 2 keeps playing.
     for (let i = 0; i < 6; i++) {
       engine.forceEndRound('player-1');
-      await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+      await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     }
 
     const done = named(emitted, 'race:lane_done');
@@ -281,7 +281,7 @@ describe('RaceEngine', () => {
 
     engine.handleAnswer('player-1', 'Anime 1', 'typing');
     engine.forceEndRound('player-2');
-    await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     engine.handleAnswer('player-2', 'Anime 2', 'typing');
     await vi.advanceTimersByTimeAsync(180_000);
 
@@ -314,7 +314,7 @@ describe('RaceEngine', () => {
     expect(bot).not.toBeNull();
     await advanceRaceToGuessing(engine);
 
-    const reveal = () => vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    const reveal = () => vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
     engine.handleAnswer(bot!.userId, 'Anime 1', 'typing');
     await reveal();
     engine.handleAnswer(bot!.userId, 'Anime 2', 'typing');
@@ -340,7 +340,7 @@ describe('RaceEngine', () => {
     const { engine, room } = createRaceHarness({ playlist });
     await advanceRaceToGuessing(engine);
     engine.handleAnswer('player-1', 'Anime 1', 'typing');
-    await vi.advanceTimersByTimeAsync(TIME_ATTACK_REVEAL_SECONDS * 1000);
+    await vi.advanceTimersByTimeAsync(revealClockMs(TIME_ATTACK_REVEAL_SECONDS));
 
     const sync = room.getSyncState('player-1');
     expect(sync.phase).toBe('guessing');

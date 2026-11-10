@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { revealDurationMs, revealDurationSeconds } from './revealDuration';
+import { GAME_CONFIG } from './constants';
+import { revealClockMs, revealDurationMs, revealDurationSeconds } from './revealDuration';
 
 describe('revealDurationSeconds', () => {
   it('matches a short guess clock (5s guess → 5s reveal)', () => {
@@ -25,5 +26,10 @@ describe('revealDurationMs', () => {
   it('returns the same window in milliseconds', () => {
     expect(revealDurationMs(5)).toBe(5000);
     expect(revealDurationMs(20)).toBe(15000);
+  });
+
+  it('adds the reveal linger on top of the visible window', () => {
+    expect(revealClockMs(15)).toBe(15_000 + GAME_CONFIG.TIMERS.REVEAL_END_GRACE);
+    expect(revealClockMs(3)).toBe(3_000 + GAME_CONFIG.TIMERS.REVEAL_END_GRACE);
   });
 });

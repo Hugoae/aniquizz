@@ -10,6 +10,7 @@ import {
   pickMatchSettings,
   matchPlaylistPersistence,
   timeAttackMedal,
+  timeAttackMedalRules,
   timeAttackMedalTargets,
   type CorrectByDifficulty,
   type ResponseType,
@@ -76,8 +77,9 @@ function computeTimeAttackVictory(
     }));
   const rankings = [...competitors].sort((a, b) => b.score - a.score);
   const found = rankings[0]?.score ?? 0;
-  const targets = timeAttackMedalTargets(budget, songDifficulties, precision);
-  const soloMedal = timeAttackMedal(found, budget, songDifficulties, precision);
+  const rules = timeAttackMedalRules(settings);
+  const targets = timeAttackMedalTargets(budget, songDifficulties, precision, rules);
+  const soloMedal = timeAttackMedal(found, budget, songDifficulties, precision, rules);
   const winnerIds = soloMedal && rankings[0] ? [rankings[0].userId] : [];
   return {
     winnerIds,

@@ -3,6 +3,7 @@ import {
   normalizeTimeBudgetSeconds,
   normalizeVideoMode,
   timeAttackMedal,
+  timeAttackMedalRules,
   timeAttackNextMedalGoal,
   timeAttackTaxMs,
   TIME_ATTACK_REVEAL_SECONDS,
@@ -147,8 +148,9 @@ export function laneCue(
     .map((item) => normalizeSongDifficulty(item.difficulty));
   const budget = normalizeTimeBudgetSeconds(engine.room.settings.timeBudgetSeconds);
   const precision = normalizePrecision(engine.room.settings.precision);
-  const medal = timeAttackMedal(lane.found, budget, difficulties, precision);
-  const goal = timeAttackNextMedalGoal(lane.found, budget, difficulties, medal, precision);
+  const rules = timeAttackMedalRules(engine.room.settings);
+  const medal = timeAttackMedal(lane.found, budget, difficulties, precision, rules);
+  const goal = timeAttackNextMedalGoal(lane.found, budget, difficulties, medal, precision, rules);
   return {
     nextSkipTaxMs: timeAttackTaxMs('skip', lane.budget.skips, engine.punitiveSkip()),
     nextMedal: goal ? { tier: goal.tier, pointsNeeded: goal.pointsNeeded } : null,

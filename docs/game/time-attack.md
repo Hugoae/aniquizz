@@ -20,7 +20,7 @@ The match budget clock (`MatchBudgetClock`) ticks **only during guessing**. Intr
 
 ## Scoring
 
-- Correct title: **+1**, then a **3 s** reveal with the budget frozen.
+- Correct title: **+1**, then a **3 s** reveal with the budget frozen. The reveal clock keeps Suivant for another 0.5 s after the countdown shows 0, same idea as the guess linger, so a late click does not hit the next Passer.
 - **Prime de série** (Général, off by default, solo and versus): every N found titles in a row (slider 3–10, default 5) adds seconds (slider +3 to +10, default +5). The streak counter is not reset when the prime pays. Skip and clip-end (Raté) reset it. A wrong guess on the current title still costs 3 s and does not reset the streak. The prime can add at most **one extra starting budget**, and the live clock never reads higher than the chosen duration. A prime that would cross either ceiling is shortened or skipped. No extra XP. The stage shows `+N s` in primary for about 3 s, with its own sting. The history row uses the same color. Other answer cues stay at about 1 s. In a race the cue stays on that lane's socket; the board only shows the clock and the streak.
 - Skip (`game:skip_round`): **−5 s, then −7 s, −9 s … capped at −15 s** within a run (`timeAttackTaxMs`) when `timeAttackPunitiveSkip` is on (default). Off keeps every skip at **−5 s**. The next cost is `nextSkipTaxMs` on `timeAttack:budget` and on the skip button (`Passer −N s`). With the reveal on (default), the skipped title still gets the 3 s reveal; the tax is applied immediately and the budget stays frozen during that reveal.
 - Validated wrong answer: **−3 s**, stay on the same title (typing stays unlocked). Empty / too-short submits are ignored.
@@ -38,7 +38,7 @@ Vitesse (`speedBonusEnabled`) stays off.
 
 ## Medals
 
-Found titles per minute × duration, then the same difficulty / precision malus as Standard. Playtest constants (medium + franchise): **4 / 5 / 7 / 9** per minute → in 3 min **12 / 15 / 21 / 27**. Helpers: `timeAttackMedal`, `timeAttackMedalTargets`.
+Found titles per minute × duration, then the same difficulty / precision malus as Standard. Playtest constants with no option adjustment (medium + franchise): **4 / 5 / 7 / 9** per minute → in 3 min **12 / 15 / 21 / 27**. `timeAttackMedalFactor` then moves those bars: punitive skip (default on) asks for a little less, and Prime de série asks for a little more — more still when the streak is short and the bonus is large. Helpers: `timeAttackMedal`, `timeAttackMedalTargets`, `timeAttackMedalRules`.
 
 During the run the server sends `nextMedal` (`{ tier, pointsNeeded }` or `null` at platinum) on `timeAttack:budget`, round payloads, and sync. It uses the difficulties of songs actually heard, including the current clip — the same inputs as the game-over bar, not the lobby difficulty filter.
 

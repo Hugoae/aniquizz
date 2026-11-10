@@ -6,6 +6,7 @@ import {
   normalizePrecision,
   timeAttackMedalTargets,
   timeAttackNextMedalGoal,
+  type TimeAttackMedalRules,
   normalizeTimeBudgetSeconds,
   type Medal,
   type MedalTier,
@@ -22,6 +23,7 @@ interface SoloMasteryBarProps {
   precision?: Precision;
   timeAttack?: boolean;
   timeBudgetSeconds?: number;
+  medalRules?: TimeAttackMedalRules | null;
 }
 
 const MEDAL_ORDER: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -34,6 +36,7 @@ function goalMessage(
   precision?: Precision,
   timeAttack?: boolean,
   timeBudgetSeconds?: number,
+  medalRules?: TimeAttackMedalRules | null,
 ): string | null {
   const goal = timeAttack
     ? timeAttackNextMedalGoal(
@@ -42,6 +45,7 @@ function goalMessage(
         difficulties,
         soloMedal,
         precision,
+        medalRules,
       )
     : nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision);
   if (goal) {
@@ -67,6 +71,7 @@ export function SoloMasteryBar({
   precision,
   timeAttack = false,
   timeBudgetSeconds,
+  medalRules,
 }: SoloMasteryBarProps) {
   const resolvedPrecision = normalizePrecision(precision);
   const markerScores = timeAttack
@@ -74,6 +79,7 @@ export function SoloMasteryBar({
         normalizeTimeBudgetSeconds(timeBudgetSeconds),
         songDifficulties,
         resolvedPrecision,
+        medalRules,
       )
     : medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision);
   const barMax = timeAttack ? markerScores.platinum : maxPossibleScore;
@@ -87,6 +93,7 @@ export function SoloMasteryBar({
     resolvedPrecision,
     timeAttack,
     timeBudgetSeconds,
+    medalRules,
   );
 
   return (

@@ -1,5 +1,5 @@
 import { Medal } from 'lucide-react';
-import type { GamePlayer, MedalTier, Precision } from '@aniquizz/shared';
+import type { GamePlayer, MedalTier, Precision, TimeAttackMedalRules } from '@aniquizz/shared';
 import { getMedalMeta } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
@@ -17,6 +17,7 @@ interface SoloScoreCardProps {
   xpEarned?: number;
   timeAttack?: boolean;
   timeBudgetSeconds?: number;
+  medalRules?: TimeAttackMedalRules | null;
 }
 
 export function SoloScoreCard({
@@ -30,6 +31,7 @@ export function SoloScoreCard({
   xpEarned,
   timeAttack = false,
   timeBudgetSeconds,
+  medalRules,
 }: SoloScoreCardProps) {
   const medalMeta = getMedalMeta(soloMedal);
 
@@ -119,6 +121,7 @@ export function SoloScoreCard({
           precision={precision}
           timeAttack={timeAttack}
           timeBudgetSeconds={timeBudgetSeconds}
+          medalRules={medalRules}
         />
       </div>
     </div>

@@ -2,6 +2,7 @@ import { prisma } from '@aniquizz/database';
 import {
   DAILY_GUESS_MS,
   DAILY_REVEAL_MS,
+  GAME_CONFIG,
   clampDailyResponseMs,
   isDailyQcmCorrect,
   offeredDailyChoice,
@@ -201,10 +202,11 @@ class DailyEngine {
         : this.guessMs,
       answeredAt: new Date(now),
     });
+    const revealMs = this.revealMs + GAME_CONFIG.TIMERS.REVEAL_END_GRACE;
     run.phase = 'reveal';
     run.draft = null;
-    run.revealUntil = now + this.revealMs;
-    run.clock.start(this.revealMs, () => {
+    run.revealUntil = now + revealMs;
+    run.clock.start(revealMs, () => {
       void this.enqueue(run.userId, async () => {
         const live = this.runs.get(run.userId);
         if (live === run && live.phase === 'reveal') await this.advanceRun(live);

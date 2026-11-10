@@ -16,6 +16,8 @@ import {
   normalizeTimeBudgetSeconds,
   timeAttackClipWindow,
   timeAttackMedal,
+  timeAttackMedalRules,
+  timeAttackMedalTargets,
   timeAttackNextMedalGoal,
   timeAttackPoolSize,
   timeAttackShortestTitleSeconds,
@@ -294,6 +296,38 @@ describe('timeAttackMedal', () => {
   it('reports the next found-count bar', () => {
     expect(timeAttackNextMedalGoal(11, 180, ['medium'], null, 'franchise')?.pointsNeeded).toBe(1);
     expect(timeAttackNextMedalGoal(27, 180, ['medium'], 'platinum', 'franchise')).toBeNull();
+  });
+
+  it('eases the bar when punitive skip is on and raises it with the streak prime', () => {
+    const punitive = timeAttackMedalRules({ timeAttackPunitiveSkip: true });
+    expect(timeAttackMedalTargets(180, ['medium'], 'franchise', punitive)).toEqual({
+      bronze: 11,
+      silver: 14,
+      gold: 19,
+      platinum: 25,
+    });
+
+    const prime = timeAttackMedalRules({
+      timeAttackPunitiveSkip: false,
+      timeAttackStreakBonus: true,
+      timeAttackStreakLength: 5,
+      timeAttackStreakBonusSeconds: 5,
+    });
+    expect(timeAttackMedalTargets(180, ['medium'], 'franchise', prime)).toEqual({
+      bronze: 13,
+      silver: 17,
+      gold: 23,
+      platinum: 30,
+    });
+
+    const greedy = timeAttackMedalRules({
+      timeAttackPunitiveSkip: false,
+      timeAttackStreakBonus: true,
+      timeAttackStreakLength: 3,
+      timeAttackStreakBonusSeconds: 10,
+    });
+    expect(timeAttackMedalTargets(180, ['medium'], 'franchise', greedy).platinum).toBe(31);
+    expect(timeAttackMedalTargets(180, ['medium'], 'franchise', greedy).bronze).toBe(14);
   });
 });
 

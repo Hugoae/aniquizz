@@ -1,3 +1,5 @@
+import { GAME_CONFIG } from './constants';
+
 /** Cap so a long guess clock does not drag the post-guess reveal. */
 export const REVEAL_DURATION_CAP_SECONDS = 15;
 
@@ -12,4 +14,10 @@ export function revealDurationSeconds(guessDurationSeconds: number): number {
 
 export function revealDurationMs(guessDurationSeconds: number): number {
   return revealDurationSeconds(guessDurationSeconds) * 1000;
+}
+
+/** Server reveal clock: the visible window, then a short linger on 0. */
+export function revealClockMs(revealSeconds: number): number {
+  const seconds = Number.isFinite(revealSeconds) ? revealSeconds : 0;
+  return Math.max(0, Math.round(seconds * 1000)) + GAME_CONFIG.TIMERS.REVEAL_END_GRACE;
 }

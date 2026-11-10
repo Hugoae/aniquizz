@@ -3,6 +3,7 @@ import {
   normalizePrecision,
   normalizeTimeBudgetSeconds,
   timeAttackMedal,
+  timeAttackMedalRules,
   timeAttackNextMedalGoal,
   timeAttackTaxMs,
   TIME_ATTACK_REVEAL_SECONDS,
@@ -49,8 +50,9 @@ export function timeAttackRunCue(host: MatchEngineHost): {
   const budget = normalizeTimeBudgetSeconds(host.room.settings.timeBudgetSeconds);
   const precision = normalizePrecision(host.room.settings.precision);
   const found = timeAttackFoundCount(host);
-  const medal = timeAttackMedal(found, budget, difficulties, precision);
-  const goal = timeAttackNextMedalGoal(found, budget, difficulties, medal, precision);
+  const rules = timeAttackMedalRules(host.room.settings);
+  const medal = timeAttackMedal(found, budget, difficulties, precision, rules);
+  const goal = timeAttackNextMedalGoal(found, budget, difficulties, medal, precision, rules);
   return {
     nextSkipTaxMs: timeAttackTaxMs('skip', host.budget.skips, timeAttackPunitiveSkip(host)),
     nextMedal: goal ? { tier: goal.tier, pointsNeeded: goal.pointsNeeded } : null,

@@ -3,6 +3,7 @@ import {
   isSpeedBonusEnabled,
   normalizeVideoMode,
   revealDurationSeconds,
+  revealClockMs,
   scoreForAnswer,
   type RoundRevealPayload,
   type SpeedLeaderboardPayload,
@@ -202,7 +203,7 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
   const revealSeconds = timeAttack
     ? timeAttackRevealSeconds()
     : revealDurationSeconds(item.guessDuration);
-  const revealMs = revealSeconds * 1000;
+  const revealMs = revealClockMs(revealSeconds);
   host.clock.start(revealMs, () => {
     if (host.isPausePending || host.room.status === 'paused') {
       if (host.room.status !== 'paused') host.pause();

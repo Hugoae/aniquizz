@@ -48,7 +48,8 @@ export const TIME_ATTACK_STREAK_BONUS_MAX_SECONDS = 10;
 export const TIME_ATTACK_STREAK_BONUS_DEFAULT_SECONDS = 5;
 
 /**
- * Found titles per minute required for each medal on medium + franchise.
+ * Found titles per minute required for each medal on medium + franchise,
+ * before skip / prime adjustments.
  * Raised after the first playtest: 2/3/4/5 (3 min → 6/9/12/15) was cleared too
  * easily once autocomplete is in play. 4/6/8/10 was a notch too steep; 4/5/7/9
  * → 12/15/21/27 in 3 min.
@@ -59,6 +60,57 @@ const TIME_ATTACK_FOUND_PER_MINUTE: Record<Medal, number> = {
   gold: 7,
   platinum: 9,
 };
+
+/** Punitive skip makes the run shorter, so the bars drop a little. */
+const TIME_ATTACK_PUNITIVE_MEDAL_FACTOR = 0.92;
+/** Prime on, at the stingiest sliders (every 10, +3 s). */
+const TIME_ATTACK_PRIME_MEDAL_FLOOR = 1.06;
+/** Extra lift from a short streak and a large bonus, up to every 3 / +10 s. */
+const TIME_ATTACK_PRIME_MEDAL_SPAN = 0.08;
+
+export interface TimeAttackMedalRules {
+  punitiveSkip: boolean;
+  streakBonus: boolean;
+  streakLength: number;
+  streakBonusSeconds: number;
+}
+
+export function timeAttackMedalRules(
+  settings:
+    | {
+        timeAttackPunitiveSkip?: boolean | null;
+        timeAttackStreakBonus?: boolean | null;
+        timeAttackStreakLength?: number | null;
+        timeAttackStreakBonusSeconds?: number | null;
+      }
+    | null
+    | undefined,
+): TimeAttackMedalRules {
+  return {
+    punitiveSkip: settings?.timeAttackPunitiveSkip !== false,
+    streakBonus: settings?.timeAttackStreakBonus === true,
+    streakLength: normalizeTimeAttackStreakLength(settings?.timeAttackStreakLength),
+    streakBonusSeconds: normalizeTimeAttackStreakBonusSeconds(
+      settings?.timeAttackStreakBonusSeconds,
+    ),
+  };
+}
+
+/** 1 when the options are omitted. Otherwise skip eases the bar and the prime raises it. */
+export function timeAttackMedalFactor(rules?: TimeAttackMedalRules | null): number {
+  if (!rules) return 1;
+  let factor = rules.punitiveSkip ? TIME_ATTACK_PUNITIVE_MEDAL_FACTOR : 1;
+  if (!rules.streakBonus) return factor;
+  const length = normalizeTimeAttackStreakLength(rules.streakLength);
+  const bonus = normalizeTimeAttackStreakBonusSeconds(rules.streakBonusSeconds);
+  const lengthEase =
+    (TIME_ATTACK_STREAK_MAX - length) / (TIME_ATTACK_STREAK_MAX - TIME_ATTACK_STREAK_MIN);
+  const bonusEase =
+    (bonus - TIME_ATTACK_STREAK_BONUS_MIN_SECONDS) /
+    (TIME_ATTACK_STREAK_BONUS_MAX_SECONDS - TIME_ATTACK_STREAK_BONUS_MIN_SECONDS);
+  const generosity = 0.55 * lengthEase + 0.45 * bonusEase;
+  return factor * (TIME_ATTACK_PRIME_MEDAL_FLOOR + TIME_ATTACK_PRIME_MEDAL_SPAN * generosity);
+}
 
 export type TimeAttackTaxKind = 'skip' | 'wrong';
 
@@ -265,12 +317,14 @@ export function timeAttackMedalTargets(
   budgetSeconds: number,
   songDifficulties: string[],
   precision?: Precision,
+  rules?: TimeAttackMedalRules | null,
 ): Record<Medal, number> {
   const minutes = minutesForBudget(budgetSeconds);
   const medium = GAME_CONFIG.MEDALS.THRESHOLDS.medium;
   const effective = effectiveMedalThresholds(songDifficulties, precision);
+  const factor = timeAttackMedalFactor(rules);
   const scale = (tier: Medal, basePerMinute: number): number => {
-    const raw = Math.round(basePerMinute * minutes * (effective[tier] / medium[tier]));
+    const raw = Math.round(basePerMinute * minutes * (effective[tier] / medium[tier]) * factor);
     return Math.max(1, raw);
   };
   const bronze = scale('bronze', TIME_ATTACK_FOUND_PER_MINUTE.bronze);
@@ -285,8 +339,9 @@ export function timeAttackMedal(
   budgetSeconds: number,
   songDifficulties: string[],
   precision?: Precision,
+  rules?: TimeAttackMedalRules | null,
 ): MedalTier {
-  const required = timeAttackMedalTargets(budgetSeconds, songDifficulties, precision);
+  const required = timeAttackMedalTargets(budgetSeconds, songDifficulties, precision, rules);
   if (found >= required.platinum) return 'platinum';
   if (found >= required.gold) return 'gold';
   if (found >= required.silver) return 'silver';
@@ -300,8 +355,9 @@ export function timeAttackNextMedalGoal(
   songDifficulties: string[],
   currentMedal: MedalTier,
   precision?: Precision,
+  rules?: TimeAttackMedalRules | null,
 ): NextMedalGoal | null {
-  const required = timeAttackMedalTargets(budgetSeconds, songDifficulties, precision);
+  const required = timeAttackMedalTargets(budgetSeconds, songDifficulties, precision, rules);
   const order: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
   const startIdx = currentMedal ? order.indexOf(currentMedal) + 1 : 0;
   for (let i = startIdx; i < order.length; i++) {

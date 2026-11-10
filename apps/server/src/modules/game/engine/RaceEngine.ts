@@ -10,6 +10,7 @@ import {
   timeAttackTaxMs,
   toClientRoomSettings,
   TIME_ATTACK_REVEAL_SECONDS,
+  revealClockMs,
   type AnswerType,
   type GameOverPayload,
   type GameSyncState,
@@ -368,7 +369,7 @@ export class RaceEngine implements RoomMatchEngine {
     }
 
     lane.budget.pause();
-    lane.clock.start(TIME_ATTACK_REVEAL_SECONDS * 1000, () => {
+    lane.clock.start(revealClockMs(TIME_ATTACK_REVEAL_SECONDS), () => {
       if (closing || lane.budget.getRemainingMs() <= 0) this.finishLane(lane);
       else this.startLaneRound(lane);
     });

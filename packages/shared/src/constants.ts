@@ -70,6 +70,11 @@ export const GAME_CONFIG = {
      *  reaches and lingers on 0 before the round cuts (softer, less abrupt).
      *  Combined with GUESS_START_BUFFER this keeps the "0" on screen ~0.5s. */
     GUESS_END_GRACE: 250,
+    /**
+     * Reveal keeps the Suivant button this long after the countdown shows 0,
+     * so a last-moment click does not land on the next round's Passer.
+     */
+    REVEAL_END_GRACE: 500,
   },
 
   // --- SPELLING TOLERANCE (fuzzy) ---
