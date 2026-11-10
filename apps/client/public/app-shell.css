@@ -1,16 +1,4 @@
-/* First-paint shell — pixel-aligned with Home.tsx / HeroSection / NewsSection / Header. */
-
-/* Critical: shell SVGs default to 300×150 without explicit dimensions. */
-#app-shell svg {
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-}
-
-/* Hide React tree until the static shell is removed (sibling selector auto-releases). */
-#app-shell ~ #root {
-  visibility: hidden;
-}
+/* First paint: solid background and a pulsing mark. Not a fake Home. */
 
 #tw-probe {
   position: fixed;
@@ -24,30 +12,6 @@
 
 #seo-content {
   display: none !important;
-}
-
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 800;
-  font-display: optional;
-  src: url('/fonts/bricolage-grotesque-latin-800-normal.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: optional;
-  src: url('/fonts/plus-jakarta-sans-latin-400-normal.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Plus Jakarta Sans';
-  font-style: normal;
-  font-weight: 600;
-  font-display: optional;
-  src: url('/fonts/plus-jakarta-sans-latin-600-normal.woff2') format('woff2');
 }
 
 html {
@@ -66,478 +30,72 @@ body {
   inset: 0;
   z-index: 9999;
   display: flex;
-  min-height: 100dvh;
-  flex-direction: column;
-  overflow: hidden;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  color: hsl(276 22% 96%);
+  align-items: center;
+  justify-content: center;
   background-color: hsl(265 25% 7%);
-  -webkit-font-smoothing: antialiased;
 }
 
-/* Ambient stage washes — matches HeroSection fixed blurs */
-#app-shell::before,
-#app-shell::after {
-  content: '';
-  position: fixed;
-  pointer-events: none;
-  border-radius: 9999px;
-}
-
-#app-shell::before {
-  top: -25%;
-  left: 50%;
-  width: 820px;
-  height: 520px;
-  transform: translateX(-50%);
-  background: hsl(265 68% 54% / 0.12);
-  filter: blur(180px);
-}
-
-#app-shell::after {
-  right: 25%;
-  bottom: 0;
-  width: 420px;
-  height: 420px;
-  background: hsl(175 78% 52% / 0.08);
-  filter: blur(160px);
-}
-
-.app-shell-page {
+.app-shell-mark {
   position: relative;
-  z-index: 1;
-  display: flex;
-  min-height: 100dvh;
-  flex-direction: column;
-  overflow: hidden;
+  display: grid;
+  place-items: center;
+  width: 7.5rem;
+  height: 7.5rem;
 }
 
-/* Header — matches Header.tsx */
-.app-shell-header {
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: 0;
-  z-index: 50;
-  display: flex;
-  height: 4rem;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid hsl(266 14% 18% / 0.6);
-  background: hsl(265 25% 7% / 0.8);
-  padding: 0 1rem;
-  backdrop-filter: blur(12px);
-}
-
-@media (min-width: 768px) {
-  .app-shell-header {
-    padding: 0 1.5rem;
-  }
-}
-
-.app-shell-brand {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  text-decoration: none;
-  color: inherit;
-}
-
-.app-shell-brand img {
-  width: 2rem;
-  height: 2rem;
-  flex-shrink: 0;
-}
-
-.app-shell-brand span {
-  font-family: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  background: linear-gradient(135deg, hsl(265 68% 54%), hsl(255 66% 46%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.app-shell-auth-slot {
-  display: flex;
-  min-width: 2.75rem;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-/* ProfileButton loading chip — matches Header placeholder */
-.app-shell-profile-chip {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  border-radius: 9999px;
-  border: 1px solid hsl(266 14% 18% / 0.6);
-  background: hsl(266 16% 17% / 0.3);
-  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
-}
-
-.app-shell-profile-avatar {
-  display: block;
-  width: 2rem;
-  height: 2rem;
-  flex-shrink: 0;
-  border-radius: 9999px;
-  background: hsl(266 14% 17% / 0.8);
-}
-
-.app-shell-profile-name {
-  display: none;
-  width: 5rem;
-  height: 1rem;
-  border-radius: 0.25rem;
-  background: hsl(266 14% 17% / 0.8);
-}
-
-@media (min-width: 768px) {
-  .app-shell-profile-name {
-    display: block;
-  }
-}
-
-/* Main — matches Home.tsx main */
-.app-shell-main {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 4rem 1rem 0;
-}
-
-.app-shell-hero-wrap {
-  position: relative;
-  display: flex;
-  width: 100%;
-  flex-direction: column;
-  align-items: center;
-}
-
-.app-shell-hero {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 1rem 1rem 0.5rem;
-}
-
-.app-shell-hero-inner {
-  position: relative;
-  z-index: 10;
-  max-width: 56rem;
-  margin: 0 auto;
-  text-align: center;
-}
-
-/* Eyebrow */
-.app-shell-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-  margin-bottom: 1.25rem;
-  padding: 0.5rem 1rem;
-  border: 1px solid hsl(266 14% 18%);
-  border-radius: 9999px;
-  background: hsl(266 16% 17% / 0.6);
-  backdrop-filter: blur(4px);
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: hsl(268 11% 64%);
-}
-
-.app-shell-eq {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 0.75rem;
-  color: hsl(175 78% 52%);
-}
-
-.app-shell-eq i {
-  display: block;
-  width: 3px;
-  border-radius: 9999px;
-  background: currentColor;
-}
-
-.app-shell-eq i:nth-child(1) { height: 55%; }
-.app-shell-eq i:nth-child(2) { height: 85%; }
-.app-shell-eq i:nth-child(3) { height: 40%; }
-.app-shell-eq i:nth-child(4) { height: 70%; }
-
-/* Hero title */
-.app-shell-title {
-  margin: 0 0 1rem;
-  font-family: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 3rem;
-  font-weight: 800;
-  line-height: 1.05;
-  text-wrap: balance;
-}
-
-@media (min-width: 768px) {
-  .app-shell-title {
-    font-size: 3.75rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .app-shell-title {
-    font-size: 4.5rem;
-  }
-}
-
-.app-shell-title span {
-  background: linear-gradient(135deg, hsl(265 68% 54%), hsl(255 66% 46%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-.app-shell-sub {
-  margin: 0 auto 1.5rem;
-  max-width: 42rem;
-  padding: 0 1rem;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: hsl(268 11% 64%);
-}
-
-@media (min-width: 768px) {
-  .app-shell-sub {
-    margin-bottom: 2rem;
-    font-size: 1.125rem;
-  }
-}
-
-/* CTAs */
-.app-shell-ctas {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.app-shell-cta-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  height: 4rem;
-  padding: 0 3rem;
-  border-radius: 0.75rem;
-  background: hsl(265 68% 54%);
-  box-shadow: 0 0 16px hsl(265 68% 54% / 0.2);
-  font-family: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: hsl(265 40% 12%);
-}
-
-.app-shell-cta-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-}
-
-.app-shell-cta-glass {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  height: 3rem;
-  padding: 0 2rem;
-  border: 1px solid hsl(266 14% 18% / 0.5);
-  border-radius: 0.5rem;
-  background: hsl(266 22% 10% / 0.5);
-  backdrop-filter: blur(24px);
-  font-size: 1rem;
-  font-weight: 600;
-  color: hsl(276 22% 96%);
-}
-
-.app-shell-new {
+.app-shell-halo {
   position: absolute;
-  top: -0.5rem;
-  right: -0.45rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.14rem 0.42rem;
-  border-radius: 999px;
-  background: hsl(265 68% 54%);
-  color: hsl(0 0% 100%);
-  font-family: 'Bricolage Grotesque', 'Plus Jakarta Sans', system-ui, sans-serif;
-  font-size: 0.5625rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  line-height: 1.15;
-  text-transform: uppercase;
-  box-shadow: 0 0 0 2px hsl(265 25% 7%), 0 0 14px hsl(265 68% 54% / 0.55);
+  width: 9.5rem;
+  height: 9.5rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, hsl(265 74% 62% / 0.7) 0%, hsl(265 68% 54% / 0) 68%);
+  filter: blur(6px);
+  animation: app-shell-halo 1.6s ease-in-out infinite;
 }
 
-/* News — latest 2 items; generated into index.html by scripts/news-teasers.mjs */
-.app-shell-news {
-  width: 100%;
-  padding: 1.5rem 1rem;
+.app-shell-mark img {
+  position: relative;
+  width: 4.5rem;
+  height: 4.5rem;
+  animation: app-shell-pulse 1.6s ease-in-out infinite;
 }
 
-.app-shell-news-inner {
-  max-width: 36rem;
-  margin: 0 auto;
+#app-shell.app-shell-leave {
+  animation: app-shell-leave 420ms ease forwards;
 }
 
-.app-shell-news-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
+@keyframes app-shell-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
 }
 
-.app-shell-news-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+@keyframes app-shell-halo {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
 }
 
-.app-shell-news-icon {
-  display: flex;
-  padding: 0.375rem;
-  border-radius: 0.5rem;
-  background: hsl(265 68% 54% / 0.1);
-  color: hsl(265 68% 54%);
+@keyframes app-shell-leave {
+  to {
+    opacity: 0;
+  }
 }
 
-.app-shell-news-icon svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.app-shell-news-title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-}
-
-.app-shell-news-more {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  height: 1.75rem;
-  padding: 0 0.5rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: transparent;
-  font-family: inherit;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: hsl(268 11% 64%);
-}
-
-.app-shell-news-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.app-shell-news-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid hsl(266 14% 18% / 0.4);
-  border-radius: 0.75rem;
-  background: hsl(266 16% 17% / 0.3);
-}
-
-.app-shell-news-card-icon {
-  display: flex;
-  flex-shrink: 0;
-  padding: 0.5rem;
-  border-radius: 0.5rem;
-  background: hsl(187 80% 52% / 0.15);
-  color: hsl(187 80% 52%);
-}
-
-.app-shell-news-card-icon svg {
-  width: 1rem;
-  height: 1rem;
-}
-
-.app-shell-news-card-body {
-  flex: 1;
-  min-width: 0;
-}
-
-.app-shell-news-card-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.25rem;
-}
-
-.app-shell-news-card-top h3 {
-  margin: 0;
-  overflow: hidden;
-  font-size: 0.875rem;
-  font-weight: 500;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-shell-news-card-date {
-  flex-shrink: 0;
-  font-family: ui-monospace, 'SFMono-Regular', monospace;
-  font-size: 10px;
-  color: hsl(268 11% 64%);
-}
-
-.app-shell-news-card-desc {
-  margin: 0;
-  overflow: hidden;
-  font-size: 0.75rem;
-  color: hsl(268 11% 64%);
-  opacity: 0.8;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.app-shell-news-chevron {
-  flex-shrink: 0;
-  width: 1rem;
-  height: 1rem;
-  color: hsl(268 11% 64%);
-}
-
-/* Version tag — matches Home.tsx */
-.app-shell-version {
-  display: none;
-  position: fixed;
-  bottom: 1.25rem;
-  left: 50%;
-  z-index: 40;
-  transform: translateX(-50%);
-  font-family: ui-monospace, 'SFMono-Regular', monospace;
-  font-size: 12px;
-  font-weight: 700;
-  color: hsl(268 11% 64% / 0.3);
-  pointer-events: none;
-  user-select: none;
-}
-
-@media (min-width: 768px) {
-  .app-shell-version {
-    display: block;
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-halo,
+  .app-shell-mark img,
+  #app-shell.app-shell-leave {
+    animation: none;
   }
 }

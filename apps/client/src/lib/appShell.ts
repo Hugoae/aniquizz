@@ -129,7 +129,19 @@ export async function dismissAppShellWhenReady(): Promise<void> {
   }
 
   shellDismissed = true;
-  document.getElementById('app-shell')?.remove();
+  const shell = document.getElementById('app-shell');
+  if (!shell) return;
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!reduce) {
+    shell.classList.add('app-shell-leave');
+    await new Promise<void>((resolve) => {
+      const done = () => resolve();
+      shell.addEventListener('animationend', done, { once: true });
+      window.setTimeout(done, 520);
+    });
+  }
+  shell.remove();
 }
 
 /** @deprecated Use dismissAppShellWhenReady — kept for tests. */

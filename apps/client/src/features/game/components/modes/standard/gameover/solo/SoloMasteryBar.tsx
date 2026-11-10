@@ -24,6 +24,7 @@ interface SoloMasteryBarProps {
   timeAttack?: boolean;
   timeBudgetSeconds?: number;
   medalRules?: TimeAttackMedalRules | null;
+  evolving?: boolean;
 }
 
 const MEDAL_ORDER: Medal[] = ['bronze', 'silver', 'gold', 'platinum'];
@@ -37,6 +38,7 @@ function goalMessage(
   timeAttack?: boolean,
   timeBudgetSeconds?: number,
   medalRules?: TimeAttackMedalRules | null,
+  evolving = false,
 ): string | null {
   const goal = timeAttack
     ? timeAttackNextMedalGoal(
@@ -47,7 +49,7 @@ function goalMessage(
         precision,
         medalRules,
       )
-    : nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision);
+    : nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision, evolving);
   if (goal) {
     const unit = timeAttack
       ? goal.pointsNeeded === 1
@@ -72,6 +74,7 @@ export function SoloMasteryBar({
   timeAttack = false,
   timeBudgetSeconds,
   medalRules,
+  evolving = false,
 }: SoloMasteryBarProps) {
   const resolvedPrecision = normalizePrecision(precision);
   const markerScores = timeAttack
@@ -81,10 +84,7 @@ export function SoloMasteryBar({
         resolvedPrecision,
         medalRules,
       )
-    : medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision);
-  const barMax = timeAttack ? markerScores.platinum : maxPossibleScore;
-  const scoreRatio = barMax > 0 ? score / barMax : 0;
-  const progressPercent = Math.min(100, scoreRatio * 100);
+    : medalMarkerScores(maxPossibleScore, songDifficulties, resolvedPrecision, evolving);
   const hint = goalMessage(
     score,
     maxPossibleScore,
@@ -94,94 +94,42 @@ export function SoloMasteryBar({
     timeAttack,
     timeBudgetSeconds,
     medalRules,
+    evolving,
   );
 
   return (
     <div className="z-10 w-full">
-      <div className="relative w-full px-1 pt-4">
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-4">
-          {MEDAL_ORDER.map((tier) => {
-            const required = markerScores[tier];
-            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
-            const earned = score >= required;
-            const meta = getMedalMeta(tier);
-            if (!meta) return null;
-            return (
+      <div className="grid grid-cols-4 gap-2">
+        {MEDAL_ORDER.map((tier) => {
+          const required = markerScores[tier];
+          const earned = score >= required;
+          const meta = getMedalMeta(tier);
+          return (
+            <div key={tier} className="flex min-w-0 flex-col items-center gap-1 text-center">
               <MedalIcon
-                key={tier}
-                className={cn(
-                  'absolute top-0 h-3.5 w-3.5 -translate-x-1/2',
-                  meta.textClass,
-                  earned && 'drop-shadow-[0_0_6px_currentColor]',
-                )}
-                style={{ left: `${pct}%` }}
+                className={cn('h-5 w-5', earned ? meta?.textClass : 'text-muted-foreground/35')}
                 aria-hidden
               />
-            );
-          })}
-        </div>
-
-        <div className="relative h-4 w-full overflow-hidden rounded-full border border-border/60 bg-secondary/50">
-          <div
-            className={cn(
-              'relative h-full rounded-full transition-all duration-1000 ease-out',
-              isSuccess ? 'bg-success' : 'bg-destructive/80',
-            )}
-            style={{ width: `${progressPercent}%` }}
-          />
-
-          {MEDAL_ORDER.map((tier) => {
-            const required = markerScores[tier];
-            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
-            const earned = score >= required;
-            return (
-              <div
-                key={tier}
-                className={cn(
-                  'absolute bottom-0 top-0 z-20 w-px',
-                  earned
-                    ? 'bg-foreground/90 shadow-[0_0_8px_hsl(var(--foreground)/0.5)]'
-                    : 'bg-muted-foreground/35',
-                )}
-                style={{ left: `${pct}%` }}
-                aria-hidden
-              />
-            );
-          })}
-        </div>
-
-        <div className="pointer-events-none relative mt-0.5 h-3.5 w-full">
-          <span className="absolute left-0 top-0 text-[9px] font-bold tabular-nums text-muted-foreground">
-            0
-          </span>
-          {MEDAL_ORDER.map((tier) => {
-            const required = markerScores[tier];
-            const pct = barMax > 0 ? Math.min(100, (required / barMax) * 100) : 0;
-            const earned = score >= required;
-            const meta = getMedalMeta(tier);
-            return (
+              <span className="text-[11px] font-medium leading-none text-muted-foreground">
+                {meta?.label ?? tier}
+              </span>
               <span
-                key={tier}
                 className={cn(
-                  'absolute top-0 -translate-x-1/2 text-[9px] font-black tabular-nums',
-                  earned ? meta?.textClass : 'text-muted-foreground/50',
+                  'font-mono text-sm font-bold tabular-nums leading-none',
+                  earned ? meta?.textClass : 'text-muted-foreground',
                 )}
-                style={{ left: `${pct}%` }}
               >
                 {required}
               </span>
-            );
-          })}
-          <span className="absolute right-0 top-0 text-[9px] font-bold tabular-nums text-muted-foreground">
-            {barMax}
-          </span>
-        </div>
+            </div>
+          );
+        })}
       </div>
 
       {hint && (
         <p
           className={cn(
-            'mt-2 text-center text-xs font-medium',
+            'mt-3 text-center text-xs font-medium',
             isSuccess ? 'text-success/90' : 'text-muted-foreground',
           )}
         >

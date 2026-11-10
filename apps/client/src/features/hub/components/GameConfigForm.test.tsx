@@ -1,7 +1,7 @@
 import { renderWithProviders as render } from '@/test/renderWithProviders';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RoomConfig } from '@aniquizz/shared';
 import { GameConfigForm } from './GameConfigForm';
 import { WATCHED_SOURCE_BLOCK_MESSAGE } from './config/watchedSource';
@@ -29,6 +29,12 @@ vi.mock('@/features/hub/hooks/usePublishedPlaylists', () => ({
   usePublishedPlaylists: () => ({ playlists: [], loading: false, error: null, retry: () => {} }),
 }));
 
+const prefsMock = vi.hoisted(() => ({ configWalkthrough: true }));
+
+vi.mock('@/features/settings/context/PlayerPrefsContext', () => ({
+  usePlayerPrefs: () => prefsMock,
+}));
+
 const baseConfig: RoomConfig = {
   mode: 'solo',
   gameType: 'standard',
@@ -48,6 +54,11 @@ const baseConfig: RoomConfig = {
 };
 
 describe('GameConfigForm', () => {
+  beforeEach(() => {
+    // Other cases open every section. The walk tests turn the option back on.
+    prefsMock.configWalkthrough = false;
+  });
+
   it('shows watched block message when AniList is not linked', () => {
     render(
       <GameConfigForm
@@ -84,6 +95,96 @@ describe('GameConfigForm', () => {
     await user.click(screen.getByRole('button', { name: /lancer la partie/i }));
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: /réinitialiser/i })).toBeInTheDocument();
+  });
+
+  it('walks Général, Source, then Avancée on every configuration', async () => {
+    prefsMock.configWalkthrough = true;
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+
+    const view = render(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={onSubmit}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Source' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Avancée' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /lancer la partie/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    expect(screen.getByRole('heading', { name: 'Source' })).toBeInTheDocument();
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Général' })).toBeEnabled();
+
+    await user.click(screen.getByRole('button', { name: 'Suivant' }));
+    expect(screen.getByRole('heading', { name: 'Avancée' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /lancer la partie/i }));
+    expect(onSubmit).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole('button', { name: 'Général' }));
+    expect(screen.getByRole('button', { name: /lancer la partie/i })).toBeEnabled();
+
+    view.unmount();
+    render(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={onSubmit}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /lancer la partie/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Source' })).toBeDisabled();
+  });
+
+  it('keeps Mettre à jour immediate while editing a live room', () => {
+    prefsMock.configWalkthrough = true;
+    render(
+      <GameConfigForm
+        config={{ ...baseConfig, mode: 'multiplayer', maxPlayers: 8 }}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        isRoom
+        currentPlayersCount={2}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Mettre à jour' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Source' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Avancée' })).toBeEnabled();
+  });
+
+  it('skips the walk when the site option is off', () => {
+    prefsMock.configWalkthrough = false;
+    render(
+      <GameConfigForm
+        config={baseConfig}
+        setConfig={() => {}}
+        toggleSoundType={() => {}}
+        onReset={() => {}}
+        onSubmit={() => {}}
+        user={{ id: 'u1' } as never}
+        profile={{ anilistUsername: 'PlayerOne' } as never}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: /lancer la partie/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Source' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Avancée' })).toBeEnabled();
   });
 
   it('allows endings to be selected', async () => {

@@ -12,6 +12,8 @@ export interface PlayerPrefs {
   soloAutoReveal: boolean;
   /** Answer stings (correct, wrong, missed, skip). The global mute still wins. */
   answerSounds: boolean;
+  /** First game setup walks Général → Source → Avancée. Off skips straight to launch. */
+  configWalkthrough: boolean;
   showShortcutReminder: boolean;
   friendRequestVisual: boolean;
   friendRequestSound: boolean;
@@ -35,6 +37,7 @@ export const PLAYER_PREFS_DEFAULTS: PlayerPrefs = {
   submitOnEnter: true,
   soloAutoReveal: false,
   answerSounds: true,
+  configWalkthrough: true,
   showShortcutReminder: true,
   friendRequestVisual: true,
   friendRequestSound: false,
@@ -50,6 +53,7 @@ export const PLAYER_PREFS_KEYS = [
   'submitOnEnter',
   'soloAutoReveal',
   'answerSounds',
+  'configWalkthrough',
   'showShortcutReminder',
   'friendRequestVisual',
   'friendRequestSound',
@@ -103,6 +107,7 @@ export function normalizePlayerPrefs(input: unknown): PlayerPrefs {
     submitOnEnter: readFlag(rec.submitOnEnter, PLAYER_PREFS_DEFAULTS.submitOnEnter),
     soloAutoReveal: readFlag(rec.soloAutoReveal, PLAYER_PREFS_DEFAULTS.soloAutoReveal),
     answerSounds: readFlag(rec.answerSounds, PLAYER_PREFS_DEFAULTS.answerSounds),
+    configWalkthrough: readFlag(rec.configWalkthrough, PLAYER_PREFS_DEFAULTS.configWalkthrough),
     showShortcutReminder: readFlag(
       rec.showShortcutReminder,
       PLAYER_PREFS_DEFAULTS.showShortcutReminder,

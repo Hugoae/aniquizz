@@ -3,7 +3,88 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.7.1** · Prime de série + admin tops + podium ties · 2026-11-09
+## Current phase: **26.8** · Config walkthrough and Évolutif · 2026-11-10
+
+### 1. Config walkthrough (first brick)
+
+A new game no longer launches from Général alone. Every time the form opens, the bottom button is **Suivant** on Général, **Suivant** on Source, and **Lancer la partie** (or **Créer le salon**) only on Avancée. A section stays locked until the walk reaches it during this visit. After that, clicking a visited section goes back. Once all three have been opened in this visit, the launch button stays available on each of them. The next opening starts the walk again. Nothing is stored on the device.
+
+**Mettre à jour** on a room that already has players skips the walk. The host is editing, not discovering the form. Standard and Contre-la-montre share the same form, solo and multi. Settings → En partie has **Parcours de configuration**, on by default. Turning it off opens every section immediately and keeps the launch button on Général. The preference is `configWalkthrough` on the profile.
+
+**Checked.** Wizard unit tests and the config form tests. Not replayed in the browser yet.
+
+### 2. Évolutif (solo ladder)
+
+Third mode, solo only, typing only. Not a modifier of Standard or Chrono. One excerpt start, random by default. The beginning stays in Avancée. The clip restarts from that point at **0.25 s, 0.5 s, 1 s, 3 s, 10 s, then 15 s**. Durations do not stack. A song that cannot grow stops the ladder. No guess clock. While Réécoute is infinite, the current step can be replayed freely. Time does not run until the guess, Passer, or abandon. A correct answer scores **6 / 5 / 4 / 3 / 2 / 1** by step, then the title stays up for **15 s** with the usual timer pill. A wrong answer or Passer loses the step and lengthens the same title. Abandon ends it at 0. No QCM, Mix, Vitesse, guess-duration slider, video choice, or instant reveal. Video stays hidden. Default **20** songs. The mode card reads « L'extrait s'allonge tant que tu ne trouves pas : 0,25 s, 0,5 s, 1 s, puis jusqu'à 15 s ». The wave icon is the mode mark. There is no « 6 → 1 pt » chip. Retour and Modifier les paramètres reopen the same solo config with Évolutif still selected.
+
+In the match, one fill bar sits under the player, ticks inside the bar. Abandon is an icon on the left: it turns red on hover and says « Abandonner le titre ». Passer is on the right, without the next duration. The center control is a large violet play/pause. Play restarts the excerpt. The stage uses the usual background, with the wave and « Écoutez bien… ».
+
+Medals sit below Standard. A solid game is about 3–4 pts a title. Medium Franchise on the 6-pt scale: **2 Bronze, 3 Silver, 4 Gold, 5 Platinum**. Difficulty and precision offsets still apply.
+
+Réécoute sits in Général, above Précision. The title is **Réécoute**, not « Réécoute infinie ». Two buttons: **Infinie** (default) and **Limitée**. The 0–5 slider appears only when Limitée is on, with no extra title. 0 is one listen. 1–5 are extra replays after the first automatic listen. A pause does not spend a replay. At 0 remaining, play does not restart. The tooltip is locked: « Infinie, tu relances l’extrait autant que tu veux. Limitée, tu choisis combien de fois tu as le droit de réécouter l’extrait à chaque durée. » The blue lines under the sliders are gone in every mode, so Général ends at the same height. In the match, the count is a pill under « Écoutez bien… »: violet with the number while replays remain, amber « Plus de réécoute » when none remain. The header Pause button is hidden for the whole match, including the reveal. The center play button stays.
+
+The lobby rules summary is the locked paragraph. Do not rewrite it. `GameMode.EVOLVING` is on the database.
+
+**Checked.** Ladder tests, settings, and the match-engine ladder. Played: config, lobby return, the bar, the replay pill, and the hidden pause.
+
+### 3. Mode colors
+
+One color per mode, shared by every tag. Standard is violet (`primary`), Contre-la-montre is cyan (`aqua`), Évolutif is green (`success`), Quiz du jour is gold (`warning`). The map is `modeChrome.ts`. Do not pick a second palette for a new surface.
+
+| Surface      | What takes the color                                                            |
+| ------------ | ------------------------------------------------------------------------------- |
+| Config       | Selected mode card: border, tint, and icon                                      |
+| Ready screen | The pill above the avatar (`ÉVOLUTIF · SOLO`, and the same for the other modes) |
+| Multi rooms  | Compact tag on the room list                                                    |
+| Lobby        | Multi header pill                                                               |
+| History      | `STD` / `CLM` / `EVO`, and the Quiz du jour chip                                |
+| End of game  | The left rail of the settings strip, including the daily rail                   |
+
+Vitesse stays a small cyan bolt on a Standard tag. It is a modifier, not a mode.
+
+**Checked.** Config cards on the dev client: Standard violet, Chrono cyan, Évolutif green. The other surfaces use the same map.
+
+### 4. History cards
+
+The profile shows the **5** latest games. A card says **Victoire** or **Défaite** from `isWinner`, in green or red, including the left bar. That flag is the match rule: solo needs at least bronze, a small lobby crowns first place, a large lobby crowns the podium. The rank is not painted silver or bronze on the word.
+
+The score (or the found count in Contre-la-montre) is the large number. A match then has a bar of correct answers. A solo card shows the medal icon next to the result when one was earned, and nothing when none was. A multi card puts the people icon and the square place pill on that same line, then `/ 8`. The pill is gold, silver, bronze, then grey from 4th. The written `2e` is not repeated, and the headcount under the card is gone. A daily card shows only the place pill, with no total. Its answer bar is the five vertical tracks from the quiz, one per song, in order.
+
+Capsules sit under the score. The mode tag keeps its color. **Typing** is shown only on Standard, with **QCM** and **Mix**. The QCM mark is the four squares, including on the config button. Difficulty capsules (Facile, Moyen, Difficile) follow. The daily card has none. Contre-la-montre and Évolutif hide Typing, because that answer mode is forced.
+
+**Rejouer** opens a solo config filled with that match's rules. The configuration walk still runs when the site option is on. The rules are a small JSON column on `Match`. It stays for the life of the match: the row is shared, so deleting it when it leaves one player's last five would remove the button for someone who still sees the game. Older matches have no snapshot and no button. The daily quiz has no Rejouer. Difficulty on an old card comes from the songs that were played.
+
+**Checked.** History card tests. Profile on the dev client: red defeats, score, accuracy bar, mode tags.
+
+### 5. Home starfield
+
+The home backdrop is a sparse field of white points. They blink on their own clocks, then reappear somewhere else. Sizes vary. There are few of them. Reduced motion draws them once and stops.
+
+A point never sits on the title, the subtitle, the buttons, the news, the header, the friends pill, the settings button, or the version tag. Those nodes carry `data-home-clear`. The canvas skips a point that overlaps one, including a small pad.
+
+The cover wall was tried and removed. Do not put album or season covers back on the home background. There is no `GET /library/home-covers`.
+
+**Checked.** Dev client home: points only, none on the title, the play button, or the news.
+
+### 6. Solo medals in the match and on the result
+
+Solo only. Standard, Contre-la-montre, and Évolutif. Not multi, not versus Chrono, not the daily quiz.
+
+In the match they sit under the player card, centered on the video column. The header cue is gone. Do not put the four icons back in the Chrono header. Each column is the icon, the name in gray (Bronze, Argent, Or, Platine), then the **threshold**: the points, or the found count in Chrono, that unlock that medal. The icon and the number stay gray until the score reaches the threshold, then they take the medal color. The number is not “how many are left”. The live score is already on the card.
+
+Chrono thresholds come from the server (`medalTargets`), from the songs actually heard, same inputs as the end medal. Standard and Évolutif are computed on the client from the round count, the best score per title (6 on Évolutif), the configured difficulties, and precision.
+
+The end screen has no bar. The old bar put the thresholds on the fill, and close numbers overlapped. `SoloMasteryBar` is the same four columns, plus the existing hint sentence.
+
+**Checked.** Played in solo: the rail under the card, and the result columns without the bar.
+
+### 7. First paint
+
+The first frame is no longer a fake Home. `#app-shell` is the site background and the logo, with a violet halo that pulses. When the real page is styled, the shell fades out. Reduced motion keeps the logo still and removes it at once. Do not rebuild the header, the hero, or the news into that shell. `sync:news` no longer writes teasers into `index.html`.
+
+**Checked.** Dev client: the mark and the halo, then the home underneath.
+
+**Next:** news id 11 and footer `v26.8` ship with this note. Do not start the dropped found bar. HIBP stays parked.
 
 ### Quiz du jour — same engine as a match (2026-11-10)
 
@@ -15,9 +96,9 @@ Reveal on every mode keeps Suivant for 0.5 s after the countdown shows 0, so a l
 
 **Next:** no release note until asked. Do not start the dropped found bar. HIBP stays parked.
 
-### Prime de série (2026-11-09)
+### Prime de série (2026-10-18)
 
-Optional Contre-la-montre modifier, off by default. Solo and versus. Medals stay on the chosen duration. No extra XP. The in-match countdown was removed on purpose. Do not put it back. Public note: news id 10 (2026-11-09), Home footer `v26.7.1`. No roadmap card. The note covers the prime, the random Chrono start, the podium ties, and the solo Retour. It does not mention the admin tops.
+Optional Contre-la-montre modifier, off by default. Solo and versus. Medals stay on the chosen duration. No extra XP. The in-match countdown was removed on purpose. Do not put it back. Public note: news id 10 (2026-10-18), Home footer `v26.7.1`. No roadmap card. The note covers the prime, the random Chrono start, the podium ties, and the solo Retour. It does not mention the admin tops.
 
 | Piece        | Decision                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -31,7 +112,7 @@ Optional Contre-la-montre modifier, off by default. Solo and versus. Medals stay
 | **Back**     | Solo ready Retour opens the config (one step). Config Retour from that path leaves the room for mode select. Modifier les paramètres still returns to the ready screen. Multi lobby Retour still leaves the room.                                                                                                                                                                                                                                                                                                              |
 | **Start**    | Switching to Contre-la-montre sets the excerpt start to random. The server default was already random. Avancé can still pin the beginning. A room that already chose the beginning stays until the game type changes.                                                                                                                                                                                                                                                                                                          |
 | **Card**     | The solo teaser under the mode card was removed. The card keeps « Entraînez-vous seul et améliorez vos scores ». The multi card keeps its live teaser.                                                                                                                                                                                                                                                                                                                                                                         |
-| **Release**  | News id 10, « Mise à jour v26.7.1 - Prime de série », date 2026-11-09. `SITE_VERSION` is `26.7.1`. `sync:news` refreshes the home shell and `newsPreview.ts`. No roadmap card.                                                                                                                                                                                                                                                                                                                                                 |
+| **Release**  | News id 10, « Mise à jour v26.7.1 - Prime de série », date 2026-10-18. `SITE_VERSION` is `26.7.1`. `sync:news` refreshes the home shell and `newsPreview.ts`. No roadmap card.                                                                                                                                                                                                                                                                                                                                                 |
 | **Checked**  | English check, lint, typecheck, `pnpm test`, and `pnpm build` were green on the prime pass. Dev client: solo and salon Général, prime off then on, both sliders, pools 60 / 120 / 40 / 200, Aléatoire selected, lobby chips, solo card without the extra sentence. The 3 s cue and the display ceiling were covered by the grant tests (22) and the engine tests, not replayed in a live match.                                                                                                                                |
 
 ### Admin tops (2026-11-09)
@@ -65,7 +146,7 @@ Playtest closed. Spec: `docs/game/time-attack.md`. Solo is on `main` (`9245d8e`)
 | **Solo**     | Found/heard instead of points. Header medal cue is four icons. A zero budget still reveals the title, then the end screen. Heard is the round index, not the 5-title window.                                                                 |
 | **Versus**   | `RaceEngine`, 2–8, shared playlist, Watched forbidden. Private round events. Board: found, heard, budget, streak, no titles. Rank = most found, then fewest heard. Humans only for the win, podium, and placement XP. Bots stay in the list. |
 | **Playback** | Video mode stays the room setting. Song start defaults to the beginning; random may shorten the clip (8 s floor, reveal + 2 s margin). Pool stays `budget / 3` (20–80): that already covers an 8 s tail and a 5 s skip.                      |
-| **Release**  | News id 9 (2026-11-08) and Home footer `v26.7`. No roadmap card. The found bar is not in that note.                                                                                                                                          |
+| **Release**  | News id 9 (2026-10-11) and Home footer `v26.7`. No roadmap card. The found bar is not in that note.                                                                                                                                          |
 
 ### Admin console (2026-11-08, dev server, not committed)
 
@@ -105,7 +186,7 @@ The home visual pass (live facts, live catalogue, « Nouveau » card, one news t
 | **Modes** | Solo and Multijoueur are the two cards. Solo names Standard and Chrono. Compétitif is one quiet line. The daily quiz sits with that choice. |
 | **Home**  | Dropped. Do not put the facts or the Nouveau card back unless that is the task. Footer is `v26.7`.                                          |
 
-### Release note (2026-11-08)
+### Release note (2026-10-11)
 
 News id 9 is the public 26.7 note: Contre-la-montre, Vitesse, answer cues, the solo reveal move, Avis & bugs, and the mode page. No roadmap card. The found bar is not announced.
 

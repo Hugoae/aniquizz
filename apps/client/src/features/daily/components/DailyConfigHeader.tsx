@@ -1,5 +1,6 @@
 import { Calendar } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MODE_CHROME } from '@/features/hub/components/modeChrome';
 import { DAILY_COPY } from '../copy/dailyCopy';
 import { DailyRuleChips } from './DailyRuleChips';
 
@@ -17,7 +18,10 @@ export function DailyConfigHeader({ className }: DailyConfigHeaderProps) {
       )}
     >
       <div
-        className="flex shrink-0 flex-col items-center justify-center gap-0.5 self-stretch bg-primary px-3 text-primary-foreground shadow-sm"
+        className={cn(
+          'flex shrink-0 flex-col items-center justify-center gap-0.5 self-stretch px-3 shadow-sm',
+          MODE_CHROME.daily.solid,
+        )}
         aria-label={DAILY_COPY.title}
       >
         <Calendar className="h-4 w-4" aria-hidden />

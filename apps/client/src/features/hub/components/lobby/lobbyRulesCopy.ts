@@ -6,6 +6,8 @@ import {
   normalizePrecision,
   isArtistPrecision,
   effectiveMedalThresholds,
+  evolvingMedalThresholds,
+  resolveEvolvingReplayLimit,
   VIDEO_MODE_LABELS,
   normalizeVideoMode,
   SONG_START_MODE_LABELS,
@@ -58,6 +60,9 @@ const STANDARD_MODE_INTRO =
 const TIME_ATTACK_INTRO =
   'Trouvez le plus de titres avant la fin du temps. Un skip retire 5 secondes, puis 7, 9… Une erreur retire 3 secondes.';
 
+const EVOLVING_INTRO =
+  "L'extrait s'allonge tant que tu ne trouves pas : 0,25 s, puis 0,5 s, 1 s, 3 s, 10 s et 15 s. Tu réécoutes l'extrait en cours autant que tu veux. Une bonne réponse vaut 6 points au premier cran, puis 5, 4, 3, 2 et 1. Une erreur ou Passer donne l'extrait plus long du même titre. Abandonner le termine tout de suite, à 0 point. La réponse reste affichée 15 s, puis le son suivant commence.";
+
 const TIME_ATTACK_RACE_INTRO =
   "Course en parallèle : chacun joue sa voie sur la même playlist, sans voir les titres des autres. Le plus de titres trouvés l'emporte. Un skip retire 5 secondes, puis 7, 9… Une erreur retire 3 secondes.";
 
@@ -74,6 +79,22 @@ const speedScoringLines = (): string[] => {
 };
 
 const scoringLinesForConfig = (config: GameConfig): string[] => {
+  if (config.gameType === 'evolving') {
+    const replayLimit = resolveEvolvingReplayLimit(config);
+    const replayLine =
+      replayLimit == null
+        ? 'Réécoute infinie : tu relances l’extrait autant que tu veux.'
+        : replayLimit === 0
+          ? 'Réécoute infinie coupée : une seule écoute par marche.'
+          : `Réécoute infinie coupée : ${replayLimit} relance${replayLimit > 1 ? 's' : ''} en plus de la première écoute.`;
+    return [
+      'Saisie uniquement.',
+      replayLine,
+      'Bonne réponse : 6 pts à 0,25 s, puis 5, 4, 3, 2, et 1 pt à 15 s.',
+      'Une erreur ou Passer allonge l’extrait du même titre. Abandonner le titre le termine tout de suite.',
+      'Un titre raté ou abandonné vaut 0 point.',
+    ];
+  }
   if (config.gameType === 'timeAttack') {
     const lines = [
       'Chaque titre trouvé vaut 1 point.',
@@ -290,12 +311,33 @@ const soloBronzeThresholdLine = (
   return `Seuil Bronze : ${formatPercentFr(effectiveBronze)} minimum du score max (moyenne des difficultés sélectionnées : ${breakdown}).`;
 };
 
+/** Points per title on a 6-point Evolving scale, for the selected difficulties. */
+const evolvingMedalLine = (
+  difficulties: string[] | undefined,
+  precision: GameConfig['precision'],
+): string => {
+  const selected = difficulties?.length ? difficulties : ['medium'];
+  const thresholds = evolvingMedalThresholds(selected, precision);
+  const perTitle = (ratio: number) => {
+    const points = Math.round(ratio * 6 * 10) / 10;
+    return Number.isInteger(points) ? String(points) : points.toFixed(1).replace('.', ',');
+  };
+  return `Médailles plus accessibles qu’en Standard : environ ${perTitle(thresholds.bronze)} pt par titre pour le Bronze, ${perTitle(thresholds.silver)} pour l’Argent, ${perTitle(thresholds.gold)} pour l’Or, ${perTitle(thresholds.platinum)} pour le Platine.`;
+};
+
 const victoryLines = (context: LobbyRulesContext, config: GameConfig): string[] => {
   if (context.lobbyMode === 'solo') {
     if (config.gameType === 'timeAttack') {
       return [
         'Victoire solo : obtenir au moins la médaille Bronze.',
         'Les seuils comptent les titres trouvés par minute, puis le même malus de difficulté / précision que le Standard.',
+        'Quatre médailles à viser : Bronze, Argent, Or et Platine.',
+      ];
+    }
+    if (config.gameType === 'evolving') {
+      return [
+        'Victoire solo : obtenir au moins la médaille Bronze.',
+        evolvingMedalLine(config.difficulty, config.precision),
         'Quatre médailles à viser : Bronze, Argent, Or et Platine.',
       ];
     }
@@ -346,13 +388,17 @@ export function buildLobbyRulesSummaryChips(
 ): LobbyRulesSummaryChip[] {
   return [
     ...buildLobbySettingChips({ ...config, playlistName }),
-    {
-      key: 'video',
-      icon: Eye,
-      label: 'Vidéo',
-      value: VIDEO_MODE_LABELS[normalizeVideoMode(config.videoMode)],
-      className: SETTING_CHIP_NEUTRAL,
-    },
+    ...(config.gameType === 'evolving'
+      ? []
+      : [
+          {
+            key: 'video',
+            icon: Eye,
+            label: 'Vidéo',
+            value: VIDEO_MODE_LABELS[normalizeVideoMode(config.videoMode)],
+            className: SETTING_CHIP_NEUTRAL,
+          },
+        ]),
     {
       key: 'songStart',
       icon: Music2,
@@ -376,18 +422,20 @@ export function buildLobbyRulesSections(
       id: 'summary',
       title: 'Résumé de la partie',
       intro:
-        config.gameType !== 'timeAttack'
-          ? STANDARD_MODE_INTRO
-          : context.lobbyMode === 'multi'
-            ? TIME_ATTACK_RACE_INTRO
-            : TIME_ATTACK_INTRO,
+        config.gameType === 'evolving'
+          ? EVOLVING_INTRO
+          : config.gameType !== 'timeAttack'
+            ? STANDARD_MODE_INTRO
+            : context.lobbyMode === 'multi'
+              ? TIME_ATTACK_RACE_INTRO
+              : TIME_ATTACK_INTRO,
       chips: buildLobbyRulesSummaryChips(config, context.playlistName),
     },
     {
       id: 'flow',
       title: 'Déroulement',
       lines: [
-        videoFlowLine(config.videoMode),
+        ...(config.gameType === 'evolving' ? [] : [videoFlowLine(config.videoMode)]),
         songStartFlowLine(config.songStartMode),
         ...(lateStartLine ? [lateStartLine] : []),
         precisionFlowLine(config.precision),

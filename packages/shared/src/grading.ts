@@ -12,6 +12,7 @@
 // docs/game/solo-medals.md.
 
 import { GAME_CONFIG } from './constants';
+import { evolvingMedalThresholds } from './evolving';
 import type { SongDifficulty } from './leveling';
 import { normalizePrecision, type Precision } from './precision';
 
@@ -91,8 +92,11 @@ export const requiredScoreForTier = (
   maxPossibleScore: number,
   difficulties: string[],
   precision?: Precision,
+  evolving = false,
 ): number => {
-  const thresholds = effectiveMedalThresholds(difficulties, precision);
+  const thresholds = evolving
+    ? evolvingMedalThresholds(difficulties, precision)
+    : effectiveMedalThresholds(difficulties, precision);
   return Math.round(thresholds[tier] * maxPossibleScore);
 };
 
@@ -101,8 +105,11 @@ export const medalMarkerScores = (
   maxPossibleScore: number,
   difficulties: string[],
   precision?: Precision,
+  evolving = false,
 ): Record<Medal, number> => {
-  const thresholds = effectiveMedalThresholds(difficulties, precision);
+  const thresholds = evolving
+    ? evolvingMedalThresholds(difficulties, precision)
+    : effectiveMedalThresholds(difficulties, precision);
   return {
     bronze: Math.round(thresholds.bronze * maxPossibleScore),
     silver: Math.round(thresholds.silver * maxPossibleScore),
@@ -120,10 +127,11 @@ export const computeMedal = (
   maxPossibleScore: number,
   difficulties: string[],
   precision?: Precision,
+  evolving = false,
 ): MedalTier => {
   if (maxPossibleScore <= 0) return null;
 
-  const required = medalMarkerScores(maxPossibleScore, difficulties, precision);
+  const required = medalMarkerScores(maxPossibleScore, difficulties, precision, evolving);
   if (score >= required.platinum) return 'platinum';
   if (score >= required.gold) return 'gold';
   if (score >= required.silver) return 'silver';
@@ -147,10 +155,11 @@ export const nextMedalGoal = (
   difficulties: string[],
   currentMedal: MedalTier,
   precision?: Precision,
+  evolving = false,
 ): NextMedalGoal | null => {
   if (maxPossibleScore <= 0) return null;
 
-  const required = medalMarkerScores(maxPossibleScore, difficulties, precision);
+  const required = medalMarkerScores(maxPossibleScore, difficulties, precision, evolving);
   const startIdx = currentMedal ? MEDAL_ASCENDING.indexOf(currentMedal) + 1 : 0;
 
   for (let i = startIdx; i < MEDAL_ASCENDING.length; i++) {

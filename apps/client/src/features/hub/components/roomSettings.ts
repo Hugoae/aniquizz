@@ -109,9 +109,12 @@ type SourceChipSettings = Pick<
 /** Core room settings (excluding difficulty) — neutral styling, consistent icons. */
 export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[] {
   const timeAttack = s.gameType === 'timeAttack';
+  const evolving = s.gameType === 'evolving';
   const timeValue = timeAttack
     ? formatTimeAttackBudget(s.timeBudgetSeconds)
-    : `${s.guessDuration}s`;
+    : evolving
+      ? '0,25 s → 15 s'
+      : `${s.guessDuration}s`;
   return [
     {
       key: 'sounds',
@@ -123,7 +126,7 @@ export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[]
     {
       key: 'time',
       icon: Clock,
-      label: timeAttack ? 'Chrono' : 'Temps',
+      label: timeAttack ? 'Chrono' : evolving ? 'Extraits' : 'Temps',
       value: timeValue,
       className: SETTING_CHIP_NEUTRAL,
     },
@@ -208,13 +211,17 @@ export function buildLobbySettingChips(
       className: difficulty.className,
     },
     ...badges,
-    {
-      key: 'video',
-      icon: Eye,
-      label: 'Vidéo',
-      value: VIDEO_MODE_LABELS[videoMode],
-      className: SETTING_CHIP_NEUTRAL,
-    },
+    ...(config.gameType === 'evolving'
+      ? []
+      : [
+          {
+            key: 'video',
+            icon: Eye,
+            label: 'Vidéo',
+            value: VIDEO_MODE_LABELS[videoMode],
+            className: SETTING_CHIP_NEUTRAL,
+          },
+        ]),
   ];
 }
 /** @deprecated Use SETTING_CHIP_NEUTRAL — kept for gradual migration if referenced elsewhere. */

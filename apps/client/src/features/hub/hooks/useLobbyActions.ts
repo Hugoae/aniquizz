@@ -93,21 +93,25 @@ export function useLobbyActions(input: {
   }, [navigate, setRoomConfig, setCurrentRoomId]);
 
   const openLobbySettings = useCallback(() => {
+    if ((roomConfigRef.current.maxPlayers ?? 1) <= 1) {
+      setConfig({ ...roomConfigRef.current, mode: 'solo' });
+      navigate(playCreatePath('solo'), {
+        state: { intent: 'solo', returnTo: '/play' },
+      });
+      return;
+    }
     navigate(playCreatePath('edit', currentRoomIdRef.current), {
       state: { intent: 'edit', draft: roomConfigRef.current, returnTo: '/play' },
     });
-  }, [navigate, currentRoomIdRef, roomConfigRef]);
+  }, [navigate, currentRoomIdRef, roomConfigRef, setConfig]);
 
-  /** Solo ready Retour: one step back to the config, not the mode list. */
+  /** Solo ready Retour: one step back to the same solo config, not the mode list. */
   const returnSoloToConfig = useCallback(() => {
-    navigate(playCreatePath('edit', currentRoomIdRef.current), {
-      state: {
-        intent: 'edit',
-        draft: roomConfigRef.current,
-        leaveOnBack: true,
-      },
+    setConfig({ ...roomConfigRef.current, mode: 'solo' });
+    navigate(playCreatePath('solo'), {
+      state: { intent: 'solo', leaveOnBack: true },
     });
-  }, [navigate, currentRoomIdRef, roomConfigRef]);
+  }, [navigate, roomConfigRef, setConfig]);
 
   const emitSolo = useCallback(
     (soloConfig: GameConfig) => {

@@ -299,6 +299,8 @@ export interface ClientToServerEvents {
   vote_pause: (payload: RoomIdInput) => void;
   vote_skip: (payload: RoomIdInput) => void;
   'game:skip_round': (payload: RoomIdInput) => void;
+  /** Evolving: drop the current title. Same room check as a solo skip. */
+  'game:abandon_round': (payload: RoomIdInput) => void;
   'game:return_to_lobby': (payload: RoomIdInput) => void;
   'game:cancel': (payload: RoomIdInput) => void;
   get_game_state: (payload: RoomIdInput) => void;

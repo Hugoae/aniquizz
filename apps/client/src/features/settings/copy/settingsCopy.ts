@@ -48,6 +48,9 @@ export const SETTINGS_COPY = {
   answerSoundsLabel: 'Sons de bonne et mauvaise réponse',
   answerSoundsHint:
     'Court jingle quand une réponse est trouvée, ratée ou passée. Le volume de la partie s’applique, et le son global les coupe aussi.',
+  configWalkthroughLabel: 'Parcours de configuration',
+  configWalkthroughHint:
+    'Chaque configuration passe par Général, Source, puis Avancée. Désactivé, toutes les sections sont ouvertes.',
   shortcutReminderLabel: 'Rappel des raccourcis clavier',
   shortcutReminderHint: 'Affiché uniquement sur un appareil avec clavier.',
   notificationsHeading: 'Notifications',

@@ -1,15 +1,130 @@
 import { memo, useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Eye, Pause, SkipForward, Volume2, VolumeX } from 'lucide-react';
+import { AlertCircle, Eye, Pause, Play, Repeat, SkipForward, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
 import type { CurrentSong } from '@/features/game/state/gameReducer';
 import { peekClipPath, peekWindowRect, type VideoMode } from '@aniquizz/shared';
 import { MatchCountdownOverlays } from '../../../shared/MatchCountdownOverlays';
+import { AudioVisualizer } from '../../../core/AudioVisualizer';
 import { cn } from '@/lib/utils';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import type { GamePhase } from './types';
 import { guessingClipPaintKey } from './videoStagePaint';
+
+/** Center play control for Evolving. Play restarts the excerpt, unless replays are capped. */
+function EvolvingListenControl({
+  videoRef,
+  startTime,
+  clipSeconds,
+  stepKey,
+  replayLimit,
+}: {
+  videoRef: React.RefObject<HTMLVideoElement>;
+  startTime: number;
+  clipSeconds: number;
+  stepKey: number;
+  /** Null means unlimited. A number is extra restarts after the first listen. */
+  replayLimit: number | null;
+}) {
+  const [playing, setPlaying] = useState(true);
+  const [clipFinished, setClipFinished] = useState(false);
+  const [replaysLeft, setReplaysLeft] = useState(replayLimit ?? 0);
+
+  useEffect(() => {
+    setReplaysLeft(replayLimit ?? 0);
+    setClipFinished(false);
+  }, [replayLimit, stepKey, startTime]);
+
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    const end = startTime + clipSeconds;
+    const sync = () => {
+      setPlaying(!el.paused && !el.ended);
+      setClipFinished(el.currentTime >= end - 0.08);
+    };
+    sync();
+    el.addEventListener('play', sync);
+    el.addEventListener('pause', sync);
+    el.addEventListener('ended', sync);
+    el.addEventListener('timeupdate', sync);
+    return () => {
+      el.removeEventListener('play', sync);
+      el.removeEventListener('pause', sync);
+      el.removeEventListener('ended', sync);
+      el.removeEventListener('timeupdate', sync);
+    };
+  }, [videoRef, startTime, clipSeconds, stepKey]);
+
+  const replayBlocked = replayLimit != null && clipFinished && replaysLeft <= 0;
+
+  const toggle = () => {
+    const el = videoRef.current;
+    if (!el) return;
+    const end = startTime + clipSeconds;
+    const atEnd = el.currentTime >= end - 0.08;
+    if (!el.paused && !el.ended) {
+      el.pause();
+      return;
+    }
+    if (!atEnd) {
+      void el.play().catch(() => undefined);
+      return;
+    }
+    if (replayLimit != null && replaysLeft <= 0) return;
+    if (replayLimit != null) setReplaysLeft((left) => Math.max(0, left - 1));
+    el.currentTime = startTime;
+    void el.play().catch(() => undefined);
+  };
+
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20 flex flex-col items-center justify-center bg-background">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={replayBlocked}
+        aria-label={playing ? 'Pause' : replayBlocked ? 'Plus de réécoute' : "Lire l'extrait"}
+        className="pointer-events-auto flex h-32 w-32 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40"
+      >
+        {playing ? (
+          <Pause className="h-12 w-12" aria-hidden="true" />
+        ) : (
+          <Play className="h-12 w-12 fill-current" aria-hidden="true" />
+        )}
+      </button>
+      <div className="mt-6 flex h-8 w-1/2 items-center justify-center">
+        <AudioVisualizer isPlaying={playing} className="h-8 text-primary" />
+      </div>
+      <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">Écoutez bien…</p>
+      {replayLimit != null ? (
+        <p
+          aria-live="polite"
+          className={cn(
+            'mt-3 inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5',
+            replaysLeft === 0
+              ? 'border-warning/40 bg-warning/15 text-warning'
+              : 'border-primary/40 bg-primary/15 text-primary shadow-glow',
+          )}
+        >
+          <Repeat className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          {replaysLeft === 0 ? (
+            <span className="text-xs font-semibold">Plus de réécoute</span>
+          ) : (
+            <>
+              <span className="font-mono text-lg font-black leading-none tabular-nums">
+                {replaysLeft}
+              </span>
+              <span className="text-xs font-semibold">
+                {replaysLeft > 1 ? 'réécoutes' : 'réécoute'}
+              </span>
+            </>
+          )}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 interface VideoStageProps {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -40,6 +155,12 @@ interface VideoStageProps {
   onVoteSkip: () => void;
   /** Must be referentially stable (memoised) — this component is memo'd. */
   timeAttackClock?: TimeAttackClock | null;
+  /** Evolving: play/pause replaces the guess ring. Reveal still shows its timer pill. */
+  evolvingMode?: boolean;
+  /** Null is unlimited. A number is extra replays after the first listen. */
+  evolvingReplayLimit?: number | null;
+  evolvingClipSeconds?: number;
+  evolvingStep?: number;
 }
 
 export const VideoStage = memo(function VideoStage({
@@ -69,6 +190,10 @@ export const VideoStage = memo(function VideoStage({
   skipRequired,
   onVoteSkip,
   timeAttackClock = null,
+  evolvingMode = false,
+  evolvingReplayLimit = null,
+  evolvingClipSeconds = 0,
+  evolvingStep = 0,
 }: VideoStageProps) {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [hasPaintedFrame, setHasPaintedFrame] = useState(false);
@@ -128,7 +253,7 @@ export const VideoStage = memo(function VideoStage({
         // landscape monitor and crushed the stage to 11rem on desktop.
         // Tighten only when the viewport is actually short (phone on its side).
         'group relative aspect-video max-h-[42vh] w-full max-w-[850px] shrink-0 overflow-hidden rounded-xl border border-border shadow-2xl transition-all duration-500 [@media(orientation:landscape)_and_(max-height:500px)]:max-h-[36vh]',
-        isGuessing && videoMode === 'peek' ? 'bg-background' : 'bg-black',
+        isGuessing && (videoMode === 'peek' || evolvingMode) ? 'bg-background' : 'bg-black',
       )}
     >
       {/* Music excerpt — no dialogue captions to ship; aria-label already describes the clip. */}
@@ -231,6 +356,18 @@ export const VideoStage = memo(function VideoStage({
           </div>
         )}
 
+      {!isGamePaused && evolvingMode && phase === 'guessing' ? (
+        <EvolvingListenControl
+          videoRef={videoRef}
+          startTime={
+            currentSong && 'videoKey' in currentSong ? (currentSong.videoStartTime ?? 0) : 0
+          }
+          clipSeconds={evolvingClipSeconds}
+          stepKey={evolvingStep}
+          replayLimit={evolvingReplayLimit}
+        />
+      ) : null}
+
       <DevRenderProfiler id="MatchCountdownOverlays">
         <MatchCountdownOverlays
           phase={phase}
@@ -238,7 +375,7 @@ export const VideoStage = memo(function VideoStage({
           phaseDurationSeconds={phaseDurationSeconds}
           isGamePaused={isGamePaused}
           isPausePending={isPausePending}
-          useCenterTimer={useCenterTimer}
+          useCenterTimer={useCenterTimer && !evolvingMode}
           useBottomBar={useBottomBar}
           timeAttack={timeAttackClock}
         />

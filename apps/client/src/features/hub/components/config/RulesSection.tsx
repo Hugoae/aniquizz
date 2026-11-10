@@ -1,15 +1,10 @@
-import { Keyboard, Target, Timer, Zap } from 'lucide-react';
+import { Infinity as InfinityIcon, Keyboard, Minus, Repeat, Target, Zap } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
-import {
-  RESPONSE_MODES,
-  PRECISION_OPTIONS,
-  PRECISION_HELP,
-  estimateMatchMinutes,
-} from './formOptions';
+import { RESPONSE_MODES, PRECISION_OPTIONS, PRECISION_HELP } from './formOptions';
 import { FiltersSection } from './FiltersSection';
 import { TimeAttackRules } from './TimeAttackRules';
 
@@ -29,115 +24,184 @@ export function RulesSection({
   toggleDifficulty,
   showSpeedBonus = false,
 }: RulesSectionProps) {
-  const estimatedMinutes = estimateMatchMinutes(config);
   const typingOk = config.responseType === 'typing';
   const speedBonusOn = Boolean(showSpeedBonus && typingOk && config.speedBonusEnabled);
   const timeAttack = config.gameType === 'timeAttack';
+  const evolving = config.gameType === 'evolving';
+
+  const replayOn = config.evolvingInfiniteReplay !== false;
+  const replayLimit = config.evolvingReplayLimit ?? 1;
 
   return (
     <div className="space-y-3">
-      {timeAttack ? (
-        <TimeAttackRules config={config} update={update} />
-      ) : (
-        <>
-          {/* Sliders + estimated duration */}
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <Label>Sons</Label>
-                  <span className="font-mono font-bold text-primary">{config.soundCount}</span>
-                </div>
-                <Slider
-                  aria-label="Nombre de sons"
-                  value={[config.soundCount]}
-                  min={5}
-                  max={100}
-                  step={5}
-                  onValueChange={(v) => update({ soundCount: v[0] })}
-                />
+      <div>
+        {timeAttack ? (
+          <TimeAttackRules config={config} update={update} />
+        ) : evolving ? (
+          <div className="flex flex-col gap-3">
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <Label>Sons</Label>
+                <span className="font-mono font-bold text-primary">{config.soundCount}</span>
               </div>
-              <div className="space-y-3">
-                <div className="flex items-baseline justify-between">
-                  <Label>Durée</Label>
-                  <span className="font-mono font-bold text-primary">{config.guessDuration}s</span>
-                </div>
-                <Slider
-                  aria-label="Durée de réponse en secondes"
-                  value={[config.guessDuration]}
-                  min={5}
-                  max={60}
-                  step={5}
-                  onValueChange={(v) => update({ guessDuration: v[0] })}
-                />
-              </div>
+              <Slider
+                aria-label="Nombre de sons"
+                value={[config.soundCount]}
+                min={5}
+                max={100}
+                step={5}
+                onValueChange={(v) => update({ soundCount: v[0] })}
+              />
             </div>
-            <div className="flex items-center gap-2 text-xs font-medium text-accent">
-              <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>≈ {estimatedMinutes} min de partie</span>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <SectionHeader
-              icon={Keyboard}
-              title="Mode de réponse"
-              tooltip="Comment les joueurs saisissent leur réponse."
-            />
-            <div className="grid grid-cols-3 gap-2">
-              {RESPONSE_MODES.map(({ id, label, description, icon: Icon }) => (
+            <div className="space-y-2">
+              <SectionHeader
+                icon={Repeat}
+                title="Réécoute"
+                tooltip="Infinie, tu relances l’extrait autant que tu veux. Limitée, tu choisis combien de fois tu as le droit de réécouter l’extrait à chaque durée."
+              />
+              <div className="grid grid-cols-4 items-center gap-2">
                 <OptionButton
-                  key={id}
-                  active={config.responseType === id}
+                  active={replayOn}
+                  aria-label="Réécoute infinie"
                   onClick={() =>
-                    update({
-                      responseType: id,
-                      speedBonusEnabled: id === 'typing' ? config.speedBonusEnabled : false,
-                    })
+                    update({ evolvingInfiniteReplay: true, evolvingReplayLimit: replayLimit })
                   }
                   className="flex flex-col items-center gap-1 p-2 text-center"
                 >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-[11px] font-bold uppercase">{label}</span>
+                  <InfinityIcon className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-[11px] font-bold uppercase">Infinie</span>
                   <span className="text-[9px] leading-tight text-muted-foreground">
-                    {description}
+                    Sans limite
                   </span>
                 </OptionButton>
-              ))}
-            </div>
-            {showSpeedBonus ? (
-              <div className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-3 py-2.5">
-                <div className="min-w-0 space-y-0.5">
-                  <div className="flex items-center gap-1.5">
-                    <Zap className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-                    <Label
-                      htmlFor="speed-bonus"
-                      className="text-xs font-bold uppercase tracking-wide"
-                    >
-                      Vitesse
-                    </Label>
+                <OptionButton
+                  active={!replayOn}
+                  aria-label="Réécoute limitée"
+                  onClick={() =>
+                    update({ evolvingInfiniteReplay: false, evolvingReplayLimit: replayLimit })
+                  }
+                  className="flex flex-col items-center gap-1 p-2 text-center"
+                >
+                  <Minus className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-[11px] font-bold uppercase">Limitée</span>
+                  <span className="text-[9px] leading-tight text-muted-foreground">0 à 5</span>
+                </OptionButton>
+                {replayOn ? null : (
+                  <div className="col-span-2 flex items-center gap-3">
+                    <Slider
+                      aria-label="Nombre de réécoutes"
+                      value={[replayLimit]}
+                      min={0}
+                      max={5}
+                      step={1}
+                      onValueChange={(v) => update({ evolvingReplayLimit: v[0] ?? replayLimit })}
+                    />
+                    <span className="w-8 shrink-0 text-right font-mono text-xs font-bold tabular-nums text-primary">
+                      {replayLimit}
+                    </span>
                   </div>
-                  <p
-                    id="speed-bonus-help"
-                    className="text-[11px] leading-snug text-muted-foreground"
-                  >
-                    {typingOk
-                      ? 'Bonus de points si vous répondez plus vite que les autres (parmi les bonnes réponses).'
-                      : 'Disponible uniquement en typing.'}
-                  </p>
-                </div>
-                <Switch
-                  id="speed-bonus"
-                  checked={speedBonusOn}
-                  disabled={!typingOk}
-                  onCheckedChange={(checked) => update({ speedBonusEnabled: checked })}
-                  aria-describedby="speed-bonus-help"
-                />
+                )}
               </div>
-            ) : null}
+            </div>
           </div>
-        </>
-      )}
+        ) : (
+          <div className="flex flex-col gap-3">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <Label>Sons</Label>
+                    <span className="font-mono font-bold text-primary">{config.soundCount}</span>
+                  </div>
+                  <Slider
+                    aria-label="Nombre de sons"
+                    value={[config.soundCount]}
+                    min={5}
+                    max={100}
+                    step={5}
+                    onValueChange={(v) => update({ soundCount: v[0] })}
+                  />
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-baseline justify-between">
+                    <Label>Durée</Label>
+                    <span className="font-mono font-bold text-primary">
+                      {config.guessDuration}s
+                    </span>
+                  </div>
+                  <Slider
+                    aria-label="Durée de réponse en secondes"
+                    value={[config.guessDuration]}
+                    min={5}
+                    max={60}
+                    step={5}
+                    onValueChange={(v) => update({ guessDuration: v[0] })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <SectionHeader
+                icon={Keyboard}
+                title="Mode de réponse"
+                tooltip="Comment les joueurs saisissent leur réponse."
+              />
+              <div className="grid grid-cols-3 gap-2">
+                {RESPONSE_MODES.map(({ id, label, description, icon: Icon }) => (
+                  <OptionButton
+                    key={id}
+                    active={config.responseType === id}
+                    onClick={() =>
+                      update({
+                        responseType: id,
+                        speedBonusEnabled: id === 'typing' ? config.speedBonusEnabled : false,
+                      })
+                    }
+                    className="flex flex-col items-center gap-1 p-2 text-center"
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                    <span className="text-[11px] font-bold uppercase">{label}</span>
+                    <span className="text-[9px] leading-tight text-muted-foreground">
+                      {description}
+                    </span>
+                  </OptionButton>
+                ))}
+              </div>
+              {showSpeedBonus ? (
+                <div className="flex items-start justify-between gap-3 rounded-xl border border-border/60 bg-card/40 px-3 py-2.5">
+                  <div className="min-w-0 space-y-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Zap className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+                      <Label
+                        htmlFor="speed-bonus"
+                        className="text-xs font-bold uppercase tracking-wide"
+                      >
+                        Vitesse
+                      </Label>
+                    </div>
+                    <p
+                      id="speed-bonus-help"
+                      className="text-[11px] leading-snug text-muted-foreground"
+                    >
+                      {typingOk
+                        ? 'Bonus de points si vous répondez plus vite que les autres (parmi les bonnes réponses).'
+                        : 'Disponible uniquement en typing.'}
+                    </p>
+                  </div>
+                  <Switch
+                    id="speed-bonus"
+                    checked={speedBonusOn}
+                    disabled={!typingOk}
+                    onCheckedChange={(checked) => update({ speedBonusEnabled: checked })}
+                    aria-describedby="speed-bonus-help"
+                  />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="space-y-2">
         <SectionHeader icon={Target} title="Précision" tooltip={PRECISION_HELP} />

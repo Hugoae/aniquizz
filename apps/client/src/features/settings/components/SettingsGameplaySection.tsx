@@ -3,8 +3,14 @@ import { SettingsToggleRow } from '@/features/settings/components/SettingsField'
 import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 
 export function SettingsGameplaySection() {
-  const { autofocusAnswer, submitOnEnter, answerSounds, showShortcutReminder, patchPrefs } =
-    usePlayerPrefs();
+  const {
+    autofocusAnswer,
+    submitOnEnter,
+    answerSounds,
+    showShortcutReminder,
+    configWalkthrough,
+    patchPrefs,
+  } = usePlayerPrefs();
 
   return (
     <section aria-labelledby="settings-gameplay-heading">
@@ -12,6 +18,13 @@ export function SettingsGameplaySection() {
         {SETTINGS_COPY.gameplayHeading}
       </h3>
       <div className="mt-3 space-y-3">
+        <SettingsToggleRow
+          id="settings-config-walkthrough"
+          label={SETTINGS_COPY.configWalkthroughLabel}
+          hint={SETTINGS_COPY.configWalkthroughHint}
+          checked={configWalkthrough}
+          onCheckedChange={(checked) => patchPrefs({ configWalkthrough: checked })}
+        />
         <SettingsToggleRow
           id="settings-autofocus"
           label={SETTINGS_COPY.autofocusLabel}

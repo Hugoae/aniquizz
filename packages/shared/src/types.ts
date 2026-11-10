@@ -12,11 +12,12 @@ export type GameMode = 'solo' | 'multiplayer' | 'competitive';
 export type SoundSelection = 'random' | 'mix' | 'watched' | 'playlist';
 
 /** Match rules variant. Speed podium is `speedBonusEnabled` on Standard, not a GameType. */
-export type GameType = 'standard' | 'timeAttack';
+export type GameType = 'standard' | 'timeAttack' | 'evolving';
 
 export const GAME_TYPE_LABELS: Record<GameType, string> = {
   standard: 'Standard',
   timeAttack: 'Contre-la-montre',
+  evolving: 'Évolutif',
 };
 
 export type GameTypeId = GameType;
@@ -86,6 +87,13 @@ export interface GameConfig {
   videoMode?: VideoMode;
   /** Where each guessing-round clip starts: random offset (default) or beginning. */
   songStartMode?: SongStartMode;
+  /**
+   * Evolving: replay the current step as many times as you want. Default on.
+   * Off reveals `evolvingReplayLimit`.
+   */
+  evolvingInfiniteReplay?: boolean;
+  /** Extra replays after the first listen when infinite replay is off. 0–5. */
+  evolvingReplayLimit?: number;
   hostAvatar?: string;
   hostName?: string;
 }

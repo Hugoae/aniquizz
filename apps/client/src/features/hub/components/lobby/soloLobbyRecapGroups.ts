@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
-import { Clock, Eye, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
+import { Clock, Eye, Gauge, Keyboard, ListMusic, Repeat, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 import {
   GAME_TYPE_LABELS,
   getPrecisionChipLabel,
   normalizeVideoMode,
+  resolveEvolvingReplayLimit,
   VIDEO_MODE_LABELS,
 } from '@aniquizz/shared';
 import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
@@ -79,17 +80,36 @@ export function buildSoloLobbyRecapGroups(
           : `${config.soundCount} sons`,
       className: SETTING_CHIP_NEUTRAL,
     },
-    {
+  ];
+  if (config.gameType === 'timeAttack') {
+    partieChips.push({
+      key: 'title-count',
+      icon: Clock,
+      label: '',
+      value: `${config.soundCount} titres`,
+      className: SETTING_CHIP_NEUTRAL,
+    });
+  } else if (config.gameType === 'evolving') {
+    const replayLimit = resolveEvolvingReplayLimit(config);
+    if (replayLimit != null) {
+      partieChips.push({
+        key: 'replay-limit',
+        icon: Repeat,
+        label: '',
+        value:
+          replayLimit === 0 ? '1 écoute' : `${replayLimit} réécoute${replayLimit > 1 ? 's' : ''}`,
+        className: SETTING_CHIP_NEUTRAL,
+      });
+    }
+  } else {
+    partieChips.push({
       key: 'guess-duration',
       icon: Clock,
       label: '',
-      value:
-        config.gameType === 'timeAttack'
-          ? `${config.soundCount} titres`
-          : `${config.guessDuration}s`,
+      value: `${config.guessDuration}s`,
       className: SETTING_CHIP_NEUTRAL,
-    },
-  ];
+    });
+  }
   const prime = streakPrimeChip(config);
   if (prime) partieChips.push(prime);
 

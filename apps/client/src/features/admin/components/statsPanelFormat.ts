@@ -32,6 +32,7 @@ export const MODE_LABELS: Record<string, string> = {
   STANDARD: 'Standard',
   SPRINT: 'Vitesse',
   TIME_ATTACK: 'Contre-la-montre',
+  EVOLVING: 'Évolutif',
 };
 
 export const formatUptime = (seconds: number): string => {

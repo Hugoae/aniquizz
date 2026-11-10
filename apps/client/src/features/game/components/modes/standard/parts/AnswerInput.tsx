@@ -29,7 +29,7 @@ interface AnswerInputProps {
   onSwitchDuo: () => void;
   precision?: Precision;
   /** Bumped each round — clears the local typing draft. */
-  roundKey: number;
+  roundKey: number | string;
   /** Round-1 ready beat: show the field but block interaction until audio starts. */
   disabled?: boolean;
   /** Custom badge next to send. Undefined = "+5 pts". null = hidden. */

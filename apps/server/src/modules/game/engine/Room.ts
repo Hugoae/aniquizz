@@ -572,6 +572,11 @@ export class Room {
     this.engine?.forceEndRound(userId);
   }
 
+  abandonRound(userId: string): void {
+    if (!this.players.has(userId) || !this.isSolo) return;
+    this.engine?.abandonRound?.(userId);
+  }
+
   cancelMatch(userId: string): void {
     if (userId !== this.hostId) return;
     this.forceCancel();

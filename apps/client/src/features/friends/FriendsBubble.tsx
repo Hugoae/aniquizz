@@ -83,7 +83,7 @@ export function FriendsBubble() {
   if (!user || !friendsCtx) return null;
 
   return (
-    <div ref={rootRef} className="fixed bottom-4 left-4 z-50 hidden md:block">
+    <div ref={rootRef} data-home-clear className="fixed bottom-4 left-4 z-50 hidden md:block">
       {/* Morphing container: the pill stays pinned as the bottom bar while the
           list grows fluidly upward out of it. */}
       <div

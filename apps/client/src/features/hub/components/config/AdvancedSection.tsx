@@ -12,12 +12,13 @@ interface AdvancedSectionProps {
 /** Video display + song start — merged under the Avancée nav section. */
 export function AdvancedSection({ config, update }: AdvancedSectionProps) {
   const timeAttack = config.gameType === 'timeAttack';
+  const evolving = config.gameType === 'evolving';
   return (
     <div className="space-y-4">
-      <VideoDisplaySection config={config} update={update} />
+      {evolving ? null : <VideoDisplaySection config={config} update={update} />}
       <SongStartSection config={config} update={update} />
       {timeAttack ? <TimeAttackRevealOption config={config} update={update} /> : null}
-      {!timeAttack && config.mode === 'solo' ? (
+      {!timeAttack && !evolving && config.mode === 'solo' ? (
         <SoloInstantRevealOption config={config} update={update} />
       ) : null}
     </div>

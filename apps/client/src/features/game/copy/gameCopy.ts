@@ -83,6 +83,14 @@ export const GAME_COPY = {
       `Encore ${needed} pour ${{ bronze: 'le bronze', silver: "l'argent", gold: "l'or", platinum: 'le platine' }[tier]}`,
     topMedal: 'Médaille maximale',
   },
+  soloMedals: {
+    rail: 'Médailles de la partie',
+    atFound: (target: number, label: string) =>
+      target === 1 ? `${label} à 1 titre` : `${label} à ${target} titres`,
+    atPoints: (target: number, label: string) =>
+      target === 1 ? `${label} à 1 point` : `${label} à ${target} points`,
+    earned: (label: string) => `${label} débloquée`,
+  },
   race: {
     boardTitle: 'Course',
     boardAria: 'Classement en direct de la course',

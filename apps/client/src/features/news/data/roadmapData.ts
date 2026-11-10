@@ -80,7 +80,7 @@ export const roadmapData: RoadmapItem[] = [
     title: 'Refonte du profil',
     description:
       "Refonte de l'historique de jeu, des statistiques et ajout de stats complémentaires.",
-    status: 'planned',
+    status: 'in-progress',
     date: 'Q4 2026',
   },
   {

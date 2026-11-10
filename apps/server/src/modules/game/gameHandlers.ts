@@ -87,6 +87,12 @@ export const registerGameHandlers = (
     gameManager.getRoom(parsed.roomId)?.forceEndRound(uid());
   };
 
+  const abandonCurrentRound = (payload: { roomId: string }) => {
+    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+    if (!parsed) return;
+    gameManager.getRoom(parsed.roomId)?.abandonRound(uid());
+  };
+
   const returnToLobby = (payload: { roomId: string }) => {
     const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
     if (!parsed) return;
@@ -202,6 +208,10 @@ export const registerGameHandlers = (
   socket.on(
     'game:skip_round',
     guard(socket, 'game:skip_round', RATE_LIMITS.vote, skipCurrentRound),
+  );
+  socket.on(
+    'game:abandon_round',
+    guard(socket, 'game:abandon_round', RATE_LIMITS.vote, abandonCurrentRound),
   );
   socket.on('game:return_to_lobby', requireAuth(socket, returnToLobby));
   socket.on('game:cancel', requireAuth(socket, cancelGame));

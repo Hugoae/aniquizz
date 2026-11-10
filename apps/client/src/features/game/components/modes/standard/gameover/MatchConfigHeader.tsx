@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { buildLobbySettingChips } from '@/features/hub/components/roomSettings';
 import { SettingChipItem, SettingChipList } from '@/features/hub/components/SettingChip';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { modeChrome } from '@/features/hub/components/modeChrome';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 
@@ -57,9 +58,7 @@ export function MatchConfigHeader({ settings, className }: MatchConfigHeaderProp
       <div
         className={cn(
           'flex shrink-0 items-center gap-2 self-stretch px-3 shadow-sm',
-          gameType === 'timeAttack'
-            ? 'bg-aqua text-aqua-foreground'
-            : 'bg-primary text-primary-foreground',
+          modeChrome(gameType).solid,
         )}
       >
         <GameModeBadge

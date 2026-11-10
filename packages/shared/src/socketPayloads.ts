@@ -91,6 +91,7 @@ export const updatePrefsInputSchema = z
     submitOnEnter: z.boolean().optional(),
     soloAutoReveal: z.boolean().optional(),
     answerSounds: z.boolean().optional(),
+    configWalkthrough: z.boolean().optional(),
     showShortcutReminder: z.boolean().optional(),
     friendRequestVisual: z.boolean().optional(),
     friendRequestSound: z.boolean().optional(),

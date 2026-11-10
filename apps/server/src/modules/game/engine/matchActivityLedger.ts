@@ -1,8 +1,10 @@
 import {
+  isEvolvingSettings,
   isSpeedBonusEnabled,
   isTimeAttackSettings,
   matchPlaylistPersistence,
   normalizePrecision,
+  replayConfigFromSettings,
 } from '@aniquizz/shared';
 import { isBotId } from '@aniquizz/database';
 import { logger } from '../../../utils/logger';
@@ -44,10 +46,12 @@ function ensureActivityMatch(host: ActivityHost): Promise<string | null> | null 
     totalRounds: Math.max(1, host.playlist.length),
     speedBonusEnabled: isSpeedBonusEnabled(settings),
     timeAttack: isTimeAttackSettings(settings),
+    evolving: isEvolvingSettings(settings),
     responseType: settings.responseType ?? 'mix',
     precision: normalizePrecision(settings.precision),
     playlistId: packs.playlistId,
     decadePlaylistId: packs.decadePlaylistId,
+    configSnapshot: replayConfigFromSettings(settings) ?? undefined,
   })
     .then((matchId) => {
       host.activityMatchId = matchId;

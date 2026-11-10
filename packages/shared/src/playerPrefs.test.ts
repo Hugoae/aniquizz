@@ -74,6 +74,8 @@ describe('normalizePlayerPrefs', () => {
     expect(normalizePlayerPrefs({ soloAutoReveal: true }).soloAutoReveal).toBe(true);
     expect(normalizePlayerPrefs({}).answerSounds).toBe(true);
     expect(normalizePlayerPrefs({ answerSounds: false }).answerSounds).toBe(false);
+    expect(normalizePlayerPrefs({}).configWalkthrough).toBe(true);
+    expect(normalizePlayerPrefs({ configWalkthrough: false }).configWalkthrough).toBe(false);
     expect(normalizePlayerPrefs({ soloAutoReveal: 'yes' }).soloAutoReveal).toBe(false);
     expect(normalizePlayerPrefs({ friendRequestSound: true }).friendRequestSound).toBe(true);
     expect(normalizePlayerPrefs({ lobbyInviteSound: false }).lobbyInviteSound).toBe(false);

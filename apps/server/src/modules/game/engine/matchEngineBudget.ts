@@ -4,11 +4,13 @@ import {
   normalizeTimeBudgetSeconds,
   timeAttackMedal,
   timeAttackMedalRules,
+  timeAttackMedalTargets,
   timeAttackNextMedalGoal,
   timeAttackTaxMs,
   TIME_ATTACK_REVEAL_SECONDS,
   type TimeAttackBudgetPayload,
   type TimeAttackNextMedal,
+  type SoloMedalTargets,
   type TimeAttackTaxKind,
 } from '@aniquizz/shared';
 import type { MatchEngineHost } from './matchEngineHost';
@@ -40,6 +42,7 @@ export function timeAttackRemainingMs(host: MatchEngineHost): number {
 export function timeAttackRunCue(host: MatchEngineHost): {
   nextSkipTaxMs: number;
   nextMedal: TimeAttackNextMedal | null;
+  medalTargets: SoloMedalTargets;
 } {
   const heard = new Set(host.recordedRounds.map((round) => round.songId));
   const current = host.playlist[host.currentRoundIndex];
@@ -56,6 +59,7 @@ export function timeAttackRunCue(host: MatchEngineHost): {
   return {
     nextSkipTaxMs: timeAttackTaxMs('skip', host.budget.skips, timeAttackPunitiveSkip(host)),
     nextMedal: goal ? { tier: goal.tier, pointsNeeded: goal.pointsNeeded } : null,
+    medalTargets: timeAttackMedalTargets(budget, difficulties, precision, rules),
   };
 }
 
@@ -77,6 +81,7 @@ export function timeAttackFields(host: MatchEngineHost): {
   foundCount?: number;
   nextSkipTaxMs?: number;
   nextMedal?: TimeAttackNextMedal | null;
+  medalTargets?: SoloMedalTargets;
 } {
   if (!isTimeAttackHost(host)) return {};
   return {

@@ -1,6 +1,8 @@
 import {
   computeVictory,
   computeCompetitionRanks,
+  EVOLVING_STEP_POINTS,
+  isEvolvingSettings,
   isSpeedBonusEnabled,
   isTimeAttackSettings,
   levelFromXp,
@@ -9,6 +11,7 @@ import {
   normalizeTimeBudgetSeconds,
   pickMatchSettings,
   matchPlaylistPersistence,
+  replayConfigFromSettings,
   timeAttackMedal,
   timeAttackMedalRules,
   timeAttackMedalTargets,
@@ -214,6 +217,9 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
           difficulties: settings.difficulty ?? [],
           songDifficulties: host.playlist.map((s) => normalizeSongDifficulty(s.difficulty)),
           precision: normalizePrecision(settings.precision),
+          ...(isEvolvingSettings(settings)
+            ? { bestPerRound: EVOLVING_STEP_POINTS[0], evolving: true }
+            : {}),
         });
 
     const rankByUser = computeCompetitionRanks(
@@ -289,12 +295,14 @@ export async function finishMatch(host: MatchEngineHost): Promise<void> {
       .persistMatch({
         speedBonusEnabled: isSpeedBonusEnabled(settings),
         timeAttack: isTimeAttackSettings(settings),
+        evolving: isEvolvingSettings(settings),
         totalRounds: recordedRounds.length,
         activityMatchId,
         startedAt: host.startedAt,
         endedAt: new Date(),
         responseType: (settings.responseType ?? 'mix') as 'typing' | 'qcm' | 'mix',
         precision: normalizePrecision(settings.precision),
+        configSnapshot: replayConfigFromSettings(settings) ?? undefined,
         players: competitors.map((p) => {
           const outcome = xpByUser.get(p.userId);
           return {

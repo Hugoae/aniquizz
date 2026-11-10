@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { SITE_VERSION } from '@/lib/site';
 import { allNews } from './newsData';
 import { latestNewsPreview } from './newsPreview';
 
@@ -16,13 +15,10 @@ describe('latestNewsPreview', () => {
     expect(latestNewsPreview).toEqual(expected);
   });
 
-  it('keeps the generated app-shell version and news blurbs aligned', () => {
-    expect(indexHtml).toContain(`v${SITE_VERSION}`);
-    expect(indexHtml).toContain('<!--app-shell-news-->');
-    for (const item of latestNewsPreview) {
-      expect(indexHtml).toContain(item.description);
-      expect(indexHtml).toContain(item.title.replace(/&/g, '&amp;'));
-    }
+  it('does not bake news copy into the first-paint shell', () => {
+    expect(indexHtml).toContain('app-shell-mark');
+    expect(indexHtml).not.toContain('<!--app-shell-news-->');
+    expect(indexHtml).not.toContain('Testez votre');
   });
 
   it('is a no-op for sync:news --check (preview + shell generated from newsData)', () => {

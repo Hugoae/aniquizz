@@ -1,15 +1,58 @@
-import { History, Trophy, Medal, Target, Zap, Users, Clock, X, Calendar } from 'lucide-react';
+import {
+  History,
+  Trophy,
+  Zap,
+  Users,
+  Clock,
+  X,
+  Calendar,
+  RotateCcw,
+  Medal,
+  Keyboard,
+  Grid2X2,
+  Shuffle,
+} from 'lucide-react';
 import {
   speedBonusFromStoredMode,
   gameTypeFromStoredMode,
+  getMedalMeta,
   type MatchHistoryEntry,
+  type MatchReplayConfig,
 } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import { DAILY_COPY } from '@/features/daily/copy/dailyCopy';
 import { formatDailyClock } from '@/features/daily/lib/dailyRecap';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
-import { matchRankMedalToken } from '@/features/profile/lib/matchHistoryAccent';
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
+import { MODE_CHROME } from '@/features/hub/components/modeChrome';
+import { DailyTracks } from '@/features/daily/components/DailyTracks';
+import { RankPill } from '@/features/game/components/shared/RankPill';
+
+const DIFFICULTY_CHIPS = [
+  { id: 'easy', label: 'Facile', className: 'bg-success/15 text-success' },
+  { id: 'medium', label: 'Moyen', className: 'bg-warning/15 text-warning' },
+  { id: 'hard', label: 'Difficile', className: 'bg-destructive/15 text-destructive' },
+] as const;
+
+const RESPONSE_CHIPS = {
+  Typing: { label: 'Typing', Icon: Keyboard },
+  QCM: { label: 'QCM', Icon: Grid2X2 },
+  Mix: { label: 'Mix', Icon: Shuffle },
+} as const;
+
+/** The profile shows the latest games only, so each card can stay readable. */
+const HISTORY_PREVIEW = 5;
+
+function ResponseChip({ chip }: { chip: (typeof RESPONSE_CHIPS)[keyof typeof RESPONSE_CHIPS] }) {
+  const Icon = chip.Icon;
+  return (
+    <span className="inline-flex items-center gap-1 rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
+      <Icon className="h-3 w-3" aria-hidden />
+      {chip.label}
+    </span>
+  );
+}
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -30,29 +73,77 @@ function formatDuration(ms: number | null): string | null {
   return min < 1 ? '<1 min' : `${min} min`;
 }
 
+function resultTone(won: boolean) {
+  return won
+    ? { text: 'text-success', bar: 'bg-success', label: 'Victoire', Icon: Trophy }
+    : { text: 'text-destructive', bar: 'bg-destructive', label: 'Défaite', Icon: X };
+}
+
+/** 1er, then 2e, 3e, 4e… The square pill carries the podium color. */
+function PlaceLine({ rank, total }: { rank: number; total?: number }) {
+  const suffix = rank === 1 ? 'er' : 'e';
+  const spoken = total != null ? `${rank}${suffix} sur ${total}` : `${rank}${suffix}`;
+  return (
+    <span className="inline-flex items-center gap-1.5" aria-label={spoken}>
+      <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+      <RankPill rank={rank} size="sm" />
+      {total != null ? (
+        <span className="font-mono text-sm font-semibold text-muted-foreground">/ {total}</span>
+      ) : null}
+    </span>
+  );
+}
+
+function AccuracyBar({ correct, total }: { correct: number; total: number }) {
+  const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
+  return (
+    <div className="w-full max-w-[11rem]">
+      <div className="mb-1 flex items-center justify-between font-mono text-[11px] text-muted-foreground">
+        <span>
+          {correct}/{total}
+        </span>
+        <span>{pct}%</span>
+      </div>
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-secondary"
+        role="meter"
+        aria-valuemin={0}
+        aria-valuemax={Math.max(total, 1)}
+        aria-valuenow={correct}
+        aria-label={`${correct} bonnes réponses sur ${total}`}
+      >
+        <div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
 function DailyHistoryRow({ entry }: { entry: MatchHistoryEntry }) {
-  const color = entry.isWinner ? 'hsl(var(--accent))' : 'hsl(var(--destructive))';
-  const Icon = entry.isWinner ? Trophy : X;
+  const tone = resultTone(entry.isWinner);
+  const Icon = tone.Icon;
 
   return (
-    <li className="relative overflow-hidden rounded-lg border border-border/40 bg-background/40 p-3">
-      <span className="absolute inset-y-0 left-0 w-1" style={{ background: color }} aria-hidden />
-      <div className="space-y-2 pl-2">
-        <div className="flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 text-sm font-bold" style={{ color }}>
-            <Icon className="h-4 w-4" />
-            {entry.isWinner ? 'Victoire' : 'Défaite'}
-            {entry.rank != null && (
-              <span className="font-mono text-[11px] font-semibold text-muted-foreground">
-                #{entry.rank}
-              </span>
-            )}
-          </span>
-          <span className="text-[11px] text-muted-foreground">{timeAgo(entry.playedAt)}</span>
+    <li className="relative overflow-hidden rounded-xl border border-border/40 bg-background/40 p-4">
+      <span className={cn('absolute inset-y-0 left-0 w-1', tone.bar)} aria-hidden />
+      <div className="space-y-3 pl-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <p className={cn('inline-flex items-center gap-2 text-base font-black', tone.text)}>
+              <Icon className="h-4 w-4" aria-hidden />
+              {tone.label}
+            </p>
+            {entry.rank != null ? <PlaceLine rank={entry.rank} /> : null}
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(entry.playedAt)}</span>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+              MODE_CHROME.daily.solid,
+            )}
+          >
             <Calendar className="h-3 w-3" aria-hidden />
             {DAILY_COPY.title}
           </span>
@@ -68,10 +159,11 @@ function DailyHistoryRow({ entry }: { entry: MatchHistoryEntry }) {
           )}
         </div>
 
+        {entry.tracks && entry.tracks.length > 0 ? (
+          <DailyTracks tracks={entry.tracks} size="sm" className="justify-start" />
+        ) : null}
+
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1 text-success">
-            <Target className="h-3 w-3" /> {entry.correctCount}/{entry.totalRounds}
-          </span>
           {entry.xpEarned > 0 && (
             <span className="inline-flex items-center gap-1 text-accent">
               <Zap className="h-3 w-3" /> +{entry.xpEarned}
@@ -88,43 +180,54 @@ function DailyHistoryRow({ entry }: { entry: MatchHistoryEntry }) {
   );
 }
 
-function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
+function HistoryRow({
+  entry,
+  onReplay,
+}: {
+  entry: MatchHistoryEntry;
+  onReplay?: (replay: MatchReplayConfig) => void;
+}) {
   if (entry.kind === 'daily') return <DailyHistoryRow entry={entry} />;
 
-  const solo = entry.rank == null || entry.playerCount <= 1;
-  const topMedal = !solo && entry.rank && entry.rank <= 3 ? matchRankMedalToken(entry.rank) : null;
-  const defeat = solo && !entry.isWinner;
-
-  const color = entry.isWinner
-    ? 'hsl(var(--accent))'
-    : (topMedal ?? (defeat ? 'hsl(var(--destructive))' : 'hsl(var(--muted-foreground) / 0.35)'));
-
-  const Icon = entry.isWinner ? Trophy : defeat ? X : Medal;
-  const label = solo
-    ? entry.isWinner
-      ? 'Victoire'
-      : 'Défaite'
-    : `#${entry.rank} / ${entry.playerCount}`;
-
+  const tone = resultTone(entry.isWinner);
+  const Icon = tone.Icon;
   const duration = formatDuration(entry.durationMs);
   const gameType = gameTypeFromStoredMode(entry.mode);
+  const multi = entry.playerCount > 1 && entry.rank != null;
+  const scoreLabel = gameType === 'timeAttack' ? (entry.score === 1 ? 'trouvé' : 'trouvés') : 'pts';
+  const medal = entry.playerCount <= 1 ? getMedalMeta(entry.medal ?? null) : null;
+  const response =
+    gameType === 'standard' && entry.answerMode && entry.answerMode in RESPONSE_CHIPS
+      ? RESPONSE_CHIPS[entry.answerMode as keyof typeof RESPONSE_CHIPS]
+      : null;
+  const difficulties = DIFFICULTY_CHIPS.filter((chip) => entry.difficulties?.includes(chip.id));
 
   return (
-    <li className="relative overflow-hidden rounded-lg border border-border/40 bg-background/40 p-3">
-      <span className="absolute inset-y-0 left-0 w-1" style={{ background: color }} aria-hidden />
-      <div className="space-y-2 pl-2">
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 text-sm font-bold',
-              entry.isWinner || topMedal || defeat ? '' : 'text-foreground',
-            )}
-            style={{ color: entry.isWinner || topMedal || defeat ? color : undefined }}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </span>
-          <span className="text-[11px] text-muted-foreground">{timeAgo(entry.playedAt)}</span>
+    <li className="relative overflow-hidden rounded-xl border border-border/40 bg-background/40 p-4">
+      <span className={cn('absolute inset-y-0 left-0 w-1', tone.bar)} aria-hidden />
+      <div className="space-y-3 pl-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <p className={cn('inline-flex items-center gap-2 text-base font-black', tone.text)}>
+              <Icon className="h-4 w-4" aria-hidden />
+              {tone.label}
+              {medal ? (
+                <Medal className={cn('h-4 w-4', medal.textClass)} aria-label={medal.label} />
+              ) : null}
+            </p>
+            {multi && entry.rank != null ? (
+              <PlaceLine rank={entry.rank} total={entry.playerCount} />
+            ) : null}
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(entry.playedAt)}</span>
+        </div>
+
+        <div className="flex items-end justify-between gap-4">
+          <p className="font-mono text-3xl font-black tabular-nums leading-none text-foreground">
+            {entry.score.toLocaleString('fr-FR')}
+            <span className="ml-1.5 text-sm font-semibold text-muted-foreground">{scoreLabel}</span>
+          </p>
+          <AccuracyBar correct={entry.correctCount} total={entry.totalRounds} />
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
@@ -134,37 +237,45 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
             speedBonusEnabled={speedBonusFromStoredMode(entry.mode)}
             className="shadow-none"
           />
-          {entry.answerMode && (
-            <span className="rounded-md bg-info/10 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-info">
-              {entry.answerMode}
+          {response ? <ResponseChip chip={response} /> : null}
+          {difficulties.map((chip) => (
+            <span
+              key={chip.id}
+              className={cn(
+                'rounded-md px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide',
+                chip.className,
+              )}
+            >
+              {chip.label}
             </span>
-          )}
+          ))}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
-          <span className="font-bold text-foreground">
-            {gameType === 'timeAttack'
-              ? `${entry.score.toLocaleString('fr-FR')} trouvé${entry.score === 1 ? '' : 's'}`
-              : `${entry.score.toLocaleString('fr-FR')} pts`}
-          </span>
-          <span className="inline-flex items-center gap-1 text-success">
-            <Target className="h-3 w-3" /> {entry.correctCount}/{entry.totalRounds}
-          </span>
-          {entry.xpEarned > 0 && (
-            <span className="inline-flex items-center gap-1 text-accent">
-              <Zap className="h-3 w-3" /> +{entry.xpEarned}
-            </span>
-          )}
-          {entry.playerCount > 1 && (
-            <span className="inline-flex items-center gap-1 text-warning">
-              <Users className="h-3 w-3" /> {entry.playerCount}
-            </span>
-          )}
-          {duration && (
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {duration}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[11px] text-muted-foreground">
+            {entry.xpEarned > 0 && (
+              <span className="inline-flex items-center gap-1 text-accent">
+                <Zap className="h-3 w-3" /> +{entry.xpEarned}
+              </span>
+            )}
+            {duration && (
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" /> {duration}
+              </span>
+            )}
+          </div>
+          {entry.replay && onReplay ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5"
+              onClick={() => onReplay(entry.replay as MatchReplayConfig)}
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+              Rejouer
+            </Button>
+          ) : null}
         </div>
       </div>
     </li>
@@ -174,32 +285,37 @@ function HistoryRow({ entry }: { entry: MatchHistoryEntry }) {
 export function MatchHistory({
   entries,
   redacted = false,
+  onReplay,
 }: {
   entries: MatchHistoryEntry[];
   redacted?: boolean;
+  /** Opens a solo game with the saved rules. Hidden when the match has no snapshot. */
+  onReplay?: (replay: MatchReplayConfig) => void;
 }) {
+  const visible = entries.slice(0, HISTORY_PREVIEW);
+
   return (
     <div>
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <History className="h-5 w-5 text-primary" />
         <h2 className="text-xl font-bold">{PROFILE_COPY.historyTitle}</h2>
       </div>
 
-      <div className="glass-card bg-card/40 rounded-xl p-2">
+      <div className="glass-card rounded-xl bg-card/40 p-2">
         {redacted ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground/60">
             <History className="h-8 w-8 opacity-40" />
             {PROFILE_COPY.historyPrivate}
           </div>
-        ) : entries.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-10 text-center text-sm text-muted-foreground/60">
             <History className="h-8 w-8 opacity-40" />
             {PROFILE_COPY.historyEmpty}
           </div>
         ) : (
           <ul className="space-y-2">
-            {entries.map((e) => (
-              <HistoryRow key={e.id} entry={e} />
+            {visible.map((entry) => (
+              <HistoryRow key={entry.id} entry={entry} onReplay={onReplay} />
             ))}
           </ul>
         )}

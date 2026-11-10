@@ -3,7 +3,7 @@ import {
   Music2,
   Disc,
   Keyboard,
-  MousePointer,
+  Grid2X2,
   Shuffle,
   Ungroup,
   Target,
@@ -65,7 +65,7 @@ export interface ResponseModeOption {
 
 export const RESPONSE_MODES: ResponseModeOption[] = [
   { id: 'typing', label: 'Typing', description: 'Écris la réponse', icon: Keyboard },
-  { id: 'qcm', label: 'QCM', description: '4 propositions', icon: MousePointer },
+  { id: 'qcm', label: 'QCM', description: '4 propositions', icon: Grid2X2 },
   { id: 'mix', label: 'Mix', description: 'Typing + QCM', icon: Shuffle },
 ];
 

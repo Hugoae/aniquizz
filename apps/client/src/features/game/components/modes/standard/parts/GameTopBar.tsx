@@ -6,7 +6,6 @@ import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
 import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
-import { TimeAttackMedalCue, type TimeAttackMedalCueState } from './TimeAttackMedalCue';
 import type { MyProfile } from './types';
 
 interface GameTopBarProps {
@@ -29,8 +28,6 @@ interface GameTopBarProps {
   foundCount?: number | null;
   /** Titles heard, so the header shows found / heard. */
   heardCount?: number | null;
-  /** Solo time-attack medal icons. Null outside solo Chrono. */
-  nextMedal?: TimeAttackMedalCueState | null;
   /** Admin test match: nothing from this run is saved. */
   testMatch?: boolean;
 }
@@ -51,7 +48,6 @@ export function GameTopBar({
   showRoundProgress = true,
   foundCount = null,
   heardCount = null,
-  nextMedal = null,
   testMatch = false,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
@@ -126,7 +122,6 @@ export function GameTopBar({
                 </span>
               )}
             </span>
-            {nextMedal && <TimeAttackMedalCue medal={nextMedal} />}
           </div>
         )}
         {showRoundProgress && !timeAttackMeter && (

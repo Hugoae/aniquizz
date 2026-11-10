@@ -4,6 +4,7 @@ import {
   normalizePrecision,
   normalizeTimeBudgetSeconds,
   pickMatchSettings,
+  replayConfigFromSettings,
   rankRaceStandings,
   timeAttackMedal,
   timeAttackMedalRules,
@@ -189,6 +190,7 @@ export async function finishRace(engine: RaceEngine): Promise<void> {
         endedAt: new Date(),
         responseType: 'typing',
         precision,
+        configSnapshot: replayConfigFromSettings(settings) ?? undefined,
         players: competitors.map((p) => {
           const outcome = xpByUser.get(p.userId);
           const heard = engine.lanes.get(p.userId)?.heardSongIds(engine.playlist) ?? [];

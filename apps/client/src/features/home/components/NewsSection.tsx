@@ -15,7 +15,7 @@ export function NewsSection() {
       className={cn('w-full px-4 pb-6 pt-6', !skipEntryAnimation && 'animate-slide-up')}
       style={skipEntryAnimation ? undefined : { animationDelay: '0.2s' }}
     >
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto" data-home-clear>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-lg bg-primary/10 text-primary">

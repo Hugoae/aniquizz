@@ -1,4 +1,4 @@
-import { Timer, Trophy, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
+import { Timer, Trophy, AudioLines, ArrowLeft, Play, Settings, Loader2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import {
   withPlaylistPoolSoundCount,
@@ -31,6 +31,7 @@ import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDia
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { SoloLobbyRecap } from '@/features/hub/components/lobby/SoloLobbyRecap';
 import { soloLobbyModeBadge } from '@/features/hub/components/lobby/soloLobbyRecapGroups';
+import { modeChrome } from '@/features/hub/components/modeChrome';
 
 interface SoloReadyProps {
   gameSettings?: RoomConfig;
@@ -120,7 +121,10 @@ export function SoloReady({
     !poolCheck.blocked &&
     !playlistPoolCheck.blocked;
   const modeBadge = gameSettings ? soloLobbyModeBadge(gameSettings) : 'Standard · Solo';
-  const ModeIcon = gameSettings?.gameType === 'timeAttack' ? Timer : Trophy;
+  const gameType = gameSettings?.gameType ?? 'standard';
+  const chrome = modeChrome(gameType);
+  const evolving = gameType === 'evolving';
+  const ModeIcon = evolving ? AudioLines : gameType === 'timeAttack' ? Timer : Trophy;
 
   return (
     <div className="relative flex min-h-[100dvh] flex-col bg-background">
@@ -149,8 +153,17 @@ export function SoloReady({
 
             <div className="flex flex-col items-center gap-4 text-center">
               <div className="inline-flex items-center gap-2">
-                <div className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-1.5 text-sm font-black uppercase tracking-wider text-primary-foreground shadow-glow">
-                  <ModeIcon className="h-4 w-4 fill-current" aria-hidden="true" />
+                <div
+                  className={cn(
+                    'inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-black uppercase tracking-wider',
+                    chrome.solid,
+                    chrome.fillIcon && 'shadow-glow',
+                  )}
+                >
+                  <ModeIcon
+                    className={cn('h-4 w-4', chrome.fillIcon && 'fill-current')}
+                    aria-hidden="true"
+                  />
                   {modeBadge}
                 </div>
                 {gameSettings?.testMatch ? <TestMatchMark /> : null}

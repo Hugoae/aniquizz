@@ -30,7 +30,10 @@ export function Header() {
   };
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between">
+    <header
+      data-home-clear
+      className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between"
+    >
       <Link to="/" className="flex items-center gap-2.5 group" aria-label="AniQuizz — accueil">
         <img
           src="/favicon-32x32.png"

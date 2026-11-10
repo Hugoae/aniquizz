@@ -58,6 +58,8 @@ export interface MatchEngineHost {
   activityMatchId: string | null;
   /** In flight until the opener resolves. Rounds wait on it so the first title is not lost. */
   activityOpen: Promise<string | null> | null;
+  /** Evolving step inside the current song. Reset when the next title starts. */
+  evolvingStep: number;
 
   resetMatchState(): void;
   resetRoundState(p: RoomPlayer): void;

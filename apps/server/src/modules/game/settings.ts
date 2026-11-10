@@ -2,6 +2,8 @@ import { z } from 'zod';
 import {
   GAME_CONFIG,
   isSpeedBonusEnabled,
+  resolveEvolvingReplayLimit,
+  isEvolvingSettings,
   normalizePrecision,
   normalizeTimeBudgetSeconds,
   TIME_ATTACK_RACE_MAX_PLAYERS,
@@ -10,6 +12,7 @@ import {
   normalizeTimeAttackStreakBonusSeconds,
   normalizeTimeAttackStreakLength,
   timeAttackPoolSize,
+  type GameType,
   type RoomSettings,
 } from '@aniquizz/shared';
 
@@ -21,7 +24,7 @@ import {
 const settingsSchema = z
   .object({
     mode: z.enum(['solo', 'multiplayer', 'competitive']).default('multiplayer'),
-    gameType: z.enum(['standard', 'timeAttack']).default('standard'),
+    gameType: z.enum(['standard', 'timeAttack', 'evolving']).default('standard'),
     responseType: z.enum(['typing', 'qcm', 'mix']).default('mix'),
     soundCount: z.coerce.number().int().min(5).max(TIME_ATTACK_STREAK_MAX_POOL).default(20),
     soundTypes: z.array(z.string()).min(1).default(['opening']),
@@ -45,6 +48,8 @@ const settingsSchema = z
     timeAttackStreakLength: z.coerce.number().int().optional(),
     timeAttackStreakBonusSeconds: z.coerce.number().int().optional(),
     soloInstantReveal: z.boolean().optional(),
+    evolvingInfiniteReplay: z.boolean().optional(),
+    evolvingReplayLimit: z.coerce.number().int().min(0).max(5).optional(),
     testMatch: z.boolean().optional(),
     videoMode: z.enum(['hidden', 'blurred', 'peek']).default('hidden'),
     songStartMode: z.enum(['random', 'beginning']).default('random'),
@@ -93,10 +98,10 @@ function applySpeedBonusRules<
     responseType: string;
     maxPlayers: number;
     mode: string;
-    gameType: 'standard' | 'timeAttack';
+    gameType: GameType;
   },
 >(settings: T): T {
-  if (settings.gameType === 'timeAttack') {
+  if (settings.gameType === 'timeAttack' || settings.gameType === 'evolving') {
     return { ...settings, speedBonusEnabled: false };
   }
   return {
@@ -108,7 +113,7 @@ function applySpeedBonusRules<
 
 function applyTimeAttackRules<
   T extends {
-    gameType: 'standard' | 'timeAttack';
+    gameType: GameType;
     mode: string;
     maxPlayers: number;
     responseType: string;
@@ -128,6 +133,7 @@ function applyTimeAttackRules<
     watchedMode?: 'union' | 'intersection';
   },
 >(settings: T): T {
+  if (settings.gameType === 'evolving') return settings;
   if (settings.gameType !== 'timeAttack') {
     const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
     return {
@@ -181,6 +187,53 @@ function applyTimeAttackRules<
   };
 }
 
+function applyEvolvingRules<
+  T extends {
+    gameType: GameType;
+    mode: string;
+    maxPlayers: number;
+    responseType: string;
+    speedBonusEnabled: boolean;
+    soloInstantReveal?: boolean;
+    videoMode: 'hidden' | 'blurred' | 'peek';
+    soundCount: number;
+    timeBudgetSeconds?: number;
+    timeAttackReveal?: boolean;
+    timeAttackPunitiveSkip?: boolean;
+    timeAttackStreakBonus?: boolean;
+    timeAttackStreakLength?: number;
+    timeAttackStreakBonusSeconds?: number;
+    evolvingInfiniteReplay?: boolean;
+    evolvingReplayLimit?: number;
+  },
+>(settings: T): T {
+  if (!isEvolvingSettings(settings)) return settings;
+  const solo = settings.mode === 'solo' || settings.maxPlayers <= 1;
+  if (!solo) {
+    return { ...settings, gameType: 'standard' };
+  }
+  return {
+    ...settings,
+    gameType: 'evolving',
+    responseType: 'typing',
+    speedBonusEnabled: false,
+    soloInstantReveal: false,
+    videoMode: 'hidden',
+    timeBudgetSeconds: undefined,
+    timeAttackReveal: undefined,
+    timeAttackPunitiveSkip: undefined,
+    timeAttackStreakBonus: undefined,
+    timeAttackStreakLength: undefined,
+    timeAttackStreakBonusSeconds: undefined,
+    soundCount: Math.min(100, Math.max(5, settings.soundCount)),
+    evolvingInfiniteReplay: settings.evolvingInfiniteReplay !== false,
+    evolvingReplayLimit: resolveEvolvingReplayLimit({
+      evolvingInfiniteReplay: false,
+      evolvingReplayLimit: settings.evolvingReplayLimit,
+    }),
+  };
+}
+
 export interface SettingsMeta {
   roomName?: string;
   hostName: string;
@@ -194,7 +247,7 @@ export interface SettingsMeta {
 
 export const normalizeRoomSettings = (input: unknown, meta: SettingsMeta): RoomSettings => {
   const parsed = settingsSchema.parse(liftLegacySprint(input ?? {}));
-  const withModes = applyTimeAttackRules(applySpeedBonusRules(parsed));
+  const withModes = applyEvolvingRules(applyTimeAttackRules(applySpeedBonusRules(parsed)));
   const name = (meta.roomName || withModes.roomName || `Salon de ${meta.hostName}`).trim();
 
   return {

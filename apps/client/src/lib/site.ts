@@ -4,7 +4,7 @@ export const SITE_URL =
   'https://aniquizz.com';
 
 /** Display / shell version tag. `sync:news` copies it into `index.html`. */
-export const SITE_VERSION = '26.7.1';
+export const SITE_VERSION = '26.8';
 
 export const SITE_NAME = 'AniQuizz';
 

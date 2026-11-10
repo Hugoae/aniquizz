@@ -34,6 +34,7 @@ import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playl
 import { PLAYLISTS_COPY } from './config/playlistsCopy';
 import { GameTypeSelector } from './GameTypeSelector';
 import { HUB_COPY } from '@/features/hub/copy/hubCopy';
+import { usePlayerPrefs } from '@/features/settings/context/PlayerPrefsContext';
 import { ConfigPoolCard } from './config/ConfigPoolCard';
 import { resolveConfigPoolPreview } from './config/configPoolPreview';
 import { useWatchedPoolStats } from '@/features/hub/hooks/useWatchedPoolStats';
@@ -44,6 +45,7 @@ import {
   defaultSectionId,
   type ConfigSectionId,
 } from './config/configSections';
+import { isConfigWizardComplete, nextConfigSection } from './config/configWizard';
 
 interface GameConfigFormProps<T extends GameConfig> {
   config: T;
@@ -75,6 +77,7 @@ export function GameConfigForm<T extends GameConfig>({
   roomId,
   watchedPlayersKey,
 }: GameConfigFormProps<T>) {
+  const { configWalkthrough } = usePlayerPrefs();
   const cfg = config as unknown as RoomConfig;
 
   const raceLobby = isRoom && cfg.gameType === 'timeAttack';
@@ -97,6 +100,19 @@ export function GameConfigForm<T extends GameConfig>({
       });
       return;
     }
+    if (gameType === 'evolving') {
+      update({
+        gameType,
+        responseType: 'typing',
+        speedBonusEnabled: false,
+        soloInstantReveal: false,
+        videoMode: 'hidden',
+        songStartMode: 'random',
+        soundCount: 20,
+        evolvingInfiniteReplay: true,
+      });
+      return;
+    }
     update({ gameType: 'standard' });
   };
 
@@ -113,12 +129,31 @@ export function GameConfigForm<T extends GameConfig>({
   const showRoomSettings = isRoom && !hideRoomSettings;
   const sections = useMemo(() => buildConfigSections(), []);
   const [activeSection, setActiveSection] = useState<ConfigSectionId>(() => defaultSectionId());
+  const [visitedSections, setVisitedSections] = useState<Set<ConfigSectionId>>(
+    () => new Set(['general']),
+  );
+  // A live room edit, or the site option off, saves without the walk.
+  // The walk itself starts again every time this form opens.
+  const editingLiveRoom = isRoom && currentPlayersCount > 0;
+  const wizardComplete =
+    editingLiveRoom || configWalkthrough === false || isConfigWizardComplete(visitedSections);
 
   const safeActiveSection = sections.some((s) => s.id === activeSection)
     ? activeSection
     : defaultSectionId();
 
   const activeSectionLabel = sections.find((s) => s.id === safeActiveSection)?.label;
+  const upcomingSection = wizardComplete ? null : nextConfigSection(safeActiveSection);
+
+  const revealSection = (id: ConfigSectionId) => {
+    setActiveSection(id);
+    setVisitedSections((current) => {
+      if (current.has(id)) return current;
+      const next = new Set(current);
+      next.add(id);
+      return next;
+    });
+  };
 
   const noTypes = (cfg.soundTypes?.length ?? 0) === 0;
   const missingPassword = showRoomSettings && cfg.isPrivate && !cfg.password;
@@ -236,15 +271,18 @@ export function GameConfigForm<T extends GameConfig>({
           {sections.map((section) => {
             const Icon = section.icon;
             const isActive = safeActiveSection === section.id;
+            const locked = !wizardComplete && !visitedSections.has(section.id);
             return (
               <button
                 key={section.id}
                 type="button"
                 onClick={() => setActiveSection(section.id)}
+                disabled={locked}
                 aria-current={isActive ? 'step' : undefined}
                 className={cn(
                   'flex shrink-0 items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-sm font-medium transition-colors',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                  'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border/60 disabled:hover:bg-card/40 disabled:hover:text-muted-foreground',
                   isActive
                     ? 'border-primary/40 bg-primary/10 text-primary shadow-sm'
                     : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:bg-card/80 hover:text-foreground',
@@ -266,7 +304,7 @@ export function GameConfigForm<T extends GameConfig>({
           <GameTypeSelector
             value={cfg.gameType ?? 'standard'}
             onChange={handleGameTypeChange}
-            versus={isRoom}
+            versus={isRoom && (cfg.maxPlayers ?? 1) > 1}
           />
         </div>
         <div className="glass-card custom-scrollbar flex-1 overflow-y-auto px-5 pb-4 pt-3 md:px-6 md:pb-5 md:pt-3 lg:px-8 lg:pb-6">
@@ -309,11 +347,17 @@ export function GameConfigForm<T extends GameConfig>({
             </Button>
             <Button
               variant="glow"
-              onClick={onSubmit}
+              onClick={() => {
+                if (upcomingSection) {
+                  revealSection(upcomingSection);
+                  return;
+                }
+                onSubmit();
+              }}
               className="flex-1 rounded-lg text-base font-bold md:text-lg"
-              disabled={submitDisabled}
+              disabled={upcomingSection ? false : submitDisabled}
             >
-              {submitLabel}
+              {upcomingSection ? HUB_COPY.configNext : submitLabel}
             </Button>
           </div>
           {watchedBlocked && (

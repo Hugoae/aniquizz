@@ -8,6 +8,7 @@ import {
   type StoredSoloMedal,
 } from '@aniquizz/database';
 import type { AnswerType } from '@aniquizz/shared';
+import type { MatchReplayConfig } from '@aniquizz/shared';
 import { logger } from '../../../utils/logger';
 import type { PersistMatchInput, PersistPlayerInput } from './MatchRepository';
 
@@ -16,21 +17,33 @@ export interface ActivityOpenInput {
   totalRounds: number;
   speedBonusEnabled: boolean;
   timeAttack?: boolean;
+  evolving?: boolean;
   responseType: PersistMatchInput['responseType'];
   precision: PersistMatchInput['precision'];
   playlistId?: string | null;
   decadePlaylistId?: string | null;
+  configSnapshot?: MatchReplayConfig;
 }
 
 export type CloseActivityResult = 'closed' | 'missing' | 'failed';
 
-const toPrismaGameMode = (input: { speedBonusEnabled: boolean; timeAttack?: boolean }) => {
+const toPrismaGameMode = (input: {
+  speedBonusEnabled: boolean;
+  timeAttack?: boolean;
+  evolving?: boolean;
+}) => {
   if (input.timeAttack) return 'TIME_ATTACK' as const;
+  if (input.evolving) return 'EVOLVING' as const;
   return input.speedBonusEnabled ? 'SPRINT' : 'STANDARD';
 };
 
 const isUniqueConflict = (error: unknown): boolean =>
   error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+
+const replayJson = (snapshot: MatchReplayConfig | undefined): Prisma.InputJsonValue | undefined => {
+  if (!snapshot) return undefined;
+  return JSON.parse(JSON.stringify(snapshot)) as Prisma.InputJsonValue;
+};
 
 export interface ActivityMappers {
   responseType: (responseType: PersistMatchInput['responseType']) => StoredResponseType;
@@ -58,6 +71,7 @@ export async function openActivityMatch(
         precision: map.precision(input.precision),
         playlistId: input.playlistId ?? undefined,
         decadePlaylistId: input.decadePlaylistId ?? undefined,
+        configSnapshot: replayJson(input.configSnapshot),
       },
       select: { id: true },
     });
@@ -134,6 +148,7 @@ export async function finishOpenedActivityMatch(
           precision: map.precision(input.precision),
           playlistId: input.playlistId ?? null,
           decadePlaylistId: input.decadePlaylistId ?? null,
+          ...(input.configSnapshot ? { configSnapshot: replayJson(input.configSnapshot) } : {}),
         },
       });
 

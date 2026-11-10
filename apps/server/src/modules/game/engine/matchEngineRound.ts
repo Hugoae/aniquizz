@@ -1,4 +1,6 @@
 import {
+  EVOLVING_REVEAL_SECONDS,
+  evolvingCue,
   generatePeekWindow,
   isSpeedBonusEnabled,
   normalizeVideoMode,
@@ -27,6 +29,7 @@ import {
   timeAttackRevealSeconds,
 } from './matchEngineBudget';
 import { grantSharedTimeAttackStreak } from './timeAttackStreakGrant';
+import { isEvolvingHost } from './matchEngineEvolving';
 import { noteActivityRound } from './matchActivityLedger';
 
 export function startRound(host: MatchEngineHost): void {
@@ -71,23 +74,33 @@ export function startRound(host: MatchEngineHost): void {
   const videoMode = normalizeVideoMode(host.room.settings.videoMode);
   host.currentPeekWindow = videoMode === 'peek' ? generatePeekWindow() : null;
 
-  const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
-  host.guessStartAt = Date.now();
-  host.clock.start(guessDurationMs, () => {
-    try {
-      host.endRound();
-    } catch (error) {
-      logger.error(`[MatchEngine ${host.room.id}] endRound crashed after timer`, 'GameLoop', error);
-    }
-  });
-  host.botTimers.push(
-    ...scheduleBotAnswers({
-      players: host.room.players.values(),
-      item,
-      responseType: host.room.settings.responseType,
-      handleAnswer: (userId, answer, answerType) => host.handleAnswer(userId, answer, answerType),
-    }),
-  );
+  const evolving = isEvolvingHost(host);
+  if (evolving) {
+    host.evolvingStep = 0;
+    host.guessStartAt = Date.now();
+  } else {
+    const guessDurationMs = item.guessDuration * 1000 + START_BUFFER_MS + GUESS_END_GRACE_MS;
+    host.guessStartAt = Date.now();
+    host.clock.start(guessDurationMs, () => {
+      try {
+        host.endRound();
+      } catch (error) {
+        logger.error(
+          `[MatchEngine ${host.room.id}] endRound crashed after timer`,
+          'GameLoop',
+          error,
+        );
+      }
+    });
+    host.botTimers.push(
+      ...scheduleBotAnswers({
+        players: host.room.players.values(),
+        item,
+        responseType: host.room.settings.responseType,
+        handleAnswer: (userId, answer, answerType) => host.handleAnswer(userId, answer, answerType),
+      }),
+    );
+  }
   host.isRoundLoading = false;
 
   if (isTimeAttackHost(host)) startTimeAttackBudget(host);
@@ -198,11 +211,14 @@ export function endRound(host: MatchEngineHost, kind: EndRoundKind = 'reveal'): 
   }
 
   const timeAttack = isTimeAttackHost(host);
+  const evolving = isEvolvingHost(host);
   if (timeAttack) pauseTimeAttackBudget(host);
 
   const revealSeconds = timeAttack
     ? timeAttackRevealSeconds()
-    : revealDurationSeconds(item.guessDuration);
+    : evolving
+      ? EVOLVING_REVEAL_SECONDS
+      : revealDurationSeconds(item.guessDuration);
   const revealMs = revealClockMs(revealSeconds);
   host.clock.start(revealMs, () => {
     if (host.isPausePending || host.room.status === 'paused') {
@@ -286,18 +302,23 @@ export function emitSpeedLeaderboard(host: MatchEngineHost): void {
 
 export function buildRoundStartPayload(host: MatchEngineHost, item: PlaylistItem) {
   const videoMode = normalizeVideoMode(host.room.settings.videoMode);
+  const evolving = isEvolvingHost(host)
+    ? evolvingCue(host.evolvingStep, item.clipDurationSeconds, item.videoStartTime)
+    : null;
+  const now = Date.now();
   return {
     round: host.currentRoundIndex + 1,
     totalRounds: host.playlist.length,
     videoKey: toPlaybackUrl(item.videoKey),
     videoStartTime: item.videoStartTime,
     startBuffer: START_BUFFER_MS,
-    serverNow: Date.now(),
-    endsAt: host.clock.endsAt,
-    durationSeconds: item.guessDuration,
+    serverNow: now,
+    endsAt: evolving ? now : host.clock.endsAt,
+    durationSeconds: evolving ? evolving.clipSeconds : item.guessDuration,
     choices: item.choices,
     peekWindow: host.currentPeekWindow ?? undefined,
     videoMode,
+    ...(evolving ? { evolving } : {}),
     ...timeAttackFields(host),
   };
 }

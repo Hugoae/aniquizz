@@ -3,6 +3,9 @@ import {
   buildChoices,
   buildDuo,
   formatSongTypeLabel,
+  evolvingExcerptStart,
+  evolvingPlaySeconds,
+  isEvolvingSettings,
   isTimeAttackGame,
   normalizePrecision,
   normalizeSongStartMode,
@@ -141,6 +144,7 @@ export class PlaylistBuilder {
     }
 
     const timeAttack = isTimeAttackGame(settings);
+    const evolving = isEvolvingSettings(settings);
     const guessDuration = settings.guessDuration || 20;
     const songStartMode = normalizeSongStartMode(settings.songStartMode);
     const playlist = songs
@@ -154,6 +158,7 @@ export class PlaylistBuilder {
           settings.responseType === 'mix',
           songStartMode,
           timeAttack,
+          evolving,
         ),
       )
       .filter((item) => precision !== 'artist' || item.validAnswers.length > 0);
@@ -198,6 +203,7 @@ export class PlaylistBuilder {
     buildDuoPair: boolean,
     songStartMode: SongStartMode,
     timeAttack: boolean,
+    evolving: boolean,
   ): PlaylistItem {
     const franchise = song.anime.franchise?.name ?? null;
     const answers = resolveRoundAnswerSet({
@@ -219,7 +225,10 @@ export class PlaylistBuilder {
     const duo = buildDuoPair && choices.length > 0 ? buildDuo(answers.correctTarget, choices) : [];
     const clipDurationSeconds = song.duration ?? null;
     const clipWindow = timeAttack ? timeAttackClipWindow(clipDurationSeconds, songStartMode) : null;
-    const roundGuessDuration = clipWindow?.guessDuration ?? guessDuration;
+    const excerptStart = evolving ? evolvingExcerptStart(clipDurationSeconds, songStartMode) : null;
+    const roundGuessDuration = evolving
+      ? evolvingPlaySeconds(0, clipDurationSeconds, excerptStart ?? 0)
+      : (clipWindow?.guessDuration ?? guessDuration);
 
     return {
       id: song.id,
@@ -232,6 +241,7 @@ export class PlaylistBuilder {
       difficulty: song.difficulty.toLowerCase(),
       videoKey: song.videoKey,
       videoStartTime:
+        excerptStart ??
         clipWindow?.videoStartTime ??
         this.pickStartTime(song.duration, roundGuessDuration, songStartMode),
       guessDuration: roundGuessDuration,

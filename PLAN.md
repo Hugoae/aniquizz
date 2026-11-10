@@ -2,20 +2,21 @@
 
 Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned updates.
 
-| Version    | Status         | Summary                                                                                                                                       |
-| ---------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| **26.0**   | 🚀 Launch      | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                                             |
-| **26.1**   | ✅ Shipped     | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10).                         |
-| **26.2**   | ✅ Shipped     | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                                            |
-| **26.3**   | ✅ Shipped     | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                                                      |
-| **26.4**   | ✅ Shipped     | Song likes, suggestions, library views, community leaderboard                                                                                 |
-| **26.5**   | ✅ Shipped     | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                                              |
-| **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                                           |
-| **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                                                     |
-| **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                                          |
-| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 + footer `v26.7` ✅. Pokédex found bar dropped.   |
-| **26.7.1** | 🔄 In progress | **Prime de série** on Contre-la-montre (solo + versus). Admin play tops persist per title. Podium ties overlap. News id 10, footer `v26.7.1`. |
-| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                                                       |
+| Version    | Status         | Summary                                                                                                                                                    |
+| ---------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **26.0**   | 🚀 Launch      | Full refactor shipped (Phases 0–10). Standard mode, friends, XP, admin, perf, legal/SEO baseline.                                                          |
+| **26.1**   | ✅ Shipped     | Account + AniList UX + lobby depth (video modes, song start, rules panel, admin lobby bots). Tag `26.1` (2026-07-10).                                      |
+| **26.2**   | ✅ Shipped     | Librairie + MyAnimeList + UX/perf polish. Tag `26.2` (2026-07-12).                                                                                         |
+| **26.3**   | ✅ Shipped     | Engine tests + doc · GameForm full-screen · **Sprint** · release content                                                                                   |
+| **26.4**   | ✅ Shipped     | Song likes, suggestions, library views, community leaderboard                                                                                              |
+| **26.5**   | ✅ Shipped     | Endings, staff playlists, product-audit hardening — tag `26.5`, commit `89c7627`                                                                           |
+| **26.6**   | ✅ Shipped     | Quiz du jour · player settings · Ko-fi · artist precision — tag `26.6` (2026-09-15)                                                                        |
+| **26.6.1** | ✅ Shipped     | Reveal answer-type icon · reveal = min(guess, 15s) — `52ce827`. Home / menu life dropped.                                                                  |
+| **26.6.2** | ✅ Shipped     | Volume persist across reload · header XP ring after matches. No `SITE_VERSION` bump.                                                                       |
+| **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 (2026-10-11) + footer `v26.7` ✅. Pokédex found bar dropped.   |
+| **26.7.1** | 🔄 In progress | **Prime de série** on Contre-la-montre (solo + versus). Admin play tops persist per title. Podium ties overlap. News id 10 (2026-10-18), footer `v26.7.1`. |
+| **26.8**   | 🔄 In progress | Config walkthrough on every setup, plus solo Évolutif: the excerpt grows 0.25 s → 15 s.                                                                    |
+| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                                                                    |
 
 **Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
 
@@ -415,7 +416,7 @@ GitHub-only. The Home footer stays `v26.6`.
 
 ---
 
-## Update 26.7 — Vitesse, Chrono solo, then pokédex & Admin rework
+## Update 26.7 — Vitesse, Chrono solo, then pokédex & Admin rework (2026-10-11)
 
 Goal: demote the old Sprint `gameType` into a Standard multi **Vitesse** checkbox, ship
 **Contre-la-montre** (solo and versus), show found songs beside heard songs on the
@@ -496,14 +497,14 @@ Staff shell on `/admin`. No new sanctions, no role change.
 - [x] Admin panel rework (grouped nav, desk line, denser users, activity sort with never-seen last, copy, file splits, per-tab error boundary, role bounds unchanged).
 - [x] Standard answer cues + `answerSounds` mute. Solo instant reveal is a Standard room setting. Public section renamed Avis & bugs. Proprietary licence (not MIT).
 - [x] Mode select is Solo + Multi, with Chrono named on Solo and Compétitif as a quiet line. Home facts and the Nouveau card were tried and dropped.
-- [x] Release copy: news id 9 (2026-11-08). No roadmap card. Home + app-shell `v26.7`.
+- [x] Release copy: news id 9 (2026-10-11). No roadmap card. Home + app-shell `v26.7`.
 - [x] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
 
 ---
 
-## Update 26.7.1 — Prime de série
+## Update 26.7.1 — Prime de série (2026-10-18)
 
-Optional Contre-la-montre modifier, solo and versus. Off by default. Medals stay on the chosen duration. News id 10 (2026-11-09) and Home footer `v26.7.1`. No roadmap card. The public note skips the admin tops.
+Optional Contre-la-montre modifier, solo and versus. Off by default. Medals stay on the chosen duration. News id 10 (2026-10-18) and Home footer `v26.7.1`. No roadmap card. The public note skips the admin tops.
 
 - Général: **Skip punitif** and **Prime de série** sit side by side, at the same height as Standard.
 - Sliders: streak **3–10** (step 1, default 5), time **+3 to +10 s** (step 1, default +5).
@@ -523,7 +524,7 @@ Optional Contre-la-montre modifier, solo and versus. Off by default. Medals stay
 - [x] Prime playable in solo and versus, server-authoritative, tests on the grant, the cap, and the cue.
 - [x] `pnpm build` + `pnpm test` green · `PROGRESS.md` updated.
 - [x] Admin tops count a title when it starts, including a match that does not finish.
-- [x] Release copy: news id 10 (2026-11-09). No roadmap card. Home + app-shell `v26.7.1`.
+- [x] Release copy: news id 10 (2026-10-18). No roadmap card. Home + app-shell `v26.7.1`.
 
 ---
 

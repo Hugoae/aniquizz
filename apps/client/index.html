@@ -17,7 +17,7 @@
     <link rel="canonical" href="https://aniquizz.com/" data-rh="true" />
 
     <!--
-      First-paint shell CSS — mirrors Home before React/Tailwind load.
+      First-paint shell — background and pulsing mark only.
       This link is replaced at build time by an inline <style> (see
       app-shell-inline-css in vite.config.ts) so the shell is styled on the
       very first paint with no extra round-trip. public/app-shell.css stays
@@ -127,110 +127,11 @@
   </head>
 
   <body>
-    <!--
-      Static first-paint shell — layout mirrors Home.tsx.
-      News copy: keep in sync with allNews.slice(0, 2) in newsData.ts.
-    -->
+    <!-- Static first paint: the real page fades in once it is styled. -->
     <div id="app-shell" aria-hidden="true">
-      <header class="app-shell-header">
-        <a class="app-shell-brand" href="/" title="AniQuizz" aria-label="AniQuizz — accueil">
-          <img src="/favicon-32x32.png" alt="" width="32" height="32" decoding="async" />
-          <span>AniQuizz</span>
-        </a>
-        <div class="app-shell-auth-slot">
-          <div class="app-shell-profile-chip" aria-hidden="true">
-            <span class="app-shell-profile-avatar"></span>
-            <span class="app-shell-profile-name"></span>
-          </div>
-        </div>
-      </header>
-
-      <div class="app-shell-page">
-        <main class="app-shell-main">
-          <div class="app-shell-hero-wrap">
-            <section class="app-shell-hero">
-              <div class="app-shell-hero-inner">
-                <div class="app-shell-eyebrow">
-                  <span class="app-shell-eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-                  <span>+ de 3&nbsp;000 sons jouables</span>
-                </div>
-                <h1 class="app-shell-title">Testez votre <span>culture anime</span></h1>
-                <p class="app-shell-sub">
-                  Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100%
-                  gratuit !
-                </p>
-                <div class="app-shell-ctas" aria-hidden="true">
-                  <div class="app-shell-cta-primary">Jouer</div>
-                  <div class="app-shell-cta-row">
-                    <span class="app-shell-cta-glass">Librairie</span>
-                    <span class="app-shell-cta-glass">Classement</span>
-                    <span class="app-shell-cta-glass">Avis &amp; bugs</span>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <section class="app-shell-news" aria-hidden="true">
-              <div class="app-shell-news-inner">
-                <div class="app-shell-news-header">
-                  <div class="app-shell-news-heading">
-                    <div class="app-shell-news-icon" aria-hidden="true">
-                      <svg
-                        width="16"
-                        height="16"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path
-                          d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"
-                        />
-                      </svg>
-                    </div>
-                    <h2 class="app-shell-news-title">Actualités</h2>
-                  </div>
-                  <span class="app-shell-news-more">Voir tout</span>
-                </div>
-                <div class="app-shell-news-list">
-                  <!--app-shell-news-->
-                  <article class="app-shell-news-card">
-                    <div class="app-shell-news-card-icon" aria-hidden="true">
-                      <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
-                    </div>
-                    <div class="app-shell-news-card-body">
-                      <div class="app-shell-news-card-top">
-                        <h3>Mise à jour v26.7.1 - Prime de série</h3>
-                        <span class="app-shell-news-card-date">9 nov.</span>
-                      </div>
-                      <p class="app-shell-news-card-desc">En Contre-la-montre, une série de titres trouvés peut rendre du temps. Le son part au hasard, et les égalités du podium tiennent sur une ligne.</p>
-                    </div>
-                    <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                  </article>
-                  <article class="app-shell-news-card">
-                    <div class="app-shell-news-card-icon" aria-hidden="true">
-                      <svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
-                    </div>
-                    <div class="app-shell-news-card-body">
-                      <div class="app-shell-news-card-top">
-                        <h3>Mise à jour v26.7 - Contre-la-montre, Vitesse &amp; retours en partie</h3>
-                        <span class="app-shell-news-card-date">8 nov.</span>
-                      </div>
-                      <p class="app-shell-news-card-desc">Course contre le temps en solo et à plusieurs, bonus de rapidité en Standard, et des retours plus clairs à chaque réponse.</p>
-                    </div>
-                    <svg class="app-shell-news-chevron" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                  </article>
-                  <!--/app-shell-news-->
-                </div>
-              </div>
-            </section>
-          </div>
-        </main>
-
-        <div class="app-shell-version">v26.7.1</div>
+      <div class="app-shell-mark">
+        <span class="app-shell-halo"></span>
+        <img src="/android-chrome-192x192.png" alt="" width="72" height="72" decoding="async" />
       </div>
     </div>
 

@@ -16,6 +16,10 @@ interface UseVideoPlaybackArgs {
   isMuted: boolean;
   /** Replay the current clip when the pause ends (phase was frozen, not restarted). */
   resumeAfterPause?: boolean;
+  /** Évolutif: pause once the playhead reaches the excerpt start plus this many seconds. */
+  clipLimitSeconds?: number | null;
+  /** Changes with the ladder step so the same file seeks back to the excerpt start. */
+  clipPlayEpoch?: number;
 }
 
 interface UseVideoPlaybackResult {
@@ -114,6 +118,8 @@ export function useVideoPlayback({
   volume,
   isMuted,
   resumeAfterPause = false,
+  clipLimitSeconds = null,
+  clipPlayEpoch = 0,
 }: UseVideoPlaybackArgs): UseVideoPlaybackResult {
   const videoRef = useRef<HTMLVideoElement>(null);
   const preloadRef = useRef<HTMLVideoElement>(null);
@@ -123,6 +129,8 @@ export function useVideoPlayback({
   const pausedRef = useRef(isGamePaused);
   pausedRef.current = isGamePaused;
   const warmedClipRef = useRef<string | null>(null);
+  const playEpochRef = useRef(clipPlayEpoch);
+  const hadClipLimitRef = useRef(false);
 
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
@@ -197,11 +205,18 @@ export function useVideoPlayback({
     const { videoKey } = currentSong;
     const startTime = currentSong.videoStartTime || 0;
     const clipKey = roundClipKey(videoKey, startTime);
-    if (loadedClipRef.current === clipKey) return;
-
     const el = videoRef.current;
     if (!el) return;
 
+    if (loadedClipRef.current === clipKey) {
+      if (playEpochRef.current === clipPlayEpoch) return;
+      playEpochRef.current = clipPlayEpoch;
+      el.currentTime = startTime;
+      if (!pausedRef.current) void playElement(el);
+      return;
+    }
+
+    playEpochRef.current = clipPlayEpoch;
     const controller = new AbortController();
 
     void (async () => {
@@ -220,7 +235,31 @@ export function useVideoPlayback({
     })();
 
     return () => controller.abort();
-  }, [currentSong, playElement]);
+  }, [currentSong, playElement, clipPlayEpoch]);
+
+  // Évolutif stops the excerpt at the step length. Reveal continues from there.
+  useEffect(() => {
+    if (clipLimitSeconds != null) hadClipLimitRef.current = true;
+    const el = videoRef.current;
+    if (!el || clipLimitSeconds == null || phase !== 'guessing') return;
+    if (!isGuessingSong(currentSong)) return;
+    const start = currentSong.videoStartTime || 0;
+    const end = start + clipLimitSeconds;
+    const onTime = () => {
+      if (el.seeking) return;
+      if (el.currentTime >= end - 0.03) el.pause();
+    };
+    el.addEventListener('timeupdate', onTime);
+    return () => el.removeEventListener('timeupdate', onTime);
+  }, [clipLimitSeconds, phase, currentSong]);
+
+  useEffect(() => {
+    if (phase !== 'revealed' || !hadClipLimitRef.current) return;
+    hadClipLimitRef.current = false;
+    const el = videoRef.current;
+    if (!el || el.ended) return;
+    void playElement(el);
+  }, [phase, playElement]);
 
   // Pause the media element whenever the match is paused. Modes that freeze a
   // phase mid-clip (solo time-attack) keep the same clip on resume, so it must be

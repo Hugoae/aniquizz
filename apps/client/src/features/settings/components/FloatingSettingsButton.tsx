@@ -101,6 +101,7 @@ export function FloatingSettingsButton() {
   return (
     <div
       ref={rootRef}
+      data-home-clear
       className="fixed z-50 max-w-[calc(100vw-2rem)] bottom-[max(1.5rem,env(safe-area-inset-bottom,0px))] right-[max(1.5rem,env(safe-area-inset-right,0px))]"
     >
       <div

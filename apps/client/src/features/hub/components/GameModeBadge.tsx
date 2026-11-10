@@ -1,6 +1,7 @@
-import { Trophy, Zap, Timer } from 'lucide-react';
+import { Trophy, Zap, Timer, AudioLines } from 'lucide-react';
 import { GAME_TYPE_LABELS, type GameType } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { modeChrome } from '@/features/hub/components/modeChrome';
 
 interface GameModeBadgeProps {
   gameType?: GameType;
@@ -18,30 +19,45 @@ export function GameModeBadge({
   className,
 }: GameModeBadgeProps) {
   const timeAttack = gameType === 'timeAttack';
-  const label = compact ? (timeAttack ? 'CLM' : 'STD') : GAME_TYPE_LABELS[gameType];
+  const evolving = gameType === 'evolving';
+  const label = compact
+    ? timeAttack
+      ? 'CLM'
+      : evolving
+        ? 'EVO'
+        : 'STD'
+    : GAME_TYPE_LABELS[gameType];
   const ariaLabel = timeAttack
     ? 'Mode Contre-la-montre'
-    : speedBonusEnabled
-      ? 'Standard, bonus Vitesse'
-      : `Mode ${GAME_TYPE_LABELS[gameType]}`;
-  const Icon = timeAttack ? Timer : Trophy;
+    : evolving
+      ? 'Mode Évolutif'
+      : speedBonusEnabled
+        ? 'Standard, bonus Vitesse'
+        : `Mode ${GAME_TYPE_LABELS[gameType]}`;
+  const Icon = timeAttack ? Timer : evolving ? AudioLines : Trophy;
+  const chrome = modeChrome(gameType);
 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-lg font-black uppercase tracking-wider shadow-glow',
-        timeAttack ? 'bg-aqua text-aqua-foreground' : 'bg-primary text-primary-foreground',
+        'inline-flex items-center gap-1.5 rounded-lg font-black uppercase tracking-wider',
+        chrome.solid,
+        !timeAttack && !evolving && 'shadow-glow',
         compact ? 'px-2 py-0.5 text-[10px]' : 'px-4 py-1.5 text-sm',
-        speedBonusEnabled && !timeAttack && (compact ? 'pr-2.5 pt-1' : 'pr-5 pt-1'),
+        speedBonusEnabled && !timeAttack && !evolving && (compact ? 'pr-2.5 pt-1' : 'pr-5 pt-1'),
         className,
       )}
       aria-label={ariaLabel}
     >
       <span className="relative inline-flex shrink-0">
-        <Icon
-          className={cn(compact ? 'h-3 w-3' : 'h-5 w-5', !timeAttack && 'fill-current')}
-          aria-hidden
-        />
+        {!timeAttack ? (
+          <Icon
+            className={cn(compact ? 'h-3 w-3' : 'h-5 w-5', !evolving && 'fill-current')}
+            aria-hidden
+          />
+        ) : (
+          <Icon className={cn(compact ? 'h-3 w-3' : 'h-5 w-5')} aria-hidden />
+        )}
         {speedBonusEnabled && !timeAttack ? (
           <span
             className={cn(

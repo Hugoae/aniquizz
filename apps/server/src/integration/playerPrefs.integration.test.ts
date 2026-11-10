@@ -14,6 +14,7 @@ const PREFS_SELECT = {
   submitOnEnter: true,
   soloAutoReveal: true,
   answerSounds: true,
+  configWalkthrough: true,
   showShortcutReminder: true,
   friendRequestVisual: true,
   friendRequestSound: true,

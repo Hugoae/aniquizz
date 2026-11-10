@@ -14,6 +14,7 @@ import type {
   SpeedLeaderboardPayload,
   TimeAttackBudgetPayload,
   TimeAttackNextMedal,
+  SoloMedalTargets,
   VictoryData,
   MatchSettingsSnapshot,
   VoteUpdatePayload,
@@ -21,6 +22,7 @@ import type {
   RaceBoardEntry,
   RaceBoardPayload,
   VideoMode,
+  EvolvingRoundCue,
 } from '@aniquizz/shared';
 import {
   normalizeVideoMode,
@@ -103,6 +105,8 @@ export interface GameState {
   nextSkipTaxMs: number | null;
   /** Undefined until the first cue. Null means the top medal is already reached. */
   nextMedal: TimeAttackNextMedal | null | undefined;
+  /** Chrono found-count bars. Null until the server sends them. */
+  medalTargets: SoloMedalTargets | null;
   stageFeedback: StageFeedback | null;
   /** Newest first, capped at `RECENT_TITLES_LIMIT`. Includes time-attack skips. */
   recentTitles: RecentTitle[];
@@ -110,6 +114,8 @@ export interface GameState {
   raceBoard: RaceBoardState | null;
   /** Versus only: my lane is over and I am waiting for the others. */
   laneDone: boolean;
+  /** Évolutif ladder for the song on screen. Null outside that mode. */
+  evolving: EvolvingRoundCue | null;
 }
 export type GameAction =
   | { type: 'SYNC'; state: GameSyncState; myUserId?: string }
@@ -189,10 +195,12 @@ export function createInitialState(totalRounds: number, players: GamePlayer[] = 
     budgetSyncedAt: 0,
     nextSkipTaxMs: null,
     nextMedal: undefined,
+    medalTargets: null,
     stageFeedback: null,
     recentTitles: [],
     raceBoard: null,
     laneDone: false,
+    evolving: null,
   };
 }
 
@@ -243,16 +251,26 @@ function budgetPatch(
     foundCount?: number;
     nextSkipTaxMs?: number;
     nextMedal?: TimeAttackNextMedal | null;
+    medalTargets?: SoloMedalTargets;
   },
   state: GameState,
 ):
-  | Pick<GameState, 'remainingMs' | 'foundCount' | 'budgetSyncedAt' | 'nextSkipTaxMs' | 'nextMedal'>
+  | Pick<
+      GameState,
+      | 'remainingMs'
+      | 'foundCount'
+      | 'budgetSyncedAt'
+      | 'nextSkipTaxMs'
+      | 'nextMedal'
+      | 'medalTargets'
+    >
   | Record<string, never> {
   if (
     payload.remainingMs == null &&
     payload.foundCount == null &&
     payload.nextSkipTaxMs == null &&
-    payload.nextMedal === undefined
+    payload.nextMedal === undefined &&
+    payload.medalTargets == null
   ) {
     return {};
   }
@@ -262,6 +280,7 @@ function budgetPatch(
     budgetSyncedAt: Date.now(),
     nextSkipTaxMs: payload.nextSkipTaxMs ?? state.nextSkipTaxMs,
     nextMedal: payload.nextMedal !== undefined ? payload.nextMedal : state.nextMedal,
+    medalTargets: payload.medalTargets ?? state.medalTargets,
   };
 }
 export function gameReducer(state: GameState, action: GameAction): GameState {
@@ -295,6 +314,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         recentTitles: [],
         raceBoard: null,
         laneDone: false,
+        evolving: null,
       };
     }
     case 'PRELOAD': {
@@ -316,6 +336,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'ROUND_START': {
       const p = action.payload;
       const videoMode = resolveVideoMode(p.videoMode, action.clientVideoMode ?? state.videoMode);
+      const stepped =
+        p.evolving != null &&
+        state.evolving != null &&
+        state.phase === 'guessing' &&
+        state.currentRound === p.round &&
+        p.evolving.stepIndex > state.evolving.stepIndex;
       return {
         ...state,
         phase: 'guessing',
@@ -348,6 +374,12 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           speedRank: undefined,
           speedBonus: undefined,
         })),
+        evolving: p.evolving ?? null,
+        stageFeedback: stepped
+          ? nextFeedback(state, 'wrong')
+          : p.round === state.currentRound
+            ? state.stageFeedback
+            : null,
         ...budgetPatch(p, state),
       };
     }
@@ -569,6 +601,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           ? { entries: s.raceBoard.entries, receivedAt: Date.now() }
           : state.raceBoard,
         laneDone: s.laneDone === true,
+        evolving: s.phase === 'guessing' ? (s.round?.evolving ?? null) : null,
         ...budgetPatch(
           {
             remainingMs: s.remainingMs ?? s.round?.remainingMs ?? s.reveal?.remainingMs,
@@ -580,6 +613,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
                 : s.round?.nextMedal !== undefined
                   ? s.round.nextMedal
                   : s.reveal?.nextMedal,
+            medalTargets: s.medalTargets ?? s.round?.medalTargets ?? s.reveal?.medalTargets,
           },
           state,
         ),

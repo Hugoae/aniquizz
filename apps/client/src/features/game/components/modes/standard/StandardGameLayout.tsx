@@ -1,6 +1,6 @@
 import { useMemo, useState, memo, type ReactNode } from 'react';
 import { SkipLinkTarget } from '@/components/a11y/SkipLink';
-import type { GamePlayer, Precision, TimeAttackNextMedal } from '@aniquizz/shared';
+import type { GamePlayer, Precision, EvolvingRoundCue } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { cn } from '@/lib/utils';
@@ -24,8 +24,10 @@ import { SongInfoCard } from '../../shared/SongInfoCard';
 import { GameSidebar } from '../../core/GameSidebar';
 import { GameTopBar } from './parts/GameTopBar';
 import { VideoStage } from './parts/VideoStage';
+import { EvolvingLadder } from './parts/EvolvingLadder';
 import { AnswerInput } from './parts/AnswerInput';
 import { PlayersFloor } from './parts/PlayersFloor';
+import { SoloMedalRail, type SoloMedalRailModel } from './parts/SoloMedalRail';
 import { SpeedLeaderboard } from './parts/SpeedLeaderboard';
 import { ConfigBadges, type ConfigBadgesData } from './parts/ConfigBadges';
 import type { GamePhase, InputMode, MyProfile } from './parts/types';
@@ -97,7 +99,6 @@ interface StandardGameLayoutProps {
   /** Solo time-attack run clock (memoised). Null outside time-attack. */
   timeAttackClock?: TimeAttackClock | null;
   foundCount?: number | null;
-  nextMedal?: TimeAttackNextMedal | 'max' | null;
   nextSkipTaxMs?: number | null;
   stageFeedback?: StageFeedback | null;
   recentTitles?: RecentTitle[];
@@ -107,6 +108,12 @@ interface StandardGameLayoutProps {
   hideScores?: boolean;
   /** Admin test match. Shown next to the header title. */
   testMatch?: boolean;
+  /** Évolutif ladder. Null outside that mode. */
+  evolving?: EvolvingRoundCue | null;
+  /** Null is unlimited. A number is extra replays after the first listen. */
+  evolvingReplayLimit?: number | null;
+  /** Solo medal ladder under the player card. Null in multi, daily, and versus. */
+  medalRail?: SoloMedalRailModel | null;
 }
 
 export const StandardGameLayout = memo(StandardGameLayoutInner);
@@ -170,13 +177,15 @@ function StandardGameLayoutInner({
   showRoundProgress = true,
   timeAttackClock = null,
   foundCount = null,
-  nextMedal = null,
   nextSkipTaxMs = null,
   stageFeedback = null,
   recentTitles = NO_RECENT_TITLES,
   race = null,
   hideScores = false,
   testMatch = false,
+  evolving = null,
+  evolvingReplayLimit = null,
+  medalRail = null,
 }: StandardGameLayoutProps) {
   const laneOver = race?.laneDone === true;
   const timeAttack = timeAttackClock != null;
@@ -200,6 +209,10 @@ function StandardGameLayoutInner({
       return;
     }
     if (roomId) socket.emit('game:skip_round', { roomId });
+  };
+
+  const handleAbandonTitle = () => {
+    if (roomId) socket.emit('game:abandon_round', { roomId });
   };
 
   const handleOpenRoster = () => {
@@ -249,7 +262,6 @@ function StandardGameLayoutInner({
         showRoundProgress={showRoundProgress}
         foundCount={timeAttack ? foundCount : null}
         heardCount={timeAttack ? heardCount : null}
-        nextMedal={timeAttack && race == null ? nextMedal : null}
         testMatch={testMatch}
       />
 
@@ -320,8 +332,20 @@ function StandardGameLayoutInner({
                         onVoteSkip={onVoteSkip}
                         timeAttackClock={timeAttackClock}
                         race={race != null}
+                        evolvingMode={evolving != null}
+                        evolvingReplayLimit={evolvingReplayLimit}
+                        evolvingClipSeconds={evolving?.clipSeconds ?? 0}
+                        evolvingStep={evolving?.stepIndex ?? 0}
                       />
                     </StageFeedbackFrame>
+
+                    {evolving && phase === 'guessing' && !isGamePaused ? (
+                      <EvolvingLadder
+                        cue={evolving}
+                        onSkip={handleSoloSkip}
+                        onAbandon={handleAbandonTitle}
+                      />
+                    ) : null}
 
                     {/* Slot under the video: answer input while guessing; on small screens
                   the reveal info shows here as a band (the big side card is hidden). */}
@@ -336,7 +360,9 @@ function StandardGameLayoutInner({
                           onSwitchCarre={onSwitchCarre}
                           onSwitchDuo={onSwitchDuo}
                           precision={precision}
-                          roundKey={currentRound}
+                          roundKey={
+                            evolving ? `${currentRound}-${evolving.stepIndex}` : currentRound
+                          }
                           disabled={phase === 'ready' || answerDisabled}
                           pointsBadge={pointsBadge}
                           autoFocusEnabled={autofocusAnswer}
@@ -388,6 +414,7 @@ function StandardGameLayoutInner({
                         }
                       />
                     )}
+                    {medalRail ? <SoloMedalRail rail={medalRail} /> : null}
                   </>
                 )}
               </div>

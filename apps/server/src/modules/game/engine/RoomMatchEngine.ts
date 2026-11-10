@@ -24,6 +24,8 @@ export interface RoomMatchEngine {
   clearPlayerVotes(userId: string): void;
   /** Solo: skip the shared round. Versus: skip this player's own title. */
   forceEndRound(userId?: string): void;
+  /** Evolving: end the current title without the remaining steps. */
+  abandonRound?(userId?: string): void;
   /** Called when a player explicitly leaves (not on a plain disconnect). */
   onPlayerRemoved?(userId: string): void;
   /** `userId` lets a versus engine return that player's own lane. */

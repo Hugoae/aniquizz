@@ -5,19 +5,19 @@ export type NewsPreviewItem = Omit<NewsItem, 'content'>;
 
 export const latestNewsPreview: NewsPreviewItem[] = [
   {
+    id: 11,
+    title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',
+    description:
+      'Nouveau mode Évolutif en solo, médailles sous la carte, historique retravaillé, et un accueil plus vivant.',
+    date: '2026-11-10T21:00:00Z',
+    type: 'update',
+  },
+  {
     id: 10,
     title: 'Mise à jour v26.7.1 - Prime de série',
     description:
       'En Contre-la-montre, une série de titres trouvés peut rendre du temps. Le son part au hasard, et les égalités du podium tiennent sur une ligne.',
-    date: '2026-11-09T21:00:00Z',
-    type: 'update',
-  },
-  {
-    id: 9,
-    title: 'Mise à jour v26.7 - Contre-la-montre, Vitesse & retours en partie',
-    description:
-      'Course contre le temps en solo et à plusieurs, bonus de rapidité en Standard, et des retours plus clairs à chaque réponse.',
-    date: '2026-11-08T16:00:00Z',
+    date: '2026-10-18T21:00:00Z',
     type: 'update',
   },
 ];

@@ -4,7 +4,9 @@ import {
   canViewAudience,
   mergeProfileHistory,
   normalizeAccountPrivacy,
+  parseMatchReplayConfig,
   PROFILE_HISTORY_TAKE,
+  dailyTrackStates,
   summarizeDailyCareerFromAggregates,
   toDailyHistoryEntry,
   type PrivacyViewerKind,
@@ -83,6 +85,7 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
               isWinner: true,
               correctCount: true,
               xpEarned: true,
+              soloMedal: true,
               answers: { select: { answerType: true } },
               match: {
                 select: {
@@ -91,6 +94,8 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
                   totalRounds: true,
                   startedAt: true,
                   endedAt: true,
+                  configSnapshot: true,
+                  rounds: { select: { song: { select: { difficulty: true } } } },
                   _count: { select: { players: true } },
                 },
               },
@@ -112,7 +117,18 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
               won: true,
               totalResponseMs: true,
               rank: true,
-              challenge: { select: { challengeNumber: true } },
+              challenge: {
+                select: {
+                  challengeNumber: true,
+                  rounds: { select: { position: true, voided: true } },
+                },
+              },
+              answers: {
+                select: {
+                  isCorrect: true,
+                  round: { select: { position: true } },
+                },
+              },
             },
             orderBy: { completedAt: 'desc' },
             take: PROFILE_HISTORY_TAKE,
@@ -164,10 +180,33 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       return 'Mix';
     };
 
+    const historyDifficulties = (
+      snapshot: ReturnType<typeof parseMatchReplayConfig>,
+      songs: Array<{ difficulty: string } | null>,
+    ): string[] => {
+      const order = ['easy', 'medium', 'hard'];
+      if (snapshot && snapshot.difficulty.length > 0) {
+        return order.filter((id) => snapshot.difficulty.includes(id));
+      }
+      const found = new Set(songs.flatMap((song) => (song ? [song.difficulty.toLowerCase()] : [])));
+      return order.filter((id) => found.has(id));
+    };
+
+    const storedMedal = (
+      value: string | null,
+    ): 'bronze' | 'silver' | 'gold' | 'platinum' | null => {
+      if (value === 'BRONZE') return 'bronze';
+      if (value === 'SILVER') return 'silver';
+      if (value === 'GOLD') return 'gold';
+      if (value === 'PLATINUM') return 'platinum';
+      return null;
+    };
+
     const matchHistory = historyRows.map((row) => {
       const m = row.match;
       const start = m.startedAt;
       const end = m.endedAt;
+      const replay = parseMatchReplayConfig(m.configSnapshot);
       return {
         id: m.id,
         playedAt: (end ?? start).toISOString(),
@@ -182,10 +221,19 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
         xpEarned: row.xpEarned,
         playerCount: m._count.players,
         durationMs: end ? end.getTime() - start.getTime() : null,
+        replay,
+        medal: storedMedal(row.soloMedal),
+        difficulties: historyDifficulties(
+          replay,
+          m.rounds.map((round) => round.song),
+        ),
       };
     });
-    const dailyHistory = dailyHistoryRows.map((row) =>
-      toDailyHistoryEntry({
+    const dailyHistory = dailyHistoryRows.map((row) => {
+      const correctByPosition = new Map(
+        row.answers.map((answer) => [answer.round.position, answer.isCorrect]),
+      );
+      return toDailyHistoryEntry({
         id: row.id,
         playedAt: row.completedAt ?? row.startedAt,
         challengeNumber: row.challenge.challengeNumber,
@@ -195,8 +243,17 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
         won: row.won,
         totalResponseMs: row.totalResponseMs,
         rank: row.rank,
-      }),
-    );
+        tracks: dailyTrackStates(
+          row.challenge.rounds.map((round) => ({
+            position: round.position,
+            voided: round.voided,
+            correct: correctByPosition.has(round.position)
+              ? correctByPosition.get(round.position)
+              : false,
+          })),
+        ),
+      });
+    });
     const history = mergeProfileHistory(matchHistory, dailyHistory);
     const dailyCareer = summarizeDailyCareerFromAggregates({
       count: dailyCareerAgg._count._all,

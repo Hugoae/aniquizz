@@ -47,6 +47,7 @@ export function toDailyHistoryEntry(input: {
   won: boolean;
   totalResponseMs: number;
   rank?: number | null;
+  tracks?: MatchHistoryEntry['tracks'];
 }): MatchHistoryEntry {
   const playedAt = input.playedAt instanceof Date ? input.playedAt.toISOString() : input.playedAt;
   return {
@@ -65,6 +66,7 @@ export function toDailyHistoryEntry(input: {
     durationMs: null,
     challengeNumber: input.challengeNumber,
     totalResponseMs: input.totalResponseMs,
+    tracks: input.tracks,
   };
 }
 

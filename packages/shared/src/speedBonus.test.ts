@@ -73,6 +73,8 @@ describe('gameTypeFromStoredMode', () => {
   it('maps TIME_ATTACK rows to timeAttack', () => {
     expect(gameTypeFromStoredMode('TIME_ATTACK')).toBe('timeAttack');
     expect(gameTypeFromStoredMode('time_attack')).toBe('timeAttack');
+    expect(gameTypeFromStoredMode('EVOLVING')).toBe('evolving');
+    expect(gameTypeFromStoredMode('evolving')).toBe('evolving');
   });
 });
 

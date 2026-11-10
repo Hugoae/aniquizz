@@ -57,7 +57,7 @@ function SessionFriendsProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** No skeleton on `/` — Home is eager-imported and the HTML app-shell covers first paint. */
+/** No skeleton on `/` — Home is eager, and the pulsing mark covers first paint. */
 function AppSuspenseFallback() {
   const { pathname } = useLocation();
   if (pathname === '/') return null;
@@ -82,7 +82,7 @@ const AppContent = () => {
     if (next) navigate(next, { replace: true });
   }, [authReady, session, navigate]);
 
-  // Keep the HTML shell covering #root until Tailwind is verified on the mounted Home.
+  // Keep the pulsing mark up until Tailwind is verified on the mounted Home.
   useLayoutEffect(() => {
     markLandingPaintDone();
   }, []);

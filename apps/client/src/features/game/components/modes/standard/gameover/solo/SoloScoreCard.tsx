@@ -18,6 +18,7 @@ interface SoloScoreCardProps {
   timeAttack?: boolean;
   timeBudgetSeconds?: number;
   medalRules?: TimeAttackMedalRules | null;
+  evolving?: boolean;
 }
 
 export function SoloScoreCard({
@@ -32,6 +33,7 @@ export function SoloScoreCard({
   timeAttack = false,
   timeBudgetSeconds,
   medalRules,
+  evolving = false,
 }: SoloScoreCardProps) {
   const medalMeta = getMedalMeta(soloMedal);
 
@@ -122,6 +124,7 @@ export function SoloScoreCard({
           timeAttack={timeAttack}
           timeBudgetSeconds={timeBudgetSeconds}
           medalRules={medalRules}
+          evolving={evolving}
         />
       </div>
     </div>

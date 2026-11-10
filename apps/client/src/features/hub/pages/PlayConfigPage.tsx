@@ -7,7 +7,7 @@ import { SeoHead } from '@/components/seo/SeoHead';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
 import { PAGE_TITLES } from '@/lib/site';
-import type { RoomConfig } from '@aniquizz/shared';
+import type { GameConfig, RoomConfig } from '@aniquizz/shared';
 
 import { GameConfigForm } from '@/features/hub/components/GameConfigForm';
 import { createSoundTypeToggler } from '@/features/hub/components/config/formOptions';
@@ -28,6 +28,8 @@ export interface PlayConfigLocationState {
    * Submit still returns to the ready screen.
    */
   leaveOnBack?: boolean;
+  /** Solo config opened from a history card, already filled with that match's rules. */
+  replayDraft?: GameConfig;
 }
 
 function intentCopy(intent: PlayConfigIntent) {
@@ -78,6 +80,12 @@ export function PlayConfigPage() {
   const isSolo = intent === 'solo';
   const isEdit = intent === 'edit';
   const isRoom = !isSolo;
+  const replayDraft = isSolo ? locationState?.replayDraft : undefined;
+
+  useEffect(() => {
+    if (!replayDraft) return;
+    setConfig(replayDraft);
+  }, [replayDraft, setConfig]);
 
   const [editDraft, setEditDraft] = useState<RoomConfig | null>(() => locationState?.draft ?? null);
 

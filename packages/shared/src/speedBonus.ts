@@ -38,6 +38,7 @@ export function speedBonusFromStoredMode(mode: string | null | undefined): boole
 /** Map a persisted Match.mode enum string to the shared GameType id. */
 export function gameTypeFromStoredMode(mode: string | null | undefined): GameType {
   if (mode?.toUpperCase() === 'TIME_ATTACK') return 'timeAttack';
+  if (mode?.toUpperCase() === 'EVOLVING') return 'evolving';
   return 'standard';
 }
 

@@ -7,6 +7,8 @@ import type { Medal, MedalTier } from './grading';
 import type { UserRole } from './roles';
 import type { Precision } from './precision';
 import type { PeekWindow, VideoMode } from './videoMode';
+import type { EvolvingRoundCue } from './evolving';
+import type { MatchReplayConfig } from './replayConfig';
 
 export type { Precision };
 
@@ -126,6 +128,10 @@ export interface RoundStartPayload extends PhaseTiming {
   nextSkipTaxMs?: number;
   /** Solo time-attack: titles still needed for the next medal. Null = top medal. */
   nextMedal?: TimeAttackNextMedal | null;
+  /** Solo time-attack: found-count bar for each medal. */
+  medalTargets?: SoloMedalTargets;
+  /** Evolving ladder for this guess. Absent on Standard and Chrono. No guess clock. */
+  evolving?: EvolvingRoundCue;
 }
 
 /** Two labels for the player who spent the Mix Duo lifeline. Never broadcast. */
@@ -173,6 +179,8 @@ export interface RoundRevealPayload extends PhaseTiming {
   foundCount?: number;
   nextSkipTaxMs?: number;
   nextMedal?: TimeAttackNextMedal | null;
+  /** Solo time-attack: found-count bar for each medal. */
+  medalTargets?: SoloMedalTargets;
   /** Set when this reveal includes a streak prime. The streak counter is not reset. */
   bonusMs?: number;
 }
@@ -183,6 +191,9 @@ export interface TimeAttackNextMedal {
   pointsNeeded: number;
 }
 
+/** Integer bar for every solo medal. Chrono counts titles; the other modes count points. */
+export type SoloMedalTargets = Record<Medal, number>;
+
 /** Solo time-attack budget after a tax or phase change (server-authoritative). */
 export interface TimeAttackBudgetPayload {
   remainingMs: number;
@@ -191,6 +202,8 @@ export interface TimeAttackBudgetPayload {
   nextSkipTaxMs?: number;
   /** Null once the top medal is already reached. */
   nextMedal?: TimeAttackNextMedal | null;
+  /** Found-count bar for each medal, from the songs heard so far. */
+  medalTargets?: SoloMedalTargets;
   /** Set when this update is a tax, so the client can play wrong / skip feedback. */
   tax?: 'skip' | 'wrong';
   /** Time removed by `tax` (ms); skips escalate within a run. */
@@ -383,6 +396,8 @@ export interface GameSyncState {
   nextSkipTaxMs?: number;
   /** Solo time-attack: next medal, or null at the top. Absent on Standard. */
   nextMedal?: TimeAttackNextMedal | null;
+  /** Solo time-attack: found-count bar for each medal. Absent on Standard. */
+  medalTargets?: SoloMedalTargets;
   /** Versus: live board at sync time. Absent outside a race. */
   raceBoard?: RaceBoardPayload;
   /** Versus: this player's lane already ended (waiting for the others). */
@@ -616,6 +631,14 @@ export interface MatchHistoryEntry {
   challengeNumber?: number;
   /** Daily cumulative guess time in ms, when `kind` is `daily`. */
   totalResponseMs?: number;
+  /** Per-song outcome for a daily card, in round order. Omitted on matches. */
+  tracks?: Array<'empty' | 'pending' | 'correct' | 'wrong' | 'voided'>;
+  /** Rules snapshot, when the match stored one. Absent on older rows and on daily. */
+  replay?: MatchReplayConfig | null;
+  /** Solo medal. Null when the player earned none, or the match is multi. */
+  medal?: 'bronze' | 'silver' | 'gold' | 'platinum' | null;
+  /** Difficulties selected for the match, or those of the songs when no snapshot exists. */
+  difficulties?: string[];
 }
 
 // --- CHAT ---

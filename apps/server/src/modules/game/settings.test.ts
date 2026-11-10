@@ -305,4 +305,34 @@ describe('settings field caps', () => {
     expect(settings.isPrivate).toBe(false);
     expect(settings.password).toBe('');
   });
+
+  it('locks Évolutif to solo typing without a video choice', () => {
+    const settings = normalizeRoomSettings(
+      {
+        mode: 'solo',
+        maxPlayers: 1,
+        gameType: 'evolving',
+        responseType: 'mix',
+        videoMode: 'blurred',
+        soloInstantReveal: true,
+        speedBonusEnabled: true,
+      },
+      meta,
+    );
+    expect(settings.gameType).toBe('evolving');
+    expect(settings.responseType).toBe('typing');
+    expect(settings.videoMode).toBe('hidden');
+    expect(settings.soloInstantReveal).toBe(false);
+    expect(settings.speedBonusEnabled).toBe(false);
+    expect(settings.evolvingInfiniteReplay).toBe(true);
+    expect(settings.evolvingReplayLimit).toBe(1);
+  });
+
+  it('refuses Évolutif in a multiplayer room', () => {
+    const settings = normalizeRoomSettings(
+      { mode: 'multiplayer', maxPlayers: 8, gameType: 'evolving' },
+      meta,
+    );
+    expect(settings.gameType).toBe('standard');
+  });
 });

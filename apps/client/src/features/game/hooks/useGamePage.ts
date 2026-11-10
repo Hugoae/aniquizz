@@ -8,7 +8,6 @@ import {
   type AnswerType,
   type GamePlayer,
   type RoomSettings,
-  type TimeAttackNextMedal,
   isBanSanctionReason,
   isSpeedBonusEnabled,
   isTimeAttackGame,
@@ -18,7 +17,11 @@ import {
   normalizeVideoMode,
   hasWatchedListLink,
   maxSpeedBonusPointsPerRound,
+  medalMarkerScores,
+  maxPointsPerRound,
   playlistSourceDisplayName,
+  resolveEvolvingReplayLimit,
+  EVOLVING_STEP_POINTS,
 } from '@aniquizz/shared';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
@@ -132,8 +135,46 @@ export function useGamePage() {
     if (answerSounds && !audioMuted) playAnswerSting(fb.kind, audioVolume);
   }, [state.stageFeedback, answerSounds, audioMuted, audioVolume]);
 
-  const nextMedal: TimeAttackNextMedal | 'max' | null =
-    !timeAttack || state.nextMedal === undefined ? null : (state.nextMedal ?? 'max');
+  const medalRail = useMemo(() => {
+    if (gameMode !== 'solo') return null;
+    if (timeAttack) {
+      if (!state.medalTargets) return null;
+      return { unit: 'found' as const, current: state.foundCount, targets: state.medalTargets };
+    }
+    if (activeSettings.gameType !== 'standard' && activeSettings.gameType !== 'evolving') {
+      return null;
+    }
+    const rounds = state.totalRounds;
+    if (rounds <= 0) return null;
+    const evolving = activeSettings.gameType === 'evolving';
+    const perRound = evolving
+      ? EVOLVING_STEP_POINTS[0]
+      : maxPointsPerRound(activeSettings.responseType ?? 'typing');
+    const difficulties =
+      activeSettings.difficulty && activeSettings.difficulty.length > 0
+        ? activeSettings.difficulty
+        : ['medium'];
+    const me = players.find((player) => String(player.id) === currentUserId);
+    return {
+      unit: 'points' as const,
+      current: me?.score ?? 0,
+      targets: medalMarkerScores(
+        rounds * perRound,
+        difficulties,
+        normalizePrecision(activeSettings.precision),
+        evolving,
+      ),
+    };
+  }, [
+    gameMode,
+    timeAttack,
+    activeSettings,
+    state.medalTargets,
+    state.foundCount,
+    state.totalRounds,
+    players,
+    currentUserId,
+  ]);
   const { videoRef, preloadRef, warmVideo, autoplayBlocked, resumeCurrent } = useVideoPlayback({
     currentSong,
     phase,
@@ -141,6 +182,8 @@ export function useGamePage() {
     volume: audioVolume,
     isMuted: audioMuted,
     resumeAfterPause: timeAttack,
+    clipLimitSeconds: phase === 'guessing' && state.evolving ? state.evolving.clipSeconds : null,
+    clipPlayEpoch: state.evolving?.stepIndex ?? 0,
   });
 
   const onVolumeChange = useCallback(
@@ -182,7 +225,7 @@ export function useGamePage() {
     if (phase !== 'guessing') return;
     setSubmittedAnswer(null);
     setInputMode(activeSettings.responseType === 'qcm' ? 'carre' : 'typing');
-  }, [state.currentRound, phase, activeSettings.responseType]);
+  }, [state.currentRound, phase, activeSettings.responseType, state.evolving?.stepIndex]);
 
   useEffect(() => {
     if (phase !== 'guessing') return;
@@ -218,9 +261,10 @@ export function useGamePage() {
 
   const pointsBadge = useMemo(() => {
     if (timeAttack) return '+1';
+    if (state.evolving && phase === 'guessing') return `${state.evolving.points} pts`;
     if (!speedBonusOn || phase !== 'guessing') return undefined;
     return `Jusqu'à +${maxSpeedBonusPointsPerRound()} pts`;
-  }, [speedBonusOn, phase, timeAttack]);
+  }, [speedBonusOn, phase, timeAttack, state.evolving]);
 
   useEffect(() => {
     if (phase === 'guessing') setShowPointsAnimation(false);
@@ -284,14 +328,17 @@ export function useGamePage() {
   const handleAction = useCallback(
     (val: string) => {
       if (!val) return;
-      if (!timeAttack) setSubmittedAnswer(val);
+      if (!timeAttack && !state.evolving) setSubmittedAnswer(val);
       actions.answer(
         val,
         INPUT_TO_ANSWER_TYPE[inputMode],
-        gameMode === 'solo' && !timeAttack && activeSettings.soloInstantReveal === true,
+        gameMode === 'solo' &&
+          !timeAttack &&
+          !state.evolving &&
+          activeSettings.soloInstantReveal === true,
       );
     },
-    [actions, activeSettings.soloInstantReveal, gameMode, inputMode, timeAttack],
+    [actions, activeSettings.soloInstantReveal, gameMode, inputMode, timeAttack, state.evolving],
   );
 
   const handleSwitchCarre = useCallback(() => {
@@ -351,6 +398,8 @@ export function useGamePage() {
     pauseRequired: state.pauseRequired,
     resumeCountdown: state.resumeCountdown,
     onVotePause: actions.votePause,
+    // Evolving has no guess clock, so a match pause does nothing.
+    showPause: activeSettings.gameType !== 'evolving',
     skipVotes: state.skipVotes,
     skipRequired: state.skipRequired,
     onVoteSkip: actions.voteSkip,
@@ -386,10 +435,13 @@ export function useGamePage() {
     showShortcutReminder,
     timeAttackClock,
     foundCount: timeAttack ? state.foundCount : null,
-    nextMedal,
+    medalRail,
     nextSkipTaxMs: timeAttack ? state.nextSkipTaxMs : null,
     stageFeedback: state.stageFeedback,
     recentTitles: state.recentTitles,
+    evolving: state.evolving,
+    evolvingReplayLimit:
+      activeSettings.gameType === 'evolving' ? resolveEvolvingReplayLimit(activeSettings) : null,
     testMatch: activeSettings.testMatch === true,
     race:
       timeAttack && gameMode !== 'solo'

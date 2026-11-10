@@ -48,7 +48,7 @@ export function DailyQuizCard() {
         className={cn(
           'group relative flex w-full items-center gap-5 overflow-hidden p-5 text-left md:p-6',
           'glass-card border border-border/50 transition-all duration-300',
-          'hover:border-primary/30 hover:shadow-xl hover:translate-y-[-2px]',
+          'hover:border-warning/40 hover:shadow-xl hover:translate-y-[-2px]',
         )}
         aria-label={`${DAILY_COPY.title} — ${cta}`}
       >
@@ -61,12 +61,12 @@ export function DailyQuizCard() {
           className="relative inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-warning to-warning/70"
           aria-hidden
         >
-          <Calendar className="h-7 w-7 text-foreground" />
+          <Calendar className="h-7 w-7 text-warning-foreground" />
         </div>
 
         <div className="relative min-w-0 flex-1 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-black tracking-tight text-foreground transition-colors group-hover:text-primary">
+            <h2 className="text-xl font-black tracking-tight text-foreground transition-colors group-hover:text-warning">
               {DAILY_COPY.title}
             </h2>
             {today?.challengeNumber != null ? (

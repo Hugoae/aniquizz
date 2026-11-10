@@ -50,6 +50,7 @@ export interface XpState {
 export interface PersistMatchInput {
   speedBonusEnabled: boolean;
   timeAttack?: boolean;
+  evolving?: boolean;
   totalRounds: number;
   startedAt: Date;
   endedAt: Date;
@@ -61,6 +62,8 @@ export interface PersistMatchInput {
   songIds: number[];
   playlistId?: string | null;
   decadePlaylistId?: string | null;
+  /** Rules snapshot for the history replay button. */
+  configSnapshot?: import('@aniquizz/shared').MatchReplayConfig;
   /**
    * Set when the match row was opened at the first title. Finish updates that
    * row instead of inserting a second one (which would double-count the tops).
@@ -68,8 +71,13 @@ export interface PersistMatchInput {
   activityMatchId?: string | null;
 }
 
-const toPrismaGameMode = (input: { speedBonusEnabled: boolean; timeAttack?: boolean }) => {
+const toPrismaGameMode = (input: {
+  speedBonusEnabled: boolean;
+  timeAttack?: boolean;
+  evolving?: boolean;
+}) => {
   if (input.timeAttack) return 'TIME_ATTACK' as const;
+  if (input.evolving) return 'EVOLVING' as const;
   return input.speedBonusEnabled ? 'SPRINT' : 'STANDARD';
 };
 
@@ -265,6 +273,9 @@ export class MatchRepository {
             precision: toStoredPrecision(input.precision),
             playlistId: input.playlistId ?? undefined,
             decadePlaylistId: input.decadePlaylistId ?? undefined,
+            configSnapshot: input.configSnapshot
+              ? (JSON.parse(JSON.stringify(input.configSnapshot)) as Prisma.InputJsonValue)
+              : undefined,
           },
         }),
         prisma.matchPlayer.createMany({

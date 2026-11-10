@@ -48,6 +48,7 @@ enum GameMode {
   STANDARD
   SPRINT
   TIME_ATTACK
+  EVOLVING
 }
 
 enum MatchStatus {
@@ -166,6 +167,8 @@ model Profile {
   submitOnEnter          Boolean @default(true)
   soloAutoReveal         Boolean @default(false)
   answerSounds           Boolean @default(true)
+  /// First setup walks the three config sections. Off skips that walk.
+  configWalkthrough      Boolean @default(true)
   showShortcutReminder   Boolean @default(true)
   friendRequestVisual    Boolean @default(true)
   friendRequestSound     Boolean @default(false)
@@ -236,6 +239,11 @@ model Match {
   playlistId   String?
   /** Decade overlay when the match combined a genre pack with a decade pack. */
   decadePlaylistId String?
+  /**
+   * Rules used to start the match, so history can open a new game with them.
+   * Small JSON. Kept for the life of the match because the row is shared.
+   */
+  configSnapshot Json?
 
   players  MatchPlayer[]
   rounds   MatchRound[]

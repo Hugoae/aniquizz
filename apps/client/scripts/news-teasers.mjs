@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
  * Single source for Home news teasers: `newsData.ts` (`allNews`) + `SITE_VERSION`.
- * Writes `newsPreview.ts` (slim, no `content`) and patches `index.html` app-shell
- * so v26.7 cannot drift just because someone forgot the static HTML.
+ * Writes `newsPreview.ts` (slim, no `content`). The first-paint shell is only a
+ * pulsing mark, so index.html is left alone when it no longer embeds the teasers.
  *
  *   pnpm --filter aniquizz-client sync:news
  *   pnpm --filter aniquizz-client sync:news -- --check
@@ -222,6 +222,10 @@ function escapeRegExp(s) {
 }
 
 export function applyAppShell(html, { version, teasers }) {
+  if (!html.includes(APP_SHELL_NEWS_START) || !html.includes(APP_SHELL_NEWS_END)) {
+    return html;
+  }
+
   const nl = newlineOf(html);
   let next = html.replace(
     /<div class="app-shell-version">[\s\S]*?<\/div>/,
@@ -230,10 +234,6 @@ export function applyAppShell(html, { version, teasers }) {
 
   const list = renderAppShellNewsList(teasers, nl);
   const wrapped = `${APP_SHELL_NEWS_START}${nl}${list}${nl}                  ${APP_SHELL_NEWS_END}`;
-
-  if (!next.includes(APP_SHELL_NEWS_START) || !next.includes(APP_SHELL_NEWS_END)) {
-    throw new Error('index.html missing <!--app-shell-news--> / <!--/app-shell-news--> markers');
-  }
   next = next.replace(
     new RegExp(`${escapeRegExp(APP_SHELL_NEWS_START)}[\\s\\S]*?${escapeRegExp(APP_SHELL_NEWS_END)}`),
     wrapped,

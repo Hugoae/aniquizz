@@ -16,6 +16,8 @@ import { AvatarCropDialog } from '@/features/profile/components/AvatarCropDialog
 import { PasswordDialog } from '@/features/profile/components/PasswordDialog';
 import { DeleteAccountDialog } from '@/features/profile/components/DeleteAccountDialog';
 import { MatchHistory } from '@/features/profile/components/MatchHistory';
+import { playCreatePath } from '@/features/hub/playConfigSearch';
+import { soloGameConfigFromReplay } from '@aniquizz/shared';
 import { ProfileSkeleton } from '@/features/profile/components/ProfileSkeleton';
 import { ProfilePokedexSection } from '@/features/profile/components/ProfilePokedexSection';
 import { ProfileAchievementsSection } from '@/features/profile/components/ProfileAchievementsSection';
@@ -112,7 +114,15 @@ export default function Profile() {
             ) : (
               <PublicFriendsList friends={p.vm.friends} onOpen={p.openProfile} />
             )}
-            <MatchHistory entries={p.vm.history} redacted={Boolean(p.vm.historyRedacted)} />
+            <MatchHistory
+              entries={p.vm.history}
+              redacted={Boolean(p.vm.historyRedacted)}
+              onReplay={(replay) =>
+                navigate(playCreatePath('solo'), {
+                  state: { intent: 'solo', replayDraft: soloGameConfigFromReplay(replay) },
+                })
+              }
+            />
           </div>
         </div>
       </ProfilePageShell>

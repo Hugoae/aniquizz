@@ -116,8 +116,7 @@ export interface DailySafeRoundDto {
 
 /** One step of the quiz-du-jour socket loop. The server pushes these. */
 export type DailyPlayState =
-  | { kind: 'round'; attempt: DailySafeRoundDto }
-  | { kind: 'result'; result: DailyResultDto };
+  { kind: 'round'; attempt: DailySafeRoundDto } | { kind: 'result'; result: DailyResultDto };
 
 export interface DailyPlayErrorPayload {
   message: string;

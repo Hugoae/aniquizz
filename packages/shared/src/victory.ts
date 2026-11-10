@@ -9,6 +9,7 @@
 import { GAME_CONFIG } from './constants';
 import { maxPointsPerRound } from './scoring';
 import { computeMedal, effectiveMedalThresholds, type MedalTier } from './grading';
+import { evolvingMedalThresholds } from './evolving';
 import { computeCompetitionRanks } from './ranking';
 import type { ResponseType } from './game';
 import type { Precision } from './precision';
@@ -33,6 +34,10 @@ export interface VictoryInput {
   songDifficulties: string[];
   /** Answer precision — Anime lowers medal thresholds vs Franchise. */
   precision?: Precision;
+  /** Best points for one round. Evolving passes 6; other modes use the answer type. */
+  bestPerRound?: number;
+  /** Evolving medals sit lower than Standard, because a 6 is rare. */
+  evolving?: boolean;
 }
 
 export interface VictoryResult {
@@ -68,11 +73,14 @@ const soloDifficultyLabel = (difficulties: string[]): string => {
  * Callers must pass human competitors only — bots must not inflate lobby size.
  */
 export const computeVictory = (input: VictoryInput): VictoryResult => {
-  const bestPerRound = maxPointsPerRound(input.responseType);
+  const bestPerRound = input.bestPerRound ?? maxPointsPerRound(input.responseType);
   const maxPossibleScore = input.totalRounds * bestPerRound;
   const rankings = [...input.players].sort((a, b) => b.score - a.score);
 
-  const soloTargetRatio = effectiveMedalThresholds(input.songDifficulties, input.precision).bronze;
+  const medalThresholds = input.evolving
+    ? evolvingMedalThresholds(input.songDifficulties, input.precision)
+    : effectiveMedalThresholds(input.songDifficulties, input.precision);
+  const soloTargetRatio = medalThresholds.bronze;
 
   const winnerIds: string[] = [];
   let multiWinnerCount = 1;
@@ -83,7 +91,13 @@ export const computeVictory = (input: VictoryInput): VictoryResult => {
     if (top) {
       const rounds = top.totalCount > 0 ? top.totalCount : input.totalRounds;
       const denom = bestPerRound * rounds;
-      soloMedal = computeMedal(top.score, denom, input.songDifficulties, input.precision);
+      soloMedal = computeMedal(
+        top.score,
+        denom,
+        input.songDifficulties,
+        input.precision,
+        input.evolving === true,
+      );
       if (soloMedal) winnerIds.push(top.userId);
     }
   } else {

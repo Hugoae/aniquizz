@@ -5,6 +5,37 @@ export { typeConfig } from './newsTypes';
 
 export const allNews: NewsItem[] = [
   {
+    id: 11,
+    title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',
+    description:
+      'Nouveau mode Évolutif en solo, médailles sous la carte, historique retravaillé, et un accueil plus vivant.',
+    content:
+      '**Évolutif**\n' +
+      '• Nouveau mode, en solo et en saisie. L’extrait repart du même point et s’allonge : 0,25 s, 0,5 s, 1 s, 3 s, 10 s, puis 15 s.\n' +
+      '• Plus vous trouvez tôt, plus le titre rapporte : 6, 5, 4, 3, 2, puis 1 point.\n' +
+      '• Une erreur ou Passer allonge l’extrait. Abandonner termine le titre à 0.\n' +
+      '• Réécoute, dans Général : Infinie, ou Limitée avec le nombre de relances. En partie, le compteur est sous « Écoutez bien… ».\n' +
+      '• Pas de chrono pour répondre, et pas de bouton Pause. Le bouton au centre relance l’extrait.\n\n' +
+      '**Parcours de configuration**\n' +
+      '• Une nouvelle partie se prépare en trois temps : Général, Source, puis Avancée. Lancer n’apparaît qu’à la fin.\n' +
+      '• Dans Paramètres, rubrique En partie, **Parcours de configuration** est activé par défaut. Le couper ouvre tout de suite.\n\n' +
+      '**Médailles**\n' +
+      '• En solo, Bronze, Argent, Or et Platine s’affichent sous votre carte, avec le score qui les débloque.\n' +
+      '• Elles restent grises, puis prennent leur couleur une fois le seuil atteint.\n' +
+      '• L’écran de fin reprend ces quatre paliers. La barre a été retirée.\n\n' +
+      '**Historique**\n' +
+      "• La catégorie historique de partie dans le profil à été retravaillée et est maintenant plus agréable, affiche plus d'informations et montre les cinq dernières parties.\n" +
+      '• Grâce au nouveau bouton **Rejouer** vous pouvez relancer une partie avec les mêmes règles.\n\n' +
+      '**Couleurs des modes**\n' +
+      '• Standard en violet, Contre-la-montre en cyan, Évolutif en vert, Quiz du jour en doré.\n\n' +
+      '**Accueil**\n' +
+      '• Le fond est parsemé de points blancs qui clignotent.\n' +
+      '• À l’ouverture, le logo pulse au centre, puis le site apparaît.\n\n' +
+      "Une grosse mise à jour qui apporte un mode de jeu et plein de nouveautés, j'espère que vous l'apprécierez !",
+    date: '2026-11-10T21:00:00Z',
+    type: 'update',
+  },
+  {
     id: 10,
     title: 'Mise à jour v26.7.1 - Prime de série',
     description:
@@ -25,7 +56,7 @@ export const allNews: NewsItem[] = [
       '**Confort**\n' +
       '• En solo, Retour depuis l’écran prêt ramène à la configuration. Un second Retour quitte vers le choix du mode.\n\n' +
       'Bon jeu !',
-    date: '2026-11-09T21:00:00Z',
+    date: '2026-10-18T21:00:00Z',
     type: 'update',
   },
   {
@@ -57,7 +88,7 @@ export const allNews: NewsItem[] = [
       '• La carte Solo nomme les deux parties : Standard (points et médailles) et Contre-la-montre.\n' +
       '• Compétitif n’est pas encore jouable. Une ligne indique que le classé arrive.\n\n' +
       'Bonne course !',
-    date: '2026-11-08T16:00:00Z',
+    date: '2026-10-11T16:00:00Z',
     type: 'update',
   },
   {

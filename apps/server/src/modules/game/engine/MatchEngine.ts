@@ -38,6 +38,12 @@ import {
   resumeFrozenTimeAttack,
   skipTimeAttackRound,
 } from './matchEngineBudget';
+import {
+  abandonEvolvingRound,
+  advanceEvolvingStep,
+  evolvingPoints,
+  isEvolvingHost,
+} from './matchEngineEvolving';
 import { abandonScheduledActivity } from './matchActivityLedger';
 
 /** Runs a single Standard-mode match: the authoritative round loop. */
@@ -78,6 +84,8 @@ export class MatchEngine {
   finishing = false;
   /** Stays set so a second finish on this engine cannot persist the match twice. */
   private finishStarted = false;
+  /** Ladder index for the song currently on screen. */
+  private evolvingStep = 0;
   /** See `matchActivityLedger`. Tests leave both null because the repo mock has no opener. */
   activityMatchId: string | null = null;
   activityOpen: Promise<string | null> | null = null;
@@ -159,7 +167,25 @@ export class MatchEngine {
     }
 
     const trimmed = answer.trim();
-    if (isTimeAttackHost(host) && trimmed.length === 0) return;
+    if ((isTimeAttackHost(host) || isEvolvingHost(host)) && trimmed.length === 0) return;
+    const timeMs = Math.max(0, Date.now() - this.guessStartAt);
+
+    if (isEvolvingHost(host)) {
+      const correct = isAnswerCorrect(answer, item.validAnswers);
+      player.hasAnswered = true;
+      player.currentAnswer = answer;
+      player.answerType = 'typing';
+      player.answerTimeMs = timeMs;
+      player.isCorrect = correct;
+      player.roundPoints = correct ? evolvingPoints(host) : 0;
+      this.channel.emit('game:answered', { userId });
+      if (correct) {
+        this.endRound('reveal');
+        return;
+      }
+      advanceEvolvingStep(host);
+      return;
+    }
 
     // Anti-cheat: never trust the client's claimed type beyond the room mode.
     // Typing-only always scores as typing; QCM-only never awards typing. Mix
@@ -169,7 +195,6 @@ export class MatchEngine {
     // so the 50/50 cannot be answered at typing or QCM points.
     const effectiveType = player.duoCommitted ? 'duo' : this.effectiveAnswerType(answerType);
 
-    const timeMs = Math.max(0, Date.now() - this.guessStartAt);
     const isCorrect = isAnswerCorrect(answer, item.validAnswers);
 
     player.hasAnswered = true;
@@ -285,8 +310,24 @@ export class MatchEngine {
     }
   }
 
+  abandonRound(): void {
+    abandonEvolvingRound(this.asHost());
+  }
+
   forceEndRound(): void {
     const host = this.asHost();
+    if (isEvolvingHost(host)) {
+      if (this.phase === 'guessing' && !this.isRoundEnded && !this.isRoundLoading) {
+        advanceEvolvingStep(host);
+        return;
+      }
+      if (this.isRoundEnded) {
+        this.clock.clear();
+        if (this.isPausePending) this.pause();
+        else this.startRound();
+      }
+      return;
+    }
     if (isTimeAttackHost(host)) {
       skipTimeAttackRound(host);
       return;

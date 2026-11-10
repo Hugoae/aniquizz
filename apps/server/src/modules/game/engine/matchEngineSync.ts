@@ -1,6 +1,7 @@
 import {
   matchHeardSongIds,
   revealDurationSeconds,
+  EVOLVING_REVEAL_SECONDS,
   type GameReadyPayload,
   type GameSyncState,
   type RoundRevealPayload,
@@ -11,6 +12,7 @@ import { toRevealSong } from './matchEngineReveal';
 import type { MatchEngineHost } from './matchEngineHost';
 import type { AdminMatchProgress } from './types';
 import { isTimeAttackHost, timeAttackFields, timeAttackRevealSeconds } from './matchEngineBudget';
+import { isEvolvingHost } from './matchEngineEvolving';
 
 export function heardSongIds(host: MatchEngineHost): number[] {
   const inProgress =
@@ -74,7 +76,9 @@ export function buildMatchSyncState(host: MatchEngineHost): GameSyncState {
       endsAt: host.clock.endsAt,
       durationSeconds: isTimeAttackHost(host)
         ? timeAttackRevealSeconds()
-        : revealDurationSeconds(item.guessDuration),
+        : isEvolvingHost(host)
+          ? EVOLVING_REVEAL_SECONDS
+          : revealDurationSeconds(item.guessDuration),
       ...timeAttackFields(host),
     };
   }

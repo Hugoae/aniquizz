@@ -30,6 +30,7 @@ export const HUB_COPY = {
   join: 'Rejoindre',
   codePlaceholder: 'CODE...',
   reset: 'Réinitialiser',
+  configNext: 'Suivant',
   copied: 'Code copié dans le presse-papier !',
   configSection: 'Configuration',
   passwordDialog: {
