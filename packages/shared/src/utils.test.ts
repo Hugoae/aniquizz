@@ -447,6 +447,27 @@ describe('isAnswerCorrect', () => {
     expect(isAnswerCorrect('???', ['Naruto'])).toBe(false);
   });
 
+  it('allows one typo on a short title and rejects a two-letter season suffix', () => {
+    expect(isAnswerCorrect('Tokyo Ghul', ['Tokyo Ghoul'])).toBe(true);
+    expect(isAnswerCorrect('Tokyo Ghoul', ['Tokyo Ghoul:re'])).toBe(false);
+    expect(isAnswerCorrect('tokyo ghoul racine carrée', ['Tokyo Ghoul:re'])).toBe(false);
+  });
+
+  it('keeps a wider margin once the title is longer', () => {
+    expect(isAnswerCorrect('My Hero Academixx', ['My Hero Academia'])).toBe(true);
+    expect(isAnswerCorrect('My Hero Academia', ['My Hero Academia 2'])).toBe(true);
+    expect(isAnswerCorrect('My Hero Academia', ['My Hero Academia Season 2'])).toBe(false);
+  });
+
+  it('compares a picked suggestion exactly, without the typing margin', () => {
+    const exact = { exact: true };
+    expect(isAnswerCorrect('Tokyo Ghoul', ['Tokyo Ghoul:re'], exact)).toBe(false);
+    expect(isAnswerCorrect('My Hero Academia', ['My Hero Academia 2'], exact)).toBe(false);
+    expect(isAnswerCorrect('narutoo', ['Naruto'], exact)).toBe(false);
+    expect(isAnswerCorrect('Tokyo Ghoul:re', ['Tokyo Ghoul:re'], exact)).toBe(true);
+    expect(isAnswerCorrect('my hero academia 2', ['My Hero Academia 2'], exact)).toBe(true);
+  });
+
   it('matches a Greek-letter artist unit without collapsing it to empty', () => {
     expect(isAnswerCorrect('μ', ['μ'])).toBe(true);
     expect(isAnswerCorrect('μ', ['Velvet.kodhy'])).toBe(false);

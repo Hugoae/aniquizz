@@ -23,6 +23,7 @@ import {
   type LobbyView,
 } from '@/features/hub/lobbySocketPolicy';
 import { HUB_COPY } from '@/features/hub/copy/hubCopy';
+import { acceptRoomSettingsRevision } from '@/features/hub/hooks/roomSettingsRevision';
 import { gamePath } from '@/features/game/gameNavState';
 import { notifyModerationBan } from '@/lib/suspension';
 import { socket } from '@/lib/socket';
@@ -80,6 +81,17 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
       roomConfigRef,
       configRef,
     } = refs;
+    let seenRoomId = '';
+    let seenRevision = -1;
+    const takeSettings = (roomId: string, revision: number | undefined): boolean => {
+      if (roomId !== seenRoomId) {
+        seenRoomId = roomId;
+        seenRevision = -1;
+      }
+      if (!acceptRoomSettingsRevision(seenRevision, revision)) return false;
+      if (typeof revision === 'number') seenRevision = revision;
+      return true;
+    };
     const {
       setAvailableRooms,
       setCurrentRoomId,
@@ -112,7 +124,12 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
 
     const onRoomCreated = (data: {
       roomId: string;
-      room: { players?: ServerLobbyPlayer[]; status?: GameStatus; settings?: WireRoomSettings };
+      room: {
+        players?: ServerLobbyPlayer[];
+        status?: GameStatus;
+        settings?: WireRoomSettings;
+        settingsRevision?: number;
+      };
     }) => {
       const isSolo = data.room.settings?.maxPlayers === 1;
       isSoloRoomRef.current = isSolo;
@@ -123,7 +140,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
       setLobbyPlayers(mapServerPlayersToLobby(data.room.players ?? [], myUserId()));
       if (data.room.status) setGameStatus(data.room.status);
 
-      if (data.room.settings) {
+      if (data.room.settings && takeSettings(data.roomId, data.room.settingsRevision)) {
         setRoomConfig((prev) => ({
           ...prev,
           ...data.room.settings,
@@ -144,6 +161,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
       players?: ServerLobbyPlayer[];
       hostId?: string;
       settings?: WireRoomSettings;
+      settingsRevision?: number;
       status?: GameStatus;
     }) => {
       const uid = myUserId();
@@ -153,7 +171,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
       if (data.hostId && uid) setIsAmIHost(String(data.hostId) === String(uid));
       setLobbyPlayers(mapServerPlayersToLobby(data.players ?? [], data.hostId));
 
-      if (data.settings) {
+      if (data.settings && takeSettings(data.roomId, data.settingsRevision)) {
         setRoomConfig((prev) => ({
           ...prev,
           ...data.settings,
@@ -175,6 +193,7 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
     };
 
     const onRoomUpdated = (data: RoomUpdatedPayload) => {
+      if (!takeSettings(currentRoomIdRef.current, data.settingsRevision)) return;
       setRoomConfig((prev) => ({
         ...prev,
         ...data.roomSettings,
@@ -193,6 +212,8 @@ export function useLobbySocketBindings(refs: LobbySocketRefs, setters: LobbySock
     };
 
     const onRoomClosed = (payload?: { reason?: string }) => {
+      seenRoomId = '';
+      seenRevision = -1;
       const reason = payload?.reason || HUB_COPY.toasts.roomClosed;
       if (!notifyModerationBan(reason)) {
         toast.error(reason);

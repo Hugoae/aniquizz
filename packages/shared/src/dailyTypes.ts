@@ -103,6 +103,8 @@ export interface DailySafeRoundDto {
   roundStartedAt: string;
   roundEndsAt: string;
   revealEndsAt: string | null;
+  /** Server clock at the moment this snapshot was built. The client offsets its own clock. */
+  serverNow?: number;
   phase: 'guessing' | 'reveal';
   reveal: DailyRevealDto | null;
   /**

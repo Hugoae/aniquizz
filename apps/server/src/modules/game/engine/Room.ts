@@ -32,6 +32,8 @@ export class Room {
   public readonly id: string;
   public readonly io: TypedServer;
   public settings: RoomSettings;
+  /** Bumped on each host save so a late join cannot overwrite a newer edit. */
+  public settingsRevision = 0;
   public hostId: string;
   public status: GameStatus = 'waiting';
   /** When the room was created — surfaced in the admin panel ("open since"). */
@@ -360,11 +362,13 @@ export class Room {
     // cannot swap the pool after `validateMusicSourceStart` / PlaylistBuilder.
     if (this.status === 'starting') return false;
     this.settings = next;
+    this.settingsRevision += 1;
     this.touch();
     this.io.to(this.id).emit('room_updated', {
       roomSettings: toClientRoomSettings(this.settings),
       roomName: this.settings.name,
       players: this.toPublicPlayers(),
+      settingsRevision: this.settingsRevision,
     });
     return true;
   }
@@ -557,7 +561,7 @@ export class Room {
     userId: string,
     answer: string,
     answerType: GamePlayer['answerType'],
-    options?: { revealAfterAnswer?: boolean },
+    options?: { revealAfterAnswer?: boolean; fromSuggestion?: boolean },
   ): void {
     this.engine?.handleAnswer(userId, answer, answerType ?? 'typing', options);
   }
@@ -574,14 +578,14 @@ export class Room {
     this.engine?.votePause(userId);
   }
 
-  voteSkip(userId: string): void {
-    this.engine?.voteSkip(userId);
+  voteSkip(userId: string, expectedRound?: number): void {
+    this.engine?.voteSkip(userId, expectedRound);
   }
 
-  forceEndRound(userId: string): void {
+  forceEndRound(userId: string, expectedRound?: number): void {
     if (!this.players.has(userId)) return;
     if (!this.isSolo && !isTimeAttackRace(this.settings)) return;
-    this.engine?.forceEndRound(userId);
+    this.engine?.forceEndRound(userId, expectedRound);
   }
 
   abandonRound(userId: string): void {

@@ -1,5 +1,6 @@
 import type { Precision } from './precision';
 import { normalizePrecision } from './precision';
+import { isSequelVariant } from './sequelVariant';
 import { answerIdentityKey, normalizeString } from './utils';
 
 const UNKNOWN_ARTIST_NORMALIZED = new Set(['unknownartist']);
@@ -119,8 +120,19 @@ export function resolveRoundAnswerSet(input: {
     };
   }
 
-  const baseAnswers = [input.animeName, ...(input.altNames ?? [])].filter((name): name is string =>
-    Boolean(name && name.trim()),
+  const animeKey = answerIdentityKey(input.animeName);
+  const franchiseKey = input.franchise?.trim() ? answerIdentityKey(input.franchise) : '';
+  const baseAnswers = [input.animeName, ...(input.altNames ?? [])].filter(
+    (name): name is string => {
+      if (!name || !name.trim()) return false;
+      if (precision !== 'anime') return true;
+      const key = answerIdentityKey(name);
+      if (!key) return false;
+      // Alt lists often repeat the saga. Anime precision must not accept that shorter title.
+      if (franchiseKey && key === franchiseKey && key !== animeKey) return false;
+      if (animeKey && isSequelVariant(key, animeKey)) return false;
+      return true;
+    },
   );
   const franchise = input.franchise?.trim() || null;
   if (precision === 'franchise' && franchise) {

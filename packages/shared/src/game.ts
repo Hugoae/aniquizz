@@ -409,6 +409,8 @@ export interface LobbyJoinedPayload {
   roomId: string;
   userId: string;
   settings: RoomSettings;
+  /** Increments on each host save. A late join must not roll the client back. */
+  settingsRevision?: number;
   players: GamePlayer[];
   isHost: boolean;
   status: GameStatus;
@@ -449,6 +451,8 @@ export interface RoomUpdatedPayload {
   roomSettings: RoomSettings;
   roomName: string;
   players: GamePlayer[];
+  /** Increments on each host save. A late join must not roll the client back. */
+  settingsRevision?: number;
 }
 
 // --- XP / LEVELING ---

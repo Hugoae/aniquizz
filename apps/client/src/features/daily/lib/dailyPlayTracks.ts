@@ -10,6 +10,21 @@ export function endsAtMs(iso: string): number {
   return Number.isFinite(parsed) ? parsed : Date.now() + DAILY_GUESS_MS;
 }
 
+/**
+ * Deadline on this device. `serverNow` cancels a clock that is ahead of the
+ * server, which otherwise paints 0 for the whole 15 s round.
+ */
+export function localPhaseEndsAt(
+  iso: string,
+  serverNow: number | undefined,
+  now = Date.now(),
+): number {
+  const parsed = Date.parse(iso);
+  if (!Number.isFinite(parsed)) return endsAtMs(iso);
+  if (serverNow == null || !Number.isFinite(serverNow)) return parsed;
+  return now + (parsed - serverNow);
+}
+
 export function tracksFromPrior(
   previous: DailyTrackState[],
   next: DailySafeRoundDto,

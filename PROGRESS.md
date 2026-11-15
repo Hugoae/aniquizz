@@ -104,6 +104,20 @@ Switching back to Standard stays allowed.
 
 **Checked.** Shared occupancy tests, the config form (16 players does not select Chrono; an already-Chrono draft cannot be saved), and `Room.canStartMatch` plus the bot cap.
 
+### Live bugs — timer, Suivant, anime precision, lobby snapshot (2026-11-14)
+
+Four reports from the same session. Not a new phase.
+
+**Quiz du jour clock.** The ring could sit on 0 while the server still had the full 15 s. The client compared the server ISO to the device clock, and the snapshot's `roundEndsAt` omitted the 500 ms tail the countdown subtracts. The snapshot now sends `serverNow` and a wall end that includes that tail. The client shifts the deadline by the clock difference once per snapshot.
+
+**Suivant on the last instant.** In a duo, one vote ends the reveal. The reveal timer can already have opened the next guess when that vote arrives, and the vote then ended the new round. `vote_skip` and `game:skip_round` carry the round the click was looking at. The server drops the action when that round is no longer current, before recording the vote. A payload without a round still applies to the current round (solo recovery).
+
+**Anime precision.** The similarity margin is for text the player types and sends as-is. A catalogue suggestion is already spelled, so picking one (click or Entrée on the highlighted row) compares that title exactly. "Tokyo Ghoul" picked for "Tokyo Ghoul:re", or "My Hero Academia" picked for season 2, is wrong. Typed text still has a margin, and that margin shrinks with the title. Up to 12 characters only one edit counts, so "Tokyo Ghoul" does not pass for "Tokyo Ghoul:re", while "narutoo" still passes for "Naruto". A longer title keeps the wider ratio, so one extra character on "My Hero Academia 2" still passes when it was typed. Anime precision still drops an alt that is only the saga or another season of the same stem, so the picked short title is not an exact accepted answer. Franchise precision still accepts the saga name. The send button sends the draft, not the highlighted row.
+
+**Lobby return.** A late `lobby:joined` could paint older settings over a save that had already landed. Each settings apply bumps `settingsRevision`. The client ignores a snapshot older than the one it already applied. Switching Standard does not itself change precision; the host still sets Anime in the form, and that save is the one that sticks.
+
+**Checked.** Shared answer and payload tests, the MatchEngine stale-vote test, the daily clock shift, and the revision helper. Server and client typecheck. Not replayed as two browsers on the skip race, or with a device clock 15 s ahead.
+
 **Next:** do not start the dropped found bar. HIBP stays parked.
 
 ### Quiz du jour — same engine as a match (2026-11-10)

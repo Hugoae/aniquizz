@@ -326,7 +326,7 @@ export function useGamePage() {
   };
 
   const handleAction = useCallback(
-    (val: string) => {
+    (val: string, fromSuggestion?: boolean) => {
       if (!val) return;
       if (!timeAttack && !state.evolving) setSubmittedAnswer(val);
       actions.answer(
@@ -336,6 +336,7 @@ export function useGamePage() {
           !timeAttack &&
           !state.evolving &&
           activeSettings.soloInstantReveal === true,
+        fromSuggestion === true,
       );
     },
     [actions, activeSettings.soloInstantReveal, gameMode, inputMode, timeAttack, state.evolving],

@@ -62,7 +62,7 @@ interface StandardGameLayoutProps {
   inputMode: InputMode;
   submittedAnswer: string | null;
   choices: string[];
-  onAction: (val: string) => void;
+  onAction: (val: string, fromSuggestion?: boolean) => void;
   onSwitchCarre: () => void;
   onSwitchDuo: () => void;
   precision?: Precision;
@@ -208,7 +208,7 @@ function StandardGameLayoutInner({
       onSoloSkip();
       return;
     }
-    if (roomId) socket.emit('game:skip_round', { roomId });
+    if (roomId) socket.emit('game:skip_round', { roomId, round: currentRound });
   };
 
   const handleAbandonTitle = () => {

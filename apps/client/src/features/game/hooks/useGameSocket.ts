@@ -59,7 +59,12 @@ interface UseGameSocketOptions {
 }
 
 export interface GameActions {
-  answer: (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => void;
+  answer: (
+    value: string,
+    answerType: AnswerType,
+    revealAfterAnswer?: boolean,
+    fromSuggestion?: boolean,
+  ) => void;
   votePause: () => void;
   voteSkip: () => void;
   skipRound: () => void;
@@ -369,14 +374,33 @@ export function useGameSocket({
   }, [roomId, state.phase, state.phaseEndsAt, state.isGamePaused, state.laneDone, state.evolving]);
 
   const answer = useCallback(
-    (value: string, answerType: AnswerType, revealAfterAnswer?: boolean) => {
-      socket.emit('game:answer', { roomId, answer: value, answerType, revealAfterAnswer });
+    (
+      value: string,
+      answerType: AnswerType,
+      revealAfterAnswer?: boolean,
+      fromSuggestion?: boolean,
+    ) => {
+      socket.emit('game:answer', {
+        roomId,
+        answer: value,
+        answerType,
+        revealAfterAnswer,
+        fromSuggestion: fromSuggestion === true ? true : undefined,
+      });
     },
     [roomId],
   );
   const votePause = useCallback(() => socket.emit('vote_pause', { roomId }), [roomId]);
-  const voteSkip = useCallback(() => socket.emit('vote_skip', { roomId }), [roomId]);
-  const skipRound = useCallback(() => socket.emit('game:skip_round', { roomId }), [roomId]);
+  const roundRef = useRef(state.currentRound);
+  roundRef.current = state.currentRound;
+  const voteSkip = useCallback(
+    () => socket.emit('vote_skip', { roomId, round: roundRef.current }),
+    [roomId],
+  );
+  const skipRound = useCallback(
+    () => socket.emit('game:skip_round', { roomId, round: roundRef.current }),
+    [roomId],
+  );
   const returnToLobby = useCallback(
     () => socket.emit('game:return_to_lobby', { roomId }),
     [roomId],

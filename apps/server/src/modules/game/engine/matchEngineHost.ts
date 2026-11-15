@@ -13,6 +13,7 @@ import type { PlaylistItem, RecordedRound, RoomPlayer } from './types';
 import type { Room } from './Room';
 import type { RoundClock } from './RoundClock';
 import type { MatchBudgetClock } from './MatchBudgetClock';
+import type { HandleAnswerOptions } from './RoomMatchEngine';
 
 export type EndRoundKind = 'reveal' | 'skip' | 'finish';
 
@@ -73,7 +74,7 @@ export interface MatchEngineHost {
     userId: string,
     answer: string,
     answerType: AnswerType,
-    options?: { revealAfterAnswer?: boolean },
+    options?: HandleAnswerOptions,
   ): void;
   emitSpeedLeaderboard(): void;
   buildRoundStartPayload(item: PlaylistItem): RoundStartPayload;

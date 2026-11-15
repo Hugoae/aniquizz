@@ -102,6 +102,8 @@ export interface AnswerInput {
   answerType: AnswerType;
   /** Solo-only: reveal the round immediately after this answer is recorded. */
   revealAfterAnswer?: boolean;
+  /** The player picked a catalogue suggestion, so the server skips the typing margin. */
+  fromSuggestion?: boolean;
 }
 
 export interface DailyAttemptCommand {
@@ -297,8 +299,8 @@ export interface ClientToServerEvents {
   /** Mix only. Spends the Duo lifeline for the current round (server scores it as duo). */
   'game:use_duo': (payload: RoomIdInput) => void;
   vote_pause: (payload: RoomIdInput) => void;
-  vote_skip: (payload: RoomIdInput) => void;
-  'game:skip_round': (payload: RoomIdInput) => void;
+  vote_skip: (payload: RoomIdInput & { round?: number }) => void;
+  'game:skip_round': (payload: RoomIdInput & { round?: number }) => void;
   /** Evolving: drop the current title. Same room check as a solo skip. */
   'game:abandon_round': (payload: RoomIdInput) => void;
   'game:return_to_lobby': (payload: RoomIdInput) => void;

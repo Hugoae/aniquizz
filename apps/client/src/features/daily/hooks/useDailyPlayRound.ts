@@ -22,7 +22,7 @@ import { DailyApiError } from '@/lib/dailyApi';
 import { dailySocket, subscribeDailyPlay } from '../lib/dailySocket';
 import { toast } from 'sonner';
 import { DAILY_COPY } from '../copy/dailyCopy';
-import { endsAtMs, tracksFromPrior } from '../lib/dailyPlayTracks';
+import { localPhaseEndsAt, tracksFromPrior } from '../lib/dailyPlayTracks';
 import { useDailyPlayLeave } from './useDailyPlayLeave';
 
 /**
@@ -194,7 +194,11 @@ export function useDailyPlayRound(input: {
     [reveal],
   );
 
-  const phaseEndsAt = endsAtMs(reveal?.revealEndsAt ?? round.roundEndsAt);
+  const deadlineIso = reveal?.revealEndsAt ?? round.roundEndsAt;
+  const phaseEndsAt = useMemo(
+    () => localPhaseEndsAt(deadlineIso, round.serverNow),
+    [deadlineIso, round.serverNow],
+  );
 
   useEffect(() => {
     const feedback = stageFeedback;

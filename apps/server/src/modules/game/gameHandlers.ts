@@ -3,6 +3,7 @@ import {
   getFuzzySuggestions,
   normalizePrecision,
   roomIdInputSchema,
+  roundActionInputSchema,
   type AnimeSearchInput,
   type ArtistSearchInput,
 } from '@aniquizz/shared';
@@ -61,11 +62,13 @@ export const registerGameHandlers = (
     answer: string;
     answerType: 'typing' | 'qcm' | 'duo';
     revealAfterAnswer?: boolean;
+    fromSuggestion?: boolean;
   }) => {
     const parsed = parseSocketPayload(socket, answerInputSchema, payload);
     if (!parsed) return;
     gameManager.getRoom(parsed.roomId)?.handleAnswer(uid(), parsed.answer, parsed.answerType, {
       revealAfterAnswer: parsed.revealAfterAnswer,
+      fromSuggestion: parsed.fromSuggestion,
     });
   };
 
@@ -75,16 +78,16 @@ export const registerGameHandlers = (
     gameManager.getRoom(parsed.roomId)?.votePause(uid());
   };
 
-  const voteSkip = (payload: { roomId: string }) => {
-    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+  const voteSkip = (payload: { roomId: string; round?: number }) => {
+    const parsed = parseSocketPayload(socket, roundActionInputSchema, payload);
     if (!parsed) return;
-    gameManager.getRoom(parsed.roomId)?.voteSkip(uid());
+    gameManager.getRoom(parsed.roomId)?.voteSkip(uid(), parsed.round);
   };
 
-  const skipCurrentRound = (payload: { roomId: string }) => {
-    const parsed = parseSocketPayload(socket, roomIdInputSchema, payload);
+  const skipCurrentRound = (payload: { roomId: string; round?: number }) => {
+    const parsed = parseSocketPayload(socket, roundActionInputSchema, payload);
     if (!parsed) return;
-    gameManager.getRoom(parsed.roomId)?.forceEndRound(uid());
+    gameManager.getRoom(parsed.roomId)?.forceEndRound(uid(), parsed.round);
   };
 
   const abandonCurrentRound = (payload: { roomId: string }) => {

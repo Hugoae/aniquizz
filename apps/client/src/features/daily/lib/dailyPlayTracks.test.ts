@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DailySafeRoundDto, DailyTrackState } from '@aniquizz/shared';
-import { tracksFromPrior } from './dailyPlayTracks';
+import { localPhaseEndsAt, tracksFromPrior } from './dailyPlayTracks';
 
 const baseRound = (overrides: Partial<DailySafeRoundDto> = {}): DailySafeRoundDto => ({
   attemptId: 'a1',
@@ -73,5 +73,14 @@ describe('tracksFromPrior', () => {
       'empty',
       'empty',
     ]);
+  });
+});
+
+describe('localPhaseEndsAt', () => {
+  it('keeps the full round when the device clock is ahead of the server', () => {
+    const serverNow = Date.parse('2026-01-01T00:00:00.000Z');
+    const endsAt = new Date(serverNow + 15_000).toISOString();
+    const deviceNow = serverNow + 20_000;
+    expect(localPhaseEndsAt(endsAt, serverNow, deviceNow) - deviceNow).toBe(15_000);
   });
 });

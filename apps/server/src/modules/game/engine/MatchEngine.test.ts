@@ -58,6 +58,18 @@ describe('MatchEngine', () => {
       expect(player.score).toBe(GAME_CONFIG.SCORING.TYPING);
     });
 
+    it('keeps a typed typo and rejects the same string when it was a suggestion', async () => {
+      const typed = createEngineHarness();
+      await advanceToGuessing(typed.engine);
+      typed.engine.handleAnswer('player-1', 'Narutoo', 'typing');
+      expect(getPlayer(typed.room, 'player-1').isCorrect).toBe(true);
+
+      const picked = createEngineHarness();
+      await advanceToGuessing(picked.engine);
+      picked.engine.handleAnswer('player-1', 'Narutoo', 'typing', { fromSuggestion: true });
+      expect(getPlayer(picked.room, 'player-1').isCorrect).toBe(false);
+    });
+
     it('awards qcm points for a correct qcm answer in mix mode', async () => {
       const { room, engine } = createEngineHarness({
         settings: { responseType: 'mix' },
@@ -623,6 +635,26 @@ describe('MatchEngine', () => {
   });
 
   describe('votes — membership and disconnect', () => {
+    it('ignores a Suivant click that arrives after the reveal already advanced', async () => {
+      const { engine } = createEngineHarness({
+        playerIds: ['player-1', 'player-2'],
+      });
+      await advanceToGuessing(engine);
+      engine.forceEndRound();
+      expect(engine.getSyncState().phase).toBe('reveal');
+      expect(engine.getSyncState().currentRound).toBe(1);
+
+      await vi.advanceTimersByTimeAsync(revealClockMs(10));
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(2);
+
+      engine.voteSkip('player-1', 1);
+
+      expect(engine.getSyncState().phase).toBe('guessing');
+      expect(engine.getSyncState().currentRound).toBe(2);
+    });
+
     it('ignores skip votes from users who are not in the room', async () => {
       const { engine } = createEngineHarness({
         playerIds: ['player-1', 'player-2'],

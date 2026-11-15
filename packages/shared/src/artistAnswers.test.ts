@@ -180,4 +180,19 @@ describe('resolveRoundAnswerSet', () => {
     expect(set.validAnswers).toContain('My Hero Academia Season 3');
     expect(set.validAnswers).toContain('My Hero Academia');
   });
+
+  it('drops the saga name from anime precision so another season does not count', () => {
+    const set = resolveRoundAnswerSet({
+      precision: 'anime',
+      animeName: 'My Hero Academia Season 2',
+      altNames: ['My Hero Academia', 'Boku no Hero Academia 2'],
+      franchise: 'My Hero Academia',
+      artist: 'LiSA',
+      artistNames: ['LiSA'],
+    });
+    expect(set.correctTarget).toBe('My Hero Academia Season 2');
+    expect(set.validAnswers).toContain('My Hero Academia Season 2');
+    expect(set.validAnswers).toContain('Boku no Hero Academia 2');
+    expect(set.validAnswers).not.toContain('My Hero Academia');
+  });
 });

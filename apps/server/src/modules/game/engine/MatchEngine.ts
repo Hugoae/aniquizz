@@ -148,7 +148,7 @@ export class MatchEngine {
     userId: string,
     answer: string,
     answerType: AnswerType,
-    options?: { revealAfterAnswer?: boolean },
+    options?: { revealAfterAnswer?: boolean; fromSuggestion?: boolean },
   ): void {
     if (this.phase !== 'guessing' || this.isRoundEnded) return;
     // Frozen clocks: an answer now would score (or tax) against a stopped round.
@@ -171,7 +171,9 @@ export class MatchEngine {
     const timeMs = Math.max(0, Date.now() - this.guessStartAt);
 
     if (isEvolvingHost(host)) {
-      const correct = isAnswerCorrect(answer, item.validAnswers);
+      const correct = isAnswerCorrect(answer, item.validAnswers, {
+        exact: options?.fromSuggestion === true,
+      });
       player.hasAnswered = true;
       player.currentAnswer = answer;
       player.answerType = 'typing';
@@ -195,7 +197,9 @@ export class MatchEngine {
     // so the 50/50 cannot be answered at typing or QCM points.
     const effectiveType = player.duoCommitted ? 'duo' : this.effectiveAnswerType(answerType);
 
-    const isCorrect = isAnswerCorrect(answer, item.validAnswers);
+    const isCorrect = isAnswerCorrect(answer, item.validAnswers, {
+      exact: options?.fromSuggestion === true,
+    });
 
     player.hasAnswered = true;
     player.currentAnswer = answer;
@@ -261,9 +265,12 @@ export class MatchEngine {
     }
   }
 
-  voteSkip(userId: string): void {
+  voteSkip(userId: string, expectedRound?: number): void {
     if (this.room.status !== 'playing' || this.isRoundLoading) return;
     if (!playerCanVote(this.room.players.get(userId))) return;
+    // A Suivant click that arrives after the reveal clock already advanced
+    // would otherwise count as a skip of the new guess.
+    if (expectedRound != null && expectedRound !== this.currentRoundIndex + 1) return;
     this.skipVotes.add(userId);
     const required = this.requiredVotes();
     const count = countActiveVotes(this.skipVotes, this.room.players);
@@ -314,7 +321,8 @@ export class MatchEngine {
     abandonEvolvingRound(this.asHost());
   }
 
-  forceEndRound(): void {
+  forceEndRound(_userId?: string, expectedRound?: number): void {
+    if (expectedRound != null && expectedRound !== this.currentRoundIndex + 1) return;
     const host = this.asHost();
     if (isEvolvingHost(host)) {
       if (this.phase === 'guessing' && !this.isRoundEnded && !this.isRoundLoading) {

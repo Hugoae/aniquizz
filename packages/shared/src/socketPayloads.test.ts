@@ -7,6 +7,7 @@ import {
   joinLobbyInputSchema,
   lobbyTargetInputSchema,
   roomIdInputSchema,
+  roundActionInputSchema,
   chatSendMessageInputSchema,
   deleteAccountInputSchema,
   friendPrivacyInputSchema,
@@ -37,6 +38,16 @@ describe('roomIdInputSchema', () => {
   });
 });
 
+describe('roundActionInputSchema', () => {
+  it('keeps the round a Suivant click was aimed at', () => {
+    expect(roundActionInputSchema.parse({ roomId: 'A3K9ZQ', round: 3 })).toEqual({
+      roomId: 'A3K9ZQ',
+      round: 3,
+    });
+    expect(roundActionInputSchema.parse({ roomId: 'A3K9ZQ' })).toEqual({ roomId: 'A3K9ZQ' });
+  });
+});
+
 describe('answerInputSchema', () => {
   it('accepts a typing answer and strips unknown keys', () => {
     expect(
@@ -51,6 +62,17 @@ describe('answerInputSchema', () => {
       answer: 'Naruto',
       answerType: 'typing',
     });
+  });
+
+  it('keeps the flag that a catalogue suggestion was picked', () => {
+    expect(
+      answerInputSchema.parse({
+        roomId: 'A3K9ZQ',
+        answer: 'Tokyo Ghoul',
+        answerType: 'typing',
+        fromSuggestion: true,
+      }).fromSuggestion,
+    ).toBe(true);
   });
 
   it('accepts optional solo reveal and the three answer types', () => {

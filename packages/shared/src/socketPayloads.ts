@@ -18,12 +18,21 @@ export const roomIdInputSchema = z
   })
   .strip();
 
+/** Skip / Suivant. `round` is the round the click was aimed at, so a late click cannot hit the next one. */
+export const roundActionInputSchema = z
+  .object({
+    roomId: roomIdSchema,
+    round: z.number().int().positive().max(500).optional(),
+  })
+  .strip();
+
 export const answerInputSchema = z
   .object({
     roomId: roomIdSchema,
     answer: z.string().max(GAME_CONFIG.LIMITS.MAX_ANSWER_LENGTH),
     answerType: z.enum(['typing', 'qcm', 'duo']),
     revealAfterAnswer: z.boolean().optional(),
+    fromSuggestion: z.boolean().optional(),
   })
   .strip();
 

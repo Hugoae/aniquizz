@@ -346,7 +346,13 @@ class DailyEngine {
       videoStartTime: current.videoStartTime,
       nextVideo: upcoming?.playbackUrl ?? null,
       nextVideoStartTime: upcoming?.videoStartTime ?? null,
-      roundEndsAt: new Date(run.phaseStartedAt + this.guessMs).toISOString(),
+      roundEndsAt: new Date(
+        run.phaseStartedAt +
+          this.guessMs +
+          GAME_CONFIG.TIMERS.GUESS_START_BUFFER +
+          GAME_CONFIG.TIMERS.GUESS_END_GRACE,
+      ).toISOString(),
+      serverNow: Date.now(),
       revealEndsAt,
       reveal: dto.reveal
         ? {

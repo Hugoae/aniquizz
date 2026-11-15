@@ -101,8 +101,24 @@ export const getLevenshteinDistance = (a: string, b: string): number => {
   return matrix[b.length][a.length];
 };
 
+/**
+ * How many edits a typed answer may contain.
+ * Eighty percent of a 12-character title is two characters, which turns
+ * "Tokyo Ghoul" into "Tokyo Ghoul:re". Up to that length a typo is one edit.
+ * Longer titles keep the wider ratio.
+ */
+function maxTypingEdits(length: number): number {
+  if (length <= 12) return 1;
+  const ratio = 1 - GAME_CONFIG.FUZZY.ANSWER_SIMILARITY;
+  return Math.max(1, Math.floor(length * ratio));
+}
+
 // --- ANSWER VALIDATION ---
-export const isAnswerCorrect = (userAnswer: string, validAnswers: string[]): boolean => {
+export const isAnswerCorrect = (
+  userAnswer: string,
+  validAnswers: string[],
+  options?: { exact?: boolean },
+): boolean => {
   if (!userAnswer) return false;
   const userKey = answerIdentityKey(userAnswer);
   if (!userKey) return false;
@@ -113,10 +129,13 @@ export const isAnswerCorrect = (userAnswer: string, validAnswers: string[]): boo
     if (!validKey) return false;
 
     if (userKey === validKey) return true;
+    // A picked suggestion is already a catalogue title. The margin is only for text sent as typed.
+    if (options?.exact) return false;
     if (validKey.length < MIN_LENGTH_FOR_FUZZY) return false;
 
     const dist = getLevenshteinDistance(userKey, validKey);
     const maxLength = Math.max(userKey.length, validKey.length);
+    if (dist > maxTypingEdits(maxLength)) return false;
     const similarity = 1 - dist / maxLength;
 
     return similarity >= ANSWER_SIMILARITY;

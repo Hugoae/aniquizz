@@ -24,7 +24,7 @@ interface AnswerInputProps {
   inputMode: InputMode;
   submittedAnswer: string | null;
   choices: string[];
-  onAction: (val: string) => void;
+  onAction: (val: string, fromSuggestion?: boolean) => void;
   onSwitchCarre: () => void;
   onSwitchDuo: () => void;
   precision?: Precision;
@@ -105,14 +105,14 @@ function AnswerInputInner({
   const panelPosition = useSuggestionPanelPosition(inputRowRef, showPanel);
 
   const submitAnswer = useCallback(
-    (value: string) => {
+    (value: string, fromSuggestion = false) => {
       const trimmed = value.trim();
       if (!trimmed) return;
       if (showTyping && !suggestionQueryReady(trimmed, resolvedPrecision)) return;
       setDraft('');
       setPanelOpen(false);
       setActiveIndex(0);
-      onAction(trimmed);
+      onAction(trimmed, fromSuggestion);
     },
     [onAction, showTyping, resolvedPrecision],
   );
@@ -172,7 +172,7 @@ function AnswerInputInner({
                   )}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => submitAnswer(suggestion.label)}
+                  onClick={() => submitAnswer(suggestion.label, true)}
                 >
                   <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
                   {idx === activeIndex && submitOnEnter && (
@@ -279,7 +279,7 @@ function AnswerInputInner({
               if (e.key === 'Enter' && submitOnEnter) {
                 e.preventDefault();
                 if (showPanel && suggestions[activeIndex]) {
-                  submitAnswer(suggestions[activeIndex].label);
+                  submitAnswer(suggestions[activeIndex].label, true);
                 } else if (suggestionQueryReady(draft, resolvedPrecision)) {
                   submitAnswer(draft);
                 }

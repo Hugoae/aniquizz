@@ -42,7 +42,7 @@ import { RaceLane } from './RaceLane';
 import { grantTimeAttackStreak } from './timeAttackStreakGrant';
 import { abandonScheduledActivity, noteActivityRound } from './matchActivityLedger';
 import type { Room } from './Room';
-import type { RoomMatchEngine } from './RoomMatchEngine';
+import type { HandleAnswerOptions, RoomMatchEngine } from './RoomMatchEngine';
 import type { AdminMatchProgress, PlaylistItem, RecordedRound, RoomPlayer } from './types';
 
 type LaneEvent = 'round_start' | 'round_reveal' | 'timeAttack:budget' | 'race:lane_done';
@@ -244,7 +244,12 @@ export class RaceEngine implements RoomMatchEngine {
     this.emitBoard();
   }
 
-  handleAnswer(userId: string, answer: string, _answerType: AnswerType): void {
+  handleAnswer(
+    userId: string,
+    answer: string,
+    _answerType: AnswerType,
+    options?: HandleAnswerOptions,
+  ): void {
     const lane = this.lanes.get(userId);
     const player = this.room.players.get(userId);
     if (!lane || !player || lane.phase !== 'guessing' || lane.isRoundEnded) return;
@@ -260,7 +265,9 @@ export class RaceEngine implements RoomMatchEngine {
 
     // Versus is typing-only: never trust the claimed answer type.
     const timeMs = Math.max(0, Date.now() - lane.guessStartAt);
-    const isCorrect = isAnswerCorrect(answer, item.validAnswers);
+    const isCorrect = isAnswerCorrect(answer, item.validAnswers, {
+      exact: options?.fromSuggestion === true,
+    });
     player.hasAnswered = true;
     player.currentAnswer = answer;
     player.answerType = 'typing';
@@ -284,9 +291,10 @@ export class RaceEngine implements RoomMatchEngine {
    * Individual skip. During the reveal it only cuts that lane's 3 s short
    * (no extra tax): the player can take the next title when they want.
    */
-  forceEndRound(userId?: string): void {
+  forceEndRound(userId?: string, expectedRound?: number): void {
     const lane = userId ? this.lanes.get(userId) : undefined;
     if (!lane || lane.isDone || this.finishStarted) return;
+    if (expectedRound != null && expectedRound !== lane.index + 1) return;
     if (lane.phase === 'reveal') {
       lane.clock.clear();
       this.startLaneRound(lane);
