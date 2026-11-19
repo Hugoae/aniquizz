@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import type { LibrarySong } from '@aniquizz/shared';
@@ -25,6 +25,7 @@ export function LibraryPageContent() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const browse = useLibraryBrowse();
+  const listTopRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<LibrarySong | null>(null);
   const [resumeAt, setResumeAt] = useState<number | null>(null);
   const [autoPlay, setAutoPlay] = useState(false);
@@ -58,6 +59,18 @@ export function LibraryPageContent() {
       setSelected(browse.deepLinkSong);
     }
   }, [browse.deepLinkSong]);
+
+  const changePage = useCallback(
+    (next: number) => {
+      browse.setPage(next);
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      listTopRef.current?.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+    },
+    [browse],
+  );
 
   const hasContent =
     browse.view === 'songs'
@@ -129,7 +142,7 @@ export function LibraryPageContent() {
             hint={browse.liked === 'liked' ? LIBRARY_COPY.emptyLikedHint : undefined}
           />
         ) : (
-          <div className="relative space-y-4">
+          <div ref={listTopRef} className="relative scroll-mt-24 space-y-4">
             {browse.refreshing && (
               <div
                 className="pointer-events-none absolute inset-0 z-10 rounded-xl bg-background/40 backdrop-blur-[1px]"
@@ -138,7 +151,11 @@ export function LibraryPageContent() {
             )}
             <div className={cn(browse.refreshing && 'opacity-60 transition-opacity')}>
               {browse.view === 'songs' && browse.songs ? (
-                <LibrarySongsGrid songs={browse.songs.songs} onSelectSong={handleSelect} />
+                <LibrarySongsGrid
+                  songs={browse.songs.songs}
+                  onSelectSong={handleSelect}
+                  resetKey={browse.page}
+                />
               ) : browse.view === 'anime' && browse.animes ? (
                 <LibraryAnimeList
                   animes={browse.animes.animes}
@@ -156,7 +173,7 @@ export function LibraryPageContent() {
             <LibraryPaginationBar
               page={browse.page}
               totalPages={browse.totalPages}
-              onPageChange={browse.setPage}
+              onPageChange={changePage}
               hrefForPage={browse.pageHref}
             />
           </div>

@@ -21,9 +21,11 @@ import {
 interface LibrarySongsGridProps {
   songs: LibrarySong[];
   onSelectSong: (song: LibrarySong, options?: LibrarySongSelectOptions) => void;
+  /** New page (or any new result set) should open on the first row. */
+  resetKey?: unknown;
 }
 
-export function LibrarySongsGrid({ songs, onSelectSong }: LibrarySongsGridProps) {
+export function LibrarySongsGrid({ songs, onSelectSong, resetKey }: LibrarySongsGridProps) {
   const { playingId, toggle, stop, stopAndCapture, videoRef } = useInlineLibraryPreview();
 
   return (
@@ -33,6 +35,7 @@ export function LibrarySongsGrid({ songs, onSelectSong }: LibrarySongsGridProps)
       maxHeight="min(70dvh, 48rem)"
       threshold={12}
       remeasureKey={playingId}
+      resetKey={resetKey}
       listLabel={LIBRARY_COPY.viewSongs}
       getKey={(song) => song.id}
       renderItem={(song) => (

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { cn } from '@/lib/utils';
 
@@ -11,6 +11,11 @@ type VirtualScrollProps<T> = {
   className?: string;
   /** Re-run row measurement when this changes (expanding preview, etc.). */
   remeasureKey?: unknown;
+  /**
+   * Jump back to the first row when this changes. The scroller keeps its
+   * offset across item swaps, so a new page would otherwise open at the bottom.
+   */
+  resetKey?: unknown;
   listLabel?: string;
   getKey: (item: T, index: number) => string | number;
   renderItem: (item: T, index: number) => ReactNode;
@@ -26,6 +31,7 @@ export function VirtualScroll<T>({
   threshold = 24,
   className,
   remeasureKey,
+  resetKey,
   listLabel,
   getKey,
   renderItem,
@@ -43,6 +49,12 @@ export function VirtualScroll<T>({
   useEffect(() => {
     virtualizer.measure();
   }, [remeasureKey, virtualizer]);
+
+  useLayoutEffect(() => {
+    const node = parentRef.current;
+    if (!node) return;
+    node.scrollTop = 0;
+  }, [resetKey]);
 
   const listAria = listLabel ? { role: 'list' as const, 'aria-label': listLabel } : undefined;
 
