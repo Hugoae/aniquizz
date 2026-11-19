@@ -1,62 +1,150 @@
+import { tx } from '@/lib/i18n/text';
+
+const s = (key: string) => tx('auth', key);
+
 export const AUTH_COPY = {
-  passwordHint:
-    'Au moins 8 caractères, avec une majuscule, une minuscule, un chiffre et un caractère spécial.',
-  passwordInvalid:
-    'Le mot de passe doit faire au moins 8 caractères et contenir une majuscule, une minuscule, un chiffre et un caractère spécial.',
-  alreadySignedInReset:
-    'Tu es déjà connecté. Pour changer de mot de passe, ouvre ton profil (il faudra l’ancien).',
-  invalidResetLink:
-    'Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.',
-  signIn: 'Se connecter',
-  profileUnavailable: 'Profil indisponible',
-  profileUnavailableHint: 'Profil indisponible — ouvrir pour réessayer',
+  get passwordHint() {
+    return s('passwordHint');
+  },
+  get passwordInvalid() {
+    return s('passwordInvalid');
+  },
+  get alreadySignedInReset() {
+    return s('alreadySignedInReset');
+  },
+  get invalidResetLink() {
+    return s('invalidResetLink');
+  },
+  get signIn() {
+    return s('signIn');
+  },
+  get profileUnavailable() {
+    return s('profileUnavailable');
+  },
+  get profileUnavailableHint() {
+    return s('profileUnavailableHint');
+  },
   modal: {
     login: {
-      title: 'CONNEXION',
-      description: 'Connectez-vous pour sauvegarder votre progression.',
-      submit: 'Se connecter',
-      switchPrompt: 'Pas encore de compte ? ',
-      switchAction: 'Créer un compte',
-      toast: 'Bon retour parmi nous !',
+      get title() {
+        return s('modal.login.title');
+      },
+      get description() {
+        return s('modal.login.description');
+      },
+      get submit() {
+        return s('modal.login.submit');
+      },
+      get switchPrompt() {
+        return s('modal.login.switchPrompt');
+      },
+      get switchAction() {
+        return s('modal.login.switchAction');
+      },
+      get toast() {
+        return s('modal.login.toast');
+      },
     },
     signup: {
-      title: 'INSCRIPTION',
-      description: 'Rejoignez la communauté AniQuizz !',
-      submit: "S'inscrire",
-      switchPrompt: 'Déjà un compte ? ',
-      switchAction: 'Se connecter',
-      toast: 'Compte créé ! Vérifiez vos emails.',
-      legalLead: 'En créant un compte, vous acceptez nos ',
-      terms: "conditions d'utilisation",
-      legalMid: ' et notre ',
-      privacy: 'politique de confidentialité',
-      legalEnd: '.',
+      get title() {
+        return s('modal.signup.title');
+      },
+      get description() {
+        return s('modal.signup.description');
+      },
+      get submit() {
+        return s('modal.signup.submit');
+      },
+      get switchPrompt() {
+        return s('modal.signup.switchPrompt');
+      },
+      get switchAction() {
+        return s('modal.signup.switchAction');
+      },
+      get toast() {
+        return s('modal.signup.toast');
+      },
+      get legalLead() {
+        return s('modal.signup.legalLead');
+      },
+      get terms() {
+        return s('modal.signup.terms');
+      },
+      get legalMid() {
+        return s('modal.signup.legalMid');
+      },
+      get privacy() {
+        return s('modal.signup.privacy');
+      },
+      get legalEnd() {
+        return s('modal.signup.legalEnd');
+      },
     },
     forgot: {
-      title: 'MOT DE PASSE OUBLIÉ',
-      description: 'Entrez votre email pour recevoir un lien de réinitialisation.',
-      submit: 'Envoyer le lien',
-      back: 'Retour à la connexion',
-      toast: "Si un compte existe pour cet email, un lien de réinitialisation vient d'être envoyé.",
+      get title() {
+        return s('modal.forgot.title');
+      },
+      get description() {
+        return s('modal.forgot.description');
+      },
+      get submit() {
+        return s('modal.forgot.submit');
+      },
+      get back() {
+        return s('modal.forgot.back');
+      },
+      get toast() {
+        return s('modal.forgot.toast');
+      },
     },
     fields: {
-      username: 'Pseudo',
-      usernamePlaceholder: 'OtakuDu93',
-      email: 'Email',
-      emailPlaceholder: 'exemple@email.com',
-      password: 'Mot de passe',
-      forgotLink: 'Mot de passe oublié ?',
+      get username() {
+        return s('modal.fields.username');
+      },
+      get usernamePlaceholder() {
+        return s('modal.fields.usernamePlaceholder');
+      },
+      get email() {
+        return s('modal.fields.email');
+      },
+      get emailPlaceholder() {
+        return s('modal.fields.emailPlaceholder');
+      },
+      get password() {
+        return s('modal.fields.password');
+      },
+      get forgotLink() {
+        return s('modal.fields.forgotLink');
+      },
     },
   },
   errors: {
-    generic: 'Impossible de continuer. Réessaie dans un instant.',
-    invalidLogin: 'Email ou mot de passe incorrect.',
-    emailNotConfirmed: 'Confirme d’abord ton email pour te connecter.',
-    alreadyRegistered: 'Un compte existe déjà pour cet email.',
-    weakPassword: 'Le mot de passe ne respecte pas les exigences de sécurité.',
-    rateLimited: 'Trop de tentatives. Réessaie un peu plus tard.',
-    invalidEmail: 'Cette adresse email n’est pas valide.',
-    samePassword: 'Le nouveau mot de passe doit être différent de l’ancien.',
-    currentPassword: 'Mot de passe actuel incorrect.',
+    get generic() {
+      return s('errors.generic');
+    },
+    get invalidLogin() {
+      return s('errors.invalidLogin');
+    },
+    get emailNotConfirmed() {
+      return s('errors.emailNotConfirmed');
+    },
+    get alreadyRegistered() {
+      return s('errors.alreadyRegistered');
+    },
+    get weakPassword() {
+      return s('errors.weakPassword');
+    },
+    get rateLimited() {
+      return s('errors.rateLimited');
+    },
+    get invalidEmail() {
+      return s('errors.invalidEmail');
+    },
+    get samePassword() {
+      return s('errors.samePassword');
+    },
+    get currentPassword() {
+      return s('errors.currentPassword');
+    },
   },
-} as const;
+};

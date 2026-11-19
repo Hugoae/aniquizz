@@ -1,74 +1,124 @@
+import { extendLive, liveStrings, tx } from '@/lib/i18n/text';
+
+const top = [
+  'backHome',
+  'back',
+  'modeTitleLead',
+  'modeTitleAccent',
+  'modeSubtitle',
+  'joinTitleLead',
+  'joinTitleAccent',
+  'createRoom',
+  'join',
+  'codePlaceholder',
+  'reset',
+  'configNext',
+  'copied',
+  'configSection',
+  'guest',
+  'player',
+  'defaultRoomName',
+] as const;
+
+export const HUB_COPY = extendLive(liveStrings('hub', '', top), {
+  modes: {
+    solo: liveStrings('hub', 'modes.solo', ['title', 'description'] as const),
+    multiplayer: liveStrings('hub', 'modes.multiplayer', ['title', 'description'] as const),
+    competitive: liveStrings('hub', 'modes.competitive', [
+      'title',
+      'description',
+      'badge',
+      'note',
+    ] as const),
+  },
+  passwordDialog: liveStrings('hub', 'passwordDialog', [
+    'title',
+    'description',
+    'label',
+    'cancel',
+    'submit',
+  ] as const),
+  seo: liveStrings('hub', 'seo', ['playDescription'] as const),
+  toasts: liveStrings('hub', 'toasts', [
+    'settingsUpdated',
+    'youAreHost',
+    'missingRoom',
+    'genericError',
+    'roomClosed',
+    'poolNowSufficient',
+  ] as const),
+  room: liveStrings('hub', 'room', ['full', 'inProgress', 'join'] as const),
+  configTitle: {
+    solo: {
+      get lead() {
+        return tx('hub', 'configTitle.soloLead');
+      },
+      get accent() {
+        return tx('hub', 'configTitle.soloAccent');
+      },
+    },
+    editSolo: {
+      get lead() {
+        return tx('hub', 'configTitle.editSoloLead');
+      },
+      get accent() {
+        return tx('hub', 'configTitle.editSoloAccent');
+      },
+    },
+    editRoom: {
+      get lead() {
+        return tx('hub', 'configTitle.editRoomLead');
+      },
+      get accent() {
+        return tx('hub', 'configTitle.editRoomAccent');
+      },
+    },
+    create: {
+      get lead() {
+        return tx('hub', 'configTitle.createLead');
+      },
+      get accent() {
+        return tx('hub', 'configTitle.createAccent');
+      },
+    },
+  },
+});
+
 export function soloRoomName(pseudo: string): string {
-  return `Solo de ${pseudo}`;
+  return tx('hub', 'soloRoomName', { name: pseudo });
 }
 
-export const HUB_COPY = {
-  backHome: "Retour à l'accueil",
-  back: 'Retour',
-  modeTitleLead: 'Choisissez votre',
-  modeTitleAccent: 'mode de jeu',
-  modeSubtitle: 'Sélectionnez un mode pour configurer votre partie',
-  modes: {
-    solo: {
-      title: 'Solo',
-      description: 'Entraînez-vous seul et améliorez vos scores',
-    },
-    multiplayer: {
-      title: 'Multijoueur',
-      description: 'Affrontez vos amis ou des joueurs du monde entier',
-    },
-    competitive: {
-      title: 'Compétitif',
-      description: 'Mode classé avec rangs et saisons.',
-      badge: 'Bientôt',
-      note: 'Le classé arrive',
-    },
-  },
-  joinTitleLead: 'Rejoindre un',
-  joinTitleAccent: 'salon',
-  createRoom: 'Créer un salon',
-  join: 'Rejoindre',
-  codePlaceholder: 'CODE...',
-  reset: 'Réinitialiser',
-  configNext: 'Suivant',
-  copied: 'Code copié dans le presse-papier !',
-  configSection: 'Configuration',
-  passwordDialog: {
-    title: 'Salon privé',
-    description: 'Entrez le mot de passe du salon',
-    label: 'Mot de passe',
-    cancel: 'Annuler',
-    submit: 'Valider',
-  },
-  guest: 'Invité',
-  player: 'Joueur',
-  defaultRoomName: 'Salon de jeu',
-  seo: {
-    playDescription: 'Configurez votre partie solo ou multijoueur et lancez un blindtest anime.',
-  },
-  toasts: {
-    settingsUpdated: 'Paramètres mis à jour.',
-    youAreHost: "Vous êtes l'hôte !",
-    missingRoom: 'Impossible de mettre à jour ce salon. Revenez au lobby.',
-    genericError: 'Erreur',
-    roomClosed: 'Salon fermé.',
-    poolNowSufficient:
-      "Plus besoin de compléter avec l'aléatoire — le pool AniList est maintenant suffisant.",
-  },
-  room: {
-    full: 'COMPLET',
-    inProgress: 'EN COURS',
-    join: 'REJOINDRE',
-  },
-  configTitle: {
-    solo: { lead: 'Partie', accent: 'solo' },
-    editSolo: { lead: 'Paramètres de la', accent: 'partie' },
-    editRoom: { lead: 'Paramètres du', accent: 'salon' },
-    create: { lead: 'Créer un', accent: 'salon' },
-  },
-} as const;
-
 export function multiplayerTeaser(count: number): string {
-  if (count <= 0) return 'Aucun salon en ce moment';
-  return `${count} joueur${count > 1 ? 's' : ''} en multijoueur`;
+  if (count <= 0) return tx('hub', 'teaserNone');
+  return tx('hub', 'teaser', { count });
+}
+
+export function videoModeLabel(mode: 'hidden' | 'blurred' | 'peek'): string {
+  return tx('hub', `videoMode.${mode}`);
+}
+
+export function videoModeHint(mode: 'hidden' | 'blurred' | 'peek'): string {
+  return tx('hub', `videoMode.${mode}Hint`);
+}
+
+export function songStartLabel(mode: 'random' | 'beginning'): string {
+  return tx('hub', `songStart.${mode}`);
+}
+
+export function songStartHint(mode: 'random' | 'beginning'): string {
+  return tx('hub', `songStart.${mode}Hint`);
+}
+
+export function gameTypeLabel(type: 'standard' | 'timeAttack' | 'evolving'): string {
+  return tx('hub', `gameType.${type}`);
+}
+
+export function precisionChipLabel(value: unknown): string {
+  const key =
+    value === 'anime' || value === 'exact' ? 'anime' : value === 'artist' ? 'artist' : 'franchise';
+  return tx('hub', `precisionChip.${key}`);
+}
+
+export function sourceLabel(source: 'random' | 'mix' | 'watched' | 'playlist'): string {
+  return tx('hub', `source.${source}`);
 }

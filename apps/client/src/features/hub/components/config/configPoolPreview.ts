@@ -1,4 +1,5 @@
 import type { PlaylistPoolStats, SoundSelection, WatchedPoolStats } from '@aniquizz/shared';
+import { formatAppNumber } from '@/lib/i18n/format';
 
 export interface CataloguePoolCounts {
   playableSongs: number;
@@ -49,7 +50,7 @@ export function formatPoolMetric(
   if (value == null) {
     return { count: loading ? '…' : '—', unitVisible: false };
   }
-  return { count: value.toLocaleString('fr-FR'), unitVisible: true };
+  return { count: formatAppNumber(value), unitVisible: true };
 }
 
 export function poolUnitLabel(value: number | null, singular: string, plural: string): string {

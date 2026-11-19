@@ -11,6 +11,7 @@ import type { Session, User, SupabaseClient } from '@supabase/supabase-js';
 import { captureClientError } from '@/lib/errorReporter';
 import { createProfileFetchGate } from '@/features/auth/lib/profileFetchGate';
 import { profileXpFields } from '@/features/auth/lib/matchXpProfile';
+import { toastUnlockedAchievements } from '@/features/profile/lib/achievementToast';
 
 const loadSupabase = () => import('@/lib/supabase').then((m) => m.supabase);
 
@@ -53,6 +54,7 @@ export type Profile = {
   friendRequestSound?: boolean;
   lobbyInviteVisual?: boolean;
   lobbyInviteSound?: boolean;
+  uiLocale?: 'fr' | 'en' | null;
   totalGuesses?: number;
   correctGuesses?: number;
 };
@@ -203,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let cleanupLevelUp: (() => void) | undefined;
     let cleanupGameOverXp: (() => void) | undefined;
+    let cleanupAchievements: (() => void) | undefined;
     let cleanupSanction: (() => void) | undefined;
     let cleanupSessionReplace: (() => void) | undefined;
     let disposed = false;
@@ -212,6 +215,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         syncSocketSession,
         registerLevelUpHandler,
         registerGameOverXpHandler,
+        registerAchievementUnlockHandler,
         registerSanctionHandler,
         registerSessionReplacementReconnect,
       }) => {
@@ -238,6 +242,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             });
           },
         );
+        cleanupAchievements = registerAchievementUnlockHandler((payload) => {
+          if (payload.ids.length > 0) toastUnlockedAchievements(payload.ids);
+          setProfile((prev) => {
+            if (!prev || prev.id !== userId) return prev;
+            const next = profileXpFields(payload.xp);
+            if (next.xp === prev.xp && next.level === prev.level) return prev;
+            return { ...prev, ...next };
+          });
+        });
         cleanupSanction = registerSanctionHandler((payload) => {
           setProfile((prev) =>
             prev
@@ -257,6 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       disposed = true;
       cleanupLevelUp?.();
       cleanupGameOverXp?.();
+      cleanupAchievements?.();
       cleanupSanction?.();
       cleanupSessionReplace?.();
     };

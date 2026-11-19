@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BookOpen } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 
@@ -11,6 +12,7 @@ import {
 } from '@/features/hub/components/lobby/lobbyRulesCopy';
 import { SettingChip } from '@/features/hub/components/SettingChip';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
+import { pick } from '@/lib/i18n/text';
 
 interface LobbyRulesDialogProps {
   open: boolean;
@@ -20,7 +22,11 @@ interface LobbyRulesDialogProps {
 }
 
 export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyRulesDialogProps) {
-  const sections = useMemo(() => buildLobbyRulesSections(config, context), [config, context]);
+  const { i18n } = useTranslation();
+  const sections = useMemo(
+    () => buildLobbyRulesSections(config, context),
+    [config, context, i18n.language],
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -29,11 +35,11 @@ export function LobbyRulesDialog({ open, onOpenChange, config, context }: LobbyR
           <DialogTitle className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xl">
             <span className="inline-flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" aria-hidden="true" />
-              Règles de la partie
+              {pick('Règles de la partie', 'Match rules')}
               {config.testMatch ? <TestMatchMark /> : null}
             </span>
             <span className="text-sm font-normal text-muted-foreground">
-              (selon la config actuelle)
+              {pick('(selon la config actuelle)', '(for the current setup)')}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -127,7 +133,7 @@ export function LobbyRulesTrigger({
         onClick={() => setOpen(true)}
       >
         <BookOpen className={cn('h-3.5 w-3.5', subtle && 'opacity-70')} aria-hidden="true" />
-        Règles
+        {pick('Règles', 'Rules')}
       </Button>
       <LobbyRulesDialog open={open} onOpenChange={setOpen} config={config} context={context} />
     </>

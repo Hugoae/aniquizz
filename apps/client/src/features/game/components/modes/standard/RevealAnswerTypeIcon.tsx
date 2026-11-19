@@ -1,5 +1,6 @@
 import { Columns2, Keyboard, LayoutGrid } from 'lucide-react';
-import { ANSWER_TYPE_LABELS, type AnswerType } from '@aniquizz/shared';
+import type { AnswerType } from '@aniquizz/shared';
+import { answerTypeDisplayLabel } from '@/features/game/lib/answerTypeLabel';
 
 const ICONS = {
   typing: Keyboard,
@@ -18,7 +19,7 @@ export function RevealAnswerTypeIcon({ answerType }: RevealAnswerTypeIconProps) 
   }
 
   const Icon = ICONS[answerType];
-  const label = ANSWER_TYPE_LABELS[answerType];
+  const label = answerTypeDisplayLabel(answerType);
 
   return (
     <span className="inline-flex items-center justify-center" title={label}>

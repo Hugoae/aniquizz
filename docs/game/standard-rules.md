@@ -8,11 +8,11 @@ Explain how the **current** room will play before launch — without opening the
 
 ## Client modules
 
-| File                                           | Role                                                           |
-| ---------------------------------------------- | -------------------------------------------------------------- |
-| `apps/client/.../lobby/lobbyRulesCopy.ts`      | `buildLobbyRulesSections(config, context)` — French UI strings |
-| `apps/client/.../lobby/LobbyRulesDialog.tsx`   | Scrollable modal + `LobbyRulesTrigger` button                  |
-| `apps/client/.../lobby/lobbyRulesCopy.test.ts` | Copy regression tests (11 cases)                               |
+| File                                           | Role                                                                                                  |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `apps/client/.../lobby/lobbyRulesCopy.ts`      | `buildLobbyRulesSections(config, context)` — French source strings, English via `pick()` at read time |
+| `apps/client/.../lobby/LobbyRulesDialog.tsx`   | Scrollable modal + `LobbyRulesTrigger` button                                                         |
+| `apps/client/.../lobby/lobbyRulesCopy.test.ts` | Copy regression tests (11 cases)                                                                      |
 
 ## Sections
 

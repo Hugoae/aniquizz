@@ -10,7 +10,7 @@ import {
   SETTINGS_SEGMENTED_OPTION,
   SETTINGS_SEGMENTED_TRACK,
 } from '@/features/settings/components/settingsSegmented';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import type { SettingsTab } from '@/features/settings/lib/openSettings';
 
 interface GlobalSettingsContentProps {
@@ -24,6 +24,7 @@ export function GlobalSettingsContent({
   initialTab = 'general',
 }: GlobalSettingsContentProps) {
   const [tab, setTab] = useState<SettingsTab>(initialTab);
+  const copy = useSettingsCopy();
   const isFloating = variant === 'floating';
 
   useEffect(() => {
@@ -44,7 +45,7 @@ export function GlobalSettingsContent({
             'shadow-none data-[state=active]:shadow-none sm:text-sm',
           )}
         >
-          {SETTINGS_COPY.tabs.general}
+          {copy.tabs.general}
         </TabsTrigger>
         <TabsTrigger
           value="social"
@@ -53,7 +54,7 @@ export function GlobalSettingsContent({
             'shadow-none data-[state=active]:shadow-none sm:text-sm',
           )}
         >
-          {SETTINGS_COPY.tabs.social}
+          {copy.tabs.social}
         </TabsTrigger>
         <TabsTrigger
           value="account"
@@ -62,7 +63,7 @@ export function GlobalSettingsContent({
             'shadow-none data-[state=active]:shadow-none sm:text-sm',
           )}
         >
-          {SETTINGS_COPY.tabs.account}
+          {copy.tabs.account}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="general" className="mt-4 focus-visible:ring-0">

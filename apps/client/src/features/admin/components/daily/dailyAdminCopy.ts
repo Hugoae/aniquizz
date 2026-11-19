@@ -39,6 +39,14 @@ export const DAILY_ADMIN_COPY = {
   saved: 'Playlist mise à jour.',
   liveHint: 'Des joueurs ont déjà commencé. Vous pouvez seulement retirer un extrait cassé.',
   qcm: 'Choix',
+  featuredTitle: 'Son du jour',
+  featuredEmpty: 'Pas encore choisi.',
+  featuredPast: 'Jour passé : le son du jour ne se change plus.',
+  featuredHint: 'Visible sur l’accueil. Il ne peut pas être un extrait du quiz de ce jour.',
+  featuredReplace: 'Remplacer le son du jour ?',
+  featuredReplaceBody: 'L’accueil affiche ce nouvel extrait dès le prochain chargement.',
+  featuredRedraw: 'Tirer un autre son du jour ?',
+  featuredRedrawBody: 'La pioche évite le quiz de ce jour et les sons déjà mis en avant.',
 } as const;
 
 const WARNING_FR: Record<string, string> = {

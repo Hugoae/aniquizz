@@ -3,23 +3,23 @@ import { Cookie, Scale, Shield, FileText } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useCookieConsent } from '@/features/legal/CookieConsentContext';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
-
-const legalLinks = [
-  { to: '/legal/confidentialite', label: SETTINGS_COPY.legalPrivacy, icon: Shield },
-  { to: '/legal/cgu', label: SETTINGS_COPY.legalTerms, icon: FileText },
-  { to: '/legal/mentions', label: SETTINGS_COPY.legalNotice, icon: Scale },
-] as const;
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 
 export function SettingsAccountExtras() {
   const { consent, savePreferences, openBanner } = useCookieConsent();
+  const copy = useSettingsCopy();
   const analyticsOn = consent?.analytics ?? false;
+  const legalLinks = [
+    { to: '/legal/confidentialite', label: copy.legalPrivacy, icon: Shield },
+    { to: '/legal/cgu', label: copy.legalTerms, icon: FileText },
+    { to: '/legal/mentions', label: copy.legalNotice, icon: Scale },
+  ];
 
   return (
     <>
       <section aria-labelledby="settings-legal-heading">
         <h3 id="settings-legal-heading" className="text-sm font-bold text-foreground">
-          {SETTINGS_COPY.legalHeading}
+          {copy.legalHeading}
         </h3>
         <ul className="mt-3 space-y-1">
           {legalLinks.map(({ to, label, icon: Icon }) => (
@@ -43,18 +43,16 @@ export function SettingsAccountExtras() {
         <div className="flex items-center gap-2">
           <Cookie className="h-4 w-4 text-primary" aria-hidden />
           <h3 id="settings-cookies-heading" className="font-bold text-foreground text-sm">
-            {SETTINGS_COPY.cookiesHeading}
+            {copy.cookiesHeading}
           </h3>
         </div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          {SETTINGS_COPY.cookiesBody}
-        </p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{copy.cookiesBody}</p>
 
         <div className="mt-4 flex items-center justify-between gap-4 rounded-lg border border-border/50 bg-secondary/20 px-3 py-3">
           <Label htmlFor="cookie-analytics" className="text-sm font-medium leading-snug">
-            {SETTINGS_COPY.analyticsLabel}
+            {copy.analyticsLabel}
             <span className="mt-0.5 block text-xs font-normal text-muted-foreground">
-              {SETTINGS_COPY.analyticsHint}
+              {copy.analyticsHint}
             </span>
           </Label>
           <Switch
@@ -65,7 +63,7 @@ export function SettingsAccountExtras() {
           />
         </div>
         <p id="cookie-analytics-desc" className="sr-only">
-          {SETTINGS_COPY.analyticsAria}
+          {copy.analyticsAria}
         </p>
 
         <button
@@ -73,7 +71,7 @@ export function SettingsAccountExtras() {
           onClick={openBanner}
           className="mt-3 rounded-sm text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          {SETTINGS_COPY.reopenBanner}
+          {copy.reopenBanner}
         </button>
       </section>
     </>

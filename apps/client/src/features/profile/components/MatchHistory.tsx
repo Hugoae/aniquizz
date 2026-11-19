@@ -12,6 +12,8 @@ import {
   Grid2X2,
   Shuffle,
 } from 'lucide-react';
+import { formatAppDate, formatAppNumber } from '@/lib/i18n/format';
+import { pick } from '@/lib/i18n/text';
 import {
   speedBonusFromStoredMode,
   gameTypeFromStoredMode,
@@ -28,16 +30,40 @@ import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 import { MODE_CHROME } from '@/features/hub/components/modeChrome';
 import { DailyTracks } from '@/features/daily/components/DailyTracks';
 import { RankPill } from '@/features/game/components/shared/RankPill';
+import { medalDisplayLabel } from '@/features/game/lib/medalLabel';
 
 const DIFFICULTY_CHIPS = [
-  { id: 'easy', label: 'Facile', className: 'bg-success/15 text-success' },
-  { id: 'medium', label: 'Moyen', className: 'bg-warning/15 text-warning' },
-  { id: 'hard', label: 'Difficile', className: 'bg-destructive/15 text-destructive' },
+  {
+    id: 'easy',
+    get label() {
+      return pick('Facile', 'Easy');
+    },
+    className: 'bg-success/15 text-success',
+  },
+  {
+    id: 'medium',
+    get label() {
+      return pick('Moyen', 'Medium');
+    },
+    className: 'bg-warning/15 text-warning',
+  },
+  {
+    id: 'hard',
+    get label() {
+      return pick('Difficile', 'Hard');
+    },
+    className: 'bg-destructive/15 text-destructive',
+  },
 ] as const;
 
 const RESPONSE_CHIPS = {
   Typing: { label: 'Typing', Icon: Keyboard },
-  QCM: { label: 'QCM', Icon: Grid2X2 },
+  QCM: {
+    get label() {
+      return pick('QCM', 'MCQ');
+    },
+    Icon: Grid2X2,
+  },
   Mix: { label: 'Mix', Icon: Shuffle },
 } as const;
 
@@ -57,14 +83,14 @@ function ResponseChip({ chip }: { chip: (typeof RESPONSE_CHIPS)[keyof typeof RES
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "à l'instant";
+  if (min < 1) return pick("à l'instant", 'just now');
   const h = Math.floor(min / 60);
-  if (min < 60) return `il y a ${min} min`;
-  if (h < 24) return `il y a ${h} h`;
+  if (min < 60) return pick(`il y a ${min} min`, `${min} min ago`);
+  if (h < 24) return pick(`il y a ${h} h`, `${h} h ago`);
   const d = Math.floor(h / 24);
-  if (d === 1) return 'hier';
-  if (d < 7) return `il y a ${d} j`;
-  return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  if (d === 1) return pick('hier', 'yesterday');
+  if (d < 7) return pick(`il y a ${d} j`, `${d} d ago`);
+  return formatAppDate(new Date(iso), { day: 'numeric', month: 'short' });
 }
 
 function formatDuration(ms: number | null): string | null {
@@ -75,8 +101,13 @@ function formatDuration(ms: number | null): string | null {
 
 function resultTone(won: boolean) {
   return won
-    ? { text: 'text-success', bar: 'bg-success', label: 'Victoire', Icon: Trophy }
-    : { text: 'text-destructive', bar: 'bg-destructive', label: 'Défaite', Icon: X };
+    ? { text: 'text-success', bar: 'bg-success', label: pick('Victoire', 'Victory'), Icon: Trophy }
+    : {
+        text: 'text-destructive',
+        bar: 'bg-destructive',
+        label: pick('Défaite', 'Defeat'),
+        Icon: X,
+      };
 }
 
 /** 1er, then 2e, 3e, 4e… The square pill carries the podium color. */
@@ -194,7 +225,10 @@ function HistoryRow({
   const duration = formatDuration(entry.durationMs);
   const gameType = gameTypeFromStoredMode(entry.mode);
   const multi = entry.playerCount > 1 && entry.rank != null;
-  const scoreLabel = gameType === 'timeAttack' ? (entry.score === 1 ? 'trouvé' : 'trouvés') : 'pts';
+  const scoreLabel =
+    gameType === 'timeAttack'
+      ? pick(entry.score === 1 ? 'trouvé' : 'trouvés', 'found')
+      : pick('pts', 'pts');
   const medal = entry.playerCount <= 1 ? getMedalMeta(entry.medal ?? null) : null;
   const response =
     gameType === 'standard' && entry.answerMode && entry.answerMode in RESPONSE_CHIPS
@@ -212,7 +246,10 @@ function HistoryRow({
               <Icon className="h-4 w-4" aria-hidden />
               {tone.label}
               {medal ? (
-                <Medal className={cn('h-4 w-4', medal.textClass)} aria-label={medal.label} />
+                <Medal
+                  className={cn('h-4 w-4', medal.textClass)}
+                  aria-label={entry.medal ? medalDisplayLabel(entry.medal) : medal.label}
+                />
               ) : null}
             </p>
             {multi && entry.rank != null ? (
@@ -224,7 +261,7 @@ function HistoryRow({
 
         <div className="flex items-end justify-between gap-4">
           <p className="font-mono text-3xl font-black tabular-nums leading-none text-foreground">
-            {entry.score.toLocaleString('fr-FR')}
+            {formatAppNumber(entry.score)}
             <span className="ml-1.5 text-sm font-semibold text-muted-foreground">{scoreLabel}</span>
           </p>
           <AccuracyBar correct={entry.correctCount} total={entry.totalRounds} />
@@ -273,7 +310,7 @@ function HistoryRow({
               onClick={() => onReplay(entry.replay as MatchReplayConfig)}
             >
               <RotateCcw className="h-3.5 w-3.5" aria-hidden />
-              Rejouer
+              {pick('Rejouer', 'Play again')}
             </Button>
           ) : null}
         </div>

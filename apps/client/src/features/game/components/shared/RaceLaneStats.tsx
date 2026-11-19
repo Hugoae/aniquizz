@@ -2,6 +2,7 @@ import { Flame } from 'lucide-react';
 import { formatTimeAttackClock } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { pick } from '@/lib/i18n/text';
 import { isRaceClockUrgent } from './raceLive';
 
 /** Same threshold as the solo card: a flame appears from 3 correct answers in a row. */
@@ -12,8 +13,8 @@ export function StreakFlame({ streak }: { streak: number }) {
   return (
     <span
       className="flex shrink-0 items-center gap-0.5 rounded-md border border-warning/50 bg-warning/10 px-1.5 py-0.5"
-      title={`Série de ${streak} bonnes réponses`}
-      aria-label={`Série de ${streak}`}
+      title={pick(`Série de ${streak} bonnes réponses`, `Streak of ${streak} correct answers`)}
+      aria-label={pick(`Série de ${streak}`, `Streak of ${streak}`)}
     >
       <Flame
         className={cn('h-3 w-3 fill-warning text-warning', streak >= 5 && 'animate-pulse')}
@@ -39,7 +40,10 @@ export function FoundHeard({
   return (
     <span
       className={cn('tabular-nums', className)}
-      aria-label={`${found} trouvé${found > 1 ? 's' : ''} sur ${heard} écouté${heard > 1 ? 's' : ''}`}
+      aria-label={pick(
+        `${found} trouvé${found > 1 ? 's' : ''} sur ${heard} écouté${heard > 1 ? 's' : ''}`,
+        `${found} found out of ${heard} heard`,
+      )}
     >
       <span className={cn('font-semibold text-foreground', prominent && 'text-xl font-black')}>
         {found}

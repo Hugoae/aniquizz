@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Settings, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { GlobalSettingsContent } from '@/features/settings/components/GlobalSettingsContent';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { cycleTabWithin } from '@/features/settings/lib/cycleTabWithin';
 import {
   subscribeFloatingSettingsSuppressed,
@@ -27,6 +27,7 @@ function settingsMorphMs(): number {
  */
 export function FloatingSettingsButton() {
   const [open, setOpen] = useState(false);
+  const copy = useSettingsCopy();
   const [mounted, setMounted] = useState(false);
   const [tab, setTab] = useState<SettingsTab>('general');
   const [suppressed, setSuppressed] = useState(false);
@@ -141,13 +142,13 @@ export function FloatingSettingsButton() {
               id="floating-settings-title"
               className="flex-1 text-left text-base font-bold text-foreground"
             >
-              {SETTINGS_COPY.panelTitle}
+              {copy.panelTitle}
             </span>
             <button
               ref={closeRef}
               type="button"
               onClick={hide}
-              aria-label={SETTINGS_COPY.closeAria}
+              aria-label={copy.closeAria}
               className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
             >
               <X className="h-4 w-4" aria-hidden />
@@ -160,7 +161,7 @@ export function FloatingSettingsButton() {
             onClick={() => show()}
             aria-expanded={false}
             aria-controls="floating-settings-panel"
-            aria-label={SETTINGS_COPY.openAria}
+            aria-label={copy.openAria}
             className="flex h-14 w-full items-center justify-center text-primary transition-colors"
           >
             <Settings className="floating-settings-morph h-6 w-6 shrink-0" aria-hidden />

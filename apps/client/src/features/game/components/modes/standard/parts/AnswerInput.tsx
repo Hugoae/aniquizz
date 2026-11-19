@@ -16,6 +16,7 @@ import { useArtistSearch } from '@/features/game/hooks/useArtistSearch';
 import { useSuggestionPanelPosition } from '@/features/game/hooks/useSuggestionPanelPosition';
 import type { InputMode } from './types';
 import { ShortcutReminder } from './ShortcutReminder';
+import { pick } from '@/lib/i18n/text';
 
 const SUGGESTION_LIST_ID = 'answer-suggestions';
 
@@ -142,7 +143,11 @@ function AnswerInputInner({
           <div
             id={SUGGESTION_LIST_ID}
             role="listbox"
-            aria-label={artistMode ? "Suggestions d'artistes" : "Suggestions d'animes"}
+            aria-label={
+              artistMode
+                ? pick("Suggestions d'artistes", 'Artist suggestions')
+                : pick("Suggestions d'animes", 'Anime suggestions')
+            }
             className="custom-scrollbar fixed z-[200] flex flex-col overflow-hidden overflow-y-auto rounded-xl border border-primary/20 bg-card shadow-2xl"
             style={{
               left: panelPosition.left,
@@ -152,9 +157,13 @@ function AnswerInputInner({
             }}
           >
             {isSearching && suggestions.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground">Recherche…</div>
+              <div className="px-4 py-3 text-sm text-muted-foreground">
+                {pick('Recherche…', 'Searching…')}
+              </div>
             ) : suggestions.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-muted-foreground">Aucune suggestion</div>
+              <div className="px-4 py-3 text-sm text-muted-foreground">
+                {pick('Aucune suggestion', 'No suggestion')}
+              </div>
             ) : (
               suggestions.map((suggestion, idx) => (
                 <button
@@ -177,7 +186,7 @@ function AnswerInputInner({
                   <SuggestionLabel label={suggestion.label} highlight={suggestion.highlight} />
                   {idx === activeIndex && submitOnEnter && (
                     <span className="ml-2 shrink-0 rounded-sm border border-current px-1 font-mono text-[10px] opacity-60">
-                      ENTRÉE
+                      {pick('ENTRÉE', 'ENTER')}
                     </span>
                   )}
                 </button>
@@ -197,7 +206,9 @@ function AnswerInputInner({
     >
       {submittedAnswer && (
         <div className="flex animate-fade-in items-center gap-2 rounded-md border border-primary/30 bg-primary/20 px-4 py-1.5 shadow-lg">
-          <span className="text-xs font-bold uppercase text-primary">Votre réponse :</span>
+          <span className="text-xs font-bold uppercase text-primary">
+            {pick('Votre réponse :', 'Your answer:')}
+          </span>
           <span className="text-sm font-bold text-foreground">{submittedAnswer}</span>
         </div>
       )}
@@ -210,7 +221,7 @@ function AnswerInputInner({
             onClick={onSwitchCarre}
             className="gap-2 hover:bg-primary/20 hover:text-primary"
           >
-            <Grid2X2 className="h-4 w-4" /> Carré (2 pts)
+            <Grid2X2 className="h-4 w-4" /> {pick('Carré (2 pts)', 'Square (2 pts)')}
           </Button>
           <Button
             variant="secondary"
@@ -218,7 +229,7 @@ function AnswerInputInner({
             onClick={onSwitchDuo}
             className="gap-2 hover:bg-primary/20 hover:text-primary"
           >
-            <Columns2 className="h-4 w-4" /> Duo (1 pt)
+            <Columns2 className="h-4 w-4" /> {pick('Duo (1 pt)', 'Duo (1 pt)')}
           </Button>
         </div>
       )}
@@ -244,12 +255,12 @@ function AnswerInputInner({
             }}
             placeholder={
               submittedAnswer
-                ? 'Modifier votre réponse…'
+                ? pick('Modifier votre réponse…', 'Edit your answer…')
                 : artistMode
-                  ? "Nom de l'artiste…"
-                  : "Nom de l'anime…"
+                  ? pick("Nom de l'artiste…", 'Artist name…')
+                  : pick("Nom de l'anime…", 'Anime name…')
             }
-            aria-label="Votre réponse"
+            aria-label={pick('Votre réponse', 'Your answer')}
             role="combobox"
             aria-expanded={showPanel}
             aria-controls={SUGGESTION_LIST_ID}
@@ -297,7 +308,7 @@ function AnswerInputInner({
               size="lg"
               onClick={() => submitAnswer(draft)}
               disabled={disabled || (showTyping && !suggestionQueryReady(draft, resolvedPrecision))}
-              aria-label="Valider la réponse"
+              aria-label={pick('Valider la réponse', 'Submit the answer')}
               className="h-14 w-14 rounded-lg p-0"
             >
               <Send className="h-5 w-5" />

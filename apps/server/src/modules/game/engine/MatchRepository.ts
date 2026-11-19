@@ -346,6 +346,8 @@ export class MatchRepository {
           correct: correctSet.has(songId),
         })),
       );
+      const { notifyProfileAchievements } = await import('../../profile/achievementNotify');
+      await notifyProfileAchievements(player.userId);
     } catch (error) {
       logger.error(
         `[MatchRepository] Aggregate stats failed for ${player.userId}`,

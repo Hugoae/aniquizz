@@ -1,114 +1,118 @@
+import { extendLive, liveStrings, tx } from '@/lib/i18n/text';
+
 export const GAME_COPY = {
-  missingRoom: {
-    title: 'Partie introuvable',
-    body: 'Revenez au hub pour rejoindre un salon ou lancer une partie.',
-    cta: 'Retour au hub',
-  },
-  loading: {
-    status: 'Chargement de la partie',
-    title: 'CHARGEMENT...',
-    preparing: 'Préparation de la partie…',
-    headphones: 'Préparez vos écouteurs...',
-    go: 'GO!',
-    cancel: 'Annuler la partie',
-    leaveSalon: 'Quitter le salon',
-  },
-  results: {
-    loading: 'Chargement des résultats…',
-  },
-  leaveMatch: {
-    title: 'Quitter le match ?',
-    returnLobbyLead: 'Retour au lobby',
-    returnLobbyBody: "vous quittez l'écran de jeu mais restez dans le salon.",
-    leaveSalonLead: 'Quitter le salon',
-    leaveSalonBody: 'vous êtes retiré du salon.',
-    cancel: 'Annuler',
-    returnCta: 'Retour au lobby',
-    leaveCta: 'Quitter le salon',
-  },
-  leaveSalon: {
-    title: 'Quitter le salon ?',
-    profile: 'Vous quitterez le salon pour accéder à votre profil.',
-    confirmProfile: 'Quitter et voir mon profil',
-    confirm: 'Quitter le salon',
-    cancel: 'Annuler',
-  },
-  consequences: {
-    solo: 'Le salon sera fermé et la partie annulée.',
-    multi: 'La partie continuera pour les autres joueurs.',
-  },
-  toasts: {
-    playlistInfo: 'Info Playlist',
-    cancelledHost: "Partie annulée par l'hôte.",
-    roomClosed: 'Salon fermé.',
-    genericError: 'Erreur',
-  },
-  config: {
-    varied: 'Varié',
-    standard: 'Standard',
-    me: 'Moi',
-  },
-  stage: {
-    pauseEndOfRound: 'Pause en fin de round',
-  },
-  stageFeedback: {
-    correct: 'Trouvé !',
-    missed: 'Raté',
-    wrong: 'Faux !',
-    announce: {
-      correct: 'Bonne réponse',
-      wrong: 'Mauvaise réponse, moins 3 secondes',
-      wrongPlain: 'Mauvaise réponse',
-      skip: 'Titre passé, moins 5 secondes',
-      skipPlain: 'Titre passé',
-      missed: 'Temps du clip écoulé, titre raté',
-      bonus: (seconds: number) => `Série réussie, plus ${seconds} secondes`,
+  missingRoom: liveStrings('game', 'missingRoom', ['title', 'body', 'cta'] as const),
+  loading: liveStrings('game', 'loading', [
+    'status',
+    'title',
+    'preparing',
+    'headphones',
+    'go',
+    'cancel',
+    'leaveSalon',
+  ] as const),
+  results: liveStrings('game', 'results', ['loading'] as const),
+  leaveMatch: liveStrings('game', 'leaveMatch', [
+    'title',
+    'returnLobbyLead',
+    'returnLobbyBody',
+    'leaveSalonLead',
+    'leaveSalonBody',
+    'cancel',
+    'returnCta',
+    'leaveCta',
+  ] as const),
+  leaveSalon: liveStrings('game', 'leaveSalon', [
+    'title',
+    'profile',
+    'confirmProfile',
+    'confirm',
+    'cancel',
+  ] as const),
+  consequences: liveStrings('game', 'consequences', ['solo', 'multi'] as const),
+  toasts: liveStrings('game', 'toasts', [
+    'playlistInfo',
+    'cancelledHost',
+    'roomClosed',
+    'genericError',
+  ] as const),
+  config: liveStrings('game', 'config', ['varied', 'standard', 'me'] as const),
+  stage: liveStrings('game', 'stage', ['pauseEndOfRound'] as const),
+  stageFeedback: extendLive(
+    liveStrings('game', 'stageFeedback', ['correct', 'missed', 'wrong'] as const),
+    {
+      announce: {
+        get correct() {
+          return tx('game', 'stageFeedback.announceCorrect');
+        },
+        get wrong() {
+          return tx('game', 'stageFeedback.announceWrong');
+        },
+        get wrongPlain() {
+          return tx('game', 'stageFeedback.announceWrongPlain');
+        },
+        get skip() {
+          return tx('game', 'stageFeedback.announceSkip');
+        },
+        get skipPlain() {
+          return tx('game', 'stageFeedback.announceSkipPlain');
+        },
+        get missed() {
+          return tx('game', 'stageFeedback.announceMissed');
+        },
+        bonus: (seconds: number) => tx('game', 'stageFeedback.announceBonus', { seconds }),
+      },
     },
-  },
-  recentTitles: {
-    heading: 'Derniers titres',
-    empty: 'Les titres joués apparaîtront ici.',
-    outcome: {
-      found: 'Trouvé',
-      missed: 'Raté',
-      skipped: 'Passé',
-    },
-    bonus: (seconds: number) => `+${seconds} s`,
-    bonusSpoken: (seconds: number) => `plus ${seconds} secondes`,
-  },
+  ),
+  recentTitles: extendLive(liveStrings('game', 'recentTitles', ['heading', 'empty'] as const), {
+    outcome: liveStrings('game', 'recentTitles', ['found', 'missed', 'skipped'] as const),
+    bonus: (seconds: number) => tx('game', 'recentTitles.bonus', { seconds }),
+    bonusSpoken: (seconds: number) => tx('game', 'recentTitles.bonusSpoken', { seconds }),
+  }),
   timeAttack: {
-    clockAria: (clock: string) => `Temps restant de la partie : ${clock}`,
-    found: (n: number) => `${n} trouvé${n === 1 ? '' : 's'}`,
+    clockAria: (clock: string) => tx('game', 'timeAttack.clockAria', { clock }),
+    found: (count: number) => tx('game', 'timeAttack.found', { count }),
     nextMedal: (needed: number, tier: 'bronze' | 'silver' | 'gold' | 'platinum') =>
-      `Encore ${needed} pour ${{ bronze: 'le bronze', silver: "l'argent", gold: "l'or", platinum: 'le platine' }[tier]}`,
-    topMedal: 'Médaille maximale',
+      tx('game', 'timeAttack.nextMedal', {
+        needed,
+        tier: tx('game', `timeAttack.tier${tier[0].toUpperCase()}${tier.slice(1)}`),
+      }),
+    get topMedal() {
+      return tx('game', 'timeAttack.topMedal');
+    },
   },
   soloMedals: {
-    rail: 'Médailles de la partie',
+    get rail() {
+      return tx('game', 'soloMedals.rail');
+    },
     atFound: (target: number, label: string) =>
-      target === 1 ? `${label} à 1 titre` : `${label} à ${target} titres`,
+      tx('game', 'soloMedals.atFound', { count: target, label }),
     atPoints: (target: number, label: string) =>
-      target === 1 ? `${label} à 1 point` : `${label} à ${target} points`,
-    hidden: (label: string) => `${label}, seuil masqué`,
-    earned: (label: string) => `${label} débloquée`,
+      tx('game', 'soloMedals.atPoints', { count: target, label }),
+    hidden: (label: string) => tx('game', 'soloMedals.hidden', { label }),
+    earned: (label: string) => tx('game', 'soloMedals.earned', { label }),
   },
-  race: {
-    boardTitle: 'Course',
-    boardAria: 'Classement en direct de la course',
-    you: 'Toi',
-    finished: 'Terminé',
-    titles: (n: number) => `${n} titre${n === 1 ? '' : 's'}`,
-    seeRanking: (hidden: number) => `+${hidden} autre${hidden > 1 ? 's' : ''} — voir le classement`,
-    laneDoneNow: "Tu es pour l'instant",
-    laneDoneWaiting: 'En attente des autres joueurs…',
-    tieBreak: 'Égalité : moins de titres écoutés. Le même ratio partage la place.',
-  },
-} as const;
+  race: extendLive(
+    liveStrings('game', 'race', [
+      'boardTitle',
+      'boardAria',
+      'you',
+      'finished',
+      'laneDoneNow',
+      'laneDoneWaiting',
+      'tieBreak',
+    ] as const),
+    {
+      titles: (count: number) => tx('game', 'race.titles', { count }),
+      seeRanking: (hidden: number) => tx('game', 'race.seeRanking', { count: hidden }),
+    },
+  ),
+};
 
 export function playerDisconnectedToast(name: string): string {
-  return `${name} s'est déconnecté.`;
+  return tx('game', 'toasts.disconnected', { name });
 }
 
 export function playerLeftMatchToast(name: string): string {
-  return `${name} a quitté la partie.`;
+  return tx('game', 'toasts.left', { name });
 }

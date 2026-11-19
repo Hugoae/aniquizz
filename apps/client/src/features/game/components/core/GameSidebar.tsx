@@ -11,6 +11,7 @@ import {
 import type { ChatMessage, GamePlayer } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { pick, tx } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
@@ -152,7 +153,7 @@ export function GameSidebar({
     const me = players.find((player) => String(player.id) === String(meId));
     const local = createLocalChatMessage({
       senderId: String(meId),
-      username: me?.username || 'Moi',
+      username: me?.username || tx('game', 'config.me'),
       avatar: me?.avatar,
       content: trimmed,
     });
@@ -165,7 +166,7 @@ export function GameSidebar({
 
   return (
     <aside
-      aria-label="Panneau joueurs et chat"
+      aria-label={tx('game', 'panelAria')}
       className={cn(
         'relative flex h-full shrink-0 flex-col border-l border-border bg-card/30 transition-all duration-300',
         isCollapsed ? 'w-12' : 'w-80 shadow-2xl',
@@ -176,7 +177,7 @@ export function GameSidebar({
         variant="ghost"
         size="icon"
         onClick={onToggle}
-        aria-label={isCollapsed ? 'Ouvrir le panneau' : 'Fermer le panneau'}
+        aria-label={isCollapsed ? tx('game', 'openPanel') : tx('game', 'closePanel')}
         aria-expanded={!isCollapsed}
         className="absolute -left-5 top-4 z-10 h-11 w-11 rounded-lg border border-border bg-card hover:bg-secondary"
       >
@@ -195,7 +196,7 @@ export function GameSidebar({
             <div
               className="flex gap-1 rounded-lg bg-secondary/50 p-1"
               role="tablist"
-              aria-label="Joueurs et chat"
+              aria-label={tx('game', 'playersChat')}
             >
               <Button
                 variant={activeTab === 'players' ? 'default' : 'ghost'}
@@ -206,7 +207,7 @@ export function GameSidebar({
                 className="flex-1 gap-2 rounded-md"
               >
                 <Users className="h-4 w-4" aria-hidden />
-                Joueurs
+                {tx('game', 'players')}
               </Button>
               <Button
                 variant={activeTab === 'chat' ? 'default' : 'ghost'}
@@ -214,7 +215,9 @@ export function GameSidebar({
                 role="tab"
                 aria-selected={activeTab === 'chat'}
                 aria-label={
-                  unreadCount > 0 && activeTab !== 'chat' ? `Chat, ${unreadCount} non lus` : 'Chat'
+                  unreadCount > 0 && activeTab !== 'chat'
+                    ? pick(`Chat, ${unreadCount} non lus`, `Chat, ${unreadCount} unread`)
+                    : 'Chat'
                 }
                 onClick={() => setActiveTab('chat')}
                 className="relative flex-1 gap-2 rounded-md"
@@ -233,7 +236,7 @@ export function GameSidebar({
           {activeTab === 'players' ? (
             <div
               role="tabpanel"
-              aria-label="Joueurs"
+              aria-label={tx('game', 'players')}
               className="custom-scrollbar flex-1 space-y-2 overflow-y-auto p-3"
             >
               {sortedPlayers.map((player, index) => {
@@ -285,8 +288,8 @@ export function GameSidebar({
                         {isDisconnected && (
                           <span
                             className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-muted"
-                            title="Déconnecté"
-                            aria-label="Déconnecté"
+                            title={tx('game', 'disconnected')}
+                            aria-label={tx('game', 'disconnected')}
                           >
                             <WifiOff className="h-2.5 w-2.5 text-muted-foreground" />
                           </span>
@@ -301,8 +304,8 @@ export function GameSidebar({
                       {hasAnswered && (
                         <span
                           className="flex h-5 w-5 shrink-0 animate-in zoom-in items-center justify-center rounded-full border border-primary/50 bg-primary/20"
-                          title="A répondu"
-                          aria-label="A répondu"
+                          title={tx('game', 'answered')}
+                          aria-label={tx('game', 'answered')}
                         >
                           <Check className="h-3 w-3 text-primary" />
                         </span>
@@ -336,7 +339,10 @@ export function GameSidebar({
               <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-3">
                 {messages.length === 0 && (
                   <div className="mt-4 text-center text-xs italic text-muted-foreground opacity-50">
-                    Aucun message. Soyez le premier à parler !
+                    {pick(
+                      'Aucun message. Soyez le premier à parler !',
+                      'No messages yet. Be the first to say something!',
+                    )}
                   </div>
                 )}
                 {messages.map((msg, index) => {
@@ -400,8 +406,8 @@ export function GameSidebar({
                   <Input
                     value={chatMessage}
                     onChange={(e) => setChatMessage(e.target.value)}
-                    placeholder="Message…"
-                    aria-label="Message de chat"
+                    placeholder={tx('game', 'chatPlaceholder')}
+                    aria-label={tx('game', 'chatMessage')}
                     className="h-9 text-sm"
                     autoComplete="off"
                   />
@@ -409,7 +415,7 @@ export function GameSidebar({
                     type="submit"
                     variant="default"
                     size="icon"
-                    aria-label="Envoyer"
+                    aria-label={tx('game', 'send')}
                     className="h-9 w-9 shrink-0"
                     disabled={!chatMessage.trim()}
                   >

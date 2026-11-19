@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { formatAppDate } from '@/lib/i18n/format';
 import { DAILY_COPY } from '../copy/dailyCopy';
 import { DailyTracks } from './DailyTracks';
 import { DailyRuleChips } from './DailyRuleChips';
@@ -36,7 +37,7 @@ function countdownLabel(resetsAt: string): string {
 function formatChallengeDate(isoDay: string): string {
   const [year, month, day] = isoDay.split('-').map(Number);
   if (!year || !month || !day) return isoDay;
-  return new Date(year, month - 1, day).toLocaleDateString('fr-FR', {
+  return formatAppDate(new Date(year, month - 1, day), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

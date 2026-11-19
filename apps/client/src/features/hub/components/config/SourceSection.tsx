@@ -1,19 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { Eye, Link2, Shuffle, Music2, AlertTriangle } from 'lucide-react';
-import {
-  WATCHED_LIST_STATUS_LABELS,
-  type PlaylistPoolStats,
-  type RoomConfig,
-  type WatchedPoolStats,
-} from '@aniquizz/shared';
+import { type PlaylistPoolStats, type RoomConfig, type WatchedPoolStats } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { pick, tx } from '@/lib/i18n/text';
 import { SectionHeader, OptionButton, FOCUS_RING } from './ConfigPrimitives';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
 import {
-  watchedPoolModeLabel,
+  watchedListStatuses,
+  watchedModeDisplayLabel,
   showWatchedFusionMode,
-  WATCHED_LIST_STATUSES_ET,
   WATCHED_LIST_UNAVAILABLE,
   WATCHED_ANILIST_BLOCKED_MESSAGE,
   WATCHED_ANILIST_STALE_MESSAGE,
@@ -22,7 +18,7 @@ import {
 import { PlaylistPicker } from './PlaylistPicker';
 import { PLAYLISTS_COPY } from './playlistsCopy';
 import { openSettings } from '@/features/settings/lib/openSettings';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 
 type Source = RoomConfig['soundSelection'];
 type SourceTab = 'random' | 'watched' | 'playlist';
@@ -57,6 +53,7 @@ export function SourceSection({
   watchedForbidden = false,
 }: SourceSectionProps) {
   const source = config.soundSelection;
+  const copy = useSettingsCopy();
   const [tab, setTab] = useState<SourceTab>(
     source === 'playlist' ? 'playlist' : source === 'watched' ? 'watched' : 'random',
   );
@@ -117,20 +114,21 @@ export function SourceSection({
 
   const showFusion = showWatchedFusionMode(isRoom, currentPlayersCount);
   const modeLabel = showFusion
-    ? watchedPoolModeLabel(stats?.watchedMode ?? config.watchedMode)
-    : 'votre liste';
+    ? watchedModeDisplayLabel(stats?.watchedMode ?? config.watchedMode)
+    : pick('votre liste', 'your list');
+  const listStatuses = watchedListStatuses('et');
 
   return (
     <div className="space-y-3">
       <SectionHeader
         icon={Eye}
-        title="Source des musiques"
-        tooltip={`D'où proviennent les animes piochés. « Watched » utilise votre liste AniList ou MyAnimeList (${WATCHED_LIST_STATUSES_ET}). Playlists = packs staff figés.`}
+        title={tx('hub', 'config.sourceTitle')}
+        tooltip={tx('hub', 'config.sourceHint', { statuses: listStatuses })}
       />
 
       <div
         role="tablist"
-        aria-label="Source des musiques"
+        aria-label={pick('Source des musiques', 'Music source')}
         className="flex shrink-0 gap-1 rounded-lg bg-secondary/30 p-1"
       >
         <button
@@ -140,7 +138,7 @@ export function SourceSection({
           onClick={() => setSource('random')}
           className={tabClass(tab === 'random')}
         >
-          Aléatoire
+          {pick('Aléatoire', 'Random')}
         </button>
         {!watchedForbidden && (
           <button
@@ -170,9 +168,12 @@ export function SourceSection({
             <div className="mb-3 rounded-full bg-primary/10 p-4">
               <Shuffle className="h-8 w-8 text-primary" aria-hidden="true" />
             </div>
-            <p className="font-bold text-foreground">Mode aléatoire</p>
+            <p className="font-bold text-foreground">{pick('Mode aléatoire', 'Random mode')}</p>
             <p className="mt-1 text-xs">
-              Pioche parmi toute la base de données selon les filtres et contraintes.
+              {pick(
+                'Pioche parmi toute la base de données selon les filtres et contraintes.',
+                'Draws from the whole catalogue, within the filters and limits.',
+              )}
             </p>
           </div>
         )}
@@ -181,29 +182,25 @@ export function SourceSection({
           <div className="custom-scrollbar h-full min-h-0 animate-in fade-in zoom-in space-y-4 overflow-y-auto p-2 duration-300">
             <div className="rounded-xl border border-info/20 bg-info/10 p-3 text-xs text-muted-foreground">
               <p className="mb-1 flex items-center gap-2 font-bold text-info">
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" /> Ma liste anime
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />{' '}
+                {pick('Ma liste anime', 'My anime list')}
               </p>
-              Pioche uniquement parmi les animes de vos listes{' '}
-              {WATCHED_LIST_STATUS_LABELS.map((label, index) => (
-                <span key={label}>
-                  {index > 0
-                    ? index === WATCHED_LIST_STATUS_LABELS.length - 1
-                      ? ' et '
-                      : ', '
-                    : null}
-                  <b className="text-foreground">{label}</b>
-                </span>
-              ))}{' '}
-              (AniList ou MyAnimeList).
+              {pick(
+                `Pioche uniquement parmi les animes de vos listes ${listStatuses} (AniList ou MyAnimeList).`,
+                `Draws only from anime on your ${listStatuses} lists (AniList or MyAnimeList).`,
+              )}
               {!watchedListLinked &&
                 !isRoom &&
-                ' Liez AniList ou MyAnimeList pour lancer une partie.'}
+                pick(
+                  ' Liez AniList ou MyAnimeList pour lancer une partie.',
+                  ' Link AniList or MyAnimeList to start a match.',
+                )}
               <button
                 type="button"
                 className="mt-2 block font-semibold text-info underline-offset-2 hover:underline"
                 onClick={() => openSettings('account')}
               >
-                {SETTINGS_COPY.integrationsManage}
+                {copy.integrationsManage}
               </button>
             </div>
 
@@ -211,21 +208,39 @@ export function SourceSection({
               <div className="flex items-start gap-2 rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-xs">
                 <Music2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" aria-hidden="true" />
                 {watchedPoolOffline ? (
-                  <span className="text-destructive">{WATCHED_SERVER_OFFLINE}</span>
+                  <span className="text-destructive">
+                    {pick(
+                      WATCHED_SERVER_OFFLINE,
+                      'The game server is unreachable. Start it, then try again.',
+                    )}
+                  </span>
                 ) : loading || !stats ? (
-                  <span className="text-muted-foreground">Analyse du pool…</span>
+                  <span className="text-muted-foreground">
+                    {pick('Analyse du pool…', 'Checking the pool…')}
+                  </span>
                 ) : stats.playableSongs === 0 ? (
                   <span className="text-warning">
                     {stats.listError === 'anilist_blocked'
-                      ? WATCHED_ANILIST_BLOCKED_MESSAGE
+                      ? pick(
+                          WATCHED_ANILIST_BLOCKED_MESSAGE,
+                          'The AniList API is down. Try again later.',
+                        )
                       : stats.animeCount === 0
-                        ? WATCHED_LIST_UNAVAILABLE
-                        : `Aucun son jouable dans la ${modeLabel} pour ces filtres.`}
+                        ? pick(
+                            WATCHED_LIST_UNAVAILABLE,
+                            'Your list is empty or unreachable (private on AniList?). Make it public, or pick another source.',
+                          )
+                        : pick(
+                            `Aucun son jouable dans la ${modeLabel} pour ces filtres.`,
+                            `No playable songs in ${modeLabel} for these filters.`,
+                          )}
                   </span>
                 ) : (
                   <span className="text-muted-foreground">
-                    <b className="text-foreground">{stats.playableSongs}</b> son
-                    {stats.playableSongs > 1 ? 's' : ''} jouable{stats.playableSongs > 1 ? 's' : ''}
+                    {pick(
+                      `${stats.playableSongs} son${stats.playableSongs > 1 ? 's' : ''} jouable${stats.playableSongs > 1 ? 's' : ''}`,
+                      `${stats.playableSongs} playable song${stats.playableSongs > 1 ? 's' : ''}`,
+                    )}
                     {showFusion ? ` (${modeLabel})` : ''}
                     <span className="text-muted-foreground/70">
                       {' '}
@@ -234,14 +249,28 @@ export function SourceSection({
                     {stats.insufficient && !config.watchedAllowFallback && (
                       <span className="text-warning">
                         {' '}
-                        — insuffisant pour {stats.soundCount} sons
+                        —{' '}
+                        {pick(
+                          `insuffisant pour ${stats.soundCount} sons`,
+                          `not enough for ${stats.soundCount} songs`,
+                        )}
                       </span>
                     )}
                     {stats.insufficient && config.watchedAllowFallback && (
-                      <span className="text-info"> — complétion aléatoire activée</span>
+                      <span className="text-info">
+                        {' '}
+                        — {pick('complétion aléatoire activée', 'random fill is on')}
+                      </span>
                     )}
                     {stats.listError === 'anilist_blocked' && (
-                      <span className="text-warning"> — {WATCHED_ANILIST_STALE_MESSAGE}</span>
+                      <span className="text-warning">
+                        {' '}
+                        —{' '}
+                        {pick(
+                          WATCHED_ANILIST_STALE_MESSAGE,
+                          'AniList is unstable: the list shown may be a few minutes old.',
+                        )}
+                      </span>
                     )}
                   </span>
                 )}
@@ -258,18 +287,24 @@ export function SourceSection({
                       className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning"
                       aria-hidden="true"
                     />
-                    Pas assez de sons dans la {modeLabel} pour {stats.soundCount} manches. Sans
-                    action, le lancement sera bloqué.
+                    {pick(
+                      `Pas assez de sons dans la ${modeLabel} pour ${stats.soundCount} manches. Sans action, le lancement sera bloqué.`,
+                      `Not enough songs in ${modeLabel} for ${stats.soundCount} rounds. Without a choice, the match cannot start.`,
+                    )}
                   </p>
                   <OptionButton
                     active={Boolean(config.watchedAllowFallback)}
                     onClick={() => update({ watchedAllowFallback: !config.watchedAllowFallback })}
                     className="w-full p-2 text-left"
                   >
-                    <div className="text-xs font-bold">Compléter avec l&apos;aléatoire</div>
+                    <div className="text-xs font-bold">
+                      {pick("Compléter avec l'aléatoire", 'Fill with random songs')}
+                    </div>
                     <div className="text-[9px] text-muted-foreground">
-                      Les manches manquantes seront tirées dans le catalogue global (choix
-                      explicite).
+                      {pick(
+                        'Les manches manquantes seront tirées dans le catalogue global (choix explicite).',
+                        'The missing rounds are drawn from the full catalogue (you choose this).',
+                      )}
                     </div>
                   </OptionButton>
                 </div>
@@ -277,7 +312,7 @@ export function SourceSection({
 
             {showFusion && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase">Mode de fusion</Label>
+                <Label className="text-xs uppercase">{pick('Mode de fusion', 'Merge mode')}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <OptionButton
                     active={config.watchedMode === 'union'}
@@ -286,7 +321,7 @@ export function SourceSection({
                   >
                     <div className="text-xs font-bold">Union</div>
                     <div className="text-[9px] text-muted-foreground">
-                      Les listes de tout le monde.
+                      {pick('Les listes de tout le monde.', "Everyone's lists.")}
                     </div>
                   </OptionButton>
                   <OptionButton
@@ -294,9 +329,9 @@ export function SourceSection({
                     onClick={() => update({ watchedMode: 'intersection' })}
                     className="p-2 text-left"
                   >
-                    <div className="text-xs font-bold">Commun</div>
+                    <div className="text-xs font-bold">{pick('Commun', 'Shared')}</div>
                     <div className="text-[9px] text-muted-foreground">
-                      Vus par TOUS les joueurs.
+                      {pick('Vus par TOUS les joueurs.', 'Seen by EVERY player.')}
                     </div>
                   </OptionButton>
                 </div>

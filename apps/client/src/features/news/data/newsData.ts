@@ -1,9 +1,59 @@
+import { pick } from '@/lib/i18n/text';
+import { NEWS_EN } from './newsEn';
 import type { NewsItem } from './newsTypes';
 
 export type { NewsItem } from './newsTypes';
 export { typeConfig } from './newsTypes';
 
+/** French source, English overlay when that language is active. */
+export function localizedNews(items: NewsItem[]): NewsItem[] {
+  return items.map((item) => {
+    const en = NEWS_EN[item.id];
+    if (!en) return item;
+    return {
+      ...item,
+      title: pick(item.title, en.title),
+      description: pick(item.description, en.description),
+      content: pick(item.content, en.content),
+    };
+  });
+}
+
+export function localizedNewsTeaser<T extends { id: number; title: string; description: string }>(
+  item: T,
+): T {
+  const en = NEWS_EN[item.id];
+  if (!en) return item;
+  return {
+    ...item,
+    title: pick(item.title, en.title),
+    description: pick(item.description, en.description),
+  };
+}
+
 export const allNews: NewsItem[] = [
+  {
+    id: 12,
+    title: 'Mise à jour v26.9 - Succès et anglais',
+    description:
+      'Une collection de succès sur le profil, récompensée en XP, et le site disponible en anglais.',
+    content:
+      '**Succès**\n' +
+      '• Une grille de succès apparaît sur votre profil, sous l’historique.\n' +
+      '• Chaque carte montre l’objectif, l’XP, et une barre de progression.\n' +
+      '• Trois filtres : Tous, À faire, Obtenus. Un succès verrouillé reste visible.\n' +
+      '• Cinq familles : Parties, Quiz du jour, Modes, Collection, Profil.\n' +
+      '**Anglais**\n' +
+      '• Le site est désormais disponible en français ou en anglais.\n' +
+      '• Le bouton est dans l’en-tête et en haut des paramètres : un drapeau, puis FR ou EN.\n' +
+      '• Tant que vous ne choisissez pas, la langue du navigateur est suivie.\n' +
+      '• Un choix enregistré sur le compte l’emporte sur l’appareil.\n\n' +
+      '**Quiz du jour**\n' +
+      '• Les ralentissements sur le mode de jeu ont été corrigés.\n\n' +
+      'Bonne chasse aux succès !',
+    date: '2026-11-19T20:30:00Z',
+    type: 'update',
+  },
   {
     id: 11,
     title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',

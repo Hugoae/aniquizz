@@ -1,5 +1,6 @@
 import { Medal } from 'lucide-react';
 import { getMedalMeta, type Medal as MedalTier, type SoloMedalTargets } from '@aniquizz/shared';
+import { medalDisplayLabel } from '@/features/game/lib/medalLabel';
 import { cn } from '@/lib/utils';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
 
@@ -27,7 +28,7 @@ export function SoloMedalRail({ rail }: { rail: SoloMedalRailModel }) {
       {MEDAL_ORDER.map((tier, index) => {
         const meta = getMedalMeta(tier);
         const target = rail.targets[tier];
-        const name = meta?.label ?? tier;
+        const name = medalDisplayLabel(tier);
         const earned = rail.current >= target;
         const revealed = nextIndex === -1 || index <= nextIndex;
         const at =

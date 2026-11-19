@@ -14,15 +14,23 @@ import { HUB_COPY, multiplayerTeaser } from '@/features/hub/copy/hubCopy';
 const MODE_CARDS: ModeCardData[] = [
   {
     id: 'solo',
-    title: HUB_COPY.modes.solo.title,
-    description: HUB_COPY.modes.solo.description,
+    get title() {
+      return HUB_COPY.modes.solo.title;
+    },
+    get description() {
+      return HUB_COPY.modes.solo.description;
+    },
     icon: User,
     gradient: 'from-info to-accent',
   },
   {
     id: 'multiplayer',
-    title: HUB_COPY.modes.multiplayer.title,
-    description: HUB_COPY.modes.multiplayer.description,
+    get title() {
+      return HUB_COPY.modes.multiplayer.title;
+    },
+    get description() {
+      return HUB_COPY.modes.multiplayer.description;
+    },
     icon: Users,
     gradient: 'from-primary to-primary-glow',
   },
@@ -55,7 +63,15 @@ export function ModeSelectView({
     return MODE_CARDS.map((card) => {
       if (card.id === 'multiplayer') {
         return {
-          ...card,
+          id: card.id,
+          get title() {
+            return card.title;
+          },
+          get description() {
+            return card.description;
+          },
+          icon: card.icon,
+          gradient: card.gradient,
           teaser: multiplayerTeaser(multiplayerCount),
           teaserLive: multiplayerCount > 0,
         };

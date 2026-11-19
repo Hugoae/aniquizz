@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useFriendsOptional } from './FriendsContext';
+import { pick } from '@/lib/i18n/text';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
 import { shouldIntervalPollFriendsHomeStats } from './friendsHomeStats';
 
@@ -103,9 +104,9 @@ export function FriendsBubble() {
         >
           <div className="overflow-hidden">
             <div className="flex items-center justify-between px-3 pt-3 pb-2">
-              <span className="text-sm font-bold">Amis</span>
+              <span className="text-sm font-bold">{pick('Amis', 'Friends')}</span>
               <span className="font-mono text-[11px] text-muted-foreground">
-                {onlineCount}/{friends.length} en ligne
+                {onlineCount}/{friends.length} {pick('en ligne', 'online')}
               </span>
             </div>
 
@@ -113,7 +114,7 @@ export function FriendsBubble() {
               {incoming.length > 0 && (
                 <div className="mb-1">
                   <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-primary/80">
-                    Demandes ({incoming.length})
+                    {pick('Demandes', 'Requests')} ({incoming.length})
                   </div>
                   {incoming.map((r) => (
                     <div
@@ -134,7 +135,7 @@ export function FriendsBubble() {
                         size="icon"
                         className="h-7 w-7 text-success"
                         onClick={() => accept?.(r.id)}
-                        aria-label="Accepter"
+                        aria-label={pick('Accepter', 'Accept')}
                       >
                         <Check className="h-4 w-4" />
                       </Button>
@@ -143,7 +144,7 @@ export function FriendsBubble() {
                         size="icon"
                         className="h-7 w-7 text-muted-foreground hover:text-destructive"
                         onClick={() => reject?.(r.id)}
-                        aria-label="Refuser"
+                        aria-label={pick('Refuser', 'Decline')}
                       >
                         <X className="h-4 w-4" />
                       </Button>
@@ -154,7 +155,7 @@ export function FriendsBubble() {
 
               {ordered.length === 0 ? (
                 <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  Aucun ami pour l'instant.
+                  {pick("Aucun ami pour l'instant.", 'No friends yet.')}
                 </div>
               ) : (
                 ordered.map((f) => (
@@ -165,7 +166,7 @@ export function FriendsBubble() {
                     <button
                       className="relative shrink-0"
                       onClick={() => openProfile?.(f.id)}
-                      aria-label={`Profil de ${f.username}`}
+                      aria-label={pick(`Profil de ${f.username}`, `${f.username}'s profile`)}
                     >
                       <UserAvatar avatar={f.avatar} username={f.username} className="h-8 w-8" />
                       <span
@@ -196,8 +197,8 @@ export function FriendsBubble() {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-primary"
-                        title="Rejoindre"
-                        aria-label={`Rejoindre ${f.username}`}
+                        title={pick('Rejoindre', 'Join')}
+                        aria-label={pick(`Rejoindre ${f.username}`, `Join ${f.username}`)}
                         onClick={() =>
                           navigate('/play', { state: { fromInvite: true, roomId: f.roomId } })
                         }
@@ -214,7 +215,7 @@ export function FriendsBubble() {
               className="w-full border-t border-border/60 px-3 py-2 text-center text-xs font-semibold text-primary hover:bg-secondary"
               onClick={() => navigate('/profile#amis')}
             >
-              Gérer mes amis
+              {pick('Gérer mes amis', 'Manage my friends')}
             </button>
           </div>
         </div>
@@ -223,7 +224,11 @@ export function FriendsBubble() {
         <button
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label={open ? 'Fermer les amis' : 'Amis et joueurs en ligne'}
+          aria-label={
+            open
+              ? pick('Fermer les amis', 'Close friends')
+              : pick('Amis et joueurs en ligne', 'Friends and players online')
+          }
           className={cn(
             'flex w-full items-center gap-3 py-2 pl-3 pr-2.5 text-sm transition-colors',
             open && 'border-t border-border/60',
@@ -248,14 +253,14 @@ export function FriendsBubble() {
             <span className="font-mono font-semibold text-foreground">
               {onlineCount}/{friends.length}
             </span>
-            <span className="text-muted-foreground">Amis</span>
+            <span className="text-muted-foreground">{pick('Amis', 'Friends')}</span>
           </span>
 
           <span className="h-4 w-px bg-border" />
 
           <span className="flex items-center gap-1.5">
             <span className="font-mono font-semibold text-foreground">{totalOnline ?? '—'}</span>
-            <span className="text-muted-foreground">En ligne</span>
+            <span className="text-muted-foreground">{pick('En ligne', 'Online')}</span>
           </span>
 
           {open ? (

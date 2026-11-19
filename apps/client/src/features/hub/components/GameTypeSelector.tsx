@@ -1,6 +1,7 @@
 import { Trophy, Timer, AudioLines } from 'lucide-react';
 import type { GameType } from '@aniquizz/shared';
-import { GAME_TYPE_LABELS } from '@aniquizz/shared';
+import { gameTypeLabel } from '@/features/hub/copy/hubCopy';
+import { pick, tx } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
 import { modeChrome } from '@/features/hub/components/modeChrome';
@@ -10,18 +11,32 @@ const GAME_TYPES: { id: GameType; icon: typeof Trophy; description: string; solo
     {
       id: 'standard',
       icon: Trophy,
-      description: 'Devinez le plus de sons et remportez des points',
+      get description() {
+        return pick(
+          'Devinez le plus de sons et remportez des points',
+          'Guess the most songs and score points',
+        );
+      },
     },
     {
       id: 'timeAttack',
       icon: Timer,
-      description: 'Trouvez le plus de titres avant la fin du temps',
+      get description() {
+        return pick(
+          'Trouvez le plus de titres avant la fin du temps',
+          'Find the most songs before time runs out',
+        );
+      },
     },
     {
       id: 'evolving',
       icon: AudioLines,
-      description:
-        "L'extrait s'allonge tant que tu ne trouves pas : 0,25 s, 0,5 s, 1 s, puis jusqu'à 15 s",
+      get description() {
+        return pick(
+          "L'extrait s'allonge tant que tu ne trouves pas : 0,25 s, 0,5 s, 1 s, puis jusqu'à 15 s",
+          'The clip grows until you find it: 0.25 s, 0.5 s, 1 s, then up to 15 s',
+        );
+      },
       soloOnly: true,
     },
   ];
@@ -83,12 +98,10 @@ export function GameTypeSelector({
                   )}
                   aria-hidden="true"
                 />
-                {GAME_TYPE_LABELS[id]}
+                {gameTypeLabel(id)}
               </span>
               <span className="text-xs leading-snug text-muted-foreground">
-                {versus && id === 'timeAttack'
-                  ? 'Course en parallèle : chacun sa voie, le plus de titres gagne'
-                  : description}
+                {versus && id === 'timeAttack' ? tx('hub', 'config.raceHint') : description}
               </span>
             </button>
           );

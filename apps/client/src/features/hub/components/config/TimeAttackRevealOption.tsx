@@ -1,6 +1,7 @@
 import { Zap } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { TIME_ATTACK_REVEAL_SECONDS } from '@aniquizz/shared';
+import { pick, tx } from '@/lib/i18n/text';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 
 interface TimeAttackRevealOptionProps {
@@ -15,8 +16,8 @@ export function TimeAttackRevealOption({ config, update }: TimeAttackRevealOptio
     <div className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3">
       <SectionHeader
         icon={Zap}
-        title="Révélation"
-        tooltip={`Après un titre trouvé ou raté, la réponse s'affiche ${TIME_ATTACK_REVEAL_SECONDS} s (le chrono est gelé). Sans révélation, le titre suivant démarre tout de suite ; la réponse reste visible dans l'historique.`}
+        title={tx('hub', 'config.revealTitle')}
+        tooltip={tx('hub', 'config.timeRevealHint', { seconds: TIME_ATTACK_REVEAL_SECONDS })}
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <OptionButton
@@ -25,10 +26,16 @@ export function TimeAttackRevealOption({ config, update }: TimeAttackRevealOptio
           className="flex flex-col items-start gap-1 p-3 text-left"
         >
           <span className="text-[11px] font-bold uppercase">
-            Avec révélation ({TIME_ATTACK_REVEAL_SECONDS} s)
+            {pick(
+              `Avec révélation (${TIME_ATTACK_REVEAL_SECONDS} s)`,
+              `With reveal (${TIME_ATTACK_REVEAL_SECONDS} s)`,
+            )}
           </span>
           <span className="text-[10px] leading-snug text-muted-foreground">
-            Le temps de voir la réponse, sans perdre de chrono.
+            {pick(
+              'Le temps de voir la réponse, sans perdre de chrono.',
+              'Time to see the answer, without losing clock time.',
+            )}
           </span>
         </OptionButton>
         <OptionButton
@@ -36,9 +43,14 @@ export function TimeAttackRevealOption({ config, update }: TimeAttackRevealOptio
           onClick={() => update({ timeAttackReveal: false })}
           className="flex flex-col items-start gap-1 p-3 text-left"
         >
-          <span className="text-[11px] font-bold uppercase">Sans révélation</span>
+          <span className="text-[11px] font-bold uppercase">
+            {pick('Sans révélation', 'No reveal')}
+          </span>
           <span className="text-[10px] leading-snug text-muted-foreground">
-            Enchaînement immédiat, partie plus nerveuse.
+            {pick(
+              'Enchaînement immédiat, partie plus nerveuse.',
+              'The next song starts at once. A tighter match.',
+            )}
           </span>
         </OptionButton>
       </div>

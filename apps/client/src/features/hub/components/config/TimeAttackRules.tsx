@@ -8,6 +8,7 @@ import {
 } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { pick } from '@/lib/i18n/text';
 import { formatTimeAttackBudget } from './timeAttackBudgetLabel';
 import { TimeAttackPunitiveSkipOption } from './TimeAttackPunitiveSkipOption';
 import { TimeAttackStreakBonusOption } from './TimeAttackStreakBonusOption';
@@ -25,11 +26,11 @@ export function TimeAttackRules({ config, update }: TimeAttackRulesProps) {
     <div className="flex h-full flex-col gap-3">
       <div className="space-y-3">
         <div className="flex items-baseline justify-between">
-          <Label>Durée</Label>
+          <Label>{pick('Durée', 'Time')}</Label>
           <span className="font-mono font-bold text-primary">{formatTimeAttackBudget(budget)}</span>
         </div>
         <Slider
-          aria-label="Durée du chrono"
+          aria-label={pick('Durée du chrono', 'Clock length')}
           className="w-full"
           value={[budget]}
           min={TIME_ATTACK_MIN_BUDGET_SECONDS}

@@ -1,11 +1,9 @@
 import { useMemo } from 'react';
 import { Check, Music2, Timer, User, X, Zap } from 'lucide-react';
-import {
-  ANSWER_TYPE_LABELS,
-  formatSpeedTimeSeconds,
-  type RoundHistoryEntry,
-} from '@aniquizz/shared';
+import { formatSpeedTimeSeconds, type RoundHistoryEntry } from '@aniquizz/shared';
+import { answerTypeDisplayLabel } from '@/features/game/lib/answerTypeLabel';
 import { formatSpeedRankLabel } from '@/features/game/copy/speedRankCopy';
+import { pick, tx } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 
 interface RoundHistoryListProps {
@@ -66,7 +64,10 @@ export function RoundHistoryList({
   if (!history || history.length === 0) {
     return (
       <p className="py-8 text-center text-sm text-muted-foreground">
-        Aucun détail de round disponible pour cette partie.
+        {pick(
+          'Aucun détail de round disponible pour cette partie.',
+          'No round breakdown for this match.',
+        )}
       </p>
     );
   }
@@ -77,12 +78,15 @@ export function RoundHistoryList({
         <div className="flex flex-wrap gap-3 rounded-lg border border-accent/20 bg-accent/5 px-3 py-2 text-xs font-semibold text-accent">
           <span className="inline-flex items-center gap-1">
             <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-            {speedSummary.podiums} podium{speedSummary.podiums > 1 ? 's' : ''} vitesse
+            {pick(
+              `${speedSummary.podiums} podium${speedSummary.podiums > 1 ? 's' : ''} vitesse`,
+              `${speedSummary.podiums} speed podium${speedSummary.podiums > 1 ? 's' : ''}`,
+            )}
           </span>
           {speedSummary.fastestMs != null && (
             <span className="inline-flex items-center gap-1 font-mono tabular-nums">
               <Timer className="h-3.5 w-3.5" aria-hidden="true" />
-              Meilleur : {formatSpeedTimeSeconds(speedSummary.fastestMs)} s
+              {pick('Meilleur', 'Best')}: {formatSpeedTimeSeconds(speedSummary.fastestMs)} s
             </span>
           )}
         </div>
@@ -117,7 +121,7 @@ export function RoundHistoryList({
               )}
               {round.answerType && (
                 <span className="rounded border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
-                  {ANSWER_TYPE_LABELS[round.answerType]}
+                  {answerTypeDisplayLabel(round.answerType)}
                 </span>
               )}
             </div>
@@ -142,7 +146,7 @@ export function RoundHistoryList({
                 </span>
                 {round.speedRank != null && round.speedRank > 0 && (
                   <span className="rounded-md border border-accent/30 bg-accent/10 px-1.5 py-0.5 text-accent">
-                    {formatSpeedRankLabel(round.speedRank)} correct
+                    {formatSpeedRankLabel(round.speedRank)} {tx('game', 'correctTag')}
                   </span>
                 )}
               </div>
@@ -151,11 +155,11 @@ export function RoundHistoryList({
             {!round.isCorrect &&
               (round.myAnswer && round.myAnswer.trim() ? (
                 <div className="mt-1 truncate text-[11px] text-destructive/80">
-                  Votre réponse : <span className="line-through">{round.myAnswer}</span>
+                  {tx('game', 'yourAnswer')} <span className="line-through">{round.myAnswer}</span>
                 </div>
               ) : (
                 <div className="mt-1 truncate text-[11px] italic text-muted-foreground/60">
-                  Aucune réponse
+                  {tx('game', 'noAnswer')}
                 </div>
               ))}
           </div>

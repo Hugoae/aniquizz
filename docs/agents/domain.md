@@ -7,6 +7,7 @@ How the engineering skills should consume this repo's domain documentation when 
 ## Before exploring, read these
 
 - **`CONTEXT-MAP.md`** at the repo root — it points at one `CONTEXT.md` per context. Read each one relevant to the topic.
+- Player UI is French and English. French is the source. How to add a string: `AGENTS.md` § Languages. Admin and server errors stay French.
 - Per-context **`CONTEXT.md`** files, e.g. `apps/server/CONTEXT.md`, `apps/client/CONTEXT.md`, `packages/shared/CONTEXT.md`, `packages/database/CONTEXT.md`.
 - **`docs/adr/`** — system-wide architectural decisions. Also check context-scoped decisions under `apps/<context>/docs/adr/` or `packages/<context>/docs/adr/` for the area you're about to work in.
 

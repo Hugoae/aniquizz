@@ -27,6 +27,7 @@ import {
 } from './dailySnapshot';
 import { exclusionsByDate, type RecentExclusionSets } from './dailyExclusions';
 import { validateDailySnapshots, type DailyValidationWarning } from './dailyValidation';
+import { ensureSongOfTheDay } from './songOfTheDay';
 
 const HORIZON_MS = 6 * 60 * 60 * 1000;
 
@@ -138,12 +139,15 @@ export async function generateDailyChallenge(
   }
 
   if (options?.force) invalidateDailyPlayablePool();
+  // Pick the discovery clip first so the five quiz songs cannot include it.
+  const featured = await ensureSongOfTheDay(isoDate);
   const pool = await loadPlayablePool();
   const recent = await loadRecentExclusions(isoDate);
   const rng = options?.rng ?? mulberry32(Number(isoDate.replace(/-/g, '')) || 1);
   const candidates = pool
     .filter((row) => row.songType === 'OP' || row.songType === 'ED')
-    .map(toDailySongCandidate);
+    .map(toDailySongCandidate)
+    .filter((row) => row.songId !== featured?.songId);
   const pickedNumber = existing?.challengeNumber ?? (await nextChallengeNumber(prisma));
   const picked = selectDailySongs({
     pool: candidates,

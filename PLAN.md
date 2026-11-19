@@ -16,9 +16,11 @@ Versioning: **year-based** (`26.x` = 2026). Patch = small fixes; minor = planned
 | **26.7**   | 🔄 In progress | **Vitesse** ✅ · **Chrono** ✅ · **Admin rework** ✅ · answer cues + licence ✅ · news id 9 (2026-10-11) + footer `v26.7` ✅. Pokédex found bar dropped.   |
 | **26.7.1** | 🔄 In progress | **Prime de série** on Contre-la-montre (solo + versus). Admin play tops persist per title. Podium ties overlap. News id 10 (2026-10-18), footer `v26.7.1`. |
 | **26.8**   | 🔄 In progress | Config walkthrough on every setup, plus solo Évolutif: the excerpt grows 0.25 s → 15 s.                                                                    |
-| **26.x+**  | 🔮 Backlog     | Competitive, i18n, user playlists, profile charts, etc.                                                                                                    |
+| **26.9**   | 🔄 In progress | Succès and English closed. News id 12, footer `v26.9`. Song of the day moved to 26.10. Not tagged.                                                         |
+| **26.10**  | 🔮 Planned     | Song of the day. The work is in the tree and stays hidden until this version.                                                                              |
+| **26.x+**  | 🔮 Backlog     | Competitive, user playlists, profile charts, etc.                                                                                                          |
 
-**Conventions:** code/docs/commits in English · UI copy French (i18n-ready) · player identity = JWT `userId` · review at each update boundary.
+**Conventions:** code/docs/commits in English · player UI French and English (French is the source; see `AGENTS.md` § Languages) · admin and server errors stay French · player identity = JWT `userId` · review at each update boundary.
 
 **References:** `ARCHITECTURE.md` · `SCHEMA-TARGET.md` (historical schema notes) · package `CONTEXT.md` files.
 
@@ -42,7 +44,7 @@ Goal: polish the core Standard experience before bigger features (librairie, cha
 ### 3. Règles du mode (lobby)
 
 - **« Règles »** tab/button in the lobby: objective, scoring per answer type, solo medals vs multi podium, pause/skip voting, active modifiers.
-- Content adapts to the room's `RoomSettings`; French copy isolated for future i18n.
+- Content adapts to the room's `RoomSettings`. Player copy is French and English (see § Languages below).
 
 ### 4. Video display modes
 
@@ -528,6 +530,70 @@ Optional Contre-la-montre modifier, solo and versus. Off by default. Medals stay
 
 ---
 
+## Update 26.9 — Succès, then English
+
+### 1. Succès (in tree, not tagged)
+
+XP-only profile collection. No cosmetics. The catalogue and the thresholds live in `packages/shared`. French titles and descriptions live in the client copy.
+
+- Full-width grid under the history column. Groups: Parties, Quiz du jour, Modes, Collection, Profil. Filters: Tous, À faire, Obtenus. Locked cards stay visible. The bar caps at 100 %. The label shows the real current, so two linked lists read 2/1.
+- A finished match, a finished daily quiz, an accepted friend, a like, an imported photo, or a linked list grants the success immediately and toasts it. Opening the profile still catches anything missed, without a second toast.
+- AniList and MyAnimeList each count. Standard matches stored as `SPRINT` (speed podium) count as Standard. Distinct songs found sit next to songs heard. The three modes, a multiplayer win, and an Évolutif answer on the first excerpt each have a success.
+- Rewards were cut about 10 to 15 % onto round numbers. 500 matches pay 35 000 XP. The full catalogue pays 45 000 XP. Raising a reward later pays the difference once. Lowering one does not take XP back by itself.
+- Staff accounts that had already been paid the older tables were settled by hand. Kirikou: 68 972 XP / level 37 → 61 752 XP / level 35 (7 220 removed). Play XP before succès was 15 002 (13 514 from 36 finished matches + 1 488 from the daily quiz), then 46 750 from the unlocked successes at the current table. admin_dev: 1 752 XP / level 6 → 1 582 XP / level 6 (170 removed).
+- The daily last-Suivant latency fix (~0.5 s left, the XP write) ships in the same 26.9 release.
+
+### 26.9 succès checklist
+
+- [x] Catalogue, groups, grant paths, and the profile grid.
+- [x] Shared threshold tests. Grid opened on a logged-in profile.
+- [x] Kirikou and admin_dev settled onto the current rewards.
+- [x] Commit, with the daily last-Suivant fix in the same release.
+- [ ] Not tagged.
+
+### 2. English (player-checked)
+
+The player site is French and English. Until the player chooses, the site follows the browser. An unsupported browser language falls back to French. An explicit choice on the device or on the account wins over the browser, and the account wins over the device. The detected language is not written back onto the profile or the device, so a later change of browser language still applies until the player picks one.
+
+How to add a string, and what must stay French, is in [`AGENTS.md`](./AGENTS.md) § Languages. Short version: French is the source, English is added in the same change (`tx()` or `pick()` read at render time), missing English falls back to French, and a getter must not be snapshotted.
+
+- **Library.** `i18next` + `react-i18next`. No compiler. Plurals and interpolation stay in the catalogue.
+- **Locales.** `fr` is the source. `en` is the second language. Missing English falls back to French, never to a key name.
+- **Switch.** A control in the header and at the top of the general settings. A guest keeps the choice on the device (`aniquizz.locale`). A logged-in player also stores `uiLocale` on the profile, next to the other comfort prefs. Null means "not chosen".
+- **URLs.** Same routes. `<html lang>` follows the resolved language. No `/en` prefix on this pass.
+- **Scope.** The player site: home, auth, hub, lobby (solo and multi), match, both end screens, daily, library, profile (including the public friends list), leaderboard, settings, friends, legal, SEO, news articles, and the roadmap. The coming-soon heading follows the language. Admin stays French. Anime titles, song names, usernames, and room names stay as stored.
+- **Server sentences.** Socket and HTTP errors stay French. An English screen can still show a French error toast. A later pass replaces them with stable codes.
+- **Shared constants.** Medal names and answer-type names stay French in `packages/shared`. The client translates them where they are shown.
+- **Check.** French vouvoiement stays. English uses "you". The player rechecked the main screens in English.
+
+### 26.9 English checklist
+
+- [x] Scope agreed (library, browser language until a choice, admin left in French, server errors left in French).
+- [x] Header and settings switch. `uiLocale` on the profile. Settings and home catalogues in both languages.
+- [x] Player pages, news, roadmap, lobby, match, end screens, and the last hardcoded labels (difficulty, playlist merge, replay range, public friends, coming soon).
+- [x] Commit.
+- [ ] Not tagged.
+
+---
+
+## Update 26.10 — Song of the day
+
+Built during 26.9 and pulled from that release. The code stays. The homepage card and the admin editor are not mounted, so nothing shows until this version.
+
+A discovery card on the right side of the home page, in the empty margin, from the `lg` breakpoint. It does not sit in the news flow. One clip for everyone until midnight, Paris time. The reveal strip shows the anime, title, artist, type, season, and difficulty. Playback starts only from the listen button, and the clip source stays empty until that click. Like and volume sit on the player. The same song is excluded from that day's quiz, including an admin swap onto a quiz round. Staff can set or redraw today and the horizon days; a past day stays locked, and a song already in that day's quiz or on another horizon day is refused. A signed-in listen adds the song to the collection once; opening the page does not. The card does not say so. Guests can listen.
+
+### 26.10 song of the day checklist
+
+- [x] Shared pick prefers a lesser-known song and never returns an excluded id.
+- [x] Daily generation removes that song before drawing the five. Admin replace is refused.
+- [x] Side card, French and English. Heard mark only after playback starts. No autoplay.
+- [x] Admin can set or redraw the clip for today and the horizon. Past days stay locked.
+- [ ] Mount the homepage card and the admin editor. Not part of 26.9.
+- [x] Commit, hidden. The homepage card and the admin editor stay unmounted.
+- [ ] Not tagged. The public release waits until the card is mounted.
+
+---
+
 ## Backlog (26.x+, timing TBD)
 
 Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated here.
@@ -538,7 +604,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **Leaderboard global** | **Shipped in 26.4** — XP / victoires / parties / Pokédex / précision. Period and friends filters remain backlog. |
 | **Le saviez-vous ?**   | Rotating trivia widget; curated `triviaData` or admin entries; carousel + reduced-motion.                        |
-| **Achievements**       | Replace profile placeholder; tie to stats/matches/medals.                                                        |
+| **Achievements**       | **In tree for 26.9.** XP-only profile grid. See Update 26.9.                                                     |
 
 ### Game modes (new engines or major variants)
 
@@ -554,7 +620,7 @@ Order within backlog **not fixed**. Shipped 26.6 items are **not** duplicated he
 
 | Item                                 | Notes                                                                                                                                                                                                            |
 | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Traduction EN**                    | Wire i18n; UI strings already isolated (French default).                                                                                                                                                         |
+| **Traduction EN**                    | **Shipped in 26.9.** Player UI is French and English. Rules for new strings: `AGENTS.md` § Languages. Admin and server errors stay French.                                                                       |
 | **Light mode**                       | Removed Phase 8 (dark-only); re-add requires token audit + `UserAvatar`/game surfaces.                                                                                                                           |
 | **Franchise catalogue cleanup**      | Data pass: DBZ, Naruto, AOT spin-offs → canonical franchises.                                                                                                                                                    |
 | **Playlists — player packs**         | Staff packs are **26.5**. Heard / found / liked game sources were dropped from **26.7**. User playlists, sharing, fork, per-pack ladder remain here.                                                             |

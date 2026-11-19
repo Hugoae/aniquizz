@@ -1,8 +1,16 @@
 import { Link } from 'react-router-dom';
 import { LegalPageLayout } from '@/features/legal/components/LegalPageLayout';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { PAGE_TITLES } from '@/lib/site';
+import { LegalNoticeEn } from '@/pages/legal/LegalNoticeEn';
 
 export default function LegalNoticePage() {
+  const { locale } = useLocale();
+  if (locale === 'en') return <LegalNoticeEn />;
+  return <LegalNoticeFr />;
+}
+
+function LegalNoticeFr() {
   return (
     <LegalPageLayout
       title={PAGE_TITLES.legal}

@@ -31,6 +31,7 @@ import { MultiplayerLobbyRoster } from '@/features/hub/components/lobby/Multipla
 import { MultiplayerLobbyFooter } from '@/features/hub/components/lobby/MultiplayerLobbyFooter';
 import { MultiplayerLobbyDialogs } from '@/features/hub/components/lobby/MultiplayerLobbyDialogs';
 import { HUB_COPY } from '@/features/hub/copy/hubCopy';
+import { pick } from '@/lib/i18n/text';
 
 export type { LobbyPlayer };
 
@@ -273,35 +274,67 @@ export function MultiplayerLobby({
           <Music2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <div className="min-w-0 space-y-1">
             {watchedPoolBanner.variant === 'loading' ? (
-              <span>Analyse du pool AniList…</span>
+              <span>{pick('Analyse du pool AniList…', 'Checking the AniList pool…')}</span>
             ) : watchedPoolBanner.variant === 'empty' ? (
               <span>
                 {bannerWatchedStats?.listError === 'anilist_blocked'
-                  ? WATCHED_ANILIST_BLOCKED_MESSAGE
-                  : `Aucun son jouable (${watchedPoolBanner.modeLabel}) pour ces filtres.`}
+                  ? pick(
+                      WATCHED_ANILIST_BLOCKED_MESSAGE,
+                      'The AniList API is down. Try again later.',
+                    )
+                  : pick(
+                      `Aucun son jouable (${watchedPoolBanner.modeLabel}) pour ces filtres.`,
+                      `No playable song (${watchedPoolBanner.modeLabel}) for these filters.`,
+                    )}
               </span>
             ) : watchedPoolBanner.variant === 'fallback' ? (
               <span>
-                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
-                <b>Complétion aléatoire activée</b> pour {watchedPoolBanner.soundCount} manches
+                <b>{watchedPoolBanner.count}</b>{' '}
+                {pick(
+                  `son${watchedPoolBanner.count > 1 ? 's' : ''} jouable${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                  `playable song${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                )}{' '}
+                ({watchedPoolBanner.modeLabel}) —{' '}
+                <b>
+                  {pick(
+                    `Complétion aléatoire activée pour ${watchedPoolBanner.soundCount} manches`,
+                    `Random fill is on for ${watchedPoolBanner.soundCount} rounds`,
+                  )}
+                </b>
               </span>
             ) : watchedPoolBanner.variant === 'insufficient' ? (
               <span>
-                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
-                <b>Insuffisant</b> pour {watchedPoolBanner.soundCount} manches
+                <b>{watchedPoolBanner.count}</b>{' '}
+                {pick(
+                  `son${watchedPoolBanner.count > 1 ? 's' : ''} jouable${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                  `playable song${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                )}{' '}
+                ({watchedPoolBanner.modeLabel}) —{' '}
+                <b>
+                  {pick(
+                    `Insuffisant pour ${watchedPoolBanner.soundCount} manches`,
+                    `Not enough for ${watchedPoolBanner.soundCount} rounds`,
+                  )}
+                </b>
               </span>
             ) : (
               <span>
-                <b>{watchedPoolBanner.count}</b> son{watchedPoolBanner.count > 1 ? 's' : ''} jouable
-                {watchedPoolBanner.count > 1 ? 's' : ''} ({watchedPoolBanner.modeLabel}) —{' '}
-                <b>Suffisant</b>
+                <b>{watchedPoolBanner.count}</b>{' '}
+                {pick(
+                  `son${watchedPoolBanner.count > 1 ? 's' : ''} jouable${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                  `playable song${watchedPoolBanner.count > 1 ? 's' : ''}`,
+                )}{' '}
+                ({watchedPoolBanner.modeLabel}) — <b>{pick('Suffisant', 'Enough')}</b>
               </span>
             )}
             {bannerWatchedStats?.listError === 'anilist_blocked' &&
               (bannerWatchedStats.playableSongs ?? 0) > 0 && (
-                <span className="block text-warning">{WATCHED_ANILIST_STALE_MESSAGE}</span>
+                <span className="block text-warning">
+                  {pick(
+                    WATCHED_ANILIST_STALE_MESSAGE,
+                    'AniList is unstable: the list shown may be a few minutes old.',
+                  )}
+                </span>
               )}
           </div>
         </div>

@@ -3,6 +3,7 @@ import { Users } from 'lucide-react';
 import type { FriendSummary } from '@aniquizz/shared';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
+import { pick } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from './presence';
 
@@ -30,7 +31,9 @@ export function PublicFriendsList({
     <div>
       <div className="flex items-center gap-2 mb-4">
         <Users className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-bold">Amis ({friends.length})</h2>
+        <h2 className="text-xl font-bold">
+          {pick('Amis', 'Friends')} ({friends.length})
+        </h2>
       </div>
 
       <div className="glass-card bg-card/40 rounded-xl overflow-hidden">
@@ -38,7 +41,7 @@ export function PublicFriendsList({
           {sorted.length === 0 ? (
             <div className="h-[200px] flex flex-col items-center justify-center gap-2 text-center text-muted-foreground/60 text-sm px-4">
               <Users className="h-8 w-8 opacity-40" />
-              Aucun ami pour l'instant.
+              {pick("Aucun ami pour l'instant.", 'No friends yet.')}
             </div>
           ) : (
             sorted.map((f) => (
@@ -68,7 +71,8 @@ export function PublicFriendsList({
                       : f.roomName
                         ? `${presenceLabel(f.status)} — ${f.roomName}`
                         : presenceLabel(f.status)}
-                    {' — '}Niv. {f.level}
+                    {' — '}
+                    {pick('Niv.', 'Lv.')} {f.level}
                   </span>
                 </span>
               </button>

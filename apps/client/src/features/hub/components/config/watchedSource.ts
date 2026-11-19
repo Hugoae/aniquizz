@@ -1,4 +1,6 @@
 import type { User } from '@supabase/supabase-js';
+import i18n from '@/lib/i18n';
+import { pick } from '@/lib/i18n/text';
 import type { RoomConfig } from '@aniquizz/shared';
 import {
   ANILIST_API_DOWN_MESSAGE,
@@ -24,6 +26,13 @@ export function isWatchedSourceBlocked(
 export const WATCHED_SOURCE_BLOCK_MESSAGE =
   'Impossible : liez AniList ou MyAnimeList, ou choisissez une autre source.';
 
+export function watchedSourceBlockMessage(): string {
+  return pick(
+    WATCHED_SOURCE_BLOCK_MESSAGE,
+    'Cannot start: link AniList or MyAnimeList, or pick another source.',
+  );
+}
+
 export const WATCHED_LIST_UNAVAILABLE =
   'Votre liste est vide ou inaccessible (privée sur AniList ?). Passez-la en public, ou changez de source.';
 
@@ -37,7 +46,7 @@ export const WATCHED_QCM_TOO_SMALL_MESSAGE = qcmPoolTooSmallReason('franchise');
 export const WATCHED_SERVER_OFFLINE =
   "Le serveur de jeu n'est pas joignable (port 3001). Lancez-le avec pnpm run dev, puis réessayez.";
 
-function joinWatchedListStatusLabels(conjunction: 'et' | 'ou'): string {
+function joinWatchedListStatusLabels(conjunction: string): string {
   const labels = [...WATCHED_LIST_STATUS_LABELS];
   const last = labels.pop();
   return last ? `${labels.join(', ')} ${conjunction} ${last}` : '';
@@ -80,25 +89,41 @@ export function checkWatchedPoolLaunch(
 
   if (stats.playableSongs === 0) {
     if (stats.listError === 'anilist_blocked') {
-      return { blocked: true, reason: WATCHED_ANILIST_BLOCKED_MESSAGE };
+      return {
+        blocked: true,
+        reason: pick(WATCHED_ANILIST_BLOCKED_MESSAGE, 'The AniList API is down. Try again later.'),
+      };
     }
     if (stats.animeCount === 0) {
-      return { blocked: true, reason: WATCHED_LIST_UNAVAILABLE };
+      return {
+        blocked: true,
+        reason: pick(
+          WATCHED_LIST_UNAVAILABLE,
+          'Your list is empty or unreachable (private on AniList?). Make it public, or pick another source.',
+        ),
+      };
     }
-    const modeHint = stats.watchedMode === 'intersection' ? ' en mode Commun' : '';
+    const shared = stats.watchedMode === 'intersection';
     return {
       blocked: true,
-      reason: `Aucun son jouable${modeHint} pour ces filtres. Changez la source ou les filtres.`,
+      reason: pick(
+        `Aucun son jouable${shared ? ' en mode Commun' : ''} pour ces filtres. Changez la source ou les filtres.`,
+        `No playable song${shared ? ' in Shared mode' : ''} for these filters. Change the source or the filters.`,
+      ),
     };
   }
 
   if (stats.insufficient && !watchedAllowFallback) {
-    const modeHint = stats.watchedMode === 'intersection' ? ' (Commun)' : '';
+    const shared = stats.watchedMode === 'intersection';
+    const songs = stats.playableSongs;
+    const asked = stats.soundCount;
     return {
       blocked: true,
-      reason:
-        `Seulement ${stats.playableSongs} son${stats.playableSongs > 1 ? 's' : ''} jouable${stats.playableSongs > 1 ? 's' : ''}${modeHint} pour ${stats.soundCount} demandé${stats.soundCount > 1 ? 's' : ''}. ` +
-        "Activez « Compléter avec l'aléatoire » ou réduisez le nombre de sons.",
+      reason: pick(
+        `Seulement ${songs} son${songs > 1 ? 's' : ''} jouable${songs > 1 ? 's' : ''}${shared ? ' (Commun)' : ''} pour ${asked} demandé${asked > 1 ? 's' : ''}. ` +
+          "Activez « Compléter avec l'aléatoire » ou réduisez le nombre de sons.",
+        `Only ${songs} playable song${songs > 1 ? 's' : ''}${shared ? ' (Shared)' : ''} for ${asked} requested. Turn on “Fill with random” or lower the song count.`,
+      ),
     };
   }
 
@@ -106,7 +131,16 @@ export function checkWatchedPoolLaunch(
     typeof stats.distinctNames === 'number' &&
     !hasEnoughQcmNames(stats.distinctNames, responseType ?? 'mix')
   ) {
-    return { blocked: true, reason: qcmPoolTooSmallReason(precision) };
+    const fr = qcmPoolTooSmallReason(precision);
+    return {
+      blocked: true,
+      reason: pick(
+        fr,
+        fr.includes('artistes')
+          ? 'Not enough different artists in this pool for multiple choice (at least 4). Switch to Typing or widen the filters.'
+          : 'Not enough different anime in this pool for multiple choice (at least 4). Switch to Typing or widen the filters.',
+      ),
+    };
   }
 
   return { blocked: false, reason: null };
@@ -127,7 +161,15 @@ export function watchedPoolModeLabel(mode?: 'union' | 'intersection'): string {
 
 /** Title-case label for rules and settings copy. */
 export function watchedModeDisplayLabel(mode?: 'union' | 'intersection'): string {
-  return mode === 'intersection' ? 'Commun' : 'Union';
+  const english = i18n.language.startsWith('en');
+  if (mode === 'intersection') return english ? 'Shared' : 'Commun';
+  return english ? 'Union' : 'Union';
+}
+
+export function watchedListStatuses(kind: 'et' | 'ou'): string {
+  const english = i18n.language.startsWith('en');
+  const conjunction = kind === 'et' ? (english ? 'and' : 'et') : english ? 'or' : 'ou';
+  return joinWatchedListStatusLabels(conjunction);
 }
 
 export type WatchedPoolBannerVariant =

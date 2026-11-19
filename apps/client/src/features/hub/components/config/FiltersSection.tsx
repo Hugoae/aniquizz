@@ -2,6 +2,7 @@ import { SlidersHorizontal } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { pick, tx } from '@/lib/i18n/text';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 import { SOUND_TYPES, DIFFICULTY_OPTIONS } from './formOptions';
 
@@ -16,8 +17,8 @@ export function FiltersSection({ config, toggleSoundType, toggleDifficulty }: Fi
     <section className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3 shadow-inner">
       <SectionHeader
         icon={SlidersHorizontal}
-        title="Sélection musicale"
-        tooltip="Types de sons et difficulté — appliqués à la source Aléatoire et au tirage du pool."
+        title={tx('hub', 'config.filtersTitle')}
+        tooltip={tx('hub', 'config.filtersHint')}
       />
 
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-8">
@@ -40,7 +41,9 @@ export function FiltersSection({ config, toggleSoundType, toggleDifficulty }: Fi
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-bold uppercase text-muted-foreground">Difficulté</Label>
+          <Label className="text-xs font-bold uppercase text-muted-foreground">
+            {pick('Difficulté', 'Difficulty')}
+          </Label>
           <div className="flex gap-2">
             {DIFFICULTY_OPTIONS.map(({ id, label, activeClassName }) => (
               <OptionButton

@@ -3,8 +3,9 @@ import {
   DAILY_PRECISION,
   DAILY_RESPONSE_TYPE,
   DAILY_ROUND_COUNT,
-  SONG_START_MODE_LABELS,
 } from '@aniquizz/shared';
+import { songStartLabel } from '@/features/hub/copy/hubCopy';
+import { tx } from '@/lib/i18n/text';
 import { Music2 } from 'lucide-react';
 import {
   SettingChip,
@@ -38,8 +39,8 @@ export function DailyRuleChips({
     {
       key: 'songStart',
       icon: Music2,
-      label: 'Départ',
-      value: SONG_START_MODE_LABELS.random,
+      label: tx('hub', 'songStartLabel'),
+      value: songStartLabel('random'),
       className: SETTING_CHIP_NEUTRAL,
     },
   ];

@@ -1,6 +1,7 @@
 import { Music2 } from 'lucide-react';
 import type { LibraryMetaResponse } from '@aniquizz/shared';
 import { LIBRARY_COPY } from '@/features/library/copy/libraryCopy';
+import { formatAppNumber } from '@/lib/i18n/format';
 
 interface LibraryHeroProps {
   meta: LibraryMetaResponse | null;
@@ -72,9 +73,7 @@ export function LibraryHero({ meta }: LibraryHeroProps) {
 function StatPill({ value, label, accent }: { value: number; label: string; accent: string }) {
   return (
     <div className="glass-card rounded-xl px-3 py-2.5 text-center min-w-[5.5rem]">
-      <div className={`text-xl font-black tabular-nums ${accent}`}>
-        {value.toLocaleString('fr-FR')}
-      </div>
+      <div className={`text-xl font-black tabular-nums ${accent}`}>{formatAppNumber(value)}</div>
       <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         {label}
       </div>

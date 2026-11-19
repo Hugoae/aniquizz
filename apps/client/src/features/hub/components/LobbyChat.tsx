@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { socket } from '@/lib/socket';
+import { pick, tx } from '@/lib/i18n/text';
 import {
   createLocalChatMessage,
   dropLastLocalChatMessage,
@@ -63,7 +64,7 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
       .find((msg) => String(msg.senderId) === String(currentUserId));
     const local = createLocalChatMessage({
       senderId: String(currentUserId),
-      username: lastOwn?.username || 'Moi',
+      username: lastOwn?.username || tx('game', 'config.me'),
       avatar: lastOwn?.avatar,
       content: trimmed,
     });
@@ -78,13 +79,18 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
     <div className="glass-card flex h-40 min-h-0 w-full shrink-0 flex-col overflow-hidden sm:h-48 lg:h-auto lg:min-h-0 lg:w-80 lg:flex-none">
       <div className="flex shrink-0 items-center gap-2 border-b border-border/50 px-4 py-3">
         <MessageSquare className="h-4 w-4 text-primary" aria-hidden="true" />
-        <span className="text-sm font-bold uppercase tracking-wide">Chat du salon</span>
+        <span className="text-sm font-bold uppercase tracking-wide">
+          {pick('Chat du salon', 'Room chat')}
+        </span>
       </div>
 
       <div className="custom-scrollbar flex-1 space-y-3 overflow-y-auto p-3">
         {messages.length === 0 && (
           <div className="mt-4 text-center text-xs italic text-muted-foreground opacity-50">
-            Aucun message. Dites bonjour en attendant !
+            {pick(
+              'Aucun message. Dites bonjour en attendant !',
+              'No messages yet. Say hello while you wait!',
+            )}
           </div>
         )}
         {messages.map((msg, index) => {
@@ -145,8 +151,8 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
           <Input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message…"
-            aria-label="Message de chat"
+            placeholder={pick('Message…', 'Message…')}
+            aria-label={pick('Message de chat', 'Chat message')}
             maxLength={200}
             className="h-9 text-sm"
             autoComplete="off"
@@ -155,7 +161,7 @@ export function LobbyChat({ roomId, currentUserId }: LobbyChatProps) {
             type="submit"
             variant="default"
             size="icon"
-            aria-label="Envoyer"
+            aria-label={pick('Envoyer', 'Send')}
             className="h-9 w-9 shrink-0"
             disabled={!draft.trim()}
           >

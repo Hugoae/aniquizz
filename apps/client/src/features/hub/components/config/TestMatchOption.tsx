@@ -1,6 +1,7 @@
 import type { RoomConfig } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
 import { FOCUS_RING } from '@/features/hub/components/config/ConfigPrimitives';
+import { pick } from '@/lib/i18n/text';
 
 /** Compact red mark shown next to a room or mode name. */
 export function TestMatchMark({ className }: { className?: string }) {
@@ -37,7 +38,7 @@ export function TestMatchOption({ config, update }: TestMatchOptionProps) {
           : 'border-border/60 bg-card/40 text-muted-foreground hover:border-border hover:bg-card/80 hover:text-foreground',
       )}
     >
-      Partie test
+      {pick('Partie test', 'Test match')}
     </button>
   );
 }

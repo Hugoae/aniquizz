@@ -12,6 +12,8 @@ import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import { isRoomListJoinable, roomJoinButtonLabel } from '@/features/hub/components/roomListJoin';
 import { usePublishedPlaylists } from '@/features/hub/hooks/usePublishedPlaylists';
+import { formatAppNumber } from '@/lib/i18n/format';
+import { pick } from '@/lib/i18n/text';
 
 interface RoomListProps {
   rooms: RoomListItem[];
@@ -22,10 +24,30 @@ interface RoomListProps {
 type FilterType = 'all' | 'public' | 'private' | 'friends';
 
 const FILTER_BUTTONS: { id: FilterType; label: string }[] = [
-  { id: 'all', label: 'Tous' },
-  { id: 'public', label: 'Publics' },
-  { id: 'private', label: 'Privés' },
-  { id: 'friends', label: 'Amis' },
+  {
+    id: 'all',
+    get label() {
+      return pick('Tous', 'All');
+    },
+  },
+  {
+    id: 'public',
+    get label() {
+      return pick('Publics', 'Public');
+    },
+  },
+  {
+    id: 'private',
+    get label() {
+      return pick('Privés', 'Private');
+    },
+  },
+  {
+    id: 'friends',
+    get label() {
+      return pick('Amis', 'Friends');
+    },
+  },
 ];
 
 export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
@@ -55,7 +77,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div
           role="group"
-          aria-label="Filtrer les salons"
+          aria-label={pick('Filtrer les salons', 'Filter rooms')}
           className="bg-secondary/30 p-1 rounded-lg flex gap-1 border border-border/50"
         >
           {FILTER_BUTTONS.map((btn) => (
@@ -78,14 +100,18 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
 
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">
-            {rooms.length} salon{rooms.length > 1 ? 's' : ''} disponible
-            {rooms.length > 1 ? 's' : ''}
+            {pick(
+              `${formatAppNumber(rooms.length)} salon${rooms.length > 1 ? 's' : ''} disponible${rooms.length > 1 ? 's' : ''}`,
+              rooms.length === 1
+                ? `${formatAppNumber(rooms.length)} room available`
+                : `${formatAppNumber(rooms.length)} rooms available`,
+            )}
           </span>
           <Button
             variant="ghost"
             size="icon"
             onClick={onRefresh}
-            aria-label="Rafraîchir la liste"
+            aria-label={pick('Rafraîchir la liste', 'Refresh the list')}
             className="text-muted-foreground hover:text-foreground"
           >
             <RefreshCw className="h-4 w-4" />
@@ -149,7 +175,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                   <div className="flex items-center gap-3">
                     <div className="text-right hidden md:block">
                       <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                        Hébergé par
+                        {pick('Hébergé par', 'Hosted by')}
                       </div>
                       <div className="text-sm font-bold">{room.host}</div>
                     </div>
@@ -160,7 +186,7 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
                     />
                     <div className="text-left md:hidden">
                       <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
-                        Hôte
+                        {pick('Hôte', 'Host')}
                       </div>
                       <div className="text-sm font-bold">{room.host}</div>
                     </div>
@@ -201,9 +227,12 @@ export function RoomList({ rooms, onJoin, onRefresh }: RoomListProps) {
           <div className="bg-secondary/20 p-4 rounded-full mb-4">
             <Search className="h-8 w-8 opacity-50" />
           </div>
-          <p className="text-lg font-bold">Aucun salon trouvé</p>
+          <p className="text-lg font-bold">{pick('Aucun salon trouvé', 'No rooms found')}</p>
           <p className="text-sm opacity-50">
-            Essayez de modifier les filtres ou créez votre propre partie !
+            {pick(
+              'Essayez de modifier les filtres ou créez votre propre partie !',
+              'Try different filters, or create your own match.',
+            )}
           </p>
         </div>
       )}

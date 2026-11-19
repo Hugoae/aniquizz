@@ -5,7 +5,8 @@ replace the last line with the actual task. Canonical copy lives here so it
 tracks `AGENTS.md` / `PLAN.md` after audits.
 
 The paste is **French** (discussion). Code, comments, logs, and commits stay
-**English**; user-facing UI stays **French** (vousvoiement).
+**English**. The player site is **French and English** (French is the source;
+see `AGENTS.md` § Languages). Admin and server errors stay French.
 
 ---
 
@@ -48,8 +49,17 @@ Règles de travail :
 - Données réseau typées via packages/shared/src/events.ts et game.ts.
   Mutateurs socket parsés avec Zod dans socketPayloads.ts au handler.
 - Identité joueur = userId JWT (`socket.data.userId`), jamais socket.id.
-- Texte UI en français (vousvoiement, copy isolée) ; code / commentaires /
-  logs / commits en anglais.
+- Site joueur en français et en anglais. Le français est la source ; l'anglais
+  s'ajoute dans le même changement (`tx()` ou `pick()`, lu au rendu). Un texte
+  anglais manquant retombe sur le français. Tant que le joueur n'a pas choisi,
+  la langue suit le navigateur (`en` ou `fr`, sinon français) et n'est pas
+  enregistrée. Le choix compte (`uiLocale`) bat le choix appareil
+  (`aniquizz.locale`) bat le navigateur. Pas de préfixe `/en`.
+  L'admin, les erreurs serveur, les titres, les noms de sons, les pseudos et
+  les noms de salon restent tels quels. Les constantes partagées (médailles,
+  types de réponse) restent en français et se traduisent à l'affichage client.
+  Ne pas étaler un objet à getters. Détail : AGENTS.md § Languages.
+  Code / commentaires / logs / commits en anglais. Le français UI vouvoie.
 - Tokens de design (apps/client/src/index.css) via Tailwind sémantique — pas de
   hex/rgb de thème en dur. jsx-a11y recommended est error : ne pas repasser en
   warn. Respecte prefers-reduced-motion. Cap mou ~300–400 lignes par fichier.

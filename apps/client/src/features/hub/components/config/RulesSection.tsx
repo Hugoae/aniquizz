@@ -4,7 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
-import { RESPONSE_MODES, PRECISION_OPTIONS, PRECISION_HELP } from './formOptions';
+import { RESPONSE_MODES, PRECISION_OPTIONS, precisionHelp } from './formOptions';
+import { pick, tx } from '@/lib/i18n/text';
 import { FiltersSection } from './FiltersSection';
 import { TimeAttackRules } from './TimeAttackRules';
 
@@ -41,11 +42,11 @@ export function RulesSection({
           <div className="flex flex-col gap-3">
             <div className="space-y-3">
               <div className="flex items-baseline justify-between">
-                <Label>Sons</Label>
+                <Label>{pick('Sons', 'Songs')}</Label>
                 <span className="font-mono font-bold text-primary">{config.soundCount}</span>
               </div>
               <Slider
-                aria-label="Nombre de sons"
+                aria-label={pick('Nombre de sons', 'Number of songs')}
                 value={[config.soundCount]}
                 min={5}
                 max={100}
@@ -56,40 +57,46 @@ export function RulesSection({
             <div className="space-y-2">
               <SectionHeader
                 icon={Repeat}
-                title="Réécoute"
-                tooltip="Infinie, tu relances l’extrait autant que tu veux. Limitée, tu choisis combien de fois tu as le droit de réécouter l’extrait à chaque durée."
+                title={tx('hub', 'config.replayTitle')}
+                tooltip={tx('hub', 'config.replayHint')}
               />
               <div className="grid grid-cols-4 items-center gap-2">
                 <OptionButton
                   active={replayOn}
-                  aria-label="Réécoute infinie"
+                  aria-label={pick('Réécoute infinie', 'Unlimited replay')}
                   onClick={() =>
                     update({ evolvingInfiniteReplay: true, evolvingReplayLimit: replayLimit })
                   }
                   className="flex flex-col items-center gap-1 p-2 text-center"
                 >
                   <InfinityIcon className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-[11px] font-bold uppercase">Infinie</span>
+                  <span className="text-[11px] font-bold uppercase">
+                    {pick('Infinie', 'Unlimited')}
+                  </span>
                   <span className="text-[9px] leading-tight text-muted-foreground">
-                    Sans limite
+                    {pick('Sans limite', 'No limit')}
                   </span>
                 </OptionButton>
                 <OptionButton
                   active={!replayOn}
-                  aria-label="Réécoute limitée"
+                  aria-label={pick('Réécoute limitée', 'Limited replay')}
                   onClick={() =>
                     update({ evolvingInfiniteReplay: false, evolvingReplayLimit: replayLimit })
                   }
                   className="flex flex-col items-center gap-1 p-2 text-center"
                 >
                   <Minus className="h-4 w-4" aria-hidden="true" />
-                  <span className="text-[11px] font-bold uppercase">Limitée</span>
-                  <span className="text-[9px] leading-tight text-muted-foreground">0 à 5</span>
+                  <span className="text-[11px] font-bold uppercase">
+                    {pick('Limitée', 'Limited')}
+                  </span>
+                  <span className="text-[9px] leading-tight text-muted-foreground">
+                    {pick('0 à 5', '0 to 5')}
+                  </span>
                 </OptionButton>
                 {replayOn ? null : (
                   <div className="col-span-2 flex items-center gap-3">
                     <Slider
-                      aria-label="Nombre de réécoutes"
+                      aria-label={pick('Nombre de réécoutes', 'Number of replays')}
                       value={[replayLimit]}
                       min={0}
                       max={5}
@@ -110,11 +117,11 @@ export function RulesSection({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between">
-                    <Label>Sons</Label>
+                    <Label>{pick('Sons', 'Songs')}</Label>
                     <span className="font-mono font-bold text-primary">{config.soundCount}</span>
                   </div>
                   <Slider
-                    aria-label="Nombre de sons"
+                    aria-label={pick('Nombre de sons', 'Number of songs')}
                     value={[config.soundCount]}
                     min={5}
                     max={100}
@@ -124,13 +131,13 @@ export function RulesSection({
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-baseline justify-between">
-                    <Label>Durée</Label>
+                    <Label>{pick('Durée', 'Time')}</Label>
                     <span className="font-mono font-bold text-primary">
                       {config.guessDuration}s
                     </span>
                   </div>
                   <Slider
-                    aria-label="Durée de réponse en secondes"
+                    aria-label={pick('Durée de réponse en secondes', 'Answer time in seconds')}
                     value={[config.guessDuration]}
                     min={5}
                     max={60}
@@ -144,8 +151,8 @@ export function RulesSection({
             <div className="space-y-2">
               <SectionHeader
                 icon={Keyboard}
-                title="Mode de réponse"
-                tooltip="Comment les joueurs saisissent leur réponse."
+                title={tx('hub', 'config.responseTitle')}
+                tooltip={tx('hub', 'config.responseHint')}
               />
               <div className="grid grid-cols-3 gap-2">
                 {RESPONSE_MODES.map(({ id, label, description, icon: Icon }) => (
@@ -177,7 +184,7 @@ export function RulesSection({
                         htmlFor="speed-bonus"
                         className="text-xs font-bold uppercase tracking-wide"
                       >
-                        Vitesse
+                        {pick('Vitesse', 'Speed')}
                       </Label>
                     </div>
                     <p
@@ -185,8 +192,11 @@ export function RulesSection({
                       className="text-[11px] leading-snug text-muted-foreground"
                     >
                       {typingOk
-                        ? 'Bonus de points si vous répondez plus vite que les autres (parmi les bonnes réponses).'
-                        : 'Disponible uniquement en typing.'}
+                        ? pick(
+                            'Bonus de points si vous répondez plus vite que les autres (parmi les bonnes réponses).',
+                            'Extra points if you answer faster than the others (among correct answers).',
+                          )
+                        : pick('Disponible uniquement en typing.', 'Available in typing only.')}
                     </p>
                   </div>
                   <Switch
@@ -204,7 +214,11 @@ export function RulesSection({
       </div>
 
       <div className="space-y-2">
-        <SectionHeader icon={Target} title="Précision" tooltip={PRECISION_HELP} />
+        <SectionHeader
+          icon={Target}
+          title={tx('hub', 'config.precisionTitle')}
+          tooltip={precisionHelp()}
+        />
         <div className="grid grid-cols-3 gap-2">
           {PRECISION_OPTIONS.map(({ id, label, description, icon: Icon }) => (
             <OptionButton

@@ -3,6 +3,7 @@ import { WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
+import { pick } from '@/lib/i18n/text';
 
 export interface PlayerCardBaseProps {
   player: {
@@ -40,7 +41,7 @@ export function PlayerCardBase({
   hideScore = false,
   ratio = null,
 }: PlayerCardBaseProps) {
-  const displayName = player.name || player.username || 'Joueur';
+  const displayName = player.name || player.username || pick('Joueur', 'Player');
   const hasChildren = React.Children.count(children) > 0;
   const isDisconnected = player.isConnected === false;
   const interactive = Boolean(onClick);
@@ -88,8 +89,8 @@ export function PlayerCardBase({
         {isDisconnected && (
           <span
             className="absolute -bottom-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border-2 border-card bg-muted"
-            title="Déconnecté"
-            aria-label="Déconnecté"
+            title={pick('Déconnecté', 'Disconnected')}
+            aria-label={pick('Déconnecté', 'Disconnected')}
           >
             <WifiOff className="h-2.5 w-2.5 text-muted-foreground" />
           </span>

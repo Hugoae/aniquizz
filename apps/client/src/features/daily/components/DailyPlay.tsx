@@ -1,10 +1,6 @@
 import { useEffect } from 'react';
-import {
-  DAILY_PRECISION,
-  getPrecisionChipLabel,
-  type DailyResultDto,
-  type DailySafeRoundDto,
-} from '@aniquizz/shared';
+import { DAILY_PRECISION, type DailyResultDto, type DailySafeRoundDto } from '@aniquizz/shared';
+import { precisionChipLabel } from '@/features/hub/copy/hubCopy';
 import { SeoHead } from '@/components/seo/SeoHead';
 import {
   AlertDialog,
@@ -96,7 +92,7 @@ export function DailyPlay({ initial, onFinished }: DailyPlayProps) {
         configBadges={{
           sourceLabel: DAILY_COPY.title,
           difficultyLabel: 'QCM',
-          precisionLabel: getPrecisionChipLabel(DAILY_PRECISION),
+          precisionLabel: precisionChipLabel(DAILY_PRECISION),
           modeLabel: DAILY_COPY.title,
           daily: true,
         }}

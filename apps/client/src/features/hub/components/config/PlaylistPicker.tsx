@@ -2,11 +2,13 @@ import type { PlaylistPoolStats, RoomConfig, ThematicPlaylistSummary } from '@an
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { pick } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import { OptionButton, FOCUS_RING } from './ConfigPrimitives';
 import { PLAYLISTS_COPY, playlistFlair } from './playlistsCopy';
 import {
   showWatchedFusionMode,
+  watchedModeDisplayLabel,
   WATCHED_ANILIST_BLOCKED_MESSAGE,
   WATCHED_ANILIST_STALE_MESSAGE,
 } from './watchedSource';
@@ -104,7 +106,11 @@ export function PlaylistPicker({
             )}
           </div>
         )}
-        {loading && <p className="p-1 text-xs text-muted-foreground">Chargement des packs…</p>}
+        {loading && (
+          <p className="p-1 text-xs text-muted-foreground">
+            {pick('Chargement des packs…', 'Loading packs…')}
+          </p>
+        )}
         {!loading && !playlists.length && !loadError && (
           <p className="p-1 text-xs text-muted-foreground">{PLAYLISTS_COPY.empty}</p>
         )}
@@ -246,8 +252,14 @@ export function PlaylistPicker({
               {overlayOn && stats?.listError === 'anilist_blocked' && (
                 <span className="mt-1 block text-[11px] text-warning">
                   {stats.playableSongs === 0
-                    ? WATCHED_ANILIST_BLOCKED_MESSAGE
-                    : WATCHED_ANILIST_STALE_MESSAGE}
+                    ? pick(
+                        WATCHED_ANILIST_BLOCKED_MESSAGE,
+                        'The AniList API is down. Try again later.',
+                      )
+                    : pick(
+                        WATCHED_ANILIST_STALE_MESSAGE,
+                        'AniList is unstable: the list shown may be a few minutes old.',
+                      )}
                 </span>
               )}
             </span>
@@ -266,16 +278,16 @@ export function PlaylistPicker({
 
           {showFusion && (
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase">Mode de fusion</Label>
+              <Label className="text-xs uppercase">{pick('Mode de fusion', 'Merge mode')}</Label>
               <div className="grid grid-cols-2 gap-2">
                 <OptionButton
                   active={config.watchedMode === 'union'}
                   onClick={() => update({ watchedMode: 'union' })}
                   className="p-2 text-left"
                 >
-                  <div className="text-xs font-bold">Union</div>
+                  <div className="text-xs font-bold">{watchedModeDisplayLabel('union')}</div>
                   <div className="text-[9px] text-muted-foreground">
-                    Les listes de tout le monde.
+                    {pick('Les listes de tout le monde.', "Everyone's lists.")}
                   </div>
                 </OptionButton>
                 <OptionButton
@@ -283,8 +295,10 @@ export function PlaylistPicker({
                   onClick={() => update({ watchedMode: 'intersection' })}
                   className="p-2 text-left"
                 >
-                  <div className="text-xs font-bold">Commun</div>
-                  <div className="text-[9px] text-muted-foreground">Vus par TOUS les joueurs.</div>
+                  <div className="text-xs font-bold">{watchedModeDisplayLabel('intersection')}</div>
+                  <div className="text-[9px] text-muted-foreground">
+                    {pick('Vus par TOUS les joueurs.', 'Seen by EVERY player.')}
+                  </div>
                 </OptionButton>
               </div>
             </div>

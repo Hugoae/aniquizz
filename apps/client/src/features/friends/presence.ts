@@ -1,4 +1,5 @@
 import type { PresenceStatus } from '@aniquizz/shared';
+import { pick } from '@/lib/i18n/text';
 
 /** Presence dot colors keyed by status (design tokens). */
 export const PRESENCE_DOT: Record<PresenceStatus, string> = {
@@ -13,29 +14,29 @@ export const PRESENCE_DOT: Record<PresenceStatus, string> = {
 export function presenceLabel(status: PresenceStatus): string {
   switch (status) {
     case 'in_game':
-      return 'En jeu';
+      return pick('En jeu', 'In a match');
     case 'in_lobby':
-      return 'Dans un salon';
+      return pick('Dans un salon', 'In a room');
     case 'online':
-      return 'En ligne';
+      return pick('En ligne', 'Online');
     case 'hidden':
-      return 'Statut masqué';
+      return pick('Statut masqué', 'Status hidden');
     default:
-      return 'Hors ligne';
+      return pick('Hors ligne', 'Offline');
   }
 }
 
 /** "Vu il y a X" relative time from an ISO timestamp. */
 export function formatLastSeen(iso: string | null): string {
-  if (!iso) return 'Jamais vu';
+  if (!iso) return pick('Jamais vu', 'Never seen');
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "Vu à l'instant";
-  if (min < 60) return `Vu il y a ${min} min`;
+  if (min < 1) return pick("Vu à l'instant", 'Seen just now');
+  if (min < 60) return pick(`Vu il y a ${min} min`, `Seen ${min} min ago`);
   const h = Math.floor(min / 60);
-  if (h < 24) return `Vu il y a ${h} h`;
+  if (h < 24) return pick(`Vu il y a ${h} h`, `Seen ${h} h ago`);
   const d = Math.floor(h / 24);
-  if (d < 30) return `Vu il y a ${d} j`;
+  if (d < 30) return pick(`Vu il y a ${d} j`, `Seen ${d} d ago`);
   const mo = Math.floor(d / 30);
-  return `Vu il y a ${mo} mois`;
+  return pick(`Vu il y a ${mo} mois`, `Seen ${mo} mo ago`);
 }

@@ -1,12 +1,12 @@
 import { Music2 } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
 import {
-  SONG_START_MODE_DESCRIPTIONS,
-  SONG_START_MODE_LABELS,
   TIME_ATTACK_MIN_CLIP_SECONDS,
   normalizeSongStartMode,
   type SongStartMode,
 } from '@aniquizz/shared';
+import { songStartHint, songStartLabel } from '@/features/hub/copy/hubCopy';
+import { tx } from '@/lib/i18n/text';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 
 const SONG_START_MODES: SongStartMode[] = ['random', 'beginning'];
@@ -23,8 +23,8 @@ export function SongStartSection({ config, update }: SongStartSectionProps) {
     <div className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3">
       <SectionHeader
         icon={Music2}
-        title="Départ de l'extrait"
-        tooltip="Où commence la lecture pendant le guess. La révélation continue depuis ce point."
+        title={tx('hub', 'config.songStartTitle')}
+        tooltip={tx('hub', 'config.songStartHint')}
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {SONG_START_MODES.map((id) => (
@@ -34,17 +34,16 @@ export function SongStartSection({ config, update }: SongStartSectionProps) {
             onClick={() => update({ songStartMode: id })}
             className="flex flex-col items-start gap-1 p-3 text-left"
           >
-            <span className="text-[11px] font-bold uppercase">{SONG_START_MODE_LABELS[id]}</span>
+            <span className="text-[11px] font-bold uppercase">{songStartLabel(id)}</span>
             <span className="text-[10px] leading-snug text-muted-foreground">
-              {SONG_START_MODE_DESCRIPTIONS[id]}
+              {songStartHint(id)}
             </span>
           </OptionButton>
         ))}
       </div>
       {config.gameType === 'timeAttack' && mode === 'random' ? (
         <p className="text-[10px] leading-snug text-muted-foreground">
-          Un départ tardif raccourcit l&apos;extrait, jamais sous {TIME_ATTACK_MIN_CLIP_SECONDS}{' '}
-          secondes. Le nombre de titres couvre le chrono même si chaque extrait est au plus court.
+          {tx('hub', 'config.lateStart', { seconds: TIME_ATTACK_MIN_CLIP_SECONDS })}
         </p>
       ) : null}
     </div>

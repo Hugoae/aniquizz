@@ -75,6 +75,11 @@ export const registerFriendsHandlers = (
         userId: parsed.userId,
       });
       await Promise.all([pushState(userId), pushState(res.other.id)]);
+      if (res.type === 'accepted') {
+        const { notifyProfileAchievements } = await import('../profile/achievementNotify');
+        void notifyProfileAchievements(userId);
+        void notifyProfileAchievements(res.other.id);
+      }
       if (res.type === 'created' && online(res.other.id)) {
         io.to(userRoom(res.other.id)).emit('friends:request_received', {
           from: friendsService.toSummary(res.requester, presence),
@@ -92,6 +97,9 @@ export const registerFriendsHandlers = (
     try {
       const { otherId } = await friendsService.acceptRequest(userId, parsed.requestId);
       await Promise.all([pushState(userId), pushState(otherId)]);
+      const { notifyProfileAchievements } = await import('../profile/achievementNotify');
+      void notifyProfileAchievements(userId);
+      void notifyProfileAchievements(otherId);
     } catch (e) {
       fail(e, 'accept');
     }

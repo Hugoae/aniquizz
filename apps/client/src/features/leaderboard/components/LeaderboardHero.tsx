@@ -1,5 +1,6 @@
 import { Trophy } from 'lucide-react';
 import { LEADERBOARD_COPY } from '@/features/leaderboard/copy/leaderboardCopy';
+import { formatAppNumber } from '@/lib/i18n/format';
 
 interface LeaderboardHeroProps {
   eligibleCount: number | null;
@@ -34,7 +35,7 @@ export function LeaderboardHero({ eligibleCount }: LeaderboardHeroProps) {
         {eligibleCount != null && (
           <div className="glass-card rounded-xl px-3 py-2.5 text-center min-w-[5.5rem]">
             <div className="text-xl font-black tabular-nums text-warning">
-              {eligibleCount.toLocaleString('fr-FR')}
+              {formatAppNumber(eligibleCount)}
             </div>
             <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {LEADERBOARD_COPY.rankedCount}

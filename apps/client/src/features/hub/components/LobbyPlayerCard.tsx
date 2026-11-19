@@ -6,6 +6,7 @@ import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { AddFriendButton } from '@/features/friends/AddFriendButton';
 import { FOCUS_RING, HOVER_REVEAL } from '@/features/hub/components/config/ConfigPrimitives';
+import { pick } from '@/lib/i18n/text';
 
 export interface LobbyPlayer {
   id: string | number;
@@ -67,7 +68,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
           <button
             type="button"
             onClick={() => onTransferHost(player.id)}
-            aria-label={`Nommer ${player.name} hôte`}
+            aria-label={pick(`Nommer ${player.name} hôte`, `Make ${player.name} the host`)}
             className={cn(
               'flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-warning',
               FOCUS_RING,
@@ -78,7 +79,10 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
           <button
             type="button"
             onClick={() => onKick(player.id)}
-            aria-label={`Exclure ${player.name} du salon`}
+            aria-label={pick(
+              `Exclure ${player.name} du salon`,
+              `Remove ${player.name} from the room`,
+            )}
             className={cn(
               'flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive',
               FOCUS_RING,
@@ -97,7 +101,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
 
       {isHost && (
         <div className="absolute -top-3 z-10 flex items-center gap-1 rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold text-warning-foreground shadow-lg">
-          <Crown className="h-3 w-3 fill-current" aria-hidden="true" /> HÔTE
+          <Crown className="h-3 w-3 fill-current" aria-hidden="true" /> {pick('Hôte', 'Host')}
         </div>
       )}
 
@@ -113,9 +117,9 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
         {typeof level === 'number' && !isBot && (
           <span
             className="absolute -bottom-1 left-1/2 flex h-6 min-w-[2.25rem] -translate-x-1/2 items-center justify-center gap-0.5 rounded-full border-2 border-card bg-gradient-to-br from-primary to-accent px-1.5 text-[11px] font-black tabular-nums text-primary-foreground shadow-md"
-            title={`Niveau ${level}`}
+            title={pick(`Niveau ${level}`, `Level ${level}`)}
           >
-            <span className="text-[8px] font-bold uppercase opacity-80">Nv</span>
+            <span className="text-[8px] font-bold uppercase opacity-80">{pick('Nv', 'Lv')}</span>
             {level}
           </span>
         )}
@@ -139,7 +143,7 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
         </h3>
         {needsWatchedList && !isBot && (
           <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-warning">
-            Liste requise
+            {pick('Liste requise', 'List required')}
           </p>
         )}
       </div>
@@ -158,13 +162,13 @@ export const LobbyPlayerCard = memo(function LobbyPlayerCard({
       >
         {isHost
           ? isInGame
-            ? 'Joue…'
-            : 'Administre'
+            ? pick('Joue…', 'Playing…')
+            : pick('Administre', 'Hosting')
           : isInGame
-            ? 'En jeu'
+            ? pick('En jeu', 'In game')
             : isReady
-              ? 'Prêt'
-              : 'En attente…'}
+              ? pick('Prêt', 'Ready')
+              : pick('En attente…', 'Waiting…')}
       </div>
     </div>
   );

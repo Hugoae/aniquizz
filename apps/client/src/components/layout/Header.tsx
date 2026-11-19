@@ -8,8 +8,10 @@ import { useAuthModal } from '@/features/auth/context/AuthModalContext';
 import { SuspensionBadge } from '@/features/auth/components/SuspensionBadge';
 import { headerAuthSlot, sessionDisplayName } from '@/features/auth/lib/headerAuthSlot';
 import { AUTH_COPY } from '@/features/auth/copy/authCopy';
+import { LanguageSwitch } from '@/features/i18n/LanguageSwitch';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { prefetchRoute } from '@/lib/routePrefetch';
+import { tx } from '@/lib/i18n/text';
 import { KOFI_URL } from '@/lib/site';
 
 export function Header() {
@@ -34,7 +36,11 @@ export function Header() {
       data-home-clear
       className="fixed top-0 left-0 right-0 h-16 border-b border-border/60 bg-background/80 backdrop-blur-md z-50 px-4 md:px-6 flex items-center justify-between"
     >
-      <Link to="/" className="flex items-center gap-2.5 group" aria-label="AniQuizz — accueil">
+      <Link
+        to="/"
+        className="flex items-center gap-2.5 group"
+        aria-label={tx('common', 'homeAria')}
+      >
         <img
           src="/favicon-32x32.png"
           alt=""
@@ -52,6 +58,7 @@ export function Header() {
 
       <div className="flex min-w-[2.75rem] items-center justify-end gap-3">
         {slot === 'profile' && <SuspensionBadge />}
+        <LanguageSwitch />
         <Button
           asChild
           variant="outline"
@@ -62,11 +69,11 @@ export function Header() {
             href={KOFI_URL}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Soutenir AniQuizz sur Ko-fi (nouvel onglet)"
-            title="Soutenir AniQuizz sur Ko-fi"
+            aria-label={tx('common', 'supportAria')}
+            title={tx('common', 'supportTitle')}
           >
             <Coffee className="text-primary" aria-hidden />
-            <span className="hidden sm:inline">Soutenir</span>
+            <span className="hidden sm:inline">{tx('common', 'support')}</span>
           </a>
         </Button>
         {slot === 'profile' && isStaff && (
@@ -74,8 +81,8 @@ export function Header() {
             asChild
             variant="ghost"
             className="h-9 min-h-9 gap-2 rounded-lg px-3"
-            aria-label="Administration"
-            title="Administration"
+            aria-label={tx('common', 'adminAria')}
+            title={tx('common', 'adminAria')}
           >
             <Link
               to="/admin"

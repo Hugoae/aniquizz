@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 
 import { multiFinishSubtitle } from '@/features/game/utils/frenchOrdinals';
+import { tx } from '@/lib/i18n/text';
 
 import { buildPodiumLayout, type PodiumSlot } from '@/features/game/utils/podiumGroups';
 
@@ -275,17 +276,17 @@ export function MultiPodium({
         <h1 className="overflow-visible px-2 font-display text-5xl font-black uppercase italic tracking-normal md:text-7xl">
           {isPlayerWinner ? (
             <span className="text-success drop-shadow-[0_0_16px_hsl(var(--success)/0.35)]">
-              Victoire
+              {tx('game', 'victory')}
             </span>
           ) : (
             <span className="text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.3)]">
-              Défaite
+              {tx('game', 'defeat')}
             </span>
           )}
         </h1>
 
         <p className="mt-2 text-lg font-medium text-muted-foreground">
-          {isPlayerWinner ? 'Incroyable performance !' : multiFinishSubtitle(myRank)}
+          {isPlayerWinner ? tx('game', 'amazing') : multiFinishSubtitle(myRank)}
         </p>
       </div>
 

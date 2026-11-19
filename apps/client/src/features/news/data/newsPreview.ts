@@ -5,19 +5,19 @@ export type NewsPreviewItem = Omit<NewsItem, 'content'>;
 
 export const latestNewsPreview: NewsPreviewItem[] = [
   {
+    id: 12,
+    title: 'Mise à jour v26.9 - Succès et anglais',
+    description:
+      'Une collection de succès sur le profil, récompensée en XP, et le site disponible en anglais.',
+    date: '2026-11-19T20:30:00Z',
+    type: 'update',
+  },
+  {
     id: 11,
     title: 'Mise à jour v26.8 - Évolutif, historique, médailles et accueil',
     description:
       'Nouveau mode Évolutif en solo, médailles sous la carte, historique repris, et des repères plus clairs en partie comme à l’accueil.',
     date: '2026-11-10T21:00:00Z',
-    type: 'update',
-  },
-  {
-    id: 10,
-    title: 'Mise à jour v26.7.1 - Prime de série',
-    description:
-      'En Contre-la-montre, une série de titres trouvés peut rendre du temps. Le son part au hasard, et les égalités du podium tiennent sur une ligne.',
-    date: '2026-10-18T21:00:00Z',
     type: 'update',
   },
 ];

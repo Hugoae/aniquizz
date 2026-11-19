@@ -1,5 +1,6 @@
 import { UserPlus, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 /**
  * A placeholder seat rendered for every free slot up to `maxPlayers`. Fills the
@@ -19,7 +20,7 @@ export function LobbySeat({ variant, children }: LobbySeatProps) {
         <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-dashed border-accent/40 text-accent transition-transform group-hover:scale-105">
           <UserPlus className="h-7 w-7" aria-hidden="true" />
         </div>
-        <p className="text-sm font-bold text-accent">Inviter un ami</p>
+        <p className="text-sm font-bold text-accent">{pick('Inviter un ami', 'Invite a friend')}</p>
         {children}
       </div>
     );
@@ -36,7 +37,7 @@ export function LobbySeat({ variant, children }: LobbySeatProps) {
         <UserRound className="h-7 w-7" />
       </div>
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground/50">
-        Place libre
+        {pick('Place libre', 'Open seat')}
       </p>
     </div>
   );

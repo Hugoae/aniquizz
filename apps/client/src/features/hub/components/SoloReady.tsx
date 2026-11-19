@@ -17,7 +17,7 @@ import type { Profile } from '@/features/auth/context/AuthContext';
 import {
   isWatchedSourceBlocked,
   checkWatchedPoolLaunch,
-  WATCHED_SOURCE_BLOCK_MESSAGE,
+  watchedSourceBlockMessage,
 } from '@/features/hub/components/config/watchedSource';
 import {
   checkPlaylistPoolLaunch,
@@ -32,6 +32,8 @@ import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption'
 import { SoloLobbyRecap } from '@/features/hub/components/lobby/SoloLobbyRecap';
 import { soloLobbyModeBadge } from '@/features/hub/components/lobby/soloLobbyRecapGroups';
 import { modeChrome } from '@/features/hub/components/modeChrome';
+import { HUB_COPY } from '@/features/hub/copy/hubCopy';
+import { pick } from '@/lib/i18n/text';
 
 interface SoloReadyProps {
   gameSettings?: RoomConfig;
@@ -148,7 +150,7 @@ export function SoloReady({
               className="w-fit gap-2 pl-0 text-muted-foreground hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-              Retour
+              {HUB_COPY.back}
             </Button>
 
             <div className="flex flex-col items-center gap-4 text-center">
@@ -179,7 +181,9 @@ export function SoloReady({
                 <h1 className="text-2xl font-bold uppercase tracking-tight md:text-3xl">
                   {playerName}
                 </h1>
-                <p className="text-sm text-muted-foreground">Prêt à lancer votre blindtest ?</p>
+                <p className="text-sm text-muted-foreground">
+                  {pick('Prêt à lancer votre blindtest ?', 'Ready to start your blind test?')}
+                </p>
               </div>
             </div>
 
@@ -208,19 +212,19 @@ export function SoloReady({
                   {isLaunchStarting ? (
                     <>
                       <Loader2 className="h-6 w-6 animate-spin" aria-hidden="true" />
-                      Préparation…
+                      {pick('Préparation…', 'Getting ready…')}
                     </>
                   ) : (
                     <>
                       <Play className="h-6 w-6 fill-current" aria-hidden="true" />
-                      Jouer
+                      {pick('Jouer', 'Play')}
                     </>
                   )}
                 </Button>
 
                 {watchedBlocked && (
                   <p className="text-center text-sm font-medium text-destructive" role="alert">
-                    {WATCHED_SOURCE_BLOCK_MESSAGE}
+                    {watchedSourceBlockMessage()}
                   </p>
                 )}
                 {playlistBlocked && !watchedBlocked && (
@@ -244,7 +248,7 @@ export function SoloReady({
 
                 <Button variant="outline" onClick={onOpenSettings} className="gap-2 rounded-lg">
                   <Settings className="h-4 w-4" aria-hidden="true" />
-                  Modifier les paramètres
+                  {pick('Modifier les paramètres', 'Edit settings')}
                 </Button>
               </div>
             </div>

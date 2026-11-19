@@ -4,7 +4,6 @@ import { socket } from '@/lib/socket';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import {
   GAME_CONFIG,
-  GAME_TYPE_LABELS,
   type AnswerType,
   type GamePlayer,
   type RoomSettings,
@@ -12,7 +11,6 @@ import {
   isSpeedBonusEnabled,
   isTimeAttackGame,
   normalizeTimeBudgetSeconds,
-  getPrecisionChipLabel,
   normalizePrecision,
   normalizeVideoMode,
   hasWatchedListLink,
@@ -23,6 +21,7 @@ import {
   resolveEvolvingReplayLimit,
   EVOLVING_STEP_POINTS,
 } from '@aniquizz/shared';
+import { gameTypeLabel, precisionChipLabel } from '@/features/hub/copy/hubCopy';
 import { useGameSocket } from '@/features/game/hooks/useGameSocket';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import { playAnswerSting } from '@/features/game/lib/playAnswerSting';
@@ -362,8 +361,8 @@ export function useGamePage() {
       difficultyLabel: difficulty.label,
       difficultyClassName: difficulty.className,
       soundTypes: settings.soundTypes,
-      precisionLabel: getPrecisionChipLabel(settings.precision),
-      modeLabel: GAME_TYPE_LABELS[activeSettings.gameType ?? 'standard'],
+      precisionLabel: precisionChipLabel(settings.precision),
+      modeLabel: gameTypeLabel(activeSettings.gameType ?? 'standard'),
       gameType: activeSettings.gameType ?? 'standard',
       speedBonusEnabled: speedBonusOn,
     };

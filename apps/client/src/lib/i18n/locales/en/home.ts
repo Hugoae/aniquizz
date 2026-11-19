@@ -1,0 +1,15 @@
+export const homeEn = {
+  eyebrow: '3,000+ playable songs',
+  titleLead: 'Test your',
+  titleAccent: 'anime knowledge',
+  sub: 'Guess the anime from the music. Solo or with friends, no ads, and free.',
+  play: 'Play',
+  library: 'Library',
+  leaderboard: 'Leaderboard',
+  ideas: 'Feedback & bugs',
+  newsTitle: 'News',
+  newsSeeAll: 'See all',
+  songOfDayTitle: 'Song of the day',
+  songOfDayPlay: 'Listen',
+  songOfDayPause: 'Pause',
+} as const;

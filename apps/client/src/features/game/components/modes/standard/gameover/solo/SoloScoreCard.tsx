@@ -2,6 +2,8 @@ import { Medal } from 'lucide-react';
 import type { GamePlayer, MedalTier, Precision, TimeAttackMedalRules } from '@aniquizz/shared';
 import { getMedalMeta } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
+import { medalDisplayLabel } from '@/features/game/lib/medalLabel';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { XpEarnedBadge } from '../XpEarnedBadge';
 import { SoloMasteryBar } from './SoloMasteryBar';
@@ -61,7 +63,7 @@ export function SoloScoreCard({
         </div>
       )}
 
-      {medalMeta && (
+      {medalMeta && soloMedal && (
         <div
           className={cn(
             'absolute -left-2.5 -top-2.5 z-20 flex items-center gap-1 rounded-lg border bg-card px-2.5 py-1 text-xs font-black shadow-lg animate-medal-wiggle',
@@ -70,7 +72,7 @@ export function SoloScoreCard({
           )}
         >
           <Medal className="h-3.5 w-3.5" aria-hidden />
-          {medalMeta.label}
+          {medalDisplayLabel(soloMedal)}
         </div>
       )}
 
@@ -87,14 +89,14 @@ export function SoloScoreCard({
               : 'text-destructive drop-shadow-[0_0_12px_hsl(var(--destructive)/0.35)]',
           )}
         >
-          {isSuccess ? 'Victoire' : 'Défaite'}
+          {isSuccess ? pick('Victoire', 'Victory') : pick('Défaite', 'Defeat')}
         </h1>
       </div>
 
       <div className="relative z-10 isolate overflow-hidden rounded-full">
         <UserAvatar
           avatar={me?.avatar ?? ''}
-          username={me?.username ?? 'Joueur'}
+          username={me?.username ?? pick('Joueur', 'Player')}
           className={cn(
             'h-32 w-32 border-0 shadow-2xl transition-all duration-500',
             isSuccess
@@ -108,7 +110,7 @@ export function SoloScoreCard({
         <h2 className="font-display text-5xl font-black tracking-tight">
           {score}{' '}
           <span className="text-lg font-medium text-muted-foreground">
-            {timeAttack ? `trouvés` : `/ ${maxPossibleScore} pts`}
+            {timeAttack ? pick('trouvés', 'found') : `/ ${maxPossibleScore} pts`}
           </span>
         </h2>
       </div>

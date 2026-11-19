@@ -76,6 +76,10 @@ export const registerProfileHandlers = (
       if (nextUsername) socket.data.username = nextUsername;
 
       socket.emit('user_profile', { success: true });
+      if (typeof updateData.avatar === 'string' && updateData.avatar.includes('/avatar.jpg')) {
+        const { notifyProfileAchievements } = await import('./achievementNotify');
+        void notifyProfileAchievements(userId);
+      }
       logger.info(`Profil mis à jour pour ${userId}`, 'Profile');
     } catch (error) {
       logger.error('Erreur update profil', 'Profile', error);
@@ -126,11 +130,12 @@ export const registerProfileHandlers = (
         return;
       }
 
-      const next = mergePlayerPrefsPatch(normalizePlayerPrefs(current), parsed);
+      const { uiLocale, ...prefsPatch } = parsed;
+      const next = mergePlayerPrefsPatch(normalizePlayerPrefs(current), prefsPatch);
 
       await prisma.profile.update({
         where: { id: userId },
-        data: next,
+        data: uiLocale === undefined ? next : { ...next, uiLocale },
       });
 
       socket.emit('profile:prefs', next);

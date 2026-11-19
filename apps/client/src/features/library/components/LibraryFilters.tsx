@@ -27,15 +27,45 @@ import {
 const DIFFICULTY_OPTIONS: LibraryDifficulty[] = ['EASY', 'MEDIUM', 'HARD'];
 
 const DISCOVERED_OPTIONS: Array<{ value: LibraryDiscoveredFilter | ''; label: string }> = [
-  { value: '', label: LIBRARY_COPY.filterDiscoveredAll },
-  { value: 'heard', label: LIBRARY_COPY.filterDiscoveredHeard },
-  { value: 'unheard', label: LIBRARY_COPY.filterDiscoveredUnheard },
+  {
+    value: '',
+    get label() {
+      return LIBRARY_COPY.filterDiscoveredAll;
+    },
+  },
+  {
+    value: 'heard',
+    get label() {
+      return LIBRARY_COPY.filterDiscoveredHeard;
+    },
+  },
+  {
+    value: 'unheard',
+    get label() {
+      return LIBRARY_COPY.filterDiscoveredUnheard;
+    },
+  },
 ];
 
 const LIKED_OPTIONS: Array<{ value: LibraryLikedFilter | ''; label: string }> = [
-  { value: '', label: LIBRARY_COPY.filterLikedAll },
-  { value: 'liked', label: LIBRARY_COPY.filterLikedOnly },
-  { value: 'unliked', label: LIBRARY_COPY.filterLikedExclude },
+  {
+    value: '',
+    get label() {
+      return LIBRARY_COPY.filterLikedAll;
+    },
+  },
+  {
+    value: 'liked',
+    get label() {
+      return LIBRARY_COPY.filterLikedOnly;
+    },
+  },
+  {
+    value: 'unliked',
+    get label() {
+      return LIBRARY_COPY.filterLikedExclude;
+    },
+  },
 ];
 
 function FilterSection({

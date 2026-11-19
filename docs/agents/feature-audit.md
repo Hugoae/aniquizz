@@ -4,8 +4,9 @@
 par le nom du domaine (`Auth`, `Home`, `Hub`, `Game`, …).
 
 Le prompt ci-dessous est **en français** (livrable + discussion). Le code, les
-commentaires et les commits du repo restent en **anglais** ; l’UI utilisateur
-reste en **français**. Un smoke navigateur de bout en bout (lentille 10,
+commentaires et les commits du repo restent en **anglais**. L’UI joueur est en
+**français et en anglais** (les deux dans le même changement). L’admin reste en
+français. Un smoke navigateur de bout en bout (lentille 10,
 compte de test local) est **obligatoire** — guest + lecture CSS ne suffisent
 pas.
 
@@ -20,7 +21,9 @@ Les sources entendus / trouvés / likés ne sont plus au plan.
 
 Repo : pnpm + Turborepo. Graphify d’abord (`.cursor/rules/graphify.mdc`).
 Lis CONTEXT-MAP.md et les CONTEXT.md des packages concernés avant de scanner.
-Code / commentaires / commits en anglais ; textes UI en français.
+Code / commentaires / commits en anglais. Textes UI joueur en français et en
+anglais (les deux dans le même changement ; voir AGENTS.md § Languages).
+L'admin reste en français.
 
 ## Périmètre
 
@@ -43,7 +46,7 @@ dis ce qui doit rester cohérent (n’audite pas ces voisins en entier).
    dans `packages/shared` (`events.ts` / `game.ts` / `socketPayloads.ts`),
    identité = `userId` JWT jamais `socket.id`, mutateurs socket parsés avec
    Zod, murs d’imports entre packages, tokens de design (pas de hex de thème
-   en dur), copy isolée pour l’i18n.
+   en dur), copy joueur en français et en anglais (AGENTS.md § Languages).
 4. **Sécurité** — authz, IDOR, injection, XSS, CSRF / cookies, JWT, rate
    limits, mass assignment, erreurs trop bavardes, secrets, suppression RGPD
    si pertinent. Le serveur fait autorité.
@@ -53,7 +56,7 @@ dis ce qui doit rester cohérent (n’audite pas ces voisins en entier).
    reconnect, courses, URL / état, invariants vs docs (`docs/game`,
    `docs/security`).
 7. **Design / a11y / UX** — tokens, primitives shadcn, `.glass-card`,
-   `FOCUS_RING`, `prefers-reduced-motion`, jsx-a11y, copy française.
+   `FOCUS_RING`, `prefers-reduced-motion`, jsx-a11y, copy joueur en français et en anglais (un libellé français seul est un trou).
    `eslint-plugin-jsx-a11y` recommended est **error** — ne pas repasser en
    warn. Corriger tout finding que FEATURE introduit.
 8. **Tests** — cas manquants sur les chemins risqués que tu as trouvés.

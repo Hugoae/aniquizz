@@ -71,6 +71,8 @@ export async function closeDailyAttempt(input: {
   answers: DailyClosedAnswer[];
   state: 'COMPLETED' | 'FORFEITED';
   now?: Date;
+  /** Socket close: send the result before the leaderboard and song history. */
+  deferBoard?: boolean;
 }): Promise<{ result: DailyResultDto }> {
   const now = input.now ?? new Date();
   const loaded = await loadAttempt(input.attemptId, input.profileId);
@@ -101,33 +103,32 @@ export async function closeDailyAttempt(input: {
   const toInsert = [...provided.values()].filter(
     (answer) => !loaded.answers.some((existing) => existing.roundId === answer.roundId),
   );
-  for (const answer of toInsert) {
-    try {
-      await prisma.dailyAttemptAnswer.create({
-        data: {
-          attemptId: input.attemptId,
-          roundId: answer.roundId,
-          selectedLabel: answer.selectedLabel,
-          isCorrect: answer.isCorrect,
-          responseMs: answer.responseMs,
-          answeredAt: answer.answeredAt,
-        },
-      });
-    } catch (error) {
-      if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
-        throw error;
-    }
+  if (toInsert.length > 0) {
+    await prisma.dailyAttemptAnswer.createMany({
+      data: toInsert.map((answer) => ({
+        attemptId: input.attemptId,
+        roundId: answer.roundId,
+        selectedLabel: answer.selectedLabel,
+        isCorrect: answer.isCorrect,
+        responseMs: answer.responseMs,
+        answeredAt: answer.answeredAt,
+      })),
+      skipDuplicates: true,
+    });
   }
+  const currentRound = input.currentRound ?? loaded.currentRound;
   await prisma.dailyAttempt.update({
     where: { id: input.attemptId },
-    data: {
-      currentRound: input.currentRound ?? loaded.currentRound,
-      revealUntil: null,
-    },
+    data: { currentRound, revealUntil: null },
   });
-  const fresh = await loadAttempt(input.attemptId, input.profileId);
+  const fresh =
+    toInsert.length === 0
+      ? { ...loaded, currentRound, revealUntil: null }
+      : await loadAttempt(input.attemptId, input.profileId);
   if (!fresh) throw new DailyHttpError(500, 'Tentative introuvable après clôture.');
-  const finished = await finishAttempt(fresh, input.state, now);
+  const finished = await finishAttempt(fresh, input.state, now, {
+    deferBoard: input.deferBoard,
+  });
   return { result: await resultFor(finished) };
 }
 

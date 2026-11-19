@@ -2,12 +2,12 @@ import type { LucideIcon } from 'lucide-react';
 import { Clock, Eye, Flame, Gauge, Keyboard, ListMusic, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
 import {
-  getPrecisionChipLabel,
   normalizeTimeAttackStreakBonusSeconds,
   normalizeTimeAttackStreakLength,
   normalizeVideoMode,
-  VIDEO_MODE_LABELS,
 } from '@aniquizz/shared';
+import { precisionChipLabel, sourceLabel, videoModeLabel } from '@/features/hub/copy/hubCopy';
+import { tx } from '@/lib/i18n/text';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
 import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
 /**
@@ -36,13 +36,13 @@ export function sourceChipValue(
 ): string {
   switch (selection) {
     case 'watched':
-      return 'Ma liste';
+      return sourceLabel('watched');
     case 'playlist':
-      return playlistName?.trim() || 'Playlists';
+      return playlistName?.trim() || sourceLabel('playlist');
     case 'mix':
-      return 'Mix';
+      return sourceLabel('mix');
     default:
-      return 'Aléatoire';
+      return sourceLabel('random');
   }
 }
 
@@ -53,49 +53,55 @@ export function getDifficultyBadge(diffs: string[] = []): { label: string; class
   const hasHard = diffs.includes('hard');
 
   if (diffs.length === 0) {
-    return { label: 'Mixte', className: SETTING_CHIP_NEUTRAL };
+    return { label: tx('hub', 'config.chipMixed'), className: SETTING_CHIP_NEUTRAL };
   }
 
   if (hasEasy && hasMedium && hasHard) {
     return {
-      label: 'Tout',
+      label: tx('hub', 'config.chipAll'),
       className:
         'border-transparent bg-gradient-to-r from-success/80 via-warning/80 to-destructive/80 text-white',
     };
   }
   if (hasEasy && hasMedium) {
     return {
-      label: 'Facile & Moyen',
+      label: tx('hub', 'config.chipEasyMedium'),
       className: 'border-transparent bg-gradient-to-r from-success/80 to-warning/80 text-white',
     };
   }
   if (hasMedium && hasHard) {
     return {
-      label: 'Moyen & Diff.',
+      label: tx('hub', 'config.chipMediumHard'),
       className: 'border-transparent bg-gradient-to-r from-warning/80 to-destructive/80 text-white',
     };
   }
   if (hasEasy && hasHard) {
     return {
-      label: 'Facile & Diff.',
+      label: tx('hub', 'config.chipEasyHard'),
       className: 'border-transparent bg-gradient-to-r from-success/80 to-destructive/80 text-white',
     };
   }
 
   if (hasEasy) {
-    return { label: 'Facile', className: 'border-success/25 bg-success/10 text-success' };
+    return {
+      label: tx('hub', 'config.difficultyEasy'),
+      className: 'border-success/25 bg-success/10 text-success',
+    };
   }
   if (hasMedium) {
-    return { label: 'Moyen', className: 'border-warning/25 bg-warning/10 text-warning' };
+    return {
+      label: tx('hub', 'config.difficultyMedium'),
+      className: 'border-warning/25 bg-warning/10 text-warning',
+    };
   }
   if (hasHard) {
     return {
-      label: 'Difficile',
+      label: tx('hub', 'config.difficultyHard'),
       className: 'border-destructive/25 bg-destructive/10 text-destructive',
     };
   }
 
-  return { label: 'Mixte', className: SETTING_CHIP_NEUTRAL };
+  return { label: tx('hub', 'config.chipMixed'), className: SETTING_CHIP_NEUTRAL };
 }
 
 type SourceChipSettings = Pick<
@@ -113,41 +119,45 @@ export function buildRoomSettingBadges(s: SourceChipSettings): SettingChipSpec[]
   const timeValue = timeAttack
     ? formatTimeAttackBudget(s.timeBudgetSeconds)
     : evolving
-      ? '0,25 s → 15 s'
+      ? tx('hub', 'config.evolvingWindow')
       : `${s.guessDuration}s`;
   return [
     {
       key: 'sounds',
       icon: ListMusic,
-      label: 'Sons',
+      label: tx('hub', 'config.chipSongs'),
       value: String(s.soundCount),
       className: SETTING_CHIP_NEUTRAL,
     },
     {
       key: 'time',
       icon: Clock,
-      label: timeAttack ? 'Chrono' : evolving ? 'Extraits' : 'Temps',
+      label: timeAttack
+        ? tx('hub', 'config.chipClock')
+        : evolving
+          ? tx('hub', 'config.chipClips')
+          : tx('hub', 'config.chipTime'),
       value: timeValue,
       className: SETTING_CHIP_NEUTRAL,
     },
     {
       key: 'precision',
       icon: Target,
-      label: 'Précision',
-      value: getPrecisionChipLabel(s.precision),
+      label: tx('hub', 'config.chipPrecision'),
+      value: precisionChipLabel(s.precision),
       className: SETTING_CHIP_NEUTRAL,
     },
     {
       key: 'type',
       icon: Keyboard,
-      label: 'Réponse',
+      label: tx('hub', 'config.chipResponse'),
       value: responseTypeLabel(s.responseType),
       className: SETTING_CHIP_NEUTRAL,
     },
     {
       key: 'source',
       icon: Shuffle,
-      label: 'Source',
+      label: tx('hub', 'config.chipSource'),
       value: sourceChipValue(s.soundSelection, s.playlistName),
       className: SETTING_CHIP_NEUTRAL,
     },
@@ -169,8 +179,8 @@ export function streakPrimeChip(config: StreakPrimeChipSettings): SettingChipSpe
   return {
     key: 'streak-prime',
     icon: Flame,
-    label: 'Prime',
-    value: `tous les ${every}, +${seconds} s`,
+    label: tx('hub', 'config.chipPrime'),
+    value: tx('hub', 'config.chipPrimeValue', { every, seconds }),
     className: 'border-primary/40 bg-primary/15 text-primary',
   };
 }
@@ -217,8 +227,8 @@ export function buildLobbySettingChips(
           {
             key: 'video',
             icon: Eye,
-            label: 'Vidéo',
-            value: VIDEO_MODE_LABELS[videoMode],
+            label: tx('hub', 'videoLabel'),
+            value: videoModeLabel(videoMode),
             className: SETTING_CHIP_NEUTRAL,
           },
         ]),

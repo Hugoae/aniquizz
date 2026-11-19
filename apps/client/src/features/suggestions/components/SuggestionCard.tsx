@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatAppDate } from '@/lib/i18n/format';
 import {
   CheckCircle2,
   ChevronUp,
@@ -51,11 +52,11 @@ const statusClasses: Record<SuggestionStatus, string> = {
   REJECTED: 'border-destructive/30 bg-destructive/10 text-destructive',
 };
 
-const dateFormatter = new Intl.DateTimeFormat('fr-FR', {
+const SUGGESTION_DATE: Intl.DateTimeFormatOptions = {
   day: 'numeric',
   month: 'short',
   year: 'numeric',
-});
+};
 
 interface SuggestionCardProps {
   suggestion: SuggestionItem;
@@ -183,7 +184,7 @@ export function SuggestionCard({
                 {suggestion.author?.username ?? SUGGESTIONS_COPY.anonymousAuthor}
               </span>
               <span className="text-xs text-muted-foreground">
-                · {dateFormatter.format(new Date(suggestion.createdAt))}
+                · {formatAppDate(new Date(suggestion.createdAt), SUGGESTION_DATE)}
               </span>
             </div>
             {canDelete && onDelete && !suggestion.locked ? (

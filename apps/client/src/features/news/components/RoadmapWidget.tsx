@@ -1,9 +1,14 @@
+import { useMemo } from 'react';
 import { CheckCircle2, Circle, Clock, Rocket, Map } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { roadmapData } from '../data/roadmapData';
+import { pick } from '@/lib/i18n/text';
+import { useLocale } from '@/features/i18n/LocaleContext';
+import { visibleRoadmap } from '../data/roadmapData';
 
 export function RoadmapWidget() {
+  const { locale } = useLocale();
+  const roadmapData = useMemo(() => visibleRoadmap(), [locale]);
   const doneCount = roadmapData.filter((i) => i.status === 'done').length;
   const total = roadmapData.length;
   const donePercent = Math.round((doneCount / total) * 100);
@@ -16,7 +21,9 @@ export function RoadmapWidget() {
         </div>
         <div>
           <h2 className="font-display text-2xl font-bold tracking-tight">Roadmap</h2>
-          <p className="text-muted-foreground text-sm">Ce qui arrive bientôt…</p>
+          <p className="text-muted-foreground text-sm">
+            {pick('Ce qui arrive bientôt…', 'What is coming next…')}
+          </p>
         </div>
       </div>
 
@@ -27,7 +34,7 @@ export function RoadmapWidget() {
           aria-valuenow={doneCount}
           aria-valuemin={0}
           aria-valuemax={total}
-          aria-label="Progression de la roadmap"
+          aria-label={pick('Progression de la roadmap', 'Roadmap progress')}
         >
           <div
             className="h-full rounded-full bg-success transition-all"
@@ -35,7 +42,7 @@ export function RoadmapWidget() {
           />
         </div>
         <span className="font-mono text-xs font-semibold text-muted-foreground">
-          {doneCount}/{total} terminés
+          {doneCount}/{total} {pick('terminés', 'done')}
         </span>
       </div>
 
@@ -84,7 +91,7 @@ export function RoadmapWidget() {
                     </h3>
                     {item.status === 'in-progress' && (
                       <Badge className="text-[9px] px-1 py-0 h-4 bg-primary/20 text-primary border-0">
-                        En cours
+                        {pick('En cours', 'In progress')}
                       </Badge>
                     )}
                   </div>

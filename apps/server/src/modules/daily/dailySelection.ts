@@ -276,6 +276,26 @@ export function pickDailyReplacement(input: {
   return null;
 }
 
+/**
+ * Homepage discovery pick. Excluded ids (today's quiz, recent featured songs)
+ * never come back, even after the popularity preference relaxes.
+ * Prefers mid/low AniList popularity so the card is not always a catalogue hit.
+ */
+export function pickSongOfTheDay(input: {
+  pool: DailySongCandidate[];
+  rng: Rng;
+  excludeSongIds: Set<number>;
+}): DailySongCandidate | null {
+  return pickDailyReplacement({
+    pool: input.pool,
+    rng: input.rng,
+    excludeSongIds: input.excludeSongIds,
+    excludeFranchiseKeys: new Set(),
+    recentSongIds: new Set(),
+    recentFranchiseKeys: new Set(),
+  });
+}
+
 export function selectDailySongs(input: {
   pool: DailySongCandidate[];
   rng: Rng;

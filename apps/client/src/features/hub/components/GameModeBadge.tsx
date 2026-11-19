@@ -1,5 +1,7 @@
 import { Trophy, Zap, Timer, AudioLines } from 'lucide-react';
-import { GAME_TYPE_LABELS, type GameType } from '@aniquizz/shared';
+import type { GameType } from '@aniquizz/shared';
+import { gameTypeLabel } from '@/features/hub/copy/hubCopy';
+import { pick, tx } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import { modeChrome } from '@/features/hub/components/modeChrome';
 
@@ -22,18 +24,18 @@ export function GameModeBadge({
   const evolving = gameType === 'evolving';
   const label = compact
     ? timeAttack
-      ? 'CLM'
+      ? pick('CLM', 'TIME')
       : evolving
         ? 'EVO'
         : 'STD'
-    : GAME_TYPE_LABELS[gameType];
+    : gameTypeLabel(gameType);
   const ariaLabel = timeAttack
-    ? 'Mode Contre-la-montre'
+    ? tx('hub', 'config.modeTimeAttack')
     : evolving
-      ? 'Mode Évolutif'
+      ? tx('hub', 'config.modeEvolving')
       : speedBonusEnabled
-        ? 'Standard, bonus Vitesse'
-        : `Mode ${GAME_TYPE_LABELS[gameType]}`;
+        ? tx('hub', 'config.modeSpeed')
+        : tx('hub', 'config.modeNamed', { name: gameTypeLabel(gameType) });
   const Icon = timeAttack ? Timer : evolving ? AudioLines : Trophy;
   const chrome = modeChrome(gameType);
 

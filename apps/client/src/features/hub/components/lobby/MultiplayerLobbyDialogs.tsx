@@ -9,6 +9,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { LobbyPlayer } from '@/features/hub/components/LobbyPlayerCard';
+import { pick } from '@/lib/i18n/text';
 
 interface MultiplayerLobbyDialogsProps {
   showLeave: boolean;
@@ -42,15 +43,21 @@ export function MultiplayerLobbyDialogs({
       <AlertDialog open={showLeave} onOpenChange={onShowLeaveChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Quitter le salon ?</AlertDialogTitle>
+            <AlertDialogTitle>{pick('Quitter le salon ?', 'Leave the room?')}</AlertDialogTitle>
             <AlertDialogDescription>
               {isHost && playerCount > 1
-                ? "Vous êtes l'hôte. Si vous quittez, un nouvel hôte sera désigné automatiquement."
-                : 'Vous allez être déconnecté de ce salon.'}
+                ? pick(
+                    "Vous êtes l'hôte. Si vous quittez, un nouvel hôte sera désigné automatiquement.",
+                    'You are the host. If you leave, a new host is chosen automatically.',
+                  )
+                : pick(
+                    'Vous allez être déconnecté de ce salon.',
+                    'You will be disconnected from this room.',
+                  )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{pick('Annuler', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 onShowLeaveChange(false);
@@ -58,7 +65,7 @@ export function MultiplayerLobbyDialogs({
               }}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Quitter
+              {pick('Quitter', 'Leave')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -67,14 +74,21 @@ export function MultiplayerLobbyDialogs({
       <AlertDialog open={!!transferTarget} onOpenChange={onTransferOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Transférer le rôle d'hôte ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {pick("Transférer le rôle d'hôte ?", 'Transfer the host role?')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Ce joueur deviendra l'hôte du salon et gérera les paramètres.
+              {pick(
+                "Ce joueur deviendra l'hôte du salon et gérera les paramètres.",
+                'This player becomes the room host and manages the settings.',
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={onConfirmTransfer}>Confirmer</AlertDialogAction>
+            <AlertDialogCancel>{pick('Annuler', 'Cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={onConfirmTransfer}>
+              {pick('Confirmer', 'Confirm')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -82,19 +96,23 @@ export function MultiplayerLobbyDialogs({
       <AlertDialog open={!!kickTarget} onOpenChange={onKickOpenChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Exclure ce joueur ?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {pick('Exclure ce joueur ?', 'Remove this player?')}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              {kickTarget?.name} sera retiré du salon. Il pourra le rejoindre à nouveau avec le
-              code.
+              {pick(
+                `${kickTarget?.name} sera retiré du salon. Il pourra le rejoindre à nouveau avec le code.`,
+                `${kickTarget?.name} will be removed from the room. They can join again with the code.`,
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel>{pick('Annuler', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={onConfirmKick}
               className="bg-destructive hover:bg-destructive/90"
             >
-              Exclure
+              {pick('Exclure', 'Remove')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

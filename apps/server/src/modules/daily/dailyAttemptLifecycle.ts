@@ -18,9 +18,10 @@ import {
   type DailyAnswerRow,
   type DailyRoundRow,
 } from './dailyPayloads';
+import { logger } from '../../utils/logger';
 import { recordHeardSongs } from '../catalogue/songHistoryService';
 import { noteDailyAnswer, noteDailyClock } from './dailyAttemptMemory';
-import { syncChallengeRanks } from './dailyRanks';
+import { syncChallengeRanksNow } from './dailyRanks';
 
 export type AttemptRecord = Prisma.DailyAttemptGetPayload<{
   include: {
@@ -69,10 +70,46 @@ export const loadAttempt = (id: string, profileId: string): Promise<AttemptRecor
     include: attemptInclude,
   });
 
+const boards = new Map<string, Promise<void>>();
+
+/** Rank and song history for a close that already showed its result. */
+export function settleDailyBoardInBackground(attemptId: string, work: () => Promise<void>): void {
+  const pending = work().catch((error: unknown) => {
+    logger.error('[Daily] Failed to publish rank or history', 'Daily', error);
+  });
+  const tracked = pending.finally(() => {
+    if (boards.get(attemptId) === tracked) boards.delete(attemptId);
+  });
+  boards.set(attemptId, tracked);
+}
+
+/** Admin reset must not rewind history that is still being written. */
+export function whenDailyBoardSettled(attemptId: string): Promise<void> {
+  return boards.get(attemptId) ?? Promise.resolve();
+}
+
+export const writeDailyAnswer = async (input: {
+  attemptId: string;
+  roundId: string;
+  selectedLabel: string | null;
+  isCorrect: boolean;
+  responseMs: number;
+  answeredAt: Date;
+}): Promise<void> => {
+  try {
+    await prisma.dailyAttemptAnswer.create({ data: input });
+  } catch (error) {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+      throw error;
+    }
+  }
+};
+
 export const finishAttempt = async (
   attempt: AttemptRecord,
   state: 'COMPLETED' | 'FORFEITED' | 'EXPIRED',
   now: Date,
+  options?: { deferBoard?: boolean },
 ): Promise<AttemptRecord> => {
   const rounds = attempt.challenge.rounds as DailyRoundRow[];
   const totals = computeAttemptTotals(rounds, attempt.answers);
@@ -156,40 +193,61 @@ export const finishAttempt = async (
         revealUntil: null,
       },
     });
-    await syncChallengeRanks(tx, attempt.challengeId);
   });
 
+  const publishBoard = async () => {
+    if (!shouldRecordHistory) return;
+    // After the score transaction: a missing catalogue FK must not roll back XP.
+    await Promise.all([
+      syncChallengeRanksNow(attempt.challengeId),
+      recordHeardSongs(prisma, attempt.profileId, heard),
+    ]);
+    const { notifyProfileAchievements } = await import('../profile/achievementNotify');
+    await notifyProfileAchievements(attempt.profileId);
+  };
+
+  if (!shouldRecordHistory) {
+    const stored = await loadAttempt(attempt.id, attempt.profileId);
+    if (!stored) throw new DailyHttpError(500, 'Tentative introuvable après clôture.');
+    return stored;
+  }
+
+  if (options?.deferBoard) {
+    // The result screen only needs score, XP, and streak. Rank can follow.
+    settleDailyBoardInBackground(attempt.id, publishBoard);
+    return {
+      ...attempt,
+      state,
+      completedAt: attempt.completedAt ?? now,
+      correctCount: totals.correctCount,
+      activeRoundCount: totals.activeRoundCount,
+      won: isDailyVictory(totals.correctCount, totals.activeRoundCount),
+      totalResponseMs: totals.totalResponseMs,
+      xpAwarded,
+      revealUntil: null,
+    };
+  }
+
+  await publishBoard();
   const fresh = await loadAttempt(attempt.id, attempt.profileId);
   if (!fresh) throw new DailyHttpError(500, 'Tentative introuvable après clôture.');
-  // After the transaction: a missing catalogue FK must not abort XP / streak.
-  if (shouldRecordHistory) {
-    await recordHeardSongs(prisma, attempt.profileId, heard);
-  }
   return fresh;
 };
 
-export const writeUnanswered = async (
+export const writeUnanswered = (
   attemptId: string,
   roundId: string,
   responseMs: number,
   now: Date,
-) => {
-  try {
-    await prisma.dailyAttemptAnswer.create({
-      data: {
-        attemptId,
-        roundId,
-        selectedLabel: null,
-        isCorrect: false,
-        responseMs,
-        answeredAt: now,
-      },
-    });
-  } catch (error) {
-    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002')
-      throw error;
-  }
-};
+): Promise<void> =>
+  writeDailyAnswer({
+    attemptId,
+    roundId,
+    selectedLabel: null,
+    isCorrect: false,
+    responseMs,
+    answeredAt: now,
+  });
 
 const startUnanswered = async (attempt: AttemptRecord, now: Date): Promise<AttemptRecord> => {
   const next = unansweredPlayable(attempt.challenge.rounds as DailyRoundRow[], attempt.answers);

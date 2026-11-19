@@ -1,6 +1,11 @@
 import { toast } from 'sonner';
 import type { Session } from '@supabase/supabase-js';
-import type { GameOverPayload, LevelUpPayload, SanctionUpdatePayload } from '@aniquizz/shared';
+import type {
+  GameOverPayload,
+  LevelUpPayload,
+  SanctionUpdatePayload,
+  AchievementsUnlockedPayload,
+} from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
 import { shouldReconnectAfterSessionReplaced } from '@/lib/socketReady';
 import { xpEarnedForUser } from '@/features/auth/lib/matchXpProfile';
@@ -54,6 +59,18 @@ export function registerGameOverXpHandler(
   socket.on('game_over', onGameOver);
   return () => {
     socket.off('game_over', onGameOver);
+  };
+}
+
+export function registerAchievementUnlockHandler(
+  onUnlocked: (payload: AchievementsUnlockedPayload) => void,
+): () => void {
+  const onEvent = (payload: AchievementsUnlockedPayload) => {
+    onUnlocked(payload);
+  };
+  socket.on('achievements:unlocked', onEvent);
+  return () => {
+    socket.off('achievements:unlocked', onEvent);
   };
 }
 

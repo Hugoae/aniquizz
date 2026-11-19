@@ -152,7 +152,7 @@ Design system: [`apps/client/src/index.css`](./apps/client/src/index.css) — da
 - Reuse shadcn primitives under `apps/client/src/components/ui/` and `FOCUS_RING` from config primitives — do not reinvent buttons, dialogs, inputs.
 - `.glass-card` owns card radius; do not override per usage.
 - Motion: global `prefers-reduced-motion` is handled in `index.css` — avoid adding animations that ignore it.
-- **User-facing copy stays French** (isolated for future i18n); styling tokens are language-agnostic.
+- Styling tokens are language-agnostic. Player-facing copy is French and English (see § Languages).
 
 Token reference (HSL custom properties): `--primary`, `--accent`, `--aqua`, `--success`, `--warning`, `--destructive`, `--card`, `--muted`, `--silver`, `--medal-bronze`, etc.
 
@@ -180,14 +180,28 @@ Token reference (HSL custom properties): `--primary`, `--accent`, `--aqua`, `--s
 
 ## Comments and language
 
-| Context                             | Language                       |
-| ----------------------------------- | ------------------------------ |
-| Code, comments, logs, docs, commits | **English**                    |
-| User-facing UI strings              | **French** (isolated for i18n) |
+| Context                             | Language                                      |
+| ----------------------------------- | --------------------------------------------- |
+| Code, comments, logs, docs, commits | **English**                                   |
+| Player-facing UI                    | **French and English** (French is the source) |
+| Admin console                       | **French**                                    |
+| Server and HTTP error sentences     | **French** (stable codes are a later pass)    |
 
 CI [`scripts/check-english-code.mjs`](./scripts/check-english-code.mjs) scans comments in `apps/server/src`, `packages/shared/src`, `packages/database/scripts` for French accents. **French string literals in server error payloads are allowed.**
 
 **Comment quality:** explain _why_ (intent, constraint, trade-off, non-obvious invariant) — not _what_ the next line does. Link to design docs when useful (`docs/game/…`, `docs/security/…`).
+
+## Languages
+
+The player site is French and English. Shipped in 26.9, not committed yet. `i18next` + `react-i18next`, no compiler. Runtime: `apps/client/src/lib/i18n/`. Resolution: `packages/shared/src/locale.ts`. Profile column: `uiLocale` (`String?`, null means not chosen).
+
+**Which language wins.** Account `uiLocale` beats the device key `aniquizz.locale` beats the browser. The device key is written only when the player uses the switch. The detected browser language is never written back. The first navigator tag whose base is `en` or `fr` wins; anything else, including `de`, falls through. No match falls back to French. Same URLs, no `/en` prefix. `<html lang>` follows the resolved language. The header and the settings share one control: a flag (FR or US) plus `FR` or `EN`.
+
+**How copy is read.** French is the source. Missing English falls back to French, never to a key name. Catalogues live in `apps/client/src/lib/i18n/locales/{fr,en}` and are read with `tx()`. One-off strings use `pick(french, english)` from `apps/client/src/lib/i18n/text.ts`, evaluated when the screen renders. Copy objects keep getters (`liveStrings` / `extendLive`). Do not spread or `Object.assign` a getter object: that snapshots the boot language. A `useMemo` that calls `pick` or `tx` must depend on `i18n.language`. `LocaleProvider` sets React state only after `i18n.changeLanguage` resolves, so a render cannot freeze French while the header already says EN.
+
+**What stays untranslated.** Admin. Anime titles, song names, usernames, and room names. Shared display constants (`GAME_CONFIG.MEDALS.META`, `ANSWER_TYPE_LABELS`, and the French reasons in `packages/shared`) stay French so server tests keep exact strings. The client translates medals and answer types at the screen (`medalDisplayLabel`, `answerTypeDisplayLabel`). Server and HTTP errors stay French; an English screen can still show a French error toast.
+
+**When you add a player-facing string.** Add the French and the English in the same change. French uses vouvoiement. English uses "you". Keep the French argument exact when a unit test asserts it. Client tests force French in `apps/client/src/test/setup.ts`. Do not add a third language. Do not put theme colors in flag SVGs; the flag fills are content.
 
 ---
 

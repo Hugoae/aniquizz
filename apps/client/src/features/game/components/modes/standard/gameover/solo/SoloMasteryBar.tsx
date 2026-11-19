@@ -13,6 +13,8 @@ import {
   type Precision,
 } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
+import { medalDisplayLabel } from '@/features/game/lib/medalLabel';
 
 interface SoloMasteryBarProps {
   score: number;
@@ -51,16 +53,22 @@ function goalMessage(
       )
     : nextMedalGoal(score, maxPossibleScore, difficulties, soloMedal, precision, evolving);
   if (goal) {
-    const unit = timeAttack
-      ? goal.pointsNeeded === 1
-        ? 'titre'
-        : 'titres'
-      : goal.pointsNeeded === 1
-        ? 'pt'
-        : 'pts';
-    return `Encore ${goal.pointsNeeded} ${unit} pour la Médaille ${goal.label}`;
+    const needed = goal.pointsNeeded;
+    const name = medalDisplayLabel(goal.tier);
+    if (timeAttack) {
+      return pick(
+        `Encore ${needed} titre${needed > 1 ? 's' : ''} pour la Médaille ${name}`,
+        `${needed} more song${needed > 1 ? 's' : ''} for the ${name} medal`,
+      );
+    }
+    return pick(
+      `Encore ${needed} pt${needed > 1 ? 's' : ''} pour la Médaille ${name}`,
+      `${needed} more pt${needed > 1 ? 's' : ''} for the ${name} medal`,
+    );
   }
-  if (soloMedal === 'platinum') return 'Platine — performance maximale !';
+  if (soloMedal === 'platinum') {
+    return pick('Platine — performance maximale !', 'Platinum — top performance!');
+  }
   return null;
 }
 
@@ -111,7 +119,7 @@ export function SoloMasteryBar({
                 aria-hidden
               />
               <span className="text-[11px] font-medium leading-none text-muted-foreground">
-                {meta?.label ?? tier}
+                {medalDisplayLabel(tier)}
               </span>
               <span
                 className={cn(

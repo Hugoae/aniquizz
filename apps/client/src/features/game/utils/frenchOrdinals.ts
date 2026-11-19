@@ -1,17 +1,20 @@
-/** User-facing French ordinal for competition ranks (isolated for future i18n). */
+import i18n from '@/lib/i18n';
+import { formatSpeedRankLabel } from '@/features/game/copy/speedRankCopy';
 
+/** Place ordinal. French keeps 1re for “place”; speed rank uses 1er. */
 export function frenchOrdinal(rank: number): string {
+  if (i18n.language.startsWith('en')) return formatSpeedRankLabel(rank);
   if (rank === 1) return '1re';
   return `${rank}e`;
 }
 
-/** e.g. « à la 1re place », « à la 5e place » */
 export function frenchRankPlacePhrase(rank: number): string {
+  if (i18n.language.startsWith('en')) return `in ${formatSpeedRankLabel(rank)} place`;
   if (rank === 1) return 'à la 1re place';
   return `à la ${rank}e place`;
 }
 
-/** Subtitle for a non-winning multi finish. */
 export function multiFinishSubtitle(rank: number): string {
+  if (i18n.language.startsWith('en')) return `You finish ${frenchRankPlacePhrase(rank)}.`;
   return `Vous terminez ${frenchRankPlacePhrase(rank)}.`;
 }

@@ -7,6 +7,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { captureClientError } from '@/lib/errorReporter';
 import { waitForAppStylesheet } from '@/lib/appShell';
 import { applyStoredMotionAttribute } from '@/features/settings/lib/motionRuntime';
+import '@/lib/i18n';
 import './fonts.css';
 import './index.css';
 

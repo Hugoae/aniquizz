@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { supabase } from '@/lib/supabase';
+import { pick } from '@/lib/i18n/text';
 
 interface PasswordDialogProps {
   open: boolean;
@@ -67,7 +68,7 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
         return;
       }
 
-      toast.success('Mot de passe mis à jour !');
+      toast.success(pick('Mot de passe mis à jour !', 'Password updated.'));
       close();
     } catch (err) {
       toast.error(mapAuthErrorMessage(err));
@@ -86,26 +87,26 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
     >
       <DialogContent className="sm:max-w-md bg-card border-border">
         <DialogHeader>
-          <DialogTitle>Changer de mot de passe</DialogTitle>
+          <DialogTitle>{pick('Changer de mot de passe', 'Change password')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <PasswordField
             id="current-password"
-            label="Mot de passe actuel"
+            label={pick('Mot de passe actuel', 'Current password')}
             autoComplete="current-password"
             value={currentPassword}
             onChange={setCurrentPassword}
           />
           <PasswordField
             id="new-password"
-            label="Nouveau mot de passe"
+            label={pick('Nouveau mot de passe', 'New password')}
             autoComplete="new-password"
             value={newPassword}
             onChange={setNewPassword}
           />
           <PasswordField
             id="confirm-password"
-            label="Confirmer le nouveau mot de passe"
+            label={pick('Confirmer le nouveau mot de passe', 'Confirm the new password')}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={setConfirmPassword}
@@ -114,10 +115,14 @@ export function PasswordDialog({ open, onOpenChange, userEmail }: PasswordDialog
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={close}>
-            Annuler
+            {pick('Annuler', 'Cancel')}
           </Button>
           <Button onClick={handleChangePassword} disabled={isChangingPassword}>
-            {isChangingPassword ? <Loader2 className="animate-spin h-4 w-4" /> : 'Mettre à jour'}
+            {isChangingPassword ? (
+              <Loader2 className="animate-spin h-4 w-4" />
+            ) : (
+              pick('Mettre à jour', 'Update')
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

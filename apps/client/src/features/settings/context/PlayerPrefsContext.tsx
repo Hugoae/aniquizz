@@ -30,7 +30,7 @@ import {
   readOsPrefersReduced,
   subscribeOsPrefersReduced,
 } from '@/features/settings/lib/motionRuntime';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { settingsText } from '@/features/settings/copy/settingsCopy';
 
 export const PLAYER_PREFS_SYNC_MS = 700;
 
@@ -220,7 +220,7 @@ export function PlayerPrefsProvider({ children }: { children: ReactNode }) {
     const onError = (payload: { message?: string }) => {
       if (!pendingRef.current || !isPrefsSyncError(payload?.message)) return;
       pendingRef.current = false;
-      toast.error(SETTINGS_COPY.prefsSyncError);
+      toast.error(settingsText().prefsSyncError);
       if (keepLocalOnAccountRef.current || hadLocalSnapshotRef.current) return;
       if (!playerPrefsEqual(lastAckedRef.current, prefsRef.current)) {
         apply(lastAckedRef.current);

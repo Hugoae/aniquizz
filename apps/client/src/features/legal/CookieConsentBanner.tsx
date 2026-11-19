@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useCookieConsent } from '@/features/legal/CookieConsentContext';
+import { tx } from '@/lib/i18n/text';
 
 /** First-visit RGPD banner — no non-essential scripts before consent. */
 export function CookieConsentBanner() {
@@ -16,24 +17,23 @@ export function CookieConsentBanner() {
       className="fixed inset-x-4 bottom-4 z-[100] mx-auto max-w-xl rounded-2xl border border-border/70 bg-popover/95 p-4 shadow-elevated backdrop-blur-xl sm:inset-x-auto sm:right-6 sm:bottom-6"
     >
       <h2 id="cookie-banner-title" className="text-sm font-bold text-foreground">
-        Cookies et confidentialité
+        {tx('common', 'cookieTitle')}
       </h2>
       <p id="cookie-banner-desc" className="mt-2 text-xs leading-relaxed text-muted-foreground">
-        Nous utilisons des cookies strictement nécessaires à la connexion et au jeu. Les cookies
-        d&apos;analyse ne sont chargés qu&apos;avec votre accord.{' '}
+        {tx('common', 'cookieBody')}{' '}
         <Link
           to="/legal/confidentialite"
           className="text-primary underline-offset-2 hover:underline"
         >
-          Politique de confidentialité
+          {tx('common', 'cookiePrivacy')}
         </Link>
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
         <Button type="button" size="sm" onClick={acceptAll}>
-          Tout accepter
+          {tx('common', 'cookieAccept')}
         </Button>
         <Button type="button" size="sm" variant="secondary" onClick={rejectOptional}>
-          Refuser l&apos;optionnel
+          {tx('common', 'cookieReject')}
         </Button>
         <Button
           type="button"
@@ -42,7 +42,7 @@ export function CookieConsentBanner() {
           onClick={closeBanner}
           className="text-muted-foreground"
         >
-          Fermer
+          {tx('common', 'cookieClose')}
         </Button>
       </div>
     </div>

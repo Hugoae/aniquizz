@@ -50,6 +50,8 @@ export function buildOwnProfileViewModel(input: {
     stats: withDailyDefaults(input.stats.stats),
     history: input.stats.history,
     historyRedacted: false,
+    achievements: input.stats.achievements ?? [],
+    achievementProgress: input.stats.achievementProgress,
     friends: [],
   };
 }
@@ -96,6 +98,8 @@ export function buildPublicProfileViewModel(publicData: PublicProfile): ProfileV
     }),
     history: publicData.history,
     historyRedacted: publicData.historyRedacted,
+    achievements: publicData.achievements ?? [],
+    achievementProgress: publicData.achievementProgress,
     friends: publicData.friends,
   };
 }

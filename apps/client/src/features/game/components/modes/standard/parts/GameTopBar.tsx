@@ -2,8 +2,9 @@ import { LogOut, Pause, Play, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ProfileButton } from '@/components/layout/ProfileButton';
 import { cn } from '@/lib/utils';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { pick } from '@/lib/i18n/text';
 import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import type { MyProfile } from './types';
@@ -51,13 +52,14 @@ export function GameTopBar({
   testMatch = false,
 }: GameTopBarProps) {
   const roundProgress = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0;
+  const copy = useSettingsCopy();
   const timeAttackMeter = foundCount != null;
 
   // Pause is a majority vote — surface the tally so a lone voter gets feedback
   // before the threshold is reached (a real gap today: nothing changed on click).
   const showPauseTally = !isGamePaused && pauseRequired > 1 && pauseVotes > 0;
   const pauseLabel = isGamePaused
-    ? 'Reprendre'
+    ? pick('Reprendre', 'Resume')
     : showPauseTally
       ? `Pause (${pauseVotes}/${pauseRequired})`
       : 'Pause';
@@ -72,7 +74,7 @@ export function GameTopBar({
           className="gap-2 text-muted-foreground hover:text-destructive"
         >
           <LogOut className="h-4 w-4" />
-          <span className="hidden md:inline">Quitter</span>
+          <span className="hidden md:inline">{pick('Quitter', 'Leave')}</span>
         </Button>
         {showPause && (
           <Button
@@ -135,7 +137,7 @@ export function GameTopBar({
               aria-valuenow={currentRound}
               aria-valuemin={0}
               aria-valuemax={totalRounds}
-              aria-label="Progression de la partie"
+              aria-label={pick('Progression de la partie', 'Match progress')}
             >
               <div
                 className="h-full bg-gradient-primary transition-all duration-1000"
@@ -151,7 +153,7 @@ export function GameTopBar({
           variant="ghost"
           size="icon"
           onClick={onShowSettings}
-          aria-label={SETTINGS_COPY.openAria}
+          aria-label={copy.openAria}
           className="text-muted-foreground hover:text-foreground"
         >
           <Settings className="h-4 w-4" />

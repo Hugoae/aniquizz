@@ -3,6 +3,7 @@ import { Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RecentTitle } from '@/features/game/state/gameReducer';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { OUTCOME_STYLE } from './recentTitleStyle';
 
 /** Latest titles shown on small screens, where the side strip is hidden. */
@@ -18,6 +19,7 @@ export const RecentTitlesPills = memo(function RecentTitlesPills({
   titles,
   className,
 }: RecentTitlesPillsProps) {
+  useLocale();
   if (titles.length === 0) return null;
   return (
     <section aria-label={GAME_COPY.recentTitles.heading} className={cn('w-full', className)}>

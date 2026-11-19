@@ -13,6 +13,7 @@ import {
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { pick, tx } from '@/lib/i18n/text';
 import { SectionHeader } from './ConfigPrimitives';
 
 interface TimeAttackStreakBonusOptionProps {
@@ -40,9 +41,9 @@ export function TimeAttackStreakBonusOption({ config, update }: TimeAttackStreak
       <div className="flex min-h-6 items-center justify-between gap-2">
         <SectionHeader
           icon={Flame}
-          title="Prime de série"
+          title={tx('hub', 'config.streakTitle')}
           className="mb-0 min-w-0 [&_h3]:truncate"
-          tooltip="Activée, chaque série de titres trouvés d'affilée rend du temps. Le compteur ne retombe pas après la prime. Passer et un titre raté cassent la série. Une mauvaise réponse sur le titre en cours retire 3 secondes sans la casser. Plafond : l'équivalent de la durée choisie, en plus."
+          tooltip={tx('hub', 'config.streakHint')}
         />
         <Switch
           checked={enabled}
@@ -55,7 +56,11 @@ export function TimeAttackStreakBonusOption({ config, update }: TimeAttackStreak
                 })
               : apply({ timeAttackStreakBonus: false })
           }
-          aria-label={enabled ? 'Prime de série activée' : 'Prime de série désactivée'}
+          aria-label={
+            enabled
+              ? pick('Prime de série activée', 'Streak bonus on')
+              : pick('Prime de série désactivée', 'Streak bonus off')
+          }
         />
       </div>
       <div
@@ -65,9 +70,14 @@ export function TimeAttackStreakBonusOption({ config, update }: TimeAttackStreak
         )}
       >
         <div className="flex items-center gap-2">
-          <span className="w-11 shrink-0 text-[11px] font-medium text-muted-foreground">Série</span>
+          <span className="w-11 shrink-0 text-[11px] font-medium text-muted-foreground">
+            {pick('Série', 'Streak')}
+          </span>
           <Slider
-            aria-label="Titres trouvés d'affilée pour la prime"
+            aria-label={pick(
+              "Titres trouvés d'affilée pour la prime",
+              'Songs found in a row for the bonus',
+            )}
             disabled={!enabled}
             value={[length]}
             min={TIME_ATTACK_STREAK_MIN}
@@ -80,9 +90,11 @@ export function TimeAttackStreakBonusOption({ config, update }: TimeAttackStreak
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-11 shrink-0 text-[11px] font-medium text-muted-foreground">Temps</span>
+          <span className="w-11 shrink-0 text-[11px] font-medium text-muted-foreground">
+            {pick('Temps', 'Time')}
+          </span>
           <Slider
-            aria-label="Secondes gagnées par prime"
+            aria-label={pick('Secondes gagnées par prime', 'Seconds gained per bonus')}
             disabled={!enabled}
             value={[seconds]}
             min={TIME_ATTACK_STREAK_BONUS_MIN_SECONDS}

@@ -2,19 +2,25 @@ import { prisma, isBotId } from '@aniquizz/database';
 import type { PublicProfile, PresenceStatus, FriendSummary } from '@aniquizz/shared';
 import {
   canViewAudience,
+  linkedProviderCount,
   mergeProfileHistory,
+  modesPlayedFrom,
+  STANDARD_MATCH_MODES,
   normalizeAccountPrivacy,
   parseMatchReplayConfig,
   PROFILE_HISTORY_TAKE,
   dailyTrackStates,
   summarizeDailyCareerFromAggregates,
   toDailyHistoryEntry,
+  EVOLVING_STEP_POINTS,
+  type AchievementProgress,
   type PrivacyViewerKind,
 } from '@aniquizz/shared';
 import { logger } from '../../utils/logger';
 import { friendsService } from '../friends/friendsService';
 import { redactPresence, unavailablePublicProfile } from './privacyRedaction';
 import { queryFinishedMatchCareer } from './profileMatchCareer';
+import { syncProfileAchievements } from './profileAchievements';
 
 const PLAYABLE_SONGS_TTL_MS = 10 * 60 * 1000;
 let playableSongsCache: { count: number; at: number } | null = null;
@@ -50,6 +56,16 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       timeAgg,
       roundsPlayed,
       finishedCareer,
+      medalCount,
+      platinumCount,
+      friendCount,
+      likeCount,
+      standardMatches,
+      chronoMatches,
+      evolvingMatches,
+      songsFound,
+      evolvingSnaps,
+      multiWins,
     ] = await Promise.all([
       countPlayableSongs(),
       prisma.songHistory.count({
@@ -70,6 +86,8 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
           totalGuesses: true,
           correctGuesses: true,
           maxStreak: true,
+          anilistUsername: true,
+          malUsername: true,
         },
       }),
       prisma.matchPlayer.aggregate({
@@ -163,11 +181,93 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       }),
       prisma.roundAnswer.count({ where: { matchPlayer: { profileId: userId } } }),
       queryFinishedMatchCareer(userId),
+      prisma.matchPlayer.count({
+        where: { profileId: userId, soloMedal: { not: null } },
+      }),
+      prisma.matchPlayer.count({
+        where: { profileId: userId, soloMedal: 'PLATINUM' },
+      }),
+      prisma.friendship.count({
+        where: {
+          status: 'ACCEPTED',
+          OR: [{ requesterId: userId }, { addresseeId: userId }],
+        },
+      }),
+      prisma.songLike.count({ where: { profileId: userId } }),
+      prisma.match.count({
+        where: {
+          status: 'FINISHED',
+          mode: { in: [...STANDARD_MATCH_MODES] },
+          players: { some: { profileId: userId } },
+        },
+      }),
+      prisma.match.count({
+        where: {
+          status: 'FINISHED',
+          mode: 'TIME_ATTACK',
+          players: { some: { profileId: userId } },
+        },
+      }),
+      prisma.match.count({
+        where: { status: 'FINISHED', mode: 'EVOLVING', players: { some: { profileId: userId } } },
+      }),
+      prisma.songHistory.count({
+        where: {
+          profileId: userId,
+          correctCount: { gt: 0 },
+          song: { downloadStatus: 'COMPLETED' },
+        },
+      }),
+      prisma.roundAnswer.count({
+        where: {
+          isCorrect: true,
+          pointsAwarded: EVOLVING_STEP_POINTS[0],
+          matchPlayer: { profileId: userId, match: { mode: 'EVOLVING', status: 'FINISHED' } },
+        },
+      }),
+      prisma.$queryRaw<Array<{ wins: number }>>`
+        SELECT COUNT(*)::int AS wins
+        FROM "MatchPlayer" mp
+        INNER JOIN "Match" m ON m.id = mp."matchId"
+        WHERE mp."profileId" = ${userId}
+          AND mp."isWinner" = true
+          AND m.status = 'FINISHED'
+          AND (
+            SELECT COUNT(*)::int FROM "MatchPlayer" other WHERE other."matchId" = m.id
+          ) > 1
+      `,
     ]);
 
     const progressPercent = totalSongs > 0 ? Math.round((discoveredSongs / totalSongs) * 100) : 0;
 
     if (!profile) throw new Error('Profil introuvable');
+
+    const progress: AchievementProgress = {
+      gamesPlayed: profile.gamesPlayed,
+      gamesWon: profile.gamesWon,
+      correctGuesses: profile.correctGuesses,
+      maxStreak: profile.maxStreak,
+      dailyCompletions: dailyStats?.completions ?? 0,
+      dailyLongestStreak: dailyStats?.longestStreak ?? 0,
+      dailyPerfectDays: dailyStats?.perfectDays ?? 0,
+      songsHeard: discoveredSongs,
+      medals: medalCount,
+      platinums: platinumCount,
+      friends: friendCount,
+      likes: likeCount,
+      standardMatches,
+      chronoMatches,
+      evolvingMatches,
+      evolvingSnaps,
+      multiMatches: finishedCareer.multiCount,
+      multiWins: multiWins[0]?.wins ?? 0,
+      modesPlayed: modesPlayedFrom({ standardMatches, chronoMatches, evolvingMatches }),
+      songsFound,
+      customAvatar: profile.avatar.includes('/avatar.jpg') ? 1 : 0,
+      linkedList: linkedProviderCount(profile.anilistUsername, profile.malUsername),
+      catalogueSize: totalSongs,
+    };
+    const achievements = await syncProfileAchievements(userId, progress, profile.xp, profile.level);
 
     // Pre-game answer style, inferred from the answers actually recorded.
     // Only a pure TYPING/QCM match maps to that mode; anything else — including
@@ -283,8 +383,8 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       discoveredSongs,
       progressPercent,
       createdAt: profile.createdAt.toISOString(),
-      xp: profile.xp,
-      level: profile.level,
+      xp: achievements.xp,
+      level: achievements.level,
       bestScore: best._max.score ?? 0,
       scoreTotal: scoreAgg._sum.score ?? 0,
       avgXpPerGame:
@@ -299,6 +399,9 @@ const computeRichStats = async (userId: string, opts?: { includeHistory?: boolea
       playtimeMs,
       history,
       historyRedacted: !includeHistory,
+      achievements: achievements.achievements,
+      newlyUnlocked: achievements.newlyUnlocked,
+      achievementProgress: progress,
       stats: {
         gamesPlayed: profile.gamesPlayed,
         gamesWon: profile.gamesWon,

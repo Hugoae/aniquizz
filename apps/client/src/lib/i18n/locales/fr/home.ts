@@ -1,0 +1,15 @@
+export const homeFr = {
+  eyebrow: '+ de 3\u00a0000 sons jouables',
+  titleLead: 'Testez votre',
+  titleAccent: 'culture anime',
+  sub: "Devinez l'anime à partir de la musique. En solo ou à plusieurs, sans pubs et 100% gratuit !",
+  play: 'Jouer',
+  library: 'Librairie',
+  leaderboard: 'Classement',
+  ideas: 'Avis & bugs',
+  newsTitle: 'Actualités',
+  newsSeeAll: 'Voir tout',
+  songOfDayTitle: 'Son du jour',
+  songOfDayPlay: 'Écouter',
+  songOfDayPause: 'Pause',
+} as const;

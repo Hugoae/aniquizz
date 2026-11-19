@@ -320,6 +320,8 @@ describe('updatePrefsInputSchema', () => {
   it('rejects a non-object payload or an invalid motion mode', () => {
     expect(updatePrefsInputSchema.safeParse(undefined).success).toBe(false);
     expect(updatePrefsInputSchema.safeParse({ motionMode: 'off' }).success).toBe(false);
+    expect(updatePrefsInputSchema.parse({ uiLocale: 'en' })).toEqual({ uiLocale: 'en' });
+    expect(updatePrefsInputSchema.safeParse({ uiLocale: 'de' }).success).toBe(false);
   });
 });
 

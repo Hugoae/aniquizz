@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 function Kbd({ children }: { children: string }) {
   return (
@@ -38,15 +39,15 @@ export function ShortcutReminder({ enabled, submitOnEnter }: ShortcutReminderPro
     >
       {submitOnEnter ? (
         <span className="inline-flex items-center gap-1">
-          <Kbd>Entrée</Kbd> valider
+          <Kbd>{pick('Entrée', 'Enter')}</Kbd> {pick('valider', 'submit')}
         </span>
       ) : null}
       <span className="inline-flex items-center gap-1">
         <Kbd>↑</Kbd>
-        <Kbd>↓</Kbd> suggestions
+        <Kbd>↓</Kbd> {pick('suggestions', 'suggestions')}
       </span>
       <span className="inline-flex items-center gap-1">
-        <Kbd>Échap</Kbd> fermer
+        <Kbd>{pick('Échap', 'Esc')}</Kbd> {pick('fermer', 'close')}
       </span>
     </p>
   );

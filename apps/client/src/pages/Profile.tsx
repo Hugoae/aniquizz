@@ -101,7 +101,6 @@ export default function Profile() {
               progressPercent={p.vm.progressPercent}
               totalSongs={p.vm.totalSongs}
             />
-            <ProfileAchievementsSection />
           </div>
 
           <div
@@ -125,6 +124,11 @@ export default function Profile() {
             />
           </div>
         </div>
+
+        <ProfileAchievementsSection
+          unlocked={p.vm.achievements}
+          progress={p.vm.achievementProgress}
+        />
       </ProfilePageShell>
 
       {p.isOwn && (

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { GlobalSettingsContent } from '@/features/settings/components/GlobalSettingsContent';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { subscribeSettingsOpen, type SettingsTab } from '@/features/settings/lib/openSettings';
 
 interface GlobalSettingsModalProps {
@@ -12,6 +12,7 @@ interface GlobalSettingsModalProps {
 
 export function GlobalSettingsModal({ open, onOpenChange }: GlobalSettingsModalProps) {
   const [tab, setTab] = useState<SettingsTab>('general');
+  const copy = useSettingsCopy();
 
   useEffect(() => {
     return subscribeSettingsOpen((next) => {
@@ -26,7 +27,7 @@ export function GlobalSettingsModal({ open, onOpenChange }: GlobalSettingsModalP
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-xl">
             <Settings className="h-5 w-5" aria-hidden />
-            {SETTINGS_COPY.panelTitle}
+            {copy.panelTitle}
           </DialogTitle>
         </DialogHeader>
         <GlobalSettingsContent variant="modal" initialTab={tab} />

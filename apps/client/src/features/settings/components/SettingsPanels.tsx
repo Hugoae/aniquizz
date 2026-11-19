@@ -1,9 +1,10 @@
 import { lazy, Suspense } from 'react';
+import { SettingsLanguageSection } from '@/features/settings/components/SettingsLanguageSection';
 import { SettingsAudioSection } from '@/features/settings/components/SettingsAudioSection';
 import { SettingsMotionSection } from '@/features/settings/components/SettingsMotionSection';
 import { SettingsGameplaySection } from '@/features/settings/components/SettingsGameplaySection';
 import { useAuth } from '@/features/auth/context/AuthContext';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { SettingsSignInHint } from '@/features/settings/components/SettingsSignInHint';
 
 const SettingsPrivacySection = lazy(() =>
@@ -35,6 +36,7 @@ const SettingsIntegrationsSection = lazy(() =>
 export function SettingsGeneralPanel() {
   return (
     <div className="space-y-6">
+      <SettingsLanguageSection />
       <SettingsAudioSection />
       <SettingsMotionSection />
       <SettingsGameplaySection />
@@ -44,6 +46,7 @@ export function SettingsGeneralPanel() {
 
 export function SettingsSocialPanel() {
   const { session, authReady } = useAuth();
+  const copy = useSettingsCopy();
   const signedIn = Boolean(authReady && session);
 
   return (
@@ -56,7 +59,7 @@ export function SettingsSocialPanel() {
             <SettingsBlockedSection />
           </>
         ) : (
-          <SettingsSignInHint message={SETTINGS_COPY.signInForAccount} />
+          <SettingsSignInHint message={copy.signInForAccount} />
         )}
       </Suspense>
     </div>
@@ -65,6 +68,7 @@ export function SettingsSocialPanel() {
 
 export function SettingsAccountPanel() {
   const { session, authReady } = useAuth();
+  const copy = useSettingsCopy();
   const signedIn = Boolean(authReady && session);
   return (
     <div className="space-y-6">
@@ -73,7 +77,7 @@ export function SettingsAccountPanel() {
           <SettingsIntegrationsSection />
         </Suspense>
       ) : (
-        <SettingsSignInHint message={SETTINGS_COPY.signInForAccount} />
+        <SettingsSignInHint message={copy.signInForAccount} />
       )}
       <Suspense fallback={null}>
         <SettingsAccountExtras />

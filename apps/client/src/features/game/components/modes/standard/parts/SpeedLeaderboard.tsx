@@ -3,6 +3,7 @@ import type { SpeedLeaderboardPayload } from '@aniquizz/shared';
 import { formatSpeedTimeSeconds } from '@aniquizz/shared';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 interface SpeedLeaderboardProps {
   data: SpeedLeaderboardPayload;
@@ -47,7 +48,10 @@ function SpeedRow({
         </span>
       )}
       {wrong && (
-        <span className="flex shrink-0 items-center" aria-label="Réponse incorrecte">
+        <span
+          className="flex shrink-0 items-center"
+          aria-label={pick('Réponse incorrecte', 'Wrong answer')}
+        >
           <X className="h-4 w-4 stroke-[3] text-destructive" aria-hidden="true" />
         </span>
       )}
@@ -98,7 +102,7 @@ export function SpeedLeaderboard({
       <div className="my-2 border-t border-border/50" aria-hidden="true" />
 
       <SpeedRow
-        username="Vous"
+        username={pick('Vous', 'You')}
         avatar={myAvatar}
         timeMs={yourTimeMs}
         wrong={you.isCorrect === false}

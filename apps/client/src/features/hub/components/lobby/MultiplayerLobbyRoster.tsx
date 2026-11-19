@@ -6,6 +6,7 @@ import { InviteFriendsButton } from '@/features/friends/InviteFriendsButton';
 import { LobbyPlayerCard, type LobbyPlayer } from '@/features/hub/components/LobbyPlayerCard';
 import { LobbySeat } from '@/features/hub/components/LobbySeat';
 import { LobbyChat } from '@/features/hub/components/LobbyChat';
+import { pick } from '@/lib/i18n/text';
 
 interface MultiplayerLobbyRosterProps {
   roomCode: string;
@@ -56,7 +57,10 @@ export function MultiplayerLobbyRoster({
               <span className={cn(hasEnoughPlayers ? 'text-foreground' : 'text-warning')}>
                 {players.length}
               </span>
-              <span className="text-muted-foreground"> / {maxPlayers} joueurs</span>
+              <span className="text-muted-foreground">
+                {' '}
+                / {maxPlayers} {pick('joueurs', 'players')}
+              </span>
             </span>
             <span
               aria-hidden="true"
@@ -76,7 +80,7 @@ export function MultiplayerLobbyRoster({
               onClick={() => onAddBots(1)}
               className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
             >
-              <Bot className="h-3.5 w-3.5" /> Ajouter un bot
+              <Bot className="h-3.5 w-3.5" /> {pick('Ajouter un bot', 'Add a bot')}
             </Button>
           )}
         </div>

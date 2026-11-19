@@ -22,7 +22,7 @@ import {
 } from './dailySelection';
 import { loadPlayablePool } from './dailyPlayablePool';
 import { recomputeChallengeResults } from './dailyResults';
-import { heardSongsForDailyAttempt } from './dailyAttemptLifecycle';
+import { heardSongsForDailyAttempt, whenDailyBoardSettled } from './dailyAttemptLifecycle';
 import { rewindHeardSongs } from '../catalogue/songHistoryService';
 import { syncChallengeRanks } from './dailyRanks';
 import type { DailyAnswerRow, DailyRoundRow } from './dailyPayloads';
@@ -36,6 +36,12 @@ import {
   type DailySongRow,
 } from './dailySnapshot';
 import { snapshotsFromJson, validateDailySnapshots } from './dailyValidation';
+import {
+  assignSongOfTheDay,
+  redrawSongOfTheDay,
+  songOfTheDayAdminRows,
+  songOfTheDaySongId,
+} from './songOfTheDay';
 import { dailyAdminCanVoidRound, dailyAdminLineupLocked } from './dailyAdminLock';
 import { searchDailyPlayableSongs } from './dailyAdminSearch';
 
@@ -57,15 +63,18 @@ export async function listDailyAdmin(now = new Date()) {
     },
     orderBy: { challengeDate: 'asc' },
   });
-  const recents = await loadRecentExclusionMap(
-    rows.map((row) => isoDayFromDate(row.challengeDate)),
-  );
+  const isoDates = rows.map((row) => isoDayFromDate(row.challengeDate));
+  const [recents, featuredByDate] = await Promise.all([
+    loadRecentExclusionMap(isoDates),
+    songOfTheDayAdminRows(isoDates),
+  ]);
   return {
     today,
     challenges: rows.map((row) => {
       const snapshots = snapshotsFromJson(row.rounds);
       const iso = isoDayFromDate(row.challengeDate);
       const attemptCount = row._count.attempts;
+      const featured = featuredByDate.get(iso) ?? null;
       const recent = recents.get(iso) ?? {
         songIds: new Set<number>(),
         franchiseKeys: new Set<string>(),
@@ -78,6 +87,7 @@ export async function listDailyAdmin(now = new Date()) {
         attemptCount,
         locked: dailyAdminLineupLocked(iso, today, attemptCount),
         canVoid: dailyAdminCanVoidRound(iso, today, attemptCount),
+        featured,
         warnings: validateDailySnapshots(snapshots, {
           challengeNumber: row.challengeNumber,
           recentSongIds: recent.songIds,
@@ -152,6 +162,10 @@ export async function replaceDailyRound(
   if (challenge.rounds.some((row) => row.songId === songId && row.id !== roundId)) {
     throw new DailyHttpError(400, 'Ce son est déjà dans le défi.');
   }
+  const featuredId = await songOfTheDaySongId(isoDayFromDate(challenge.challengeDate));
+  if (featuredId === songId) {
+    throw new DailyHttpError(400, 'Ce son est le son du jour.');
+  }
   const snapshot = await rebuildRound(songId);
   await prisma.dailyChallengeRound.update({
     where: { id: roundId },
@@ -180,6 +194,8 @@ export async function regenerateDailyRound(
   const excludeSongIds = new Set(
     challenge.rounds.map((row) => row.songId).filter((id): id is number => id != null),
   );
+  const featuredId = await songOfTheDaySongId(iso);
+  if (featuredId != null) excludeSongIds.add(featuredId);
   const excludeFranchiseKeys = new Set(
     challenge.rounds.map((row) => {
       const current = parseDailySnapshot(row.snapshot);
@@ -335,6 +351,7 @@ export async function resetDailyProgress(profileId: string, now = new Date()) {
   if (!attempt) {
     return { reset: false, xpReverted: 0 };
   }
+  await whenDailyBoardSettled(attempt.id);
 
   const xpReverted = attempt.xpAwarded;
   const counted =
@@ -394,4 +411,14 @@ export async function resetDailyProgress(profileId: string, now = new Date()) {
   });
 
   return { reset: true, xpReverted };
+}
+
+export async function setDailyFeaturedSong(isoDate: string, songId: number, now = new Date()) {
+  await assignSongOfTheDay(isoDate, songId, now);
+  return listDailyAdmin(now);
+}
+
+export async function redrawDailyFeaturedSong(isoDate: string, now = new Date()) {
+  await redrawSongOfTheDay(isoDate, now);
+  return listDailyAdmin(now);
 }

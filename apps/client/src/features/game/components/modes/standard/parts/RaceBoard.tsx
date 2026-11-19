@@ -14,6 +14,8 @@ import {
   StreakFlame,
 } from '@/features/game/components/shared/RaceLaneStats';
 import { GAME_COPY } from '../../../../copy/gameCopy';
+import { pick } from '@/lib/i18n/text';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import type { RaceBoardState } from '../../../../state/gameReducer';
 import { playerDisplayName, rankAccent } from '../../../../utils/ranking';
 
@@ -40,6 +42,7 @@ export const RaceBoard = memo(function RaceBoard({
   maxRows = RACE_BOARD_PREVIEW,
   className,
 }: RaceBoardProps) {
+  useLocale();
   const now = useRaceNow(board);
   const rows = useMemo(() => {
     if (!board) return [];
@@ -67,7 +70,7 @@ export const RaceBoard = memo(function RaceBoard({
       <ol className="flex flex-col gap-1.5">
         {visible.map(({ row, player }) => {
           const mine = row.userId === String(currentUserId);
-          const name = player ? playerDisplayName(player) : 'Joueur';
+          const name = player ? playerDisplayName(player) : pick('Joueur', 'Player');
           return (
             <li
               key={row.userId}

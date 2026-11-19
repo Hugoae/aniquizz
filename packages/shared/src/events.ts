@@ -11,6 +11,7 @@ import type { CataloguePoolStats, PlaylistPoolStats } from './playlist';
 import type { Precision } from './game';
 import type { DailyPlayErrorPayload, DailyPlayState } from './dailyTypes';
 import type { PlayerPrefs, PlayerPrefsInput } from './playerPrefs';
+import type { AppLocale } from './locale';
 import type { AccountPrivacy, AccountPrivacyInput } from './privacyAudience';
 import type {
   ListOperationError,
@@ -28,6 +29,7 @@ import type {
   GameStartedPayload,
   GameSyncState,
   LevelUpPayload,
+  AchievementsUnlockedPayload,
   LobbyInvitePayload,
   LobbyJoinedPayload,
   AnsweredPayload,
@@ -190,6 +192,8 @@ export interface ServerToClientEvents {
   game_over: (payload: GameOverPayload) => void;
   /** Sent to a player's own socket when a finished match levels them up. */
   level_up: (payload: LevelUpPayload) => void;
+  /** Successes granted at the moment the counters moved. */
+  'achievements:unlocked': (payload: AchievementsUnlockedPayload) => void;
   game_state_sync: (state: GameSyncState) => void;
   vote_update: (payload: VoteUpdatePayload) => void;
   game_paused: (payload: { isPaused: boolean }) => void;
@@ -361,7 +365,7 @@ export interface ClientToServerEvents {
   'profile:get_stats': () => void;
   update_profile_data: (payload: { username?: string; avatarUrl?: string }) => void;
   /** Persist player comfort prefs. Rate-limited; omitted keys keep the stored value. */
-  'profile:update_prefs': (payload: PlayerPrefsInput) => void;
+  'profile:update_prefs': (payload: PlayerPrefsInput & { uiLocale?: AppLocale }) => void;
   /** Persist account privacy audiences. Rate-limited; omitted keys keep the stored value. */
   'profile:update_privacy': (payload: AccountPrivacyInput) => void;
   'profile:delete_account': (payload: DeleteAccountInput) => void;

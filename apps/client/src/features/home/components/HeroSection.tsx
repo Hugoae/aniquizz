@@ -1,7 +1,7 @@
 import { Lightbulb, Music, Play, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { HOME_COPY } from '@/features/home/copy/homeCopy';
+import { useHomeCopy } from '@/features/home/copy/homeCopy';
 import { dailyApi } from '@/lib/dailyApi';
 import { prefetchGameHub, prefetchRoute, routeIntentHandlers } from '@/lib/routePrefetch';
 import { isFirstLandingPaint } from '@/lib/initialPaint';
@@ -11,6 +11,7 @@ import { NewsSection } from './NewsSection';
 
 export function HeroSection() {
   const skipEntryAnimation = isFirstLandingPaint();
+  const copy = useHomeCopy();
 
   return (
     <div className="relative w-full flex flex-col items-center">
@@ -37,21 +38,21 @@ export function HeroSection() {
               <i></i>
               <i></i>
             </span>
-            <span className="text-sm font-medium text-muted-foreground">{HOME_COPY.eyebrow}</span>
+            <span className="text-sm font-medium text-muted-foreground">{copy.eyebrow}</span>
           </div>
 
           <h1
             data-home-clear
             className="font-display text-5xl md:text-6xl lg:text-7xl font-extrabold mb-4 leading-[1.05] text-balance"
           >
-            {HOME_COPY.titleLead} <span className="gradient-text">{HOME_COPY.titleAccent}</span>
+            {copy.titleLead} <span className="gradient-text">{copy.titleAccent}</span>
           </h1>
 
           <p
             data-home-clear
             className="text-base md:text-lg text-muted-foreground mb-6 md:mb-8 max-w-2xl mx-auto px-4"
           >
-            {HOME_COPY.sub}
+            {copy.sub}
           </p>
 
           <div data-home-clear className="mx-auto flex w-fit flex-col items-center gap-4">
@@ -64,7 +65,7 @@ export function HeroSection() {
                 })}
               >
                 <Play className="h-6 w-6 group-hover:scale-110 transition-transform fill-current" />
-                {HOME_COPY.play}
+                {copy.play}
               </Link>
             </Button>
 
@@ -72,7 +73,7 @@ export function HeroSection() {
               <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
                 <Link to="/library" {...routeIntentHandlers(() => prefetchRoute('library'))}>
                   <Music className="h-5 w-5" />
-                  {HOME_COPY.library}
+                  {copy.library}
                 </Link>
               </Button>
               <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
@@ -81,7 +82,7 @@ export function HeroSection() {
                   {...routeIntentHandlers(() => prefetchRoute('leaderboard'))}
                 >
                   <Trophy className="h-5 w-5" />
-                  {HOME_COPY.leaderboard}
+                  {copy.leaderboard}
                 </Link>
               </Button>
               <Button asChild variant="glass" size="lg" className="hover-lift gap-2">
@@ -90,7 +91,7 @@ export function HeroSection() {
                   {...routeIntentHandlers(() => prefetchRoute('suggestions'))}
                 >
                   <Lightbulb className="h-5 w-5" />
-                  {HOME_COPY.ideas}
+                  {copy.ideas}
                 </Link>
               </Button>
             </div>

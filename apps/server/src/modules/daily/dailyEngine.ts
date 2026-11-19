@@ -14,7 +14,7 @@ import { env } from '../../config/env';
 import { toPlaybackUrl } from '../../lib/mediaPlaybackUrl';
 import { logger } from '../../utils/logger';
 import { RoundClock } from '../game/engine/RoundClock';
-import { playableRounds } from './dailyAttemptLifecycle';
+import { playableRounds, writeDailyAnswer } from './dailyAttemptLifecycle';
 import { DailyHttpError } from './dailyErrors';
 import { snapshotOf, toRevealDto, toSafeRound, type DailyRoundRow } from './dailyPayloads';
 import { runDailyPlayer } from './dailyPlayerGate';
@@ -213,6 +213,14 @@ class DailyEngine {
       });
     });
     this.emitRound(run);
+    const answer = run.answers[run.answers.length - 1];
+    if (!answer) return;
+    try {
+      await writeDailyAnswer({ attemptId: run.attemptId, ...answer });
+    } catch (error) {
+      // The close still inserts anything missing. The reveal is already on screen.
+      logger.warn('[Daily] Failed to store a round answer', 'Daily', error);
+    }
   }
 
   private async advanceRun(run: LiveRun, now = Date.now()): Promise<void> {
@@ -244,6 +252,7 @@ class DailyEngine {
       currentRound: null,
       answers: [],
       state: 'FORFEITED',
+      deferBoard: true,
     });
     socket.emit('daily:state', { kind: 'result', result: closed.result });
   }
@@ -281,6 +290,7 @@ class DailyEngine {
         answers: run.answers,
         state,
         now: new Date(now),
+        deferBoard: true,
       });
       run.socket.emit('daily:state', { kind: 'result', result: closed.result });
     } catch (error) {

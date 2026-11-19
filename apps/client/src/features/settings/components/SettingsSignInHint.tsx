@@ -1,8 +1,9 @@
 import { useAuthModal } from '@/features/auth/context/AuthModalContext';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 
 export function SettingsSignInHint({ message }: { message: string }) {
   const { setShowAuthModal } = useAuthModal();
+  const copy = useSettingsCopy();
   return (
     <p className="text-xs text-muted-foreground">
       {message}{' '}
@@ -11,7 +12,7 @@ export function SettingsSignInHint({ message }: { message: string }) {
         onClick={() => setShowAuthModal(true)}
         className="font-medium text-foreground underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        {SETTINGS_COPY.signInCta}
+        {copy.signInCta}
       </button>
     </p>
   );

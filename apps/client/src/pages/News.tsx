@@ -9,7 +9,9 @@ import { Header } from '@/components/layout/Header';
 
 import { NewsCard } from '@/features/news/components/NewsCard';
 import { RoadmapWidget } from '@/features/news/components/RoadmapWidget';
-import { allNews, typeConfig, type NewsItem } from '@/features/news/data/newsData';
+import { allNews, localizedNews, typeConfig, type NewsItem } from '@/features/news/data/newsData';
+import { pick } from '@/lib/i18n/text';
+import { useLocale } from '@/features/i18n/LocaleContext';
 
 type Filter = NewsItem['type'] | 'all';
 
@@ -19,7 +21,9 @@ const TYPE_ORDER: NewsItem['type'][] = ['update', 'feature', 'fix', 'event'];
 export default function News() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { locale } = useLocale();
   const [filter, setFilter] = useState<Filter>('all');
+  const news = useMemo(() => localizedNews(allNews), [locale]);
 
   const focusedId = useMemo(() => {
     const match = location.hash.match(/^#news-(\d+)$/);
@@ -28,18 +32,18 @@ export default function News() {
 
   // Only surface chips for types that actually have entries.
   const availableTypes = useMemo(() => {
-    const present = new Set(allNews.map((n) => n.type));
+    const present = new Set(news.map((n) => n.type));
     return TYPE_ORDER.filter((t) => present.has(t));
-  }, []);
+  }, [news]);
 
   const counts = useMemo(() => {
     const map = new Map<NewsItem['type'], number>();
-    for (const n of allNews) map.set(n.type, (map.get(n.type) ?? 0) + 1);
+    for (const n of news) map.set(n.type, (map.get(n.type) ?? 0) + 1);
     return map;
-  }, []);
+  }, [news]);
 
-  const filteredNews = filter === 'all' ? allNews : allNews.filter((n) => n.type === filter);
-  const latestId = allNews[0]?.id;
+  const filteredNews = filter === 'all' ? news : news.filter((n) => n.type === filter);
+  const latestId = news[0]?.id;
 
   // A new deep link must show every card so the target is mounted. Adjusting
   // during render (not in the scroll effect) avoids a wasted update when the
@@ -47,20 +51,20 @@ export default function News() {
   const [appliedFocus, setAppliedFocus] = useState(focusedId);
   if (focusedId !== appliedFocus) {
     setAppliedFocus(focusedId);
-    if (focusedId !== null && allNews.some((item) => item.id === focusedId)) {
+    if (focusedId !== null && news.some((item) => item.id === focusedId)) {
       setFilter('all');
     }
   }
 
   useEffect(() => {
-    if (focusedId === null || !allNews.some((item) => item.id === focusedId)) return;
+    if (focusedId === null || !news.some((item) => item.id === focusedId)) return;
     const timer = window.setTimeout(() => {
       document
         .getElementById(`news-${focusedId}`)
         ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 200);
     return () => window.clearTimeout(timer);
-  }, [focusedId]);
+  }, [focusedId, news]);
 
   const chipClass = (active: boolean) =>
     cn(
@@ -74,7 +78,10 @@ export default function News() {
     <>
       <SeoHead
         title={PAGE_TITLES.news}
-        description="Mises à jour, nouveautés et feuille de route d'AniQuizz."
+        description={pick(
+          "Mises à jour, nouveautés et feuille de route d'AniQuizz.",
+          'Updates, new features, and the AniQuizz roadmap.',
+        )}
         path="/news"
       />
 
@@ -88,7 +95,7 @@ export default function News() {
             className="gap-2 mb-6 text-muted-foreground hover:text-foreground pl-0"
           >
             <ArrowLeft className="h-4 w-4" />
-            Retour à l'accueil
+            {pick("Retour à l'accueil", 'Back to home')}
           </Button>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -98,21 +105,32 @@ export default function News() {
                   <Newspaper className="h-6 w-6" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight">Actualités</h1>
-                  <p className="text-muted-foreground">Mises à jour et annonces officielles</p>
+                  <h1 className="text-3xl font-bold tracking-tight">
+                    {pick('Actualités', 'News')}
+                  </h1>
+                  <p className="text-muted-foreground">
+                    {pick(
+                      'Mises à jour et annonces officielles',
+                      'Updates and official announcements',
+                    )}
+                  </p>
                 </div>
               </div>
 
               {/* Type filters */}
-              <div className="flex flex-wrap gap-2" role="group" aria-label="Filtrer par type">
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label={pick('Filtrer par type', 'Filter by type')}
+              >
                 <button
                   type="button"
                   onClick={() => setFilter('all')}
                   className={chipClass(filter === 'all')}
                   aria-pressed={filter === 'all'}
                 >
-                  Tous
-                  <span className="font-mono text-[10px] opacity-70">{allNews.length}</span>
+                  {pick('Tous', 'All')}
+                  <span className="font-mono text-[10px] opacity-70">{news.length}</span>
                 </button>
                 {availableTypes.map((type) => {
                   const config = typeConfig[type];
@@ -138,7 +156,7 @@ export default function News() {
               <div className="space-y-4">
                 {filteredNews.length === 0 ? (
                   <div className="glass-card p-10 text-center text-sm text-muted-foreground">
-                    Aucune actualité dans cette catégorie.
+                    {pick('Aucune actualité dans cette catégorie.', 'No news in this category.')}
                   </div>
                 ) : (
                   filteredNews.map((news, i) => (

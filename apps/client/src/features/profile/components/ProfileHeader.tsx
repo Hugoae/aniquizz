@@ -8,9 +8,11 @@ import { cn } from '@/lib/utils';
 import { presenceLabel, formatLastSeen, PRESENCE_DOT } from '@/features/friends/presence';
 import type { Relation } from '@/features/friends/FriendsContext';
 import type { ProfileVM } from '@/features/profile/types';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
+import { formatAppDate } from '@/lib/i18n/format';
 import { openSettings } from '@/features/settings/lib/openSettings';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { useLists } from '@/features/settings/integrations/listsContextValue';
 import { ProfileAvatarBlock } from '@/features/profile/components/ProfileAvatarBlock';
 import { ProfileOwnMenu } from '@/features/profile/components/ProfileOwnMenu';
@@ -108,6 +110,7 @@ export function ProfileHeader({
   onUnblock,
 }: ProfileHeaderProps) {
   const { status: listsStatus } = useLists();
+  const copy = useSettingsCopy();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const lvl = useMemo(() => levelProgress(vm.xp), [vm.xp]);
   const roleMeta = ROLE_META[vm.role];
@@ -117,16 +120,15 @@ export function ProfileHeader({
   const anilistLinked = listsStatus.anilist.linked;
   const malLinked = listsStatus.mal.linked;
 
+  const { locale } = useLocale();
   const memberSince = useMemo(() => {
     if (!vm.createdAt) return null;
     try {
-      return new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' }).format(
-        new Date(vm.createdAt),
-      );
+      return formatAppDate(new Date(vm.createdAt), { month: 'long', year: 'numeric' });
     } catch {
       return null;
     }
-  }, [vm.createdAt]);
+  }, [vm.createdAt, locale]);
 
   return (
     <div className="relative rounded-xl overflow-hidden bg-card border border-border p-8 shadow-elevated animate-fade-in">
@@ -221,7 +223,7 @@ export function ProfileHeader({
                   >
                     <ListProviderBadge provider="anilist" username={anilistUsername!.trim()} />
                     {activeListProvider === 'anilist' ? (
-                      <span className="font-medium">{SETTINGS_COPY.listActive}</span>
+                      <span className="font-medium">{copy.listActive}</span>
                     ) : null}
                   </span>
                 ) : null}
@@ -237,7 +239,7 @@ export function ProfileHeader({
                   >
                     <ListProviderBadge provider="mal" username={malUsername!.trim()} />
                     {activeListProvider === 'mal' ? (
-                      <span className="font-medium">{SETTINGS_COPY.listActive}</span>
+                      <span className="font-medium">{copy.listActive}</span>
                     ) : null}
                   </span>
                 ) : null}
@@ -248,7 +250,7 @@ export function ProfileHeader({
                   className="h-7 px-2.5 text-xs"
                   onClick={() => openSettings('account')}
                 >
-                  {SETTINGS_COPY.integrationsManage}
+                  {copy.integrationsManage}
                 </Button>
               </div>
             )}

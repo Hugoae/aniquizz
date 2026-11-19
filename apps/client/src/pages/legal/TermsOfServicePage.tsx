@@ -1,7 +1,15 @@
 import { LegalPageLayout } from '@/features/legal/components/LegalPageLayout';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { PAGE_TITLES } from '@/lib/site';
+import { TermsOfServiceEn } from '@/pages/legal/TermsOfServiceEn';
 
 export default function TermsOfServicePage() {
+  const { locale } = useLocale();
+  if (locale === 'en') return <TermsOfServiceEn />;
+  return <TermsOfServiceFr />;
+}
+
+function TermsOfServiceFr() {
   return (
     <LegalPageLayout
       title={PAGE_TITLES.terms}

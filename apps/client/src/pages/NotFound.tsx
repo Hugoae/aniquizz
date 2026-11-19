@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { SeoHead } from '@/components/seo/SeoHead';
+import { tx } from '@/lib/i18n/text';
 import { PAGE_TITLES } from '@/lib/site';
 import { captureClientError } from '@/lib/errorReporter';
 const NotFound = () => {
@@ -16,9 +17,9 @@ const NotFound = () => {
       <main id="main-content" className="text-center">
         {' '}
         <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Page introuvable</p>
+        <p className="mb-4 text-xl text-muted-foreground">{tx('common', 'notFoundBody')}</p>
         <Link to="/" className="text-primary underline hover:text-primary/90">
-          Retour à l&apos;accueil
+          {tx('common', 'backHome')}
         </Link>
       </main>
     </div>

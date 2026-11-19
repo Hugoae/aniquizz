@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from 'react';
 import { AlertCircle, Eye, Pause, Play, Repeat, SkipForward, Volume2, VolumeX } from 'lucide-react';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { DevRenderProfiler } from '@/components/dev/DevRenderProfiler';
@@ -9,6 +9,7 @@ import { peekClipPath, peekWindowRect, type VideoMode } from '@aniquizz/shared';
 import { MatchCountdownOverlays } from '../../../shared/MatchCountdownOverlays';
 import { AudioVisualizer } from '../../../core/AudioVisualizer';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 import type { TimeAttackClock } from '@/features/game/hooks/useTimeAttackClock';
 import type { GamePhase } from './types';
 import { guessingClipPaintKey } from './videoStagePaint';
@@ -85,7 +86,13 @@ function EvolvingListenControl({
         type="button"
         onClick={toggle}
         disabled={replayBlocked}
-        aria-label={playing ? 'Pause' : replayBlocked ? 'Plus de réécoute' : "Lire l'extrait"}
+        aria-label={
+          playing
+            ? 'Pause'
+            : replayBlocked
+              ? pick('Plus de réécoute', 'No replays left')
+              : pick("Lire l'extrait", 'Play the clip')
+        }
         className="pointer-events-auto flex h-32 w-32 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-glow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-40"
       >
         {playing ? (
@@ -97,7 +104,9 @@ function EvolvingListenControl({
       <div className="mt-6 flex h-8 w-1/2 items-center justify-center">
         <AudioVisualizer isPlaying={playing} className="h-8 text-primary" />
       </div>
-      <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">Écoutez bien…</p>
+      <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">
+        {pick('Écoutez bien…', 'Listen carefully…')}
+      </p>
       {replayLimit != null ? (
         <p
           aria-live="polite"
@@ -110,14 +119,16 @@ function EvolvingListenControl({
         >
           <Repeat className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           {replaysLeft === 0 ? (
-            <span className="text-xs font-semibold">Plus de réécoute</span>
+            <span className="text-xs font-semibold">
+              {pick('Plus de réécoute', 'No replays left')}
+            </span>
           ) : (
             <>
               <span className="font-mono text-lg font-black leading-none tabular-nums">
                 {replaysLeft}
               </span>
               <span className="text-xs font-semibold">
-                {replaysLeft > 1 ? 'réécoutes' : 'réécoute'}
+                {replaysLeft > 1 ? pick('réécoutes', 'replays') : pick('réécoute', 'replay')}
               </span>
             </>
           )}
@@ -185,7 +196,7 @@ export const VideoStage = memo(function VideoStage({
   submittedAnswer,
   onSoloSkip,
   soloSkipAlways = false,
-  soloSkipLabel = 'Révéler',
+  soloSkipLabel = pick('Révéler', 'Reveal'),
   playersCount,
   skipVotes,
   skipRequired,
@@ -198,6 +209,7 @@ export const VideoStage = memo(function VideoStage({
 }: VideoStageProps) {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [hasPaintedFrame, setHasPaintedFrame] = useState(false);
+  const copy = useSettingsCopy();
   const paintKey = guessingClipPaintKey(phase, currentSong);
 
   useEffect(() => {
@@ -267,8 +279,11 @@ export const VideoStage = memo(function VideoStage({
         preload="auto"
         aria-label={
           phase === 'revealed'
-            ? 'Extrait musical — réponse révélée'
-            : "Extrait musical en cours — devinez l'anime"
+            ? pick('Extrait musical — réponse révélée', 'Music clip — answer revealed')
+            : pick(
+                "Extrait musical en cours — devinez l'anime",
+                'Music clip playing — guess the anime',
+              )
         }
         disablePictureInPicture
         controlsList="nodownload noplaybackrate noremoteplayback"
@@ -295,7 +310,7 @@ export const VideoStage = memo(function VideoStage({
       {autoplayBlocked && phase === 'guessing' && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/90">
           <Button onClick={onSafePlay} variant="glow" size="lg" className="animate-bounce gap-2">
-            <AlertCircle className="h-5 w-5" /> Activer le son
+            <AlertCircle className="h-5 w-5" /> {pick('Activer le son', 'Turn the sound on')}
           </Button>
         </div>
       )}
@@ -316,7 +331,10 @@ export const VideoStage = memo(function VideoStage({
           className="absolute inset-0 z-50 flex animate-fade-in items-center justify-center bg-background/90"
           role="status"
           aria-live="assertive"
-          aria-label={`Reprise dans ${resumeCountdown} secondes`}
+          aria-label={pick(
+            `Reprise dans ${resumeCountdown} secondes`,
+            `Resuming in ${resumeCountdown} seconds`,
+          )}
         >
           <span className="animate-pulse text-9xl font-black text-foreground" aria-hidden="true">
             {resumeCountdown}
@@ -330,7 +348,9 @@ export const VideoStage = memo(function VideoStage({
             variant="ghost"
             size="icon"
             onClick={onToggleMute}
-            aria-label={isMuted ? 'Activer le son' : 'Couper le son'}
+            aria-label={
+              isMuted ? pick('Activer le son', 'Turn the sound on') : pick('Couper le son', 'Mute')
+            }
             className="h-8 w-8 rounded-md"
           >
             {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -339,11 +359,11 @@ export const VideoStage = memo(function VideoStage({
             value={[volume]}
             onValueChange={([v]) => onVolumeChange(v)}
             max={100}
-            aria-label={`Volume, ${SETTINGS_COPY.volumeValue(volume)}`}
+            aria-label={`Volume, ${copy.volumeValue(volume)}`}
             className="w-20"
           />
           <span className="max-w-0 overflow-hidden whitespace-nowrap text-right font-mono text-[11px] font-semibold tabular-nums text-muted-foreground opacity-0 transition-all duration-200 group-hover/vol:ml-2 group-hover/vol:mr-2 group-hover/vol:max-w-14 group-hover/vol:opacity-100 group-focus-within/vol:ml-2 group-focus-within/vol:mr-2 group-focus-within/vol:max-w-14 group-focus-within/vol:opacity-100">
-            {SETTINGS_COPY.volumeValue(volume)}
+            {copy.volumeValue(volume)}
           </span>
         </div>
       </div>
@@ -392,7 +412,7 @@ export const VideoStage = memo(function VideoStage({
             onClick={race ? onSoloSkip : onVoteSkip}
             className="gap-2 shadow-glow"
           >
-            <SkipForward className="h-4 w-4" /> Suivant
+            <SkipForward className="h-4 w-4" /> {pick('Suivant', 'Next')}
             {!race && playersCount > 1 && ` (${skipVotes}/${skipRequired})`}
           </Button>
         </div>

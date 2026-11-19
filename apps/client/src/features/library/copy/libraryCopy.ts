@@ -1,120 +1,145 @@
-/** French UI copy for the music library (i18n-ready). */
+import i18n from '@/lib/i18n';
+import { formatAppNumber } from '@/lib/i18n/format';
+import { extendLive, liveStrings, tx } from '@/lib/i18n/text';
 
-export const LIBRARY_COPY = {
-  heroEyebrow: 'Catalogue complet',
+/**
+ * Quoted on purpose. The static prerender reads these French fields from this file.
+ * The live screen uses the getters below.
+ */
+export const LIBRARY_HERO_FR = {
   heroTitle: 'Librairie musicale',
   heroSubtitle:
     'Explorez openings, endings et inserts. Écoutez les extraits et retrouvez vos découvertes en partie.',
-  searchPlaceholder: 'Rechercher un anime, un titre ou un artiste…',
-  filterSectionSearch: 'Recherche',
-  filterToggle: 'Filtres',
-  filterToggleShow: 'Afficher les filtres',
-  filterToggleHide: 'Masquer les filtres',
-  filterActiveBadge: 'Filtres actifs',
-  filterSectionTypes: 'Type de son',
-  filterSectionDifficulty: 'Difficulté',
-  filterSectionDiscovered: 'Mes découvertes',
-  filterSectionSort: "Ordre d'affichage",
-  filterSectionView: 'Affichage',
-  filterSort: 'Tri',
-  filterDiscovered: 'Découvertes',
-  filterDiscoveredAll: 'Toutes',
-  filterDiscoveredHeard: 'Déjà entendu',
-  filterDiscoveredUnheard: 'Pas encore entendu',
-  filterDiscoveredHeardShort: 'Entendu',
-  filterDiscoveredUnheardShort: 'Nouveau',
-  filterDiscoveredLoginHint: 'Connectez-vous pour filtrer vos découvertes',
-  filterSectionLiked: 'Mes favoris',
-  filterLikedAll: 'Tous',
-  filterLikedOnly: 'Favoris',
-  filterLikedExclude: 'Non likés',
-  filterLikedLoginHint: 'Connectez-vous pour liker et filtrer vos favoris',
-  likedBadge: 'Favori',
-  viewFranchise: 'Franchise',
-  viewAnime: 'Anime',
-  viewSongs: 'Sons',
-  sortFranchise: 'Franchise (A-Z)',
-  sortFranchiseDesc: 'Franchise (Z-A)',
-  sortPopularity: 'Popularité',
-  sortTitle: 'Titre du son',
-  sortAnime: 'Anime (A-Z)',
-  sortLikes: 'Plus likés',
-  sortLikedRecent: 'Likés récemment',
-  metaPopularity: (compact: string) => `Pop. ${compact}`,
-  metaLikes: (n: number) => `${n.toLocaleString('fr-FR')} like${n === 1 ? '' : 's'}`,
-  metaLikesAria: (n: number) =>
-    n === 0 ? 'Aucun like' : n === 1 ? '1 like' : `${n.toLocaleString('fr-FR')} likes`,
-  animeSongCount: (n: number) => (n === 1 ? '1 son' : `${n.toLocaleString('fr-FR')} sons`),
-  nestedSeeAll: (hidden: number) =>
-    hidden === 1
-      ? '1 son de plus — vue Sons'
-      : `${hidden.toLocaleString('fr-FR')} sons de plus — vue Sons`,
-  statLiked: (n: number) =>
-    n === 0 ? 'aucun favori' : n === 1 ? '1 favori' : `${n.toLocaleString('fr-FR')} favoris`,
-  searchModeHint: 'Résultats par son — pagination sur les extraits correspondants',
-  songsViewHint: 'Vue Sons — pagination par extrait',
-  typeOp: 'Openings',
-  typeEd: 'Endings',
-  typeInsert: 'Inserts',
-  typeOpShort: 'OP',
-  typeEdShort: 'ED',
-  typeInsertShort: 'IN',
-  diffEasy: 'Facile',
-  diffMedium: 'Moyen',
-  diffHard: 'Difficile',
-  discoveredBadge: 'Déjà entendu',
-  playPreview: "Écouter l'extrait",
-  previewPause: 'Pause',
-  previewClose: "Fermer l'aperçu",
-  openAnilist: 'Voir sur AniList',
-  playCta: 'Lancer une partie',
-  playCtaHint: 'Entendez ce son en blindtest depuis le mode Standard.',
-  resultsCount: (n: number) =>
-    n === 0
-      ? 'Aucun résultat'
-      : n === 1
-        ? '1 son trouvé'
-        : `${n.toLocaleString('fr-FR')} sons trouvés`,
-  emptyTitle: 'Aucun son ne correspond',
-  emptyHint: 'Essayez un autre mot-clé ou élargissez les filtres.',
-  emptyLikedTitle: 'Aucun titre favori',
-  emptyLikedHint: 'Likez un extrait pour le retrouver ici et sur votre profil.',
-  emptyPersonalHint: 'Connectez-vous pour filtrer vos favoris et vos découvertes.',
-  loadError: 'Impossible de charger la librairie.',
-  networkError: 'Erreur réseau.',
-  retry: 'Réessayer',
-  backHome: "Retour à l'accueil",
-  filtersAria: 'Filtres de la librairie',
-  pagePrev: 'Page précédente',
-  pageNext: 'Page suivante',
-  expandAnime: (name: string) => `Développer ${name}`,
-  collapseAnime: (name: string) => `Réduire ${name}`,
-  videoUnavailable: 'Lecture indisponible (CDN non configuré).',
-  statSongs: 'sons jouables',
-  statAnimes: 'animes',
-  statFranchises: 'franchises',
-  franchiseSongs: (songs: number, animes: number) =>
-    `${songs.toLocaleString('fr-FR')} son${songs > 1 ? 's' : ''} · ${animes} anime${animes > 1 ? 's' : ''}`,
-} as const;
+};
+
+const flat = [
+  'heroEyebrow',
+  'heroTitle',
+  'heroSubtitle',
+  'searchPlaceholder',
+  'filterSectionSearch',
+  'filterToggle',
+  'filterToggleShow',
+  'filterToggleHide',
+  'filterActiveBadge',
+  'filterSectionTypes',
+  'filterSectionDifficulty',
+  'filterSectionDiscovered',
+  'filterSectionSort',
+  'filterSectionView',
+  'filterSort',
+  'filterDiscovered',
+  'filterDiscoveredAll',
+  'filterDiscoveredHeard',
+  'filterDiscoveredUnheard',
+  'filterDiscoveredHeardShort',
+  'filterDiscoveredUnheardShort',
+  'filterDiscoveredLoginHint',
+  'filterSectionLiked',
+  'filterLikedAll',
+  'filterLikedOnly',
+  'filterLikedExclude',
+  'filterLikedLoginHint',
+  'likedBadge',
+  'viewFranchise',
+  'viewAnime',
+  'viewSongs',
+  'sortFranchise',
+  'sortFranchiseDesc',
+  'sortPopularity',
+  'sortTitle',
+  'sortAnime',
+  'sortLikes',
+  'sortLikedRecent',
+  'searchModeHint',
+  'songsViewHint',
+  'typeOp',
+  'typeEd',
+  'typeInsert',
+  'typeOpShort',
+  'typeEdShort',
+  'typeInsertShort',
+  'diffEasy',
+  'diffMedium',
+  'diffHard',
+  'discoveredBadge',
+  'playPreview',
+  'previewPause',
+  'previewClose',
+  'openAnilist',
+  'playCta',
+  'playCtaHint',
+  'emptyTitle',
+  'emptyHint',
+  'emptyLikedTitle',
+  'emptyLikedHint',
+  'emptyPersonalHint',
+  'loadError',
+  'networkError',
+  'retry',
+  'backHome',
+  'filtersAria',
+  'pagePrev',
+  'pageNext',
+  'videoUnavailable',
+  'statSongs',
+  'statAnimes',
+  'statFranchises',
+] as const;
+
+const countOpts = (count: number) => ({ count, formatted: formatAppNumber(count) });
+
+export const LIBRARY_COPY = extendLive(liveStrings('library', '', flat), {
+  metaPopularity: (compact: string) => tx('library', 'metaPopularity', { compact }),
+  metaLikes: (count: number) => tx('library', 'metaLikes', countOpts(count)),
+  metaLikesAria: (count: number) =>
+    count === 0 ? tx('library', 'metaLikesNone') : tx('library', 'metaLikesAria', countOpts(count)),
+  animeSongCount: (count: number) => tx('library', 'animeSongCount', countOpts(count)),
+  nestedSeeAll: (hidden: number) => tx('library', 'nestedSeeAll', countOpts(hidden)),
+  statLiked: (count: number) =>
+    count === 0 ? tx('library', 'statLikedNone') : tx('library', 'statLiked', countOpts(count)),
+  resultsCount: (count: number) =>
+    count === 0 ? tx('library', 'resultsNone') : tx('library', 'results', countOpts(count)),
+  expandAnime: (name: string) => tx('library', 'expandAnime', { name }),
+  collapseAnime: (name: string) => tx('library', 'collapseAnime', { name }),
+  franchiseSongs: (songs: number, animes: number) => {
+    const english = i18n.language.startsWith('en');
+    return tx('library', 'franchiseSongs', {
+      songs: formatAppNumber(songs),
+      animes: formatAppNumber(animes),
+      songsSuffix: songs > 1 ? 's' : '',
+      animesSuffix: !english && animes > 1 ? 's' : '',
+    });
+  },
+});
+
+function option<T extends string>(value: T, labelKey: string) {
+  return {
+    value,
+    get label() {
+      return tx('library', labelKey);
+    },
+  };
+}
 
 export const LIBRARY_SONG_TYPE_OPTIONS = [
-  { value: 'OP', label: LIBRARY_COPY.typeOp },
-  { value: 'ED', label: LIBRARY_COPY.typeEd },
-  { value: 'INSERT', label: LIBRARY_COPY.typeInsert },
+  option('OP', 'typeOp'),
+  option('ED', 'typeEd'),
+  option('INSERT', 'typeInsert'),
 ] as const;
 
 export const LIBRARY_VIEW_OPTIONS = [
-  { value: 'franchise', label: LIBRARY_COPY.viewFranchise },
-  { value: 'anime', label: LIBRARY_COPY.viewAnime },
-  { value: 'songs', label: LIBRARY_COPY.viewSongs },
+  option('franchise', 'viewFranchise'),
+  option('anime', 'viewAnime'),
+  option('songs', 'viewSongs'),
 ] as const;
 
 export const LIBRARY_SORT_OPTIONS = [
-  { value: 'franchise', label: LIBRARY_COPY.sortFranchise },
-  { value: 'franchise_desc', label: LIBRARY_COPY.sortFranchiseDesc },
-  { value: 'anime', label: LIBRARY_COPY.sortAnime },
-  { value: 'popularity', label: LIBRARY_COPY.sortPopularity },
-  { value: 'title', label: LIBRARY_COPY.sortTitle },
-  { value: 'likes', label: LIBRARY_COPY.sortLikes },
-  { value: 'liked_recent', label: LIBRARY_COPY.sortLikedRecent },
+  option('franchise', 'sortFranchise'),
+  option('franchise_desc', 'sortFranchiseDesc'),
+  option('anime', 'sortAnime'),
+  option('popularity', 'sortPopularity'),
+  option('title', 'sortTitle'),
+  option('likes', 'sortLikes'),
+  option('liked_recent', 'sortLikedRecent'),
 ] as const;

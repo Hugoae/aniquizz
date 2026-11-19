@@ -134,6 +134,16 @@ export interface DailyAdminRound {
   year: number | null;
 }
 
+export interface DailyAdminFeatured {
+  songId: number;
+  title: string;
+  artist: string;
+  anime: string;
+  typeLabel: string;
+  cover: string | null;
+  videoStartTime: number;
+}
+
 export interface DailyAdminChallenge {
   id: string;
   challengeDate: string;
@@ -142,6 +152,7 @@ export interface DailyAdminChallenge {
   attemptCount: number;
   locked: boolean;
   canVoid: boolean;
+  featured: DailyAdminFeatured | null;
   warnings: Array<{ code: string; message: string }>;
   rounds: DailyAdminRound[];
 }

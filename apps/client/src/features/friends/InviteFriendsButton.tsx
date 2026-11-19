@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { UserAvatar } from '@/components/ui/UserAvatar';
 import { RoleBadge } from '@/components/ui/RoleBadge';
 import { useFriends } from './FriendsContext';
+import { pick } from '@/lib/i18n/text';
 import { presenceLabel } from './presence';
 
 /**
@@ -34,16 +35,16 @@ export function InviteFriendsButton({ excludeIds = [] }: InviteFriendsButtonProp
           className="gap-2 bg-secondary/50 hover:bg-secondary border border-border rounded-lg"
         >
           <UserPlus className="h-4 w-4" />
-          Inviter
+          {pick('Inviter', 'Invite')}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64 p-1">
         <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          Amis en ligne ({online.length})
+          {pick('Amis en ligne', 'Friends online')} ({online.length})
         </div>
         {online.length === 0 ? (
           <div className="px-3 py-4 text-center text-xs text-muted-foreground">
-            Aucun ami en ligne à inviter.
+            {pick('Aucun ami en ligne à inviter.', 'No friend online to invite.')}
           </div>
         ) : (
           online.map((f) => (
@@ -65,7 +66,7 @@ export function InviteFriendsButton({ excludeIds = [] }: InviteFriendsButtonProp
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-primary"
-                title="Inviter"
+                title={pick('Inviter', 'Invite')}
                 onClick={() => invite(f.id)}
               >
                 <Send className="h-4 w-4" />

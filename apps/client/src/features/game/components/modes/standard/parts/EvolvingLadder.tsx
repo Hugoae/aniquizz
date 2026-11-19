@@ -3,6 +3,7 @@ import { formatEvolvingSeconds, type EvolvingRoundCue } from '@aniquizz/shared';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 interface EvolvingLadderProps {
   cue: EvolvingRoundCue;
@@ -32,13 +33,15 @@ export function EvolvingLadder({ cue, onSkip, onAbandon }: EvolvingLadderProps) 
               type="button"
               variant="outline"
               onClick={onAbandon}
-              aria-label="Abandonner le titre"
+              aria-label={pick('Abandonner le titre', 'Give up this song')}
               className="h-9 w-9 shrink-0 px-0 text-muted-foreground hover:border-destructive hover:bg-destructive/15 hover:text-destructive focus-visible:border-destructive focus-visible:text-destructive"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="top">Abandonner le titre</TooltipContent>
+          <TooltipContent side="top">
+            {pick('Abandonner le titre', 'Give up this song')}
+          </TooltipContent>
         </Tooltip>
 
         <div className="min-w-0 flex-1 pt-2.5">
@@ -48,7 +51,10 @@ export function EvolvingLadder({ cue, onSkip, onAbandon }: EvolvingLadderProps) 
             aria-valuemin={0}
             aria-valuemax={count}
             aria-valuenow={cue.stepIndex + 1}
-            aria-label={`Marche ${cue.stepIndex + 1} sur ${count}, ${current}, ${cue.points} points`}
+            aria-label={pick(
+              `Marche ${cue.stepIndex + 1} sur ${count}, ${current}, ${cue.points} points`,
+              `Step ${cue.stepIndex + 1} of ${count}, ${current}, ${cue.points} points`,
+            )}
           >
             <div
               className="absolute inset-y-0 left-0 bg-primary shadow-glow motion-safe:transition-[width] motion-safe:duration-500 motion-safe:ease-out"
@@ -90,11 +96,15 @@ export function EvolvingLadder({ cue, onSkip, onAbandon }: EvolvingLadderProps) 
         <Button
           type="button"
           onClick={onSkip}
-          aria-label={next ? `Passer, extrait de ${next}` : 'Passer'}
+          aria-label={
+            next
+              ? pick(`Passer, extrait de ${next}`, `Skip, clip of ${next}`)
+              : pick('Passer', 'Skip')
+          }
           className="h-9 shrink-0 gap-1.5 px-3 shadow-glow"
         >
           <SkipForward className="h-4 w-4" aria-hidden="true" />
-          Passer
+          {pick('Passer', 'Skip')}
         </Button>
       </div>
     </div>

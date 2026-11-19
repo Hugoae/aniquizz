@@ -1,13 +1,14 @@
 import type { LucideIcon } from 'lucide-react';
 import { Clock, Eye, Gauge, Keyboard, ListMusic, Repeat, Shuffle, Target } from 'lucide-react';
 import type { GameConfig } from '@aniquizz/shared';
+import { normalizeVideoMode, resolveEvolvingReplayLimit } from '@aniquizz/shared';
 import {
-  GAME_TYPE_LABELS,
-  getPrecisionChipLabel,
-  normalizeVideoMode,
-  resolveEvolvingReplayLimit,
-  VIDEO_MODE_LABELS,
-} from '@aniquizz/shared';
+  gameTypeLabel,
+  precisionChipLabel,
+  sourceLabel,
+  videoModeLabel,
+} from '@/features/hub/copy/hubCopy';
+import { pick, tx } from '@/lib/i18n/text';
 import { formatTimeAttackBudget } from '@/features/hub/components/config/timeAttackBudgetLabel';
 import { getDifficultyBadge, streakPrimeChip } from '@/features/hub/components/roomSettings';
 import { SETTING_CHIP_NEUTRAL } from '@/features/hub/components/SettingChip';
@@ -20,18 +21,15 @@ export interface SoloLobbyRecapGroup {
   chips: SettingChipSpec[];
 }
 
-const RESPONSE_LABELS: Record<GameConfig['responseType'], string> = {
-  typing: 'Typing',
-  qcm: 'QCM',
-  mix: 'Mix',
-};
+function responseLabel(type: GameConfig['responseType']): string {
+  if (type === 'qcm') return pick('QCM', 'MCQ');
+  if (type === 'mix') return 'Mix';
+  return 'Typing';
+}
 
-const SOURCE_LABELS: Record<GameConfig['soundSelection'], string> = {
-  random: 'Aléatoire',
-  mix: 'Mix',
-  watched: 'Ma liste',
-  playlist: 'Playlists',
-};
+function sourceName(selection: GameConfig['soundSelection']): string {
+  return sourceLabel(selection);
+}
 
 function soundTypeChips(types: string[] | undefined): SettingChipSpec[] {
   if (!types?.length) {
@@ -66,9 +64,8 @@ export function buildSoloLobbyRecapGroups(
   const difficultyBadge = getDifficultyBadge(config.difficulty ?? []);
   const videoMode = normalizeVideoMode(config.videoMode);
 
-  const responseLabel =
-    config.responseType === 'typing' ? 'Typing' : RESPONSE_LABELS[config.responseType];
-  const precisionLabel = getPrecisionChipLabel(config.precision);
+  const responseName = responseLabel(config.responseType);
+  const precisionLabel = precisionChipLabel(config.precision);
   const partieChips: SettingChipSpec[] = [
     {
       key: 'sound-count',
@@ -77,7 +74,10 @@ export function buildSoloLobbyRecapGroups(
       value:
         config.gameType === 'timeAttack'
           ? formatTimeAttackBudget(config.timeBudgetSeconds)
-          : `${config.soundCount} sons`,
+          : pick(
+              `${config.soundCount} son${config.soundCount > 1 ? 's' : ''}`,
+              `${config.soundCount} song${config.soundCount > 1 ? 's' : ''}`,
+            ),
       className: SETTING_CHIP_NEUTRAL,
     },
   ];
@@ -86,7 +86,10 @@ export function buildSoloLobbyRecapGroups(
       key: 'title-count',
       icon: Clock,
       label: '',
-      value: `${config.soundCount} titres`,
+      value: pick(
+        `${config.soundCount} titre${config.soundCount > 1 ? 's' : ''}`,
+        `${config.soundCount} song${config.soundCount > 1 ? 's' : ''}`,
+      ),
       className: SETTING_CHIP_NEUTRAL,
     });
   } else if (config.gameType === 'evolving') {
@@ -97,7 +100,12 @@ export function buildSoloLobbyRecapGroups(
         icon: Repeat,
         label: '',
         value:
-          replayLimit === 0 ? '1 écoute' : `${replayLimit} réécoute${replayLimit > 1 ? 's' : ''}`,
+          replayLimit === 0
+            ? pick('1 écoute', '1 listen')
+            : pick(
+                `${replayLimit} réécoute${replayLimit > 1 ? 's' : ''}`,
+                `${replayLimit} replay${replayLimit > 1 ? 's' : ''}`,
+              ),
         className: SETTING_CHIP_NEUTRAL,
       });
     }
@@ -116,18 +124,18 @@ export function buildSoloLobbyRecapGroups(
   return [
     {
       id: 'partie',
-      label: 'Partie',
+      label: pick('Partie', 'Match'),
       chips: partieChips,
     },
     {
       id: 'reponse',
-      label: 'Réponse',
+      label: pick('Réponse', 'Answer'),
       chips: [
         {
           key: 'response-type',
           icon: Keyboard,
           label: '',
-          value: responseLabel,
+          value: responseName,
           className: SETTING_CHIP_NEUTRAL,
         },
         {
@@ -141,7 +149,7 @@ export function buildSoloLobbyRecapGroups(
     },
     {
       id: 'musique',
-      label: 'Musique',
+      label: pick('Musique', 'Music'),
       chips: [
         ...soundTypeChips(config.soundTypes),
         {
@@ -157,21 +165,21 @@ export function buildSoloLobbyRecapGroups(
           label: '',
           value:
             config.soundSelection === 'playlist'
-              ? playlistName?.trim() || SOURCE_LABELS.playlist
-              : SOURCE_LABELS[config.soundSelection],
+              ? playlistName?.trim() || sourceName('playlist')
+              : sourceName(config.soundSelection),
           className: SETTING_CHIP_NEUTRAL,
         },
       ],
     },
     {
       id: 'video',
-      label: 'Vidéo',
+      label: tx('hub', 'videoLabel'),
       chips: [
         {
           key: 'video-mode',
           icon: Eye,
           label: '',
-          value: VIDEO_MODE_LABELS[videoMode],
+          value: videoModeLabel(videoMode),
           className: SETTING_CHIP_NEUTRAL,
         },
       ],
@@ -180,6 +188,6 @@ export function buildSoloLobbyRecapGroups(
 }
 
 export function soloLobbyModeBadge(config: Pick<GameConfig, 'gameType'>): string {
-  const mode = GAME_TYPE_LABELS[config.gameType ?? 'standard'];
+  const mode = gameTypeLabel(config.gameType ?? 'standard');
   return `${mode} · Solo`;
 }

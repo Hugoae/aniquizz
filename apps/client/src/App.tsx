@@ -17,6 +17,7 @@ import { CookieConsentProvider } from '@/features/legal/CookieConsentContext';
 import { CookieConsentBanner } from '@/features/legal/CookieConsentBanner';
 import { VercelAnalytics } from '@/features/legal/VercelAnalytics';
 import { SongLikesProvider } from '@/features/likes/context/SongLikesContext';
+import { LocaleProvider } from '@/features/i18n/LocaleContext';
 import { PlayerPrefsProvider } from '@/features/settings/context/PlayerPrefsContext';
 import { ListsProvider } from '@/features/settings/integrations/ListsContext';
 import { FloatingSettingsButton } from '@/features/settings/components/FloatingSettingsButton';
@@ -257,17 +258,19 @@ function App() {
       <CookieConsentProvider>
         <AuthModalProvider>
           <AuthProvider>
-            <ListsProvider>
-              <SongLikesProvider>
-                <PlayerPrefsProvider>
-                  <NotificationFeedbackProvider>
-                    <SessionFriendsProvider>
-                      <AppContent />
-                    </SessionFriendsProvider>
-                  </NotificationFeedbackProvider>
-                </PlayerPrefsProvider>
-              </SongLikesProvider>
-            </ListsProvider>
+            <LocaleProvider>
+              <ListsProvider>
+                <SongLikesProvider>
+                  <PlayerPrefsProvider>
+                    <NotificationFeedbackProvider>
+                      <SessionFriendsProvider>
+                        <AppContent />
+                      </SessionFriendsProvider>
+                    </NotificationFeedbackProvider>
+                  </PlayerPrefsProvider>
+                </SongLikesProvider>
+              </ListsProvider>
+            </LocaleProvider>
           </AuthProvider>
         </AuthModalProvider>
       </CookieConsentProvider>

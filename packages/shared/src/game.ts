@@ -9,6 +9,7 @@ import type { Precision } from './precision';
 import type { PeekWindow, VideoMode } from './videoMode';
 import type { EvolvingRoundCue } from './evolving';
 import type { MatchReplayConfig } from './replayConfig';
+import type { AchievementProgress } from './achievements';
 
 export type { Precision };
 
@@ -464,6 +465,14 @@ export interface LevelUpPayload {
   xp: number;
 }
 
+/** Pushed when successes are granted outside the profile page. */
+export interface AchievementsUnlockedPayload {
+  ids: string[];
+  xpGained: number;
+  xp: number;
+  level: number;
+}
+
 // --- SOCIAL / FRIENDS (Phase 7) ---
 /**
  * Rich presence, computed server-side from the socket rooms + GameManager.
@@ -571,6 +580,12 @@ export interface ProfileStats {
   history: MatchHistoryEntry[];
   /** True when recent matches were withheld for the viewer (aggregates stay). */
   historyRedacted?: boolean;
+  /** Successes already granted. Missing ids are still locked. */
+  achievements?: { id: string; unlockedAt: string }[];
+  /** Ids granted during this read. Empty on later visits. */
+  newlyUnlocked?: string[];
+  /** Live counters behind the success cards. Missing on older payloads. */
+  achievementProgress?: AchievementProgress;
   stats: {
     gamesPlayed: number;
     gamesWon: number;

@@ -1,4 +1,9 @@
-import type { MatchHistoryEntry, PresenceStatus, FriendSummary } from '@aniquizz/shared';
+import type {
+  AchievementProgress,
+  MatchHistoryEntry,
+  PresenceStatus,
+  FriendSummary,
+} from '@aniquizz/shared';
 
 /** Basic per-game aggregates shown on both the personal and public profile. */
 export interface ProfileBasicStats {
@@ -45,6 +50,8 @@ export interface ProfileVM {
   stats: ProfileBasicStats;
   history: MatchHistoryEntry[];
   historyRedacted?: boolean;
+  achievements: { id: string; unlockedAt: string }[];
+  achievementProgress?: AchievementProgress;
   friends: FriendSummary[];
 }
 
@@ -67,6 +74,9 @@ export interface OwnProfileStats {
   playtimeMs: number;
   history: MatchHistoryEntry[];
   stats: ProfileBasicStats;
+  achievements?: { id: string; unlockedAt: string }[];
+  newlyUnlocked?: string[];
+  achievementProgress?: AchievementProgress;
 }
 
 export const INITIAL_OWN_PROFILE_STATS: OwnProfileStats = {

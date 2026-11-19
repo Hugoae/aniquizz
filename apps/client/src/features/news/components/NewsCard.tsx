@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { formatAppDate } from '@/lib/i18n/format';
 import { typeConfig, type NewsItem } from '../data/newsData';
 
 interface NewsCardProps {
@@ -111,7 +112,7 @@ export function NewsCard({ news, defaultExpanded = false, index = 0 }: NewsCardP
   const version = match?.[1];
   const title = match?.[2] ?? news.title;
 
-  const formattedDate = new Date(news.date).toLocaleDateString('fr-FR', {
+  const formattedDate = formatAppDate(new Date(news.date), {
     day: 'numeric',
     month: 'long',
     year: 'numeric',

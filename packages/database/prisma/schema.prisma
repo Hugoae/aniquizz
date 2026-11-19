@@ -174,6 +174,8 @@ model Profile {
   friendRequestSound     Boolean @default(false)
   lobbyInviteVisual      Boolean @default(true)
   lobbyInviteSound       Boolean @default(false)
+  /// Explicit UI language. Null follows the browser, then French.
+  uiLocale               String?
 
   gamesPlayed    Int @default(0)
   gamesWon       Int @default(0)
@@ -196,6 +198,7 @@ model Profile {
   receivedRequests Friendship[] @relation("ReceivedRequests")
   dailyAttempts    DailyAttempt[]
   dailyStats       DailyPlayerStats?
+  achievements     ProfileAchievement[]
   reviewedDailyChallenges DailyChallenge[] @relation("DailyReviewer")
   staffAuditAsActor  StaffAuditLog[] @relation("StaffAuditActor")
   staffAuditAsTarget StaffAuditLog[] @relation("StaffAuditTarget")
@@ -398,6 +401,7 @@ model Song {
   rounds  MatchRound[]
   thematicPlaylists ThematicPlaylistSong[]
   dailyRounds       DailyChallengeRound[]
+  featuredDays      SongOfTheDay[]
 
   @@index([animeId])
   @@index([downloadStatus])
@@ -419,6 +423,20 @@ model SongHistory {
   lastPlayedAt DateTime @default(now())
 
   @@unique([profileId, songId])
+  @@index([songId])
+}
+
+/// One shared discovery clip per Paris day. Server-only. Excluded from that day's quiz.
+model SongOfTheDay {
+  id             String   @id @default(uuid())
+  /// Paris civil date stored as DATE (YYYY-MM-DD), same boundary as DailyChallenge.
+  featuredDate   DateTime @unique @db.Date
+  songId         Int
+  videoStartTime Int
+  createdAt      DateTime @default(now())
+
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+
   @@index([songId])
 }
 
@@ -649,4 +667,15 @@ model DailyPlayerStats {
   updatedAt          DateTime @updatedAt
 
   profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+}
+
+model ProfileAchievement {
+  profileId     String
+  achievementId String
+  xpAwarded     Int
+  unlockedAt    DateTime @default(now())
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, achievementId])
 }

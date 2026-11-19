@@ -1,10 +1,12 @@
+import { extendLive, liveStrings } from '@/lib/i18n/text';
+
 /** Canonical production site URL (no trailing slash). */
 export const SITE_URL =
   (import.meta.env.VITE_SITE_URL as string | undefined)?.replace(/\/$/, '') ||
   'https://aniquizz.com';
 
 /** Display / shell version tag. `sync:news` copies it into `index.html`. */
-export const SITE_VERSION = '26.8';
+export const SITE_VERSION = '26.9';
 
 export const SITE_NAME = 'AniQuizz';
 
@@ -50,23 +52,29 @@ export function absoluteUrl(path: string): string {
   return `${SITE_URL}${normalized}`;
 }
 
-/** Route → tab title map (single source of truth). */
-export const PAGE_TITLES = {
-  home: SITE_NAME,
-  play: 'Jouer',
-  playCreate: 'Configurer la partie',
-  playJoin: 'Rejoindre un salon',
-  game: 'Partie',
-  news: 'Actus',
-  leaderboard: 'Classement',
-  library: 'Librairie',
-  suggestions: 'Avis & bugs',
-  profile: 'Profil',
-  admin: 'Admin',
-  daily: 'Quiz du jour',
-  resetPassword: 'Mot de passe',
-  notFound: '404',
-  privacy: 'Confidentialité',
-  terms: 'CGU',
-  legal: 'Mentions légales',
-} as const;
+const PAGE_TITLE_KEYS = [
+  'play',
+  'playCreate',
+  'playJoin',
+  'game',
+  'news',
+  'leaderboard',
+  'library',
+  'suggestions',
+  'profile',
+  'daily',
+  'resetPassword',
+  'privacy',
+  'terms',
+  'legal',
+] as const;
+
+/** Route → tab title. Admin and 404 stay as written; the rest follow the UI language. */
+export const PAGE_TITLES = extendLive(
+  {
+    home: SITE_NAME,
+    admin: 'Admin',
+    notFound: '404',
+  },
+  liveStrings('common', 'pageTitle', PAGE_TITLE_KEYS),
+);

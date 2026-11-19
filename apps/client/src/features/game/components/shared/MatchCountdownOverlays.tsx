@@ -7,6 +7,7 @@ import { useTimeAttackClock, type TimeAttackClock } from '@/features/game/hooks/
 import { CircularGameTimer } from './CircularGameTimer';
 import type { GamePhase } from '@/features/game/components/modes/standard/parts/types';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { useLocale } from '@/features/i18n/LocaleContext';
 
 /** Last stretch of the run where the budget clock turns red and blinks. */
 const TIME_ATTACK_URGENT_SECONDS = 15;
@@ -107,6 +108,7 @@ export const MatchCountdownOverlays = memo(function MatchCountdownOverlays({
   useBottomBar,
   timeAttack,
 }: MatchCountdownOverlaysProps) {
+  useLocale();
   const { timeLeft, progress } = useMatchCountdown({
     phase,
     phaseEndsAt,

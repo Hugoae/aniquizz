@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 import { AudioVisualizer } from '../core/AudioVisualizer';
 
 interface CircularGameTimerProps {
@@ -55,14 +56,16 @@ export function CircularGameTimer({
           {/* Invisible spacers matching the guessing layout (visualizer + hint). */}
           <div className="mt-6 h-8 w-1/2" aria-hidden="true" />
           <p className="mt-4 invisible text-sm font-medium" aria-hidden="true">
-            Écoutez bien…
+            {pick('Écoutez bien…', 'Listen carefully…')}
           </p>
         </div>
       )}
 
       <div
         role="timer"
-        aria-label={ariaLabel ?? `Temps restant : ${timeLeft} secondes`}
+        aria-label={
+          ariaLabel ?? pick(`Temps restant : ${timeLeft} secondes`, `${timeLeft} seconds left`)
+        }
         className={cn(
           'absolute inset-0 z-20 flex flex-col items-center justify-center bg-background transition-all duration-500',
           phase === 'revealed' ? 'pointer-events-none z-10 opacity-0' : 'opacity-100',
@@ -111,7 +114,9 @@ export function CircularGameTimer({
 
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             {isReady ? (
-              <span className="animate-pulse text-lg font-black text-primary">À vous !</span>
+              <span className="animate-pulse text-lg font-black text-primary">
+                {pick('À vous !', 'Your turn!')}
+              </span>
             ) : (
               <span
                 className={cn(
@@ -139,10 +144,10 @@ export function CircularGameTimer({
 
         <p className="mt-4 animate-pulse text-sm font-medium text-muted-foreground">
           {phase === 'loading'
-            ? 'Chargement…'
+            ? pick('Chargement…', 'Loading…')
             : phase === 'ready'
-              ? 'Préparez-vous…'
-              : 'Écoutez bien…'}
+              ? pick('Préparez-vous…', 'Get ready…')
+              : pick('Écoutez bien…', 'Listen carefully…')}
         </p>
       </div>
     </>

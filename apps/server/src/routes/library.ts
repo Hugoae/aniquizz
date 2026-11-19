@@ -216,7 +216,10 @@ export function registerLibraryRoutes(app: Application): void {
       }
 
       try {
-        res.json(await likeSong(req.actor.userId, songId));
+        const liked = await likeSong(req.actor.userId, songId);
+        const { notifyProfileAchievements } = await import('../modules/profile/achievementNotify');
+        void notifyProfileAchievements(req.actor.userId);
+        res.json(liked);
       } catch (e) {
         if (handleSongLikeError(res, e)) return;
         throw e;

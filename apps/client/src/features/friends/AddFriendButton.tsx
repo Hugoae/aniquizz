@@ -1,6 +1,7 @@
 import { UserPlus, Check, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 import { useFriendsActions, useFriendsState } from './FriendsContext';
 
 interface Props {
@@ -39,7 +40,10 @@ export function AddFriendButton({ userId, isBot, compact, className }: Props) {
 
   if (relation === 'outgoing') {
     return compact ? (
-      <span className={cn('text-muted-foreground/60', className)} title="Demande envoyée">
+      <span
+        className={cn('text-muted-foreground/60', className)}
+        title={pick('Demande envoyée', 'Request sent')}
+      >
         <Clock className="h-4 w-4" />
       </span>
     ) : (
@@ -49,12 +53,12 @@ export function AddFriendButton({ userId, isBot, compact, className }: Props) {
         disabled
         className={cn('gap-1.5 text-muted-foreground', className)}
       >
-        <Clock className="h-3.5 w-3.5" /> Envoyée
+        <Clock className="h-3.5 w-3.5" /> {pick('Envoyée', 'Sent')}
       </Button>
     );
   }
 
-  const label = relation === 'incoming' ? 'Accepter' : 'Ajouter';
+  const label = relation === 'incoming' ? pick('Accepter', 'Accept') : pick('Ajouter', 'Add');
   const Icon = relation === 'incoming' ? Check : UserPlus;
 
   if (compact) {
@@ -63,7 +67,7 @@ export function AddFriendButton({ userId, isBot, compact, className }: Props) {
         variant="ghost"
         size="icon"
         className={cn('h-8 w-8 text-primary hover:text-primary hover:bg-primary/10', className)}
-        title={`${label} en ami`}
+        title={pick(`${label} en ami`, `${label} as a friend`)}
         onClick={handleClick}
       >
         <Icon className="h-4 w-4" />

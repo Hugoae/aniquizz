@@ -1,5 +1,6 @@
 import { Zap } from 'lucide-react';
 import type { RoomConfig } from '@aniquizz/shared';
+import { pick, tx } from '@/lib/i18n/text';
 import { SectionHeader, OptionButton } from './ConfigPrimitives';
 
 interface SoloInstantRevealOptionProps {
@@ -14,8 +15,8 @@ export function SoloInstantRevealOption({ config, update }: SoloInstantRevealOpt
     <div className="space-y-3 rounded-xl border border-border/60 bg-secondary/10 p-3">
       <SectionHeader
         icon={Zap}
-        title="Révélation"
-        tooltip="Après l'envoi, le clip et la réponse s'affichent sans attendre le bouton. Sinon, la révélation attend la fin du temps ou le bouton."
+        title={tx('hub', 'config.revealTitle')}
+        tooltip={tx('hub', 'config.revealHint')}
       />
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <OptionButton
@@ -23,9 +24,12 @@ export function SoloInstantRevealOption({ config, update }: SoloInstantRevealOpt
           onClick={() => update({ soloInstantReveal: false })}
           className="flex flex-col items-start gap-1 p-3 text-left"
         >
-          <span className="text-[11px] font-bold uppercase">Attendre</span>
+          <span className="text-[11px] font-bold uppercase">{pick('Attendre', 'Wait')}</span>
           <span className="text-[10px] leading-snug text-muted-foreground">
-            La réponse s'affiche à la fin du temps, ou quand vous le demandez.
+            {pick(
+              "La réponse s'affiche à la fin du temps, ou quand vous le demandez.",
+              'The answer shows when time runs out, or when you ask for it.',
+            )}
           </span>
         </OptionButton>
         <OptionButton
@@ -33,9 +37,14 @@ export function SoloInstantRevealOption({ config, update }: SoloInstantRevealOpt
           onClick={() => update({ soloInstantReveal: true })}
           className="flex flex-col items-start gap-1 p-3 text-left"
         >
-          <span className="text-[11px] font-bold uppercase">Tout de suite</span>
+          <span className="text-[11px] font-bold uppercase">
+            {pick('Tout de suite', 'Right away')}
+          </span>
           <span className="text-[10px] leading-snug text-muted-foreground">
-            Dès l'envoi, le clip et la réponse s'affichent.
+            {pick(
+              "Dès l'envoi, le clip et la réponse s'affichent.",
+              'As soon as you send it, the clip and the answer appear.',
+            )}
           </span>
         </OptionButton>
       </div>

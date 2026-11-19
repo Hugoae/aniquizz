@@ -3,6 +3,7 @@ import { Disc3, Flame } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { RecentTitle } from '@/features/game/state/gameReducer';
 import { GAME_COPY } from '@/features/game/copy/gameCopy';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { OUTCOME_STYLE } from './recentTitleStyle';
 
 /** Matches the `recent-out` keyframe duration in index.css. */
@@ -107,6 +108,7 @@ export const RecentTitlesStrip = memo(function RecentTitlesStrip({
   titles,
   className,
 }: RecentTitlesStripProps) {
+  useLocale();
   const copy = GAME_COPY.recentTitles;
   // Titles that just dropped out of the window keep rendering while they slide away.
   const [leaving, setLeaving] = useState<RecentTitle[]>([]);

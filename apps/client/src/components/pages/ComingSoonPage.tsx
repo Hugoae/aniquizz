@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Header } from '@/components/layout/Header';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 export interface ComingSoonPageProps {
   helmetTitle: string;
@@ -90,7 +91,7 @@ export function ComingSoonPage({
 
           <div className="max-w-lg space-y-4 px-4 text-center">
             <h1 className="text-4xl font-black tracking-tight md:text-6xl">
-              <span className={headingClassName}>BIENTÔT</span>
+              <span className={headingClassName}>{pick('BIENTÔT', 'SOON')}</span>
             </h1>
             <p className="text-lg text-muted-foreground">{description}</p>
           </div>

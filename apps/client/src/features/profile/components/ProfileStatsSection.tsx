@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Trophy,
   Target,
@@ -18,6 +19,9 @@ import {
   Layers,
   Calendar,
 } from 'lucide-react';
+import { formatAppNumber } from '@/lib/i18n/format';
+import { pick } from '@/lib/i18n/text';
+import { useLocale } from '@/features/i18n/LocaleContext';
 
 import { StatsCarousel, type StatItem } from '@/features/profile/components/StatsCarousel';
 import type { ProfileVM } from '@/features/profile/types';
@@ -39,34 +43,36 @@ interface ProfileStatsSectionProps {
 }
 
 export function ProfileStatsSection({ vm }: ProfileStatsSectionProps) {
+  const { locale } = useLocale();
+  const { i18n } = useTranslation();
   const statItems: StatItem[] = useMemo(
     () => [
       // Page 1 — top row
       {
         id: 'games',
         icon: Target,
-        label: 'Parties jouées',
+        label: pick('Parties jouées', 'Games played'),
         value: vm.stats.gamesPlayed,
         color: 'text-primary',
       },
       {
         id: 'winrate',
         icon: Trophy,
-        label: 'Taux de victoire',
+        label: pick('Taux de victoire', 'Win rate'),
         value: `${vm.stats.winRate}%`,
         color: 'text-accent',
       },
       {
         id: 'accuracy',
         icon: Check,
-        label: 'Taux de bon guess',
+        label: pick('Taux de bon guess', 'Correct guess rate'),
         value: `${vm.stats.accuracy}%`,
         color: 'text-success',
       },
       {
         id: 'playtime',
         icon: Clock,
-        label: 'Temps de jeu',
+        label: pick('Temps de jeu', 'Play time'),
         value: fmtDuration(vm.playtimeMs),
         color: 'text-info',
       },
@@ -74,28 +80,28 @@ export function ProfileStatsSection({ vm }: ProfileStatsSectionProps) {
       {
         id: 'best',
         icon: Medal,
-        label: 'Meilleur score',
-        value: vm.bestScore.toLocaleString('fr-FR'),
+        label: pick('Meilleur score', 'Best score'),
+        value: formatAppNumber(vm.bestScore),
         color: 'text-accent',
       },
       {
         id: 'streak',
         icon: Flame,
-        label: 'Meilleure série',
+        label: pick('Meilleure série', 'Best streak'),
         value: vm.stats.maxStreak,
         color: 'text-warning',
       },
       {
         id: 'fastest',
         icon: Rocket,
-        label: 'Réponse la plus rapide',
+        label: pick('Réponse la plus rapide', 'Fastest answer'),
         value: fmtAvgTime(vm.fastestAnswerMs),
         color: 'text-success',
       },
       {
         id: 'avgtime',
         icon: Timer,
-        label: 'Temps de réponse moy.',
+        label: pick('Temps de réponse moy.', 'Avg. response time'),
         value: fmtAvgTime(vm.avgAnswerMs),
         color: 'text-info',
       },
@@ -103,74 +109,80 @@ export function ProfileStatsSection({ vm }: ProfileStatsSectionProps) {
       {
         id: 'xp',
         icon: Zap,
-        label: 'XP totale',
-        value: vm.xp.toLocaleString('fr-FR'),
+        label: pick('XP totale', 'Total XP'),
+        value: formatAppNumber(vm.xp),
         color: 'text-primary',
       },
       {
         id: 'scoretotal',
         icon: TrendingUp,
-        label: 'Score total',
-        value: vm.scoreTotal.toLocaleString('fr-FR'),
+        label: pick('Score total', 'Total score'),
+        value: formatAppNumber(vm.scoreTotal),
         color: 'text-accent',
       },
       {
         id: 'correct',
         icon: CheckCheck,
-        label: 'Bonnes réponses',
-        value: (vm.stats.correctGuesses ?? 0).toLocaleString('fr-FR'),
+        label: pick('Bonnes réponses', 'Correct answers'),
+        value: formatAppNumber(vm.stats.correctGuesses ?? 0),
         color: 'text-success',
       },
       {
         id: 'rounds',
         icon: Layers,
-        label: 'Rounds joués',
-        value: vm.roundsPlayed.toLocaleString('fr-FR'),
+        label: pick('Rounds joués', 'Rounds played'),
+        value: formatAppNumber(vm.roundsPlayed),
         color: 'text-warning',
       },
       {
         id: 'avgscore',
         icon: Gauge,
-        label: 'Score moyen / partie',
+        label: pick('Score moyen / partie', 'Avg. score / game'),
         value:
           vm.stats.gamesPlayed > 0
-            ? Math.round(vm.scoreTotal / vm.stats.gamesPlayed).toLocaleString('fr-FR')
+            ? formatAppNumber(Math.round(vm.scoreTotal / vm.stats.gamesPlayed))
             : '—',
         color: 'text-info',
       },
       {
         id: 'avgxp',
         icon: Sparkles,
-        label: 'XP moyenne / partie',
-        value: vm.avgXpPerGame.toLocaleString('fr-FR'),
+        label: pick('XP moyenne / partie', 'Avg. XP / game'),
+        value: formatAppNumber(vm.avgXpPerGame),
         color: 'text-primary',
       },
       {
         id: 'multi',
         icon: Users,
-        label: 'Parties multi',
+        label: pick('Parties multi', 'Multiplayer games'),
         value: vm.multiCount,
         color: 'text-accent',
       },
-      { id: 'solo', icon: User, label: 'Parties solo', value: vm.soloCount, color: 'text-warning' },
+      {
+        id: 'solo',
+        icon: User,
+        label: pick('Parties solo', 'Solo games'),
+        value: vm.soloCount,
+        color: 'text-warning',
+      },
       {
         id: 'daily-played',
         icon: Calendar,
-        label: 'Quiz du jour',
+        label: pick('Quiz du jour', 'Daily quiz'),
         value: vm.stats.dailyCompletions ?? 0,
         color: 'text-primary',
       },
       {
         id: 'daily-wins',
         icon: Trophy,
-        label: 'Victoires du jour',
+        label: pick('Victoires du jour', 'Daily wins'),
         value: vm.stats.dailyWins ?? 0,
         color: 'text-accent',
       },
       {
         id: 'daily-winrate',
         icon: Medal,
-        label: 'Taux victoire du jour',
+        label: pick('Taux victoire du jour', 'Daily win rate'),
         value: `${
           (vm.stats.dailyCompletions ?? 0) > 0
             ? Math.round(((vm.stats.dailyWins ?? 0) / vm.stats.dailyCompletions) * 100)
@@ -181,50 +193,50 @@ export function ProfileStatsSection({ vm }: ProfileStatsSectionProps) {
       {
         id: 'daily-streak',
         icon: Flame,
-        label: 'Série du jour',
+        label: pick('Série du jour', 'Daily streak'),
         value: vm.stats.dailyStreak ?? 0,
         color: 'text-warning',
       },
       {
         id: 'daily-best-streak',
         icon: Rocket,
-        label: 'Meilleure série du jour',
+        label: pick('Meilleure série du jour', 'Best daily streak'),
         value: vm.stats.dailyLongestStreak ?? 0,
         color: 'text-info',
       },
       {
         id: 'daily-perfect',
         icon: Sparkles,
-        label: 'Jours parfaits',
+        label: pick('Jours parfaits', 'Perfect days'),
         value: vm.stats.dailyPerfectDays ?? 0,
         color: 'text-aqua',
       },
       {
         id: 'daily-avg-rank',
         icon: Medal,
-        label: 'Place moyenne du jour',
+        label: pick('Place moyenne du jour', 'Avg. daily rank'),
         value:
           vm.stats.dailyAvgRank != null
-            ? `#${vm.stats.dailyAvgRank.toLocaleString('fr-FR', { maximumFractionDigits: 1 })}`
+            ? `#${formatAppNumber(vm.stats.dailyAvgRank, { maximumFractionDigits: 1 })}`
             : '—',
         color: 'text-accent',
       },
       {
         id: 'daily-avg-time',
         icon: Timer,
-        label: 'Temps moyen du jour',
+        label: pick('Temps moyen du jour', 'Avg. daily time'),
         value: fmtAvgTime(vm.stats.dailyAvgTimeMs ?? null),
         color: 'text-info',
       },
     ],
-    [vm],
+    [vm, locale, i18n.language],
   );
 
   return (
     <section className="space-y-4 animate-fade-in" style={{ animationDelay: '80ms' }}>
       <div className="flex items-center gap-2">
         <Zap className="h-5 w-5 text-primary" />
-        <h2 className="text-xl font-bold">Statistiques</h2>
+        <h2 className="text-xl font-bold">{pick('Statistiques', 'Statistics')}</h2>
       </div>
       <StatsCarousel items={statItems} />
     </section>

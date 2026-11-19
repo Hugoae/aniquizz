@@ -10,6 +10,7 @@ rounds whose clip started (`position <= currentRound`), not forfeited leftovers.
 ## Product contract
 
 - Five globally identical songs per Paris calendar day, **QCM only**, precision **anime**.
+- The **song of the day** is built for 26.10 and is not shown in 26.9. Generation still picks that clip first and removes it from the five. Replacing a quiz round with it is rejected. The homepage card and the admin editor stay unmounted until 26.10.
 - Account required. One official attempt per profile; leaving mid-run (quit,
   refresh, close tab, disconnect) forfeits remaining rounds as unanswered.
   There is no resume.

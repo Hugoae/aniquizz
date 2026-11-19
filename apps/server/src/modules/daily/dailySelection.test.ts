@@ -6,6 +6,7 @@ import {
   mulberry32,
   pickDailyClipStart,
   pickDailyReplacement,
+  pickSongOfTheDay,
   selectDailySongs,
   type DailySongCandidate,
 } from './dailySelection';
@@ -248,6 +249,56 @@ describe('dailySelection', () => {
         excludeFranchiseKeys: new Set(),
         recentSongIds: new Set(),
         recentFranchiseKeys: new Set(),
+      });
+      expect(picked?.popularity).toBeLessThan(1000);
+    }
+  });
+});
+
+describe('pickSongOfTheDay', () => {
+  const showcasePool = (): DailySongCandidate[] => [
+    song(1, { difficulty: 'EASY', songType: 'OP', popularity: 50_000 }),
+    song(2, { difficulty: 'EASY', songType: 'OP', popularity: 40_000 }),
+    song(3, { difficulty: 'MEDIUM', songType: 'ED', popularity: 20 }),
+    song(4, { difficulty: 'HARD', songType: 'OP', popularity: 30 }),
+    song(5, { difficulty: 'MEDIUM', songType: 'ED', popularity: 25 }),
+  ];
+
+  it('returns the same song for the same seed', () => {
+    const pool = showcasePool();
+    const a = pickSongOfTheDay({ pool, rng: mulberry32(20261119), excludeSongIds: new Set() });
+    const b = pickSongOfTheDay({ pool, rng: mulberry32(20261119), excludeSongIds: new Set() });
+    expect(a?.songId).toBe(b?.songId);
+  });
+
+  it('never returns an excluded song', () => {
+    const pool = showcasePool();
+    const picked = pickSongOfTheDay({
+      pool,
+      rng: mulberry32(7),
+      excludeSongIds: new Set([3, 4, 5]),
+    });
+    expect(picked?.songId).toBeDefined();
+    expect([3, 4, 5]).not.toContain(picked?.songId);
+  });
+
+  it('returns null when every song is excluded', () => {
+    const pool = showcasePool();
+    const picked = pickSongOfTheDay({
+      pool,
+      rng: mulberry32(7),
+      excludeSongIds: new Set(pool.map((row) => row.songId)),
+    });
+    expect(picked).toBeNull();
+  });
+
+  it('prefers a song outside the high popularity band', () => {
+    const pool = showcasePool();
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const picked = pickSongOfTheDay({
+        pool,
+        rng: mulberry32(seed * 11),
+        excludeSongIds: new Set(),
       });
       expect(picked?.popularity).toBeLessThan(1000);
     }

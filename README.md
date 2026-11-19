@@ -101,7 +101,7 @@ Production domain: **https://aniquizz.com** (www and `*.vercel.app` redirect to 
 
 ## Conventions
 
-- Code, comments, logs, docs, and commits: **English**. User-facing UI: **French** (isolated for future i18n).
+- Code, comments, logs, docs, and commits: **English**. Player UI: **French and English** (French is the source). Admin and server errors stay French. See [`AGENTS.md`](./AGENTS.md) § Languages.
 - [Conventional Commits](https://www.conventionalcommits.org/).
 - Player identity = JWT `userId`, never `socket.id`.
 - Never log secrets (JWT tokens, room passwords).

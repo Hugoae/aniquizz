@@ -11,12 +11,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import {
-  PRECISION_META,
   revealDurationSeconds,
   normalizeTimeBudgetSeconds,
   type GameConfig,
   type Precision,
 } from '@aniquizz/shared';
+import { pick, tx } from '@/lib/i18n/text';
 
 export {
   normalizePrecision,
@@ -47,11 +47,25 @@ export interface DifficultyOption {
 }
 
 export const DIFFICULTY_OPTIONS: DifficultyOption[] = [
-  { id: 'easy', label: 'Facile', activeClassName: 'border-success bg-success/15 text-success' },
-  { id: 'medium', label: 'Moyen', activeClassName: 'border-warning bg-warning/15 text-warning' },
+  {
+    id: 'easy',
+    get label() {
+      return tx('hub', 'config.difficultyEasy');
+    },
+    activeClassName: 'border-success bg-success/15 text-success',
+  },
+  {
+    id: 'medium',
+    get label() {
+      return tx('hub', 'config.difficultyMedium');
+    },
+    activeClassName: 'border-warning bg-warning/15 text-warning',
+  },
   {
     id: 'hard',
-    label: 'Difficile',
+    get label() {
+      return tx('hub', 'config.difficultyHard');
+    },
     activeClassName: 'border-destructive bg-destructive/15 text-destructive',
   },
 ];
@@ -64,9 +78,32 @@ export interface ResponseModeOption {
 }
 
 export const RESPONSE_MODES: ResponseModeOption[] = [
-  { id: 'typing', label: 'Typing', description: 'Écris la réponse', icon: Keyboard },
-  { id: 'qcm', label: 'QCM', description: '4 propositions', icon: Grid2X2 },
-  { id: 'mix', label: 'Mix', description: 'Typing + QCM', icon: Shuffle },
+  {
+    id: 'typing',
+    label: 'Typing',
+    get description() {
+      return tx('hub', 'config.responseTyping');
+    },
+    icon: Keyboard,
+  },
+  {
+    id: 'qcm',
+    get label() {
+      return pick('QCM', 'MCQ');
+    },
+    get description() {
+      return tx('hub', 'config.responseQcm');
+    },
+    icon: Grid2X2,
+  },
+  {
+    id: 'mix',
+    label: 'Mix',
+    get description() {
+      return tx('hub', 'config.responseMix');
+    },
+    icon: Shuffle,
+  },
 ];
 
 export interface PrecisionOption {
@@ -76,26 +113,39 @@ export interface PrecisionOption {
   icon: LucideIcon;
 }
 
-export const PRECISION_HELP =
-  'Franchise = la saga suffit. Anime = la saison précise. Artiste = un des artistes ou groupes crédités suffit, inutile de tous les citer.';
+export function precisionHelp(): string {
+  return tx('hub', 'config.precisionHelp');
+}
 
 export const PRECISION_OPTIONS: PrecisionOption[] = [
   {
     id: 'franchise',
-    label: PRECISION_META.franchise.label,
-    description: PRECISION_META.franchise.description,
+    get label() {
+      return tx('hub', 'precisionChip.franchise');
+    },
+    get description() {
+      return tx('hub', 'config.precisionFranchise');
+    },
     icon: Ungroup,
   },
   {
     id: 'anime',
-    label: PRECISION_META.anime.label,
-    description: PRECISION_META.anime.description,
+    get label() {
+      return tx('hub', 'precisionChip.anime');
+    },
+    get description() {
+      return tx('hub', 'config.precisionAnime');
+    },
     icon: Target,
   },
   {
     id: 'artist',
-    label: PRECISION_META.artist.label,
-    description: PRECISION_META.artist.description,
+    get label() {
+      return tx('hub', 'precisionChip.artist');
+    },
+    get description() {
+      return tx('hub', 'config.precisionArtist');
+    },
     icon: Mic2,
   },
 ];

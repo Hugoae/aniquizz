@@ -204,6 +204,16 @@ export const adminApi = {
       method: 'POST',
       body: JSON.stringify({ date }),
     }),
+  setDailyFeatured: (date: string, songId: number) =>
+    request<DailyAdminList>('/daily/featured', {
+      method: 'POST',
+      body: JSON.stringify({ date, songId }),
+    }),
+  redrawDailyFeatured: (date: string) =>
+    request<DailyAdminList>('/daily/featured/redraw', {
+      method: 'POST',
+      body: JSON.stringify({ date }),
+    }),
   replaceDailyRound: (id: string, roundId: string, songId: number) =>
     request<DailyAdminList>(`/daily/${id}/rounds/${roundId}/replace`, {
       method: 'POST',

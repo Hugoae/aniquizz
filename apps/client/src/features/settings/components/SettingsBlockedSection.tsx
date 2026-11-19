@@ -12,20 +12,21 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useFriends } from '@/features/friends/FriendsContext';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { useSettingsCopy } from '@/features/settings/copy/settingsCopy';
 
 export function SettingsBlockedSection() {
   const { blocked, unblock } = useFriends();
+  const copy = useSettingsCopy();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const pending = blocked.find((u) => u.id === pendingId) ?? null;
 
   return (
     <section aria-labelledby="settings-blocked-heading" className="border-t border-border/60 pt-5">
       <h3 id="settings-blocked-heading" className="text-sm font-bold text-foreground">
-        {SETTINGS_COPY.blockedHeading}
+        {copy.blockedHeading}
       </h3>
       {blocked.length === 0 ? (
-        <p className="mt-3 text-xs text-muted-foreground">{SETTINGS_COPY.blockedEmpty}</p>
+        <p className="mt-3 text-xs text-muted-foreground">{copy.blockedEmpty}</p>
       ) : (
         <ul className="mt-3 space-y-2">
           {blocked.map((user) => (
@@ -43,7 +44,7 @@ export function SettingsBlockedSection() {
                 size="sm"
                 onClick={() => setPendingId(user.id)}
               >
-                {SETTINGS_COPY.blockedUnblock}
+                {copy.blockedUnblock}
               </Button>
             </li>
           ))}
@@ -53,20 +54,20 @@ export function SettingsBlockedSection() {
       <AlertDialog open={Boolean(pending)} onOpenChange={(open) => !open && setPendingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{SETTINGS_COPY.blockedConfirmTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{copy.blockedConfirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pending ? SETTINGS_COPY.blockedConfirmBody(pending.username) : ''}
+              {pending ? copy.blockedConfirmBody(pending.username) : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>{SETTINGS_COPY.cancel}</AlertDialogCancel>
+            <AlertDialogCancel>{copy.cancel}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
                 if (pending) unblock(pending.id);
                 setPendingId(null);
               }}
             >
-              {SETTINGS_COPY.blockedUnblock}
+              {copy.blockedUnblock}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

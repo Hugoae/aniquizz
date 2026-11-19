@@ -16,6 +16,7 @@ import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 import { getDistinctRanks, podiumTierForRank } from '@/features/game/utils/podiumGroups';
 
 import { XpEarnedBadge } from './XpEarnedBadge';
+import { pick } from '@/lib/i18n/text';
 
 interface FinalRankingProps {
   sortedPlayers: GamePlayer[];
@@ -48,11 +49,14 @@ export function FinalRanking({
         <div className="flex items-center justify-between border-b border-border/60 bg-secondary/20 p-4 md:p-6">
           <h3 className="font-display flex items-center gap-2 text-xl font-bold">
             <Medal className="h-5 w-5 text-warning" aria-hidden />
-            Classement final
+            {pick('Classement final', 'Final ranking')}
           </h3>
 
           <div className="rounded-md border border-border/50 bg-secondary/40 px-3 py-1 font-mono text-xs text-muted-foreground">
-            {sortedPlayers.length} joueurs
+            {pick(
+              `${sortedPlayers.length} joueur${sortedPlayers.length > 1 ? 's' : ''}`,
+              `${sortedPlayers.length} player${sortedPlayers.length > 1 ? 's' : ''}`,
+            )}
           </div>
         </div>
 
@@ -120,7 +124,10 @@ export function FinalRanking({
                       p.matchTotalCount > 0 && (
                         <span className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                           <Check className="h-3 w-3 shrink-0 text-success/80" aria-hidden />
-                          {p.matchCorrectCount} / {p.matchTotalCount} bonnes réponses
+                          {pick(
+                            `${p.matchCorrectCount} / ${p.matchTotalCount} bonnes réponses`,
+                            `${p.matchCorrectCount} / ${p.matchTotalCount} correct answers`,
+                          )}
                         </span>
                       )}
                   </div>
@@ -158,7 +165,7 @@ export function FinalRanking({
         <div className="space-y-3 border-t border-border/60 bg-secondary/20 p-4">
           <Button onClick={onShowDetail} variant="glow" className="h-12 w-full gap-2">
             <ListMusic className="h-4 w-4" aria-hidden />
-            Détail de ma partie
+            {pick('Détail de ma partie', 'My match breakdown')}
           </Button>
 
           <Button
@@ -168,7 +175,7 @@ export function FinalRanking({
             className="h-14 w-full gap-2 text-lg"
           >
             <ArrowLeft className="h-5 w-5" aria-hidden />
-            Retour au Lobby
+            {pick('Retour au Lobby', 'Back to the lobby')}
           </Button>
         </div>
       </div>

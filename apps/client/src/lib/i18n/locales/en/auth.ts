@@ -1,0 +1,62 @@
+export const authEn = {
+  showPassword: 'Hold to show the password',
+  passwordHint:
+    'At least 8 characters, with an uppercase letter, a lowercase letter, a number, and a symbol.',
+  passwordInvalid:
+    'The password must be at least 8 characters and include an uppercase letter, a lowercase letter, a number, and a symbol.',
+  alreadySignedInReset:
+    'You are already signed in. To change your password, open your profile (you will need the current one).',
+  invalidResetLink: 'This reset link is invalid or has expired. Please request a new one.',
+  signIn: 'Sign in',
+  profileUnavailable: 'Profile unavailable',
+  profileUnavailableHint: 'Profile unavailable — open to try again',
+  modal: {
+    login: {
+      title: 'SIGN IN',
+      description: 'Sign in to save your progress.',
+      submit: 'Sign in',
+      switchPrompt: 'No account yet? ',
+      switchAction: 'Create an account',
+      toast: 'Welcome back!',
+    },
+    signup: {
+      title: 'SIGN UP',
+      description: 'Join the AniQuizz community!',
+      submit: 'Sign up',
+      switchPrompt: 'Already have an account? ',
+      switchAction: 'Sign in',
+      toast: 'Account created! Check your email.',
+      legalLead: 'By creating an account, you accept our ',
+      terms: 'terms of use',
+      legalMid: ' and our ',
+      privacy: 'privacy policy',
+      legalEnd: '.',
+    },
+    forgot: {
+      title: 'FORGOT PASSWORD',
+      description: 'Enter your email to receive a reset link.',
+      submit: 'Send the link',
+      back: 'Back to sign in',
+      toast: 'If an account exists for this email, a reset link has just been sent.',
+    },
+    fields: {
+      username: 'Username',
+      usernamePlaceholder: 'OtakuDu93',
+      email: 'Email',
+      emailPlaceholder: 'name@email.com',
+      password: 'Password',
+      forgotLink: 'Forgot your password?',
+    },
+  },
+  errors: {
+    generic: 'Something went wrong. Try again in a moment.',
+    invalidLogin: 'Incorrect email or password.',
+    emailNotConfirmed: 'Confirm your email before signing in.',
+    alreadyRegistered: 'An account already exists for this email.',
+    weakPassword: 'The password does not meet the security requirements.',
+    rateLimited: 'Too many attempts. Try again a little later.',
+    invalidEmail: 'This email address is not valid.',
+    samePassword: 'The new password must be different from the current one.',
+    currentPassword: 'Current password is incorrect.',
+  },
+} as const;

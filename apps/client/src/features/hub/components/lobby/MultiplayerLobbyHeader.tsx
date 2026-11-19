@@ -9,6 +9,7 @@ import { LobbyRulesTrigger } from '@/features/hub/components/lobby/LobbyRulesDia
 import { GameModeBadge } from '@/features/hub/components/GameModeBadge';
 import { TestMatchMark } from '@/features/hub/components/config/TestMatchOption';
 import type { SettingChipSpec } from '@/features/hub/components/roomSettings';
+import { pick } from '@/lib/i18n/text';
 
 interface MultiplayerLobbyHeaderProps {
   roomName: string;
@@ -53,7 +54,7 @@ export function MultiplayerLobbyHeader({
             variant="ghost"
             size="icon"
             onClick={onLeaveClick}
-            aria-label="Quitter le salon"
+            aria-label={pick('Quitter le salon', 'Leave the room')}
             className="h-10 w-10 shrink-0 rounded-full"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -71,7 +72,7 @@ export function MultiplayerLobbyHeader({
             <div className="mt-2 flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 rounded-md border border-border/50 bg-secondary/40 px-3 py-1.5">
                 <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Code :
+                  {pick('Code :', 'Code:')}
                 </span>
                 <span className="min-w-[80px] text-center font-mono text-lg font-bold tracking-widest text-foreground">
                   {showCode ? roomCode : '••••••'}
@@ -79,7 +80,11 @@ export function MultiplayerLobbyHeader({
                 <button
                   type="button"
                   onClick={onToggleCode}
-                  aria-label={showCode ? 'Masquer le code' : 'Afficher le code'}
+                  aria-label={
+                    showCode
+                      ? pick('Masquer le code', 'Hide the code')
+                      : pick('Afficher le code', 'Show the code')
+                  }
                   aria-pressed={showCode}
                   className={cn(
                     'ml-1 rounded text-muted-foreground transition-colors hover:text-foreground',
@@ -91,7 +96,7 @@ export function MultiplayerLobbyHeader({
                 <button
                   type="button"
                   onClick={onCopyCode}
-                  aria-label="Copier le code du salon"
+                  aria-label={pick('Copier le code du salon', 'Copy the room code')}
                   className={cn(
                     'ml-1 rounded text-muted-foreground transition-colors hover:text-primary',
                     FOCUS_RING,
@@ -109,7 +114,7 @@ export function MultiplayerLobbyHeader({
           {isHost && (
             <Button variant="secondary" onClick={onOpenSettings} className="gap-2">
               <Settings className="h-4 w-4" />
-              Paramètres
+              {pick('Paramètres', 'Settings')}
             </Button>
           )}
         </div>

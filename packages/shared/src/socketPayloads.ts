@@ -106,6 +106,7 @@ export const updatePrefsInputSchema = z
     friendRequestSound: z.boolean().optional(),
     lobbyInviteVisual: z.boolean().optional(),
     lobbyInviteSound: z.boolean().optional(),
+    uiLocale: z.enum(['fr', 'en']).optional(),
   })
   .strip();
 

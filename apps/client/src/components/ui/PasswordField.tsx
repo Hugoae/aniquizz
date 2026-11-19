@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { tx } from '@/lib/i18n/text';
 
 interface PasswordFieldProps {
   id: string;
@@ -65,7 +66,7 @@ export function PasswordField({
         />
         <button
           type="button"
-          aria-label="Maintenir pour afficher le mot de passe"
+          aria-label={tx('auth', 'showPassword')}
           aria-pressed={reveal}
           disabled={disabled}
           className="absolute right-2 top-1/2 -translate-y-1/2 rounded text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

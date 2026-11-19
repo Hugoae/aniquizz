@@ -375,11 +375,22 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz', () => {
     if (forfeited.kind !== 'result') throw new Error('expected a result');
     const settled = await prisma.dailyAttempt.findUniqueOrThrow({
       where: { id: round.attemptId },
-      select: { won: true, activeRoundCount: true, correctCount: true, rank: true },
+      select: { won: true, activeRoundCount: true, correctCount: true },
     });
     expect(settled.activeRoundCount).toBe(5);
     expect(settled.won).toBe(isDailyVictory(settled.correctCount, settled.activeRoundCount));
-    expect(settled.rank).toBeGreaterThanOrEqual(1);
+    await expect
+      .poll(
+        async () =>
+          (
+            await prisma.dailyAttempt.findUnique({
+              where: { id: round.attemptId },
+              select: { rank: true },
+            })
+          )?.rank ?? 0,
+        { timeout: 5_000, interval: 50 },
+      )
+      .toBeGreaterThanOrEqual(1);
     const afterPlay = await prisma.profile.findUniqueOrThrow({
       where: { id: TEST_USER_IDS.admin },
       select: { xp: true },
@@ -425,8 +436,10 @@ describe.skipIf(!hasIntegrationEnv)('daily quiz', () => {
     });
     expect(row.state).toBe('IN_PROGRESS');
     expect(row.currentRound).toBe(1);
+    // The locked guess is stored as soon as the reveal starts, so the last
+    // Suivant does not wait on that insert. Reading today must not close the run.
     expect(await prisma.dailyAttemptAnswer.count({ where: { attemptId: round.attemptId } })).toBe(
-      0,
+      1,
     );
   });
 

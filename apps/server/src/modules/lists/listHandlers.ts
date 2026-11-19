@@ -117,6 +117,8 @@ export const registerListHandlers = (
         void syncLinkedProvider(io, gameManager, userId, row, provider).catch((syncError) => {
           logger.error('Failed to sync list after link', 'Lists', syncError);
         });
+        const { notifyProfileAchievements } = await import('../profile/achievementNotify');
+        void notifyProfileAchievements(userId);
       } catch (error) {
         logger.error('Failed to link list', 'Lists', error);
         emitOperationError(requestId, 'link', provider, 'Impossible de lier ce compte.');

@@ -40,7 +40,7 @@ Tabs **above** the sons / timer row (solo + multi configuration modal):
 | **Général** | Current form: `RoomSettingsSection`, `RulesSection`, `SourceSection`, `FiltersSection` |
 | **Avancé**  | **Affichage vidéo** — 3-option picker (radio cards)                                    |
 
-French labels (UI):
+French source labels (the client also shows English at render time):
 
 - **Audio seul** — `hidden` — _Fond noir pendant le guess, comme aujourd'hui._
 - **Vidéo floutée** — `blurred`

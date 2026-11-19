@@ -4,6 +4,7 @@ import { FoundHeard } from '@/features/game/components/shared/RaceLaneStats';
 import { liveRaceRows, useRaceNow } from '@/features/game/components/shared/raceLive';
 import { frenchOrdinal } from '@/features/game/utils/frenchOrdinals';
 import { GAME_COPY } from '../../../../copy/gameCopy';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import type { RaceBoardState } from '../../../../state/gameReducer';
 import { RaceBoard } from './RaceBoard';
 
@@ -26,6 +27,7 @@ export const RaceLaneDone = memo(function RaceLaneDone({
   currentUserId,
   onOpenRoster,
 }: RaceLaneDoneProps) {
+  useLocale();
   const now = useRaceNow(board);
   const mine = useMemo(() => {
     if (!board) return null;

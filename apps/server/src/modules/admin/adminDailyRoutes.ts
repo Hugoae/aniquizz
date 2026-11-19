@@ -12,6 +12,8 @@ import {
   reorderDailyRounds,
   replaceDailyRound,
   restoreDailyRound,
+  redrawDailyFeaturedSong,
+  setDailyFeaturedSong,
   reshuffleDailyRoundClip,
   searchDailyPlayableSongs,
   setDailyChallengeStatus,
@@ -36,6 +38,7 @@ const statusSchema = z.object({ status: z.enum(['ready', 'draft']) });
 const replaceSchema = z.object({ songId: z.number().int().positive() });
 const reorderSchema = z.object({ orderedIds: z.array(z.string().min(1)).min(1).max(5) });
 const dateSchema = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) });
+const featuredSchema = dateSchema.extend({ songId: z.number().int().positive() });
 
 export function registerAdminDailyRoutes(router: Router): void {
   router.get(
@@ -57,6 +60,32 @@ export function registerAdminDailyRoutes(router: Router): void {
         .map((value) => Number(value))
         .filter((id) => Number.isInteger(id) && id > 0);
       res.json({ songs: await searchDailyPlayableSongs(query, exclude) });
+    }),
+  );
+
+  router.post(
+    '/daily/featured',
+    ...staff('ADMIN'),
+    wrap(async (req, res) => {
+      const parsed = featuredSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Date ou son invalide.' });
+        return;
+      }
+      res.json(await setDailyFeaturedSong(parsed.data.date, parsed.data.songId));
+    }),
+  );
+
+  router.post(
+    '/daily/featured/redraw',
+    ...staff('ADMIN'),
+    wrap(async (req, res) => {
+      const parsed = dateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Date invalide.' });
+        return;
+      }
+      res.json(await redrawDailyFeaturedSong(parsed.data.date));
     }),
   );
 

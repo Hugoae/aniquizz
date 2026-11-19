@@ -1,7 +1,15 @@
 import { LegalPageLayout } from '@/features/legal/components/LegalPageLayout';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { PAGE_TITLES } from '@/lib/site';
+import { PrivacyPolicyEn } from '@/pages/legal/PrivacyPolicyEn';
 
 export default function PrivacyPolicyPage() {
+  const { locale } = useLocale();
+  if (locale === 'en') return <PrivacyPolicyEn />;
+  return <PrivacyPolicyFr />;
+}
+
+function PrivacyPolicyFr() {
   return (
     <LegalPageLayout
       title={PAGE_TITLES.privacy}

@@ -1,5 +1,6 @@
 import { ExternalLink, Calendar, Music2, User, Star, Check, HelpCircle, Film } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 import { SongLikeButton } from '@/features/likes/components/SongLikeButton';
 import {
   formatRevealEpisodeRange,
@@ -138,10 +139,10 @@ export function SongInfoCard({
         </div>
         <div>
           <p className="text-lg font-black uppercase tracking-tight text-foreground/80">
-            Quel est cet anime ?
+            {pick('Quel est cet anime ?', 'Which anime is this?')}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Les infos apparaîtront à la révélation.
+            {pick('Les infos apparaîtront à la révélation.', 'The details show up at the reveal.')}
           </p>
         </div>
       </div>
@@ -155,7 +156,16 @@ export function SongInfoCard({
         ? 'text-destructive border-destructive/30 bg-destructive/10'
         : 'text-info border-info/30 bg-info/10';
 
-  const diffLabel = difficulty ? difficulty.toUpperCase() : 'NORMAL';
+  const diffLabel =
+    difficulty === 'easy'
+      ? pick('Facile', 'Easy')
+      : difficulty === 'medium'
+        ? pick('Moyen', 'Medium')
+        : difficulty === 'hard'
+          ? pick('Difficile', 'Hard')
+          : difficulty
+            ? difficulty.toUpperCase()
+            : 'NORMAL';
   const formattedType = type.replace(/(\d+)$/, ' $1');
   const seasonYearLabel = formatRevealSeasonYear(season, year);
   const formatLabel = formatRevealFormat(format);
@@ -199,7 +209,7 @@ export function SongInfoCard({
             {isWatched && (
               <div className="absolute left-1 top-1 z-20 flex items-center gap-1 rounded bg-success px-1.5 py-0.5 text-success-foreground shadow">
                 <Check className="h-3 w-3 stroke-[4]" />
-                <span className="text-[9px] font-black leading-none">VU</span>
+                <span className="text-[9px] font-black leading-none">{pick('VU', 'SEEN')}</span>
               </div>
             )}
             {showLikeButton && songId != null && (
@@ -223,7 +233,7 @@ export function SongInfoCard({
             target="_blank"
             rel="noopener noreferrer"
             className="line-clamp-1 text-lg font-black leading-tight text-foreground underline-offset-4 transition-colors hover:text-primary hover:underline"
-            title="Voir sur AniList"
+            title={pick('Voir sur AniList', 'View on AniList')}
           >
             {animeName}
             <ExternalLink className="relative -top-0.5 ml-1.5 inline h-3 w-3 opacity-50" />
@@ -278,7 +288,7 @@ export function SongInfoCard({
           target="_blank"
           rel="noopener noreferrer"
           className="mb-2 block line-clamp-2 text-xl font-black leading-tight text-foreground underline-offset-4 transition-all hover:text-primary hover:underline"
-          title="Voir sur AniList"
+          title={pick('Voir sur AniList', 'View on AniList')}
           style={accent ? { textShadow: `0 0 24px ${accent}33` } : undefined}
         >
           {animeName}

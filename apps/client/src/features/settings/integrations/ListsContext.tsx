@@ -9,7 +9,7 @@ import {
 } from '@aniquizz/shared';
 import { toast } from 'sonner';
 import { useAuth, type Profile } from '@/features/auth/context/AuthContext';
-import { SETTINGS_COPY } from '@/features/settings/copy/settingsCopy';
+import { settingsText } from '@/features/settings/copy/settingsCopy';
 import {
   ListsContext,
   type ListOperationOutcome,
@@ -51,7 +51,7 @@ const statusFromProfile = (profile: Profile | null): ListsStatusPayload => {
 
 const successMessage = (operation: ListOperation, provider: WatchedListProvider): string => {
   const label = provider === 'anilist' ? 'AniList' : 'MyAnimeList';
-  return SETTINGS_COPY.listOperationSuccess[operation](label);
+  return settingsText().listOperationSuccess[operation](label);
 };
 
 export function ListsProvider({ children }: { children: React.ReactNode }) {
@@ -161,7 +161,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       if (!current) return;
       setOutcome({ requestId: current.requestId, success: false });
       finishOperation();
-      toast.error(error.message || SETTINGS_COPY.listGenericError);
+      toast.error(error.message || settingsText().listGenericError);
     };
 
     socket.on('lists:status', onStatus);
@@ -196,11 +196,11 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
       emit: (requestId: string) => void,
     ): string | null => {
       if (pendingRef.current) {
-        toast.error(SETTINGS_COPY.listOperationPending);
+        toast.error(settingsText().listOperationPending);
         return null;
       }
       if (!socket.connected) {
-        toast.error(SETTINGS_COPY.listServerOffline);
+        toast.error(settingsText().listServerOffline);
         return null;
       }
       const requestId =
@@ -216,7 +216,7 @@ export function ListsProvider({ children }: { children: React.ReactNode }) {
         if (pendingRef.current?.requestId !== requestId) return;
         setOutcome({ requestId, success: false });
         finishOperation();
-        toast.error(SETTINGS_COPY.listServerTimeout);
+        toast.error(settingsText().listServerTimeout);
         refreshStatus();
       }, 40_000);
       return requestId;

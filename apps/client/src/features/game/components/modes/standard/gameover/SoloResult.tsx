@@ -10,6 +10,7 @@ import {
   type VictoryData,
 } from '@aniquizz/shared';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 import { ConfettiLayer } from './ConfettiLayer';
 import { GLOW, SOLO_DEFEAT_CONFETTI, SOLO_VICTORY_CONFETTI } from './confettiPresets';
 import { MatchConfigHeader } from './MatchConfigHeader';
@@ -77,7 +78,7 @@ export function SoloResult({
         <div className="sticky top-0 z-[60] flex items-center justify-between gap-3 border-b border-border/60 bg-background/90 px-4 py-2.5 backdrop-blur-md lg:hidden">
           <span className="font-mono text-sm font-bold tabular-nums">
             {isTimeAttackSettings(settings)
-              ? `${score} trouvé${score === 1 ? '' : 's'}`
+              ? pick(`${score} trouvé${score === 1 ? '' : 's'}`, `${score} found`)
               : `${score}/${maxPossibleScore} pts`}
           </span>
           <span className="font-mono text-sm font-bold tabular-nums text-muted-foreground">
@@ -89,7 +90,7 @@ export function SoloResult({
               isSuccess ? 'text-success' : 'text-destructive',
             )}
           >
-            {isSuccess ? 'Victoire' : 'Défaite'}
+            {isSuccess ? pick('Victoire', 'Victory') : pick('Défaite', 'Defeat')}
           </span>
         </div>
       )}
@@ -119,7 +120,7 @@ export function SoloResult({
               onClick={scrollToDetail}
               className="flex w-full shrink-0 items-center justify-center gap-2 rounded-lg border border-border/60 bg-secondary/30 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary/50 hover:text-foreground lg:hidden"
             >
-              Voir le détail des rounds
+              {pick('Voir le détail des rounds', 'See the round breakdown')}
               <ChevronDown className="h-4 w-4 animate-bounce" aria-hidden />
             </button>
           </div>
@@ -130,7 +131,8 @@ export function SoloResult({
           >
             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border/60 bg-secondary/20 p-4">
               <h3 className="flex items-center gap-2 font-bold">
-                <ListMusic className="h-4 w-4 text-primary" /> Détail de la partie
+                <ListMusic className="h-4 w-4 text-primary" />{' '}
+                {pick('Détail de la partie', 'Match breakdown')}
               </h3>
               <span className="font-mono text-sm font-bold tabular-nums text-foreground/90">
                 {correctCount}/{totalRounds}

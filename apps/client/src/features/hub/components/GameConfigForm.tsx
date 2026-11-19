@@ -1,9 +1,10 @@
-import { useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { pick } from '@/lib/i18n/text';
 
 import type { User } from '@supabase/supabase-js';
 import type { GameConfig, GameType, RoomConfig } from '@aniquizz/shared';
@@ -30,7 +31,7 @@ import { TestMatchOption } from './config/TestMatchOption';
 import {
   isWatchedSourceBlocked,
   checkWatchedPoolLaunch,
-  WATCHED_SOURCE_BLOCK_MESSAGE,
+  watchedSourceBlockMessage,
   WATCHED_SERVER_OFFLINE,
 } from './config/watchedSource';
 import { checkPlaylistPoolLaunch, isPlaylistSourceBlocked } from './config/playlistSource';
@@ -144,7 +145,7 @@ export function GameConfigForm<T extends GameConfig>({
     });
 
   const showRoomSettings = isRoom && !hideRoomSettings;
-  const sections = useMemo(() => buildConfigSections(), []);
+  const sections = buildConfigSections();
   const [activeSection, setActiveSection] = useState<ConfigSectionId>(() => defaultSectionId());
   const [visitedSections, setVisitedSections] = useState<Set<ConfigSectionId>>(
     () => new Set(['general']),
@@ -272,9 +273,9 @@ export function GameConfigForm<T extends GameConfig>({
 
   const submitLabel = isRoom
     ? currentPlayersCount > 0
-      ? 'Mettre à jour'
-      : 'Créer le salon'
-    : 'Lancer la partie';
+      ? pick('Mettre à jour', 'Update')
+      : pick('Créer le salon', 'Create room')
+    : pick('Lancer la partie', 'Start match');
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-8">
@@ -392,7 +393,7 @@ export function GameConfigForm<T extends GameConfig>({
           )}
           {watchedBlocked && (
             <p className="text-center text-sm font-medium text-destructive" role="alert">
-              {WATCHED_SOURCE_BLOCK_MESSAGE}
+              {watchedSourceBlockMessage()}
             </p>
           )}
           {playlistBlocked && !watchedBlocked && (

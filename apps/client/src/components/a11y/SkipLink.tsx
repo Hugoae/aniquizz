@@ -1,3 +1,5 @@
+import { tx } from '@/lib/i18n/text';
+
 export const SkipLinkTarget = 'main-content';
 
 /**
@@ -11,7 +13,7 @@ export function SkipLink() {
       href={`#${SkipLinkTarget}`}
       className="fixed left-4 -top-24 z-[200] rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-foreground outline-none focus:top-4 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
     >
-      Aller au contenu principal
+      {tx('common', 'skipToContent')}
     </a>
   );
 }

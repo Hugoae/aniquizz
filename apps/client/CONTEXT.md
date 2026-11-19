@@ -15,9 +15,9 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 | **useAnimeSearch / useArtistSearch** | Local fuzzy autocomplete; artist mode uses a separate catalogue (`artist:get_all`).                         | `features/game/hooks/`                            |
 | **gameReducer**                      | Client mirror of match state; merges server payloads (with lobby-config fallbacks for `videoMode`).         | `features/game/`                                  |
 | **useLobbyController**               | Lobby actions (create/join, settings, `addBots`, ready). Socket listeners live in `useLobbySocketBindings`. | `features/hub/`                                   |
-| **gameCopy**                         | Isolated French match strings (loading, leave dialogs, toasts).                                             | `features/game/copy/gameCopy.ts`                  |
-| **hubCopy**                          | Isolated French hub strings (mode select, join list, password dialog, reset).                               | `features/hub/copy/hubCopy.ts`                    |
-| **lobbyRulesCopy**                   | Pure builder turning live `RoomConfig` into French rules text (unit-tested).                                | `features/hub/components/lobby/lobbyRulesCopy.ts` |
+| **gameCopy**                         | Player match copy. French is the source; English is read at render time.                                    | `features/game/copy/gameCopy.ts`                  |
+| **hubCopy**                          | Player hub copy. French is the source; English is read at render time.                                      | `features/hub/copy/hubCopy.ts`                    |
+| **lobbyRulesCopy**                   | Live `RoomConfig` → rules text. French source, English via `pick()` (unit-tested in French).                | `features/hub/components/lobby/lobbyRulesCopy.ts` |
 | **GameModeBadge**                    | STD + trophy; lightning overlay when Vitesse is on.                                                         | `features/hub/components/GameModeBadge.tsx`       |
 | **VideoStage**                       | Renders the guessing clip per `VideoMode` (`hidden` / `blurred` / `peek`) + timer variants.                 | `features/game/`                                  |
 | **useVideoPlayback**                 | Seek-before-play pipeline; clip cache keyed `videoKey:startTime`.                                           | `features/game/`                                  |
@@ -35,8 +35,7 @@ See [`README.md`](./README.md) for stack, routes, env, and deploy details.
 - **Do not import `apps/server` or `@aniquizz/database`.** Talk to the API over
   HTTP / Socket.io. ESLint `no-restricted-imports` enforces this.
 - **`jsx-a11y` recommended is error.** Fix findings; don't disable the plugin to ship.
-- **User-facing copy is French; code/comments English.** Keep strings isolated
-  (e.g. `gameCopy.ts`, `hubCopy.ts`, `lobbyRulesCopy.ts`, `adminCopy.ts`) for future i18n — don't inline French in logic.
+- **Player copy is French and English.** French is the source. Read it with `tx()` or `pick()` when the screen renders. Do not spread a getter object, and do not memo a translated string without `i18n.language` in the deps. Admin stays French (`adminCopy.ts`). Shared medal and answer-type labels stay French and are translated at the screen. See `AGENTS.md` § Languages.
 - **Design tokens only** — style via Tailwind semantic classes (`bg-primary`,
   `text-muted-foreground`) or `hsl(var(--token))`; reuse `.glass-card`,
   `.gradient-text`, `FOCUS_RING`, and `components/ui/` primitives. No hardcoded hex.

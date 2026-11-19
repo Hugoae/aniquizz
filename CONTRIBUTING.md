@@ -24,7 +24,9 @@ pnpm test:setup                # sync env + ensure @aniquizz.test users exist
 ### Language
 
 - **English** for code, comments, logs, docs, and commit messages.
-- **French** for user-facing UI strings only (kept isolated for future i18n).
+- **French and English** for player-facing UI. French is the source and uses vouvoiement. Add the English in the same change (`tx()` or `pick()`, read when the screen renders). A missing English string falls back to French. Do not spread a copy object that uses getters.
+- The site follows the browser (`en` or `fr`) until the player chooses. An account choice wins over the device. Details: [`AGENTS.md`](./AGENTS.md) § Languages.
+- **French** stays for the admin console, server error sentences, anime titles, song names, usernames, and room names.
 
 ### Commits
 

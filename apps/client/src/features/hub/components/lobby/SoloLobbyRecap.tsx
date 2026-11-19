@@ -1,4 +1,5 @@
 import type { GameConfig } from '@aniquizz/shared';
+import { pick } from '@/lib/i18n/text';
 
 import { buildSoloLobbyRecapGroups } from '@/features/hub/components/lobby/soloLobbyRecapGroups';
 
@@ -43,7 +44,7 @@ export function SoloLobbyRecap({ config, playlistName }: SoloLobbyRecapProps) {
     <div
       className="space-y-3 rounded-xl border border-border/60 bg-card/40 p-4"
 
-      aria-label="Récapitulatif de la partie"
+      aria-label={pick('Récapitulatif de la partie', 'Match summary')}
     >
       {groups.map((group) => (
         <RecapRow key={group.id} label={group.label} chips={group.chips} />

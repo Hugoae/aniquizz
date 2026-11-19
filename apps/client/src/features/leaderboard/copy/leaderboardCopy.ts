@@ -1,79 +1,109 @@
 import type { LeaderboardEntry, LeaderboardMetric } from '@aniquizz/shared';
 import { LEADERBOARD_DEFAULT_PAGE_SIZE } from '@aniquizz/shared';
+import { formatAppNumber } from '@/lib/i18n/format';
+import { extendLive, liveStrings, tx } from '@/lib/i18n/text';
 
-export const LEADERBOARD_COPY = {
-  title: 'Classement global',
-  eyebrow: 'Toute la communauté',
-  subtitle:
-    'L’XP compte aussi le quiz du jour. Victoires, parties et précision viennent des parties classiques. Le Pokédex compte chaque son entendu, y compris les extraits du quiz du jour.',
-  back: "Retour à l'accueil",
-  loadError: 'Impossible de charger le classement.',
-  retry: 'Réessayer',
-  emptyTitle: 'Aucun joueur classé pour le moment.',
-  emptyHint: 'Terminez une partie pour apparaître ici.',
-  rankedCount: 'Classés',
-  playCta: 'Jouer',
-  you: 'Vous',
-  tied: 'Ex-aequo',
-  moreTied: (count: number) => `+${count} ex-aequo`,
-  loginToCompare: 'Connectez-vous pour voir votre rang.',
-  loginToProfile: 'Connectez-vous pour ouvrir un profil.',
-  viewProfileOf: (name: string) => `Voir le profil de ${name}`,
-  backToBoard: 'Retour au classement',
-  outsideTop: `Hors du top ${LEADERBOARD_DEFAULT_PAGE_SIZE}`,
-  unranked: "Vous n'êtes pas encore classé sur cet onglet.",
+const keys = [
+  'title',
+  'eyebrow',
+  'subtitle',
+  'back',
+  'loadError',
+  'retry',
+  'emptyTitle',
+  'emptyHint',
+  'rankedCount',
+  'playCta',
+  'you',
+  'tied',
+  'loginToCompare',
+  'loginToProfile',
+  'backToBoard',
+  'unranked',
+  'loadingAria',
+  'tabsAria',
+] as const;
+
+export const LEADERBOARD_COPY = extendLive(liveStrings('leaderboard', '', keys), {
+  moreTied: (count: number) => tx('leaderboard', 'moreTied', { count }),
+  viewProfileOf: (name: string) => tx('leaderboard', 'viewProfileOf', { name }),
+  get outsideTop() {
+    return tx('leaderboard', 'outsideTop', { size: LEADERBOARD_DEFAULT_PAGE_SIZE });
+  },
   ineligible: (current: number, required: number) =>
-    `Encore ${required - current} manche${required - current > 1 ? 's' : ''} pour entrer en précision (${current}/${required}).`,
-  loadingAria: 'Chargement du classement',
-  tabsAria: 'Critères de classement',
-  level: (level: number) => `Niveau ${level}`,
+    tx('leaderboard', 'ineligible', {
+      count: Math.max(required - current, 0),
+      remaining: formatAppNumber(Math.max(required - current, 0)),
+      current: formatAppNumber(current),
+      required: formatAppNumber(required),
+    }),
+  level: (level: number) => tx('leaderboard', 'level', { level }),
   metrics: {
-    xp: { label: 'XP', hint: 'Niveau et XP totale' },
-    victories: { label: 'Victoires', hint: 'Parties gagnées' },
-    games: { label: 'Parties', hint: 'Parties terminées' },
-    discoveries: { label: 'Pokédex', hint: 'Sons uniques découverts' },
-    accuracy: { label: 'Précision', hint: 'Taux de bonnes réponses' },
+    xp: liveStrings('leaderboard', 'metrics.xp', ['label', 'hint'] as const),
+    victories: liveStrings('leaderboard', 'metrics.victories', ['label', 'hint'] as const),
+    games: liveStrings('leaderboard', 'metrics.games', ['label', 'hint'] as const),
+    discoveries: liveStrings('leaderboard', 'metrics.discoveries', ['label', 'hint'] as const),
+    accuracy: liveStrings('leaderboard', 'metrics.accuracy', ['label', 'hint'] as const),
   } satisfies Record<LeaderboardMetric, { label: string; hint: string }>,
-};
+});
+
+const n = (value: number) => formatAppNumber(value);
 
 export const formatLeaderboardValue = (entry: LeaderboardEntry): string => {
   switch (entry.metric) {
     case 'xp':
-      return `${entry.xp.toLocaleString('fr-FR')} XP`;
+      return tx('leaderboard', 'xpValue', { formatted: n(entry.xp) });
     case 'victories':
-      return `${entry.gamesWon.toLocaleString('fr-FR')}`;
+      return n(entry.gamesWon);
     case 'games':
-      return `${entry.gamesPlayed.toLocaleString('fr-FR')}`;
+      return n(entry.gamesPlayed);
     case 'discoveries':
-      return `${entry.discoveries.toLocaleString('fr-FR')}`;
+      return n(entry.discoveries);
     case 'accuracy':
-      return `${entry.accuracy.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+      return tx('leaderboard', 'accuracyValue', {
+        formatted: formatAppNumber(entry.accuracy, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }),
+      });
   }
 };
 
 export const formatLeaderboardDetail = (entry: LeaderboardEntry): string | null => {
   switch (entry.metric) {
     case 'victories':
-      return `${entry.gamesPlayed.toLocaleString('fr-FR')} partie${entry.gamesPlayed > 1 ? 's' : ''} · ${entry.winRate} %`;
+      return tx('leaderboard', 'detailVictories', {
+        count: entry.gamesPlayed,
+        formatted: n(entry.gamesPlayed),
+        rate: entry.winRate,
+      });
     case 'accuracy':
-      return `${entry.correctGuesses.toLocaleString('fr-FR')} / ${entry.totalGuesses.toLocaleString('fr-FR')}`;
+      return `${n(entry.correctGuesses)} / ${n(entry.totalGuesses)}`;
     default:
       return null;
   }
 };
 
-/** Spoken summary so a row is not read as a games ranking when the tab is victories. */
 export const formatLeaderboardAnnouncement = (entry: LeaderboardEntry): string => {
   switch (entry.metric) {
     case 'victories': {
-      const wins = `${entry.gamesWon.toLocaleString('fr-FR')} victoire${entry.gamesWon > 1 ? 's' : ''}`;
+      const wins = tx('leaderboard', 'wins', {
+        count: entry.gamesWon,
+        formatted: n(entry.gamesWon),
+      });
       const detail = formatLeaderboardDetail(entry);
       return detail ? `${wins}, ${detail}` : wins;
     }
     case 'games':
-      return `${entry.gamesPlayed.toLocaleString('fr-FR')} partie${entry.gamesPlayed > 1 ? 's' : ''}`;
+      return tx('leaderboard', 'games', {
+        count: entry.gamesPlayed,
+        formatted: n(entry.gamesPlayed),
+      });
     case 'discoveries':
-      return `${entry.discoveries.toLocaleString('fr-FR')} découverte${entry.discoveries > 1 ? 's' : ''}`;
+      return tx('leaderboard', 'discoveries', {
+        count: entry.discoveries,
+        formatted: n(entry.discoveries),
+      });
     default: {
       const detail = formatLeaderboardDetail(entry);
       return detail ? `${formatLeaderboardValue(entry)}, ${detail}` : formatLeaderboardValue(entry);

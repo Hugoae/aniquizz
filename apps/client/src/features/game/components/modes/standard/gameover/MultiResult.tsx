@@ -14,6 +14,7 @@ import { MatchConfigHeader } from './MatchConfigHeader';
 import { MultiPodium } from './MultiPodium';
 import { FinalRanking } from './FinalRanking';
 import { RoundHistoryList } from './RoundHistoryList';
+import { pick } from '@/lib/i18n/text';
 
 interface MultiResultProps {
   currentUserId: string;
@@ -73,7 +74,7 @@ export function MultiResult({
             isPlayerWinner={isPlayerWinner}
             myRank={myRank}
             ranks={ranks}
-            scoreUnit={raceByUser ? 'titres' : undefined}
+            scoreUnit={raceByUser ? pick('titres', 'songs') : undefined}
             race={raceByUser}
           />
           <FinalRanking
@@ -92,7 +93,7 @@ export function MultiResult({
           <DialogHeader className="shrink-0 space-y-2 border-b border-border/60 pb-4 pr-10">
             <DialogTitle className="font-display flex items-center gap-2 text-xl font-bold">
               <ListMusic className="h-5 w-5 shrink-0 text-primary" aria-hidden />
-              Détail de ma partie
+              {pick('Détail de ma partie', 'My match breakdown')}
             </DialogTitle>
             {totalRounds > 0 && (
               <p className="font-mono text-sm font-bold tabular-nums text-muted-foreground">

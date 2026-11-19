@@ -11,6 +11,7 @@ import { registerSuggestionRoutes } from './routes/suggestions';
 import { registerAdminRoutes } from './modules/admin/adminRoutes';
 import { registerPlaylistRoutes } from './routes/playlists';
 import { registerDailyRoutes } from './routes/daily';
+import { registerDiscoverRoutes } from './routes/discover';
 import { startDailyHorizonJob } from './modules/daily/dailyGenerator';
 import { logger } from './utils/logger';
 import { captureError } from './utils/errorReporter';
@@ -35,6 +36,7 @@ async function main() {
     registerSuggestionRoutes(app);
     registerPlaylistRoutes(app);
     registerDailyRoutes(app);
+    registerDiscoverRoutes(app);
     registerAdminRoutes(app, io, gameManager);
 
     // 3. Socket manager wires all feature handlers.

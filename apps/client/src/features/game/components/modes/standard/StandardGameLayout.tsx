@@ -3,6 +3,7 @@ import { SkipLinkTarget } from '@/components/a11y/SkipLink';
 import type { GamePlayer, Precision, EvolvingRoundCue } from '@aniquizz/shared';
 import type { VideoMode } from '@aniquizz/shared';
 import { socket } from '@/lib/socket';
+import { pick, tx } from '@/lib/i18n/text';
 import { cn } from '@/lib/utils';
 import type {
   CurrentSong,
@@ -323,8 +324,11 @@ function StandardGameLayoutInner({
                         soloSkipAlways={timeAttack}
                         soloSkipLabel={
                           timeAttack
-                            ? `Passer −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`
-                            : 'Révéler'
+                            ? pick(
+                                `Passer −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`,
+                                `Skip −${Math.round((nextSkipTaxMs ?? 5000) / 1000)} s`,
+                              )
+                            : pick('Révéler', 'Reveal')
                         }
                         playersCount={activeRosterCount}
                         skipVotes={skipVotes}
@@ -383,7 +387,7 @@ function StandardGameLayoutInner({
                         </div>
                       ) : (
                         <div className="flex h-[72px] w-full animate-pulse items-center justify-center text-muted-foreground">
-                          Chargement de la réponse…
+                          {pick('Chargement de la réponse…', 'Loading the answer…')}
                         </div>
                       )}
                     </div>
@@ -463,7 +467,7 @@ function StandardGameLayoutInner({
             {!sidebarCollapsed && (
               <button
                 type="button"
-                aria-label="Fermer le panneau"
+                aria-label={tx('game', 'closePanel')}
                 onClick={() => setSidebarCollapsed(true)}
                 className="absolute inset-0 z-30 bg-background/80"
               />

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { type Area } from 'react-easy-crop';
-import type { PublicProfile as PublicProfileData } from '@aniquizz/shared';
+import { type PublicProfile as PublicProfileData } from '@aniquizz/shared';
 import { getProfileFromAdminState } from '@/features/admin/adminNavigation';
 import { useAuth } from '@/features/auth/context/AuthContext';
 import { useFriends, type Relation } from '@/features/friends/FriendsContext';
@@ -12,6 +12,7 @@ import {
 } from '@/features/leaderboard/lib/leaderboardNavigation';
 import { LEADERBOARD_COPY } from '@/features/leaderboard/copy/leaderboardCopy';
 import { PROFILE_COPY } from '@/features/profile/copy/profileCopy';
+import { toastUnlockedAchievements } from '@/features/profile/lib/achievementToast';
 import {
   PUBLIC_PROFILE_LOAD_ERROR_EVENT,
   PUBLIC_PROFILE_LOAD_TIMEOUT_MS,
@@ -119,7 +120,11 @@ export function useProfilePage() {
     if (!isOwn) return;
 
     const onStats = (data: unknown) => {
-      if (isOwnProfileStats(data)) setStatsData(data);
+      if (!isOwnProfileStats(data)) return;
+      setStatsData(data);
+      const fresh = data.newlyUnlocked ?? [];
+      if (fresh.length === 0) return;
+      toastUnlockedAchievements(fresh);
     };
     const onProfileUpdate = () => {
       toast.success(PROFILE_COPY.updatedToast);
@@ -136,6 +141,7 @@ export function useProfilePage() {
     };
 
     socket.on('profile:stats', onStats);
+    socket.on('achievements:unlocked', requestStats);
     socket.on('user_profile', onProfileUpdate);
     socket.on('profile:error', onError);
     socket.on('error', onError);
@@ -144,6 +150,7 @@ export function useProfilePage() {
     return () => {
       stopReady();
       socket.off('profile:stats', onStats);
+      socket.off('achievements:unlocked', requestStats);
       socket.off('user_profile', onProfileUpdate);
       socket.off('profile:error', onError);
       socket.off('error', onError);
@@ -192,7 +199,7 @@ export function useProfilePage() {
         username: profile.username,
         avatar: profile.avatar,
         role: profile.role,
-        xp: profile.xp,
+        xp: statsData.createdAt ? statsData.xp : profile.xp,
         stats: statsData,
       });
     }

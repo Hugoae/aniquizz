@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { HOME_COPY } from './homeCopy';
+import { homeText } from './homeCopy';
 
 describe('HOME_COPY', () => {
+  const HOME_COPY = homeText('fr');
   it('advertises a 3000+ playable catalogue', () => {
     expect(HOME_COPY.eyebrow).toMatch(/3\u00a0000 sons jouables/);
   });

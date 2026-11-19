@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { pick } from '@/lib/i18n/text';
 
 /** Decorative genre/tag chips cycle through the token palette (no raw colors). */
 export const REVEAL_TAG_TONES = [
@@ -10,22 +11,41 @@ export const REVEAL_TAG_TONES = [
   'bg-warning/10 text-warning border-warning/20',
 ] as const;
 
-const SEASON_LABELS: Record<string, string> = {
-  WINTER: 'Hiver',
-  SPRING: 'Printemps',
-  SUMMER: 'Été',
-  FALL: 'Automne',
-};
+function seasonName(key: string): string | null {
+  switch (key) {
+    case 'WINTER':
+      return pick('Hiver', 'Winter');
+    case 'SPRING':
+      return pick('Printemps', 'Spring');
+    case 'SUMMER':
+      return pick('Été', 'Summer');
+    case 'FALL':
+      return pick('Automne', 'Fall');
+    default:
+      return null;
+  }
+}
 
-const FORMAT_LABELS: Record<string, string> = {
-  TV: 'Série TV',
-  MOVIE: 'Film',
-  OVA: 'OVA',
-  ONA: 'ONA',
-  SPECIAL: 'Spécial',
-  MUSIC: 'Musique',
-  TV_SHORT: 'Court',
-};
+function formatName(key: string): string | null {
+  switch (key) {
+    case 'TV':
+      return pick('Série TV', 'TV series');
+    case 'MOVIE':
+      return pick('Film', 'Movie');
+    case 'OVA':
+      return 'OVA';
+    case 'ONA':
+      return 'ONA';
+    case 'SPECIAL':
+      return pick('Spécial', 'Special');
+    case 'MUSIC':
+      return pick('Musique', 'Music');
+    case 'TV_SHORT':
+      return pick('Court', 'Short');
+    default:
+      return null;
+  }
+}
 
 export function isRevealAccentColor(value: string | null | undefined): value is string {
   return !!value && /^#[0-9A-Fa-f]{6}$/.test(value);
@@ -35,7 +55,7 @@ export function formatRevealSeasonYear(
   season?: string | null,
   year?: number | null,
 ): string | null {
-  const seasonLabel = season ? (SEASON_LABELS[season.toUpperCase()] ?? season) : null;
+  const seasonLabel = season ? (seasonName(season.toUpperCase()) ?? season) : null;
   if (seasonLabel && year) return `${seasonLabel} ${year}`;
   if (year) return String(year);
   if (seasonLabel) return seasonLabel;
@@ -45,13 +65,14 @@ export function formatRevealSeasonYear(
 export function formatRevealFormat(format?: string | null): string | null {
   if (!format) return null;
   const key = format.toUpperCase();
-  return FORMAT_LABELS[key] ?? format;
+  return formatName(key) ?? format;
 }
 
 export function formatRevealEpisodeRange(range?: string | null): string | null {
   const trimmed = range?.trim();
   if (!trimmed) return null;
-  return trimmed.startsWith('Ép.') || trimmed.startsWith('Ep.') ? trimmed : `Ép. ${trimmed}`;
+  if (trimmed.startsWith('Ép.') || trimmed.startsWith('Ep.')) return trimmed;
+  return `${pick('Ép.', 'Ep.')} ${trimmed}`;
 }
 
 /** Inline styles for a subtle coverColor accent on the reveal card. */

@@ -3,7 +3,39 @@
 > Kept intentionally short (read on every onboarding). Detailed history is archived in
 > [`docs/progress-archive/`](./docs/progress-archive/). Roadmap lives in [`PLAN.md`](./PLAN.md).
 
-## Current phase: **26.8** · Config walkthrough and Évolutif · 2026-11-10
+## Current phase: **26.9** · Succès · 2026-11-19
+
+Footer `v26.9`. News id 12 covers the achievements, the English player site, and the faster last Suivant on the daily quiz. The public roadmap marks Succès and English done. Song of the day stays hidden for 26.10.
+
+### 1. Succès
+
+The profile collection sits full width under the history column. Cards show the goal, the XP, and a progress bar. Filters are Tous, À faire, and Obtenus. XP only, no cosmetics. Thresholds use counters the server already keeps, plus finished matches by mode (Standard, Contre-la-montre, Évolutif), an imported profile photo, and a linked AniList or MyAnimeList list. Harder tiers extend parties, victoires, réponses, séries, quiz du jour, titres, médailles, amis, and favoris. The catalogue lives in `packages/shared`. French titles stay in the client copy.
+
+Opening a profile grants every success the counters already meet and that row does not own yet. The XP is added once. If a reward in the catalogue is raised later, the next open pays the difference once and does not toast again. A second open does not pay again. Locked cards stay visible. A catch-up of several successes is one toast. The grid is grouped: Parties, Quiz du jour, Modes, Collection, Profil.
+
+Rewards were trimmed by about 10 to 15 percent onto round numbers (500 matches pay 35 000 XP, the full catalogue 45 000). Two staff accounts had already been paid the older tables and were settled by hand. Kirikou: 68 972 XP, level 37, down to 61 752 XP, level 35 (7 220 removed). The play XP underneath was 15 002, from 13 514 in finished matches and 1 488 in the daily quiz, plus 46 750 from the unlocked successes at the current table. admin_dev: 1 752 XP, level 6, down to 1 582 XP, level 6 (170 removed). A linked AniList and a linked MyAnimeList each count, so both show 2/1. Standard matches saved with the speed podium (`SPRINT`) count as Standard. Trying Standard, Contre-la-montre, Évolutif, and multijoueur each has its own success, plus the three modes together, a multiplayer win, and an Évolutif answer on the first excerpt. Distinct songs found sit next to songs heard. Fifty daily quizzes count separate days, not a streak. Catalogue complet tracks every playable song, so the goal moves when songs are added. The success stays once it has been granted.
+
+A finished match, a finished daily quiz, a new friend, a like, an imported photo, or a linked list grants the success immediately and toasts it on whatever screen is open. Opening the profile still catches anything that was missed.
+
+**Checked.** Shared threshold tests. The full-width grid was opened on a logged-in profile. The end-screen toast is wired. A live match was not required before calling the feature ready.
+
+### 2. English
+
+The player site is French and English. The player rechecked the main screens. How a new string is added, and what stays French, is in [`AGENTS.md`](./AGENTS.md) § Languages.
+
+French is the source. English is the second language and is written in the same change. `i18next` reads catalogues with `tx()`. A one-off line uses `pick(french, english)` when the screen renders. Copy objects keep getters. Spreading one snapshots the language from boot, which is why some screens stayed French after the header already said EN. React state waits until `i18n.changeLanguage` has finished. A memo that builds labels depends on `i18n.language`.
+
+Until the player chooses, the site follows the browser (`en` or `fr`; anything else stays French). That detection is not saved. A guest choice stays on the device (`aniquizz.locale`). A signed-in choice is `uiLocale` on the profile and wins over the device. Same URLs. The switch is a flag plus FR or EN, in the header and in settings.
+
+Covered: home, auth, hub, both lobbies, match setup (including the pool card, difficulty, playlist merge, and the replay range), the match, both end screens, daily, library, profile (stats, history, public friends), leaderboard, settings, friends, legal, news, the roadmap, and the coming-soon heading. Shared medal and answer-type names stay French; the client translates them on screen. Anime titles, song names, usernames, and room names stay as stored. Admin stays French. Server errors stay French, so an English screen can still show a French toast.
+
+**Next:** do not start the dropped found bar. HIBP stays parked. The daily last-Suivant fix ships with this release.
+
+### 3. Song of the day — parked for 26.10
+
+The work stays in the tree. The homepage card and the admin editor are unmounted, so 26.9 does not show them. See [`PLAN.md`](./PLAN.md) Update 26.10.
+
+## Previous phase: **26.8** · Config walkthrough and Évolutif · 2026-11-10
 
 ### 1. Config walkthrough (first brick)
 
@@ -117,6 +149,16 @@ Four reports from the same session. Not a new phase.
 **Lobby return.** A late `lobby:joined` could paint older settings over a save that had already landed. Each settings apply bumps `settingsRevision`. The client ignores a snapshot older than the one it already applied. Switching Standard does not itself change precision; the host still sets Anime in the form, and that save is the one that sticks.
 
 **Checked.** Shared answer and payload tests, the MatchEngine stale-vote test, the daily clock shift, and the revision helper. Server and client typecheck. Not replayed as two browsers on the skip race, or with a device clock 15 s ahead.
+
+### 26.9 — Quiz du jour, last Suivant (2026-11-17)
+
+A correction for **26.9**, not part of the 26.8 feature work. Current phase stays 26.8.
+
+The end screen waited on the whole close. Each answer was inserted only then, one after another, and the handler also rewrote every finisher's rank and the song history before emitting. There is no built-in 3 s pause.
+
+A guess lock now stores that one answer after the reveal is sent. The last Suivant still waits for the score, the XP, and the streak, then emits. Rank and song history follow. An admin reset waits for that follow-up so it does not rewind history that has not been written yet.
+
+**Checked.** Played on the dev server 2026-11-17. The last Suivant now waits about half a second. That is the score, XP, and streak write, and it stays.
 
 **Next:** do not start the dropped found bar. HIBP stays parked.
 

@@ -3,12 +3,18 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { isFirstLandingPaint } from '@/lib/initialPaint';
 import { cn } from '@/lib/utils';
-import { HOME_COPY } from '@/features/home/copy/homeCopy';
+import { useHomeCopy } from '@/features/home/copy/homeCopy';
+import { formatAppDate } from '@/lib/i18n/format';
 import { latestNewsPreview } from '@/features/news/data/newsPreview';
+import { localizedNewsTeaser } from '@/features/news/data/newsData';
+import { pick } from '@/lib/i18n/text';
+import { useLocale } from '@/features/i18n/LocaleContext';
 import { typeConfig } from '@/features/news/data/newsTypes';
 
 export function NewsSection() {
   const skipEntryAnimation = isFirstLandingPaint();
+  const copy = useHomeCopy();
+  const { locale } = useLocale();
 
   return (
     <section
@@ -21,7 +27,7 @@ export function NewsSection() {
             <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
               <typeConfig.update.icon className="h-4 w-4" />
             </div>
-            <h2 className="text-base font-semibold">{HOME_COPY.newsTitle}</h2>
+            <h2 className="text-base font-semibold">{copy.newsTitle}</h2>
           </div>
           <Button
             asChild
@@ -30,22 +36,23 @@ export function NewsSection() {
             className="gap-1 text-muted-foreground hover:text-primary text-xs h-7 px-2"
           >
             <Link to="/news">
-              {HOME_COPY.newsSeeAll}
+              {copy.newsSeeAll}
               <ChevronRight className="h-3 w-3" />
             </Link>
           </Button>
         </div>
 
         <div className="space-y-2">
-          {latestNewsPreview.map((news) => {
+          {latestNewsPreview.map((raw) => {
+            const news = localizedNewsTeaser(raw);
             const config = typeConfig[news.type];
             const TypeIcon = config.icon;
 
             return (
               <Link
-                key={news.id}
+                key={`${news.id}-${locale}`}
                 to={`/news#news-${news.id}`}
-                aria-label={`Actualité : ${news.title}`}
+                aria-label={`${pick('Actualité', 'News')}: ${news.title}`}
                 className="flex p-4 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors cursor-pointer group border border-border/40 hover:border-primary/30 relative overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <div className="flex items-center gap-4 relative z-10 min-w-0 w-full">
@@ -59,7 +66,7 @@ export function NewsSection() {
                         {news.title}
                       </h3>
                       <span className="text-[10px] text-muted-foreground shrink-0 font-mono">
-                        {new Date(news.date).toLocaleDateString('fr-FR', {
+                        {formatAppDate(new Date(news.date), {
                           day: 'numeric',
                           month: 'short',
                         })}
